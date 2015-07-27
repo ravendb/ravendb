@@ -1,15 +1,15 @@
 import commandBase = require("commands/commandBase");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 
 class getTimeSeriesStatsCommand extends commandBase {
 
-    constructor(private cs: timeSeries, private longWait: boolean = false) {
+    constructor(private ts: timeSeries, private longWait: boolean = false) {
         super();
     }
 
     execute(): JQueryPromise<timeSeriesStatisticsDto> {
         var url = "/stats";
-        return this.query<timeSeriesStatisticsDto>(url, null, this.cs, null, this.getTimeToAlert(this.longWait));
+        return this.query<timeSeriesStatisticsDto>(url, null, this.ts, null, this.getTimeToAlert(this.longWait));
     }
 }
 

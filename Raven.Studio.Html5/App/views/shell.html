@@ -182,7 +182,7 @@
                 <div data-bind="visible: canShowTimeSeriesNavbar, css: { 'menu-item-disabled': isActiveTimeSeriesDisabled }">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('TimeSeries') }">
-                            <a data-bind="attr: { href: appUrls.timeSeriesSeries }">Time Series</a>
+                            <a data-bind="attr: { href: appUrls.timeSeriesKey }">Time Series</a>
                         </li>
                         <li data-bind="css: { active: appUrls.isActive('Stats') }">
                             <a data-bind="attr: { href: appUrls.timeSeriesStats }">Stats</a>
@@ -331,8 +331,10 @@
                 </li>
 
                 <!-- ko with: statistics -->
-                <li><a data-bind="text: timeSeriesCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: requestsPerSecondText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: typesCountText"></a></li>
+                <li><a data-bind="text: keysCountText"></a></li>
+                <li><a data-bind="text: valuesCountText"></a></li>
+                <li><a data-bind="text: requestsPerSecondText"></a></li>
                 <!-- /ko -->
             </ul>
 

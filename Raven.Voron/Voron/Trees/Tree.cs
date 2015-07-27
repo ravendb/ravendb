@@ -843,5 +843,20 @@ namespace Voron.Trees
 
 			return fixedSizeTree;
 		}
-	}
+
+	    public long DeleteFixedTreeFor(string key, byte valSize = 0)
+	    {
+		    var fixedSizeTree = FixedTreeFor(key, valSize);
+		    var numberOfEntries = fixedSizeTree.NumberOfEntries;
+
+		    foreach (var page in fixedSizeTree.AllPages())
+		    {
+			    _tx.FreePage(page);
+		    }
+			_fixedSizeTrees.Remove(key);
+			Delete(key);
+		    
+			return numberOfEntries;
+	    }
+    }
 }

@@ -7118,7 +7118,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-overflow: ellipsis;
   max-width: 90%;
 }
-.document-collections li:not(:first-child) {
+.document-collections.has-show-all-items li:not(:first-child) {
   padding-left: 15px;
 }
 #index-merge-suggestions .index-name {

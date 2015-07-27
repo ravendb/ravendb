@@ -28,22 +28,22 @@ namespace Raven.Client.TimeSeries
 		TimeSeriesStore.TimeSeriesStoreAdminOperations Admin { get; }
 
 
-		Task CreatePrefixConfigurationAsync(string prefix, byte valueLength, CancellationToken token = default(CancellationToken));
+		Task CreateTypeAsync(string type, string[] fields, CancellationToken token = default(CancellationToken));
 
-		Task DeletePrefixConfigurationAsync(string prefix, CancellationToken token = default(CancellationToken));
+		Task DeleteTypeAsync(string type, CancellationToken token = default(CancellationToken));
 
-		Task AppendAsync(string prefix, string key, DateTime time, double value, CancellationToken token = default(CancellationToken));
+		Task AppendAsync(string type, string key, DateTime at, double value, CancellationToken token = default(CancellationToken));
 
-		Task AppendAsync(string prefix, string key, DateTime time, CancellationToken token, params double[] values);
+		Task AppendAsync(string type, string key, DateTime at, CancellationToken token, params double[] values);
 
-		Task AppendAsync(string prefix, string key, DateTime time, double[] values, CancellationToken token = default(CancellationToken));
+		Task AppendAsync(string type, string key, DateTime at, double[] values, CancellationToken token = default(CancellationToken));
 
-		Task DeleteAsync(string prefix, string key, CancellationToken token = default(CancellationToken));
+		Task DeleteAsync(string type, string key, CancellationToken token = default(CancellationToken));
 
-		Task DeleteRangeAsync(string prefix, string key, DateTime start, DateTime end, CancellationToken token = default(CancellationToken));
+		Task DeleteRangeAsync(string type, string key, DateTime start, DateTime end, CancellationToken token = default(CancellationToken));
 
 		
-		Task<TimeSeriesStats> GetTimeSeriesStatsAsync(CancellationToken token = default (CancellationToken));
+		Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken));
 
 		Task<TimeSeriesMetrics> GetTimeSeriesMetricsAsync(CancellationToken token = default (CancellationToken));
 

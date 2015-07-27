@@ -10,7 +10,7 @@ namespace Raven.Client.TimeSeries
 {
 	public partial class TimeSeriesStore
 	{
-		public async Task<TimeSeriesStats> GetTimeSeriesStatsAsync(CancellationToken token = default (CancellationToken))
+		public async Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 

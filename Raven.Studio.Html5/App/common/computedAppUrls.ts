@@ -90,7 +90,7 @@ interface computedAppUrls {
     counterStorageStats: KnockoutComputed<string>;
     counterStorageConfiguration: KnockoutComputed<string>;
 
-    timeSeries: KnockoutComputed<string>;
+    timeSeriesKey: KnockoutComputed<string>;
     timeSeriesStats: KnockoutComputed<string>;
     timeSeriesConfiguration: KnockoutComputed<string>;
 

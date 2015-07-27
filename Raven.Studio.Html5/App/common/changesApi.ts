@@ -51,6 +51,10 @@ class changesApi {
     private watchedCounter = {};
     private watchedCountersInGroup = {};
     private allCounterBulkOperationsHandlers = ko.observableArray<changesCallback<counterBulkOperationNotificationDto>>();
+
+    private allTimeSeriesHandlers = ko.observableArray<changesCallback<timeSeriesKeyChangeNotification>>();
+    private watchedTimeSeries = {};
+    private allTimeSeriesBulkOperationsHandlers = ko.observableArray<changesCallback<timeSeriesBulkOperationNotificationDto>>();
     
     constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = idGenerator.generateId();
@@ -308,9 +312,11 @@ class changesApi {
             this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
         } else if (eventType === "ChangeNotification") {
             this.fireEvents(this.allCountersHandlers(), value, (event) => true);
-			//TODO: send events to other subscriptions
-        }
-        else {
+            //TODO: send events to other subscriptions
+        } else if (eventType === "KeyChangeNotification") {
+            this.fireEvents(this.allTimeSeriesHandlers(), value, (event) => true);
+            //TODO: send events to other subscriptions
+        } else {
             console.log("Unhandled Changes API notification type: " + eventType);
         }
     }
@@ -528,6 +534,51 @@ class changesApi {
         this.allCounterBulkOperationsHandlers.push(callback);
         return new changeSubscription(() => {
             this.allCounterBulkOperationsHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-bulk-operation");
+            }
+        });
+    }
+
+    watchTimeSeriesChange(type: string, key: string, onChange: (e: timeSeriesKeyChangeNotification) => void): changeSubscription {
+        var fullId = type + "/" + key;
+        var callback = new changesCallback<timeSeriesKeyChangeNotification>(onChange);
+        if (typeof (this.watchedTimeSeries[fullId]) === "undefined") {
+            this.send("watch-time-series-key-change", fullId);
+            this.watchedTimeSeries[fullId] = ko.observableArray();
+        }
+        this.watchedTimeSeries[fullId].push(callback);
+        return new changeSubscription(() => {
+            this.watchedTimeSeries[fullId].remove(callback);
+            if (this.watchedTimeSeries[fullId]().length === 0) {
+                delete this.watchedTimeSeries[fullId];
+                this.send("unwatch-time-series-key-change", fullId);
+            }
+        });
+    }
+
+	watchAllTimeSeries(onChange: (e: timeSeriesKeyChangeNotification) => void) {
+        var callback = new changesCallback<timeSeriesKeyChangeNotification>(onChange);
+        if (this.allDocsHandlers().length === 0) {
+            this.send("watch-time-series");
+        }
+        this.allTimeSeriesHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allTimeSeriesHandlers.remove(callback);
+            if (this.allDocsHandlers().length === 0) {
+                this.send("unwatch-time-series");
+            }
+        });
+    }
+	
+    watchTimeSeriesBulkOperation(onChange: (e: timeSeriesBulkOperationNotificationDto) => void) {
+        var callback = new changesCallback<timeSeriesBulkOperationNotificationDto>(onChange);
+        if (this.allTimeSeriesBulkOperationsHandlers().length === 0) {
+            this.send("watch-bulk-operation");
+        }
+        this.allTimeSeriesBulkOperationsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allTimeSeriesBulkOperationsHandlers.remove(callback);
             if (this.allDocsHandlers().length === 0) {
                 this.send("unwatch-bulk-operation");
             }

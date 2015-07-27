@@ -1,7 +1,7 @@
 import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import resource = require("models/resources/resource");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
@@ -124,8 +124,7 @@ class appUrl {
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
 
-        timeSeries: ko.computed(() => appUrl.forTimeSeries()),
-        timeSeriesSeries: ko.computed(() => appUrl.forTimeSeriesSeries(null, appUrl.currentTimeSeries())),
+        timeSeriesKey: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
         timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
         timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
     };
@@ -176,10 +175,13 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
-    static forTimeSeriesSeries(name: string, ts: timeSeries) {
-        var part = name ? "name=" + encodeURIComponent(name) : "";
+    static forTimeSeriesKey(type: string, key: string, ts: timeSeries) {
+        var url = "";
+        if (type && key) {
+            url = "type=" + encodeURIComponent(type) + "&key=" + encodeURIComponent(key);
+        }
         var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
-        return "#timeseries/series?" + part + timeSeriesPart;
+        return "#timeseries/series?" + url + timeSeriesPart;
     }
 
     static forTimeSeriesStats(ts: timeSeries) {

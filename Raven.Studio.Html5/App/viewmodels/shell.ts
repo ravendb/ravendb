@@ -10,7 +10,7 @@ import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
@@ -259,7 +259,7 @@ class shell extends viewModelBase {
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
 			{ route: "counterstorages/edit", title: "Edit Counter", moduleId: "viewmodels/counter/editCounter", nav: false },
-            { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeries },
+            { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeriesKey },
             { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
             { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
         ]).buildNavigationModel();
@@ -419,7 +419,8 @@ class shell extends viewModelBase {
 
     private activateTimeSeries(ts: timeSeries) {
         var changesSubscriptionArray = () => [
-            //TODO: enable changes api for counter storages, server side
+            changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTimeSeriesStats(ts)),
+            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTimeSeriesStats(ts))
         ];
         var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
         this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTimeSeriesStats(ts), changesSubscriptionArray);

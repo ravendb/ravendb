@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeriesDocument");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
@@ -72,7 +72,7 @@ class viewModelBase {
                 return { redirect: appUrl.forResources() };
             }
         } else if (resource instanceof timeSeries) {
-            var ts = this.activeCounterStorage();
+            var ts = this.activeTimeSeries();
 
             if (!!ts && ts.disabled()) {
                 messagePublisher.reportError("Time Series '" + ts.name + "' is disabled!", "You can't access any section of the time series while it's disabled.");

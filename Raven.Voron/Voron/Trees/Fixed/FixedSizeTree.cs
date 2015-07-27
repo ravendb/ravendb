@@ -3,15 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
 using Sparrow;
 using Sparrow.Platform;
-
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
@@ -27,7 +24,7 @@ namespace Voron.Trees.Fixed
         private readonly byte _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
-        private FixedSizeTreeHeader.OptionFlags? _flags;
+		private FixedSizeTreeHeader.OptionFlags? _flags;
         private Stack<Page> _cursor;
 
         public FixedSizeTree(Transaction tx, Tree parent, Slice treeName, byte valSize)
@@ -53,7 +50,9 @@ namespace Voron.Trees.Fixed
 
         public long[] Debug(Page p)
         {
-            return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
+	        if (p == null)
+		        return null;
+	        return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
                 p.IsLeaf ? _entrySize : BranchEntrySize);
         }
 
@@ -72,7 +71,7 @@ namespace Voron.Trees.Fixed
             return a;
         }
 
-        public void Add(long key, Slice val = null)
+        public bool Add(long key, Slice val = null)
         {
             if (_valSize == 0 && val != null)
                 throw new InvalidOperationException("When the value size is zero, no value can be specified");
@@ -81,29 +80,33 @@ namespace Voron.Trees.Fixed
             if (val != null && val.Size != _valSize)
                 throw new InvalidOperationException("The value size must be " + _valSize + " but was " + val.Size);
 
-            var pos = DirectAdd(key);
+	        bool isNew;
+	        var pos = DirectAdd(key, out isNew);
             if (val != null)
                 val.CopyTo(pos);
+
+			return isNew;
         }
 
-        public void Add(long key, byte[] val)
+        public bool Add(long key, byte[] val)
         {
-			Add(key, new Slice(val));
+			return Add(key, new Slice(val));
         }
 
-        public byte* DirectAdd(long key)
+        public byte* DirectAdd(long key, out bool isNew)
         {
             byte* pos;
             switch (_flags)
             {
                 case null:
                     pos = AddNewEntry(key);
+		            isNew = true;
                     break;
                 case FixedSizeTreeHeader.OptionFlags.Embedded:
-                    pos = AddEmbeddedEntry(key);
+                    pos = AddEmbeddedEntry(key, out isNew);
                     break;
                 case FixedSizeTreeHeader.OptionFlags.Large:
-                    pos = AddLargeEntry(key);
+                    pos = AddLargeEntry(key, out isNew);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -111,7 +114,7 @@ namespace Voron.Trees.Fixed
             return pos;
         }
 
-        private byte* AddLargeEntry(long key)
+        private byte* AddLargeEntry(long key, out bool isNew)
         {
             var page = FindPageFor(key);
 
@@ -119,6 +122,7 @@ namespace Voron.Trees.Fixed
 
             if (_lastMatch == 0) // update
             {
+				isNew = false;
                 return page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
             }
             var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
@@ -132,7 +136,9 @@ namespace Voron.Trees.Fixed
                 PageSplit(page, key);
 
                 // now we know we have enough space, or we need to split the parent page
-                return AddLargeEntry(key);
+	            var addLargeEntry = AddLargeEntry(key, out isNew);
+				isNew = true;
+				return addLargeEntry;
             }
 
             if (page.FixedSize_StartPosition != Constants.PageHeaderSize)
@@ -152,6 +158,7 @@ namespace Voron.Trees.Fixed
                     entriesToMove * _entrySize);
             }
             page.FixedSize_NumberOfEntries++;
+	        isNew = true;
             *((long*)(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize))) = key;
             return (page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
         }
@@ -264,7 +271,7 @@ namespace Voron.Trees.Fixed
             }
         }
 
-        private byte* AddEmbeddedEntry(long key)
+        private byte* AddEmbeddedEntry(long key, out bool isNew)
         {
             var ptr = _parent.DirectRead(_treeName);
             var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
@@ -272,7 +279,8 @@ namespace Voron.Trees.Fixed
             var startingEntryCount = header->NumberOfEntries;
             var pos = BinarySearch(dataStart, startingEntryCount, key, _entrySize);
             var newEntriesCount = startingEntryCount;
-            if (_lastMatch != 0)
+	        isNew = _lastMatch != 0;
+	        if (isNew)
             {
                 newEntriesCount++; // new entry, need more space
             }
@@ -468,12 +476,291 @@ namespace Voron.Trees.Fixed
                     RemoveEmbeddedEntry(key);
                     break;
                 case FixedSizeTreeHeader.OptionFlags.Large:
-                    RemoveLargeEntry(key);
+		            RemoveLargeEntry(key);
                     break;
             }
         }
 
-        private void RemoveLargeEntry(long key)
+		public long DeleteRange(long start, long end, out bool allRemoved)
+		{
+			if (start > end)
+				throw new InvalidOperationException("Start range cannot be greater than the end of the range");
+
+			switch (_flags)
+			{
+				case null:
+					allRemoved = false;
+					return -1;
+				case FixedSizeTreeHeader.OptionFlags.Embedded:
+					return DeleteRangeEmbedded(start, end, out allRemoved);
+				case FixedSizeTreeHeader.OptionFlags.Large:
+					return DeleteRangeLarge(start, end, out allRemoved);
+			}
+
+			throw new InvalidOperationException("Flags value is not valid: " + _flags);
+		}
+
+		private long DeleteRangeEmbedded(long start, long end, out bool allRemoved)
+		{
+			allRemoved = false;
+
+			byte* ptr = _parent.DirectRead(_treeName);
+			var header = (FixedSizeTreeHeader.Embedded*)ptr;
+			var startingEntryCount = header->NumberOfEntries;
+			var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
+			if (_lastMatch > 0)
+			{
+				return 0; // Greater than the values we have, nothing to do
+			}
+			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
+			if (_lastMatch < 0)
+			{
+				return 0; // End key is before all the values we have, nothing to do
+			}
+
+			byte entriesDeleted = (byte) (endPos - startPos + 1);
+
+		    if (entriesDeleted == header->NumberOfEntries)
+		    {
+			    _parent.Delete(_treeName);
+			    _flags = null;
+			    allRemoved = true;
+				return entriesDeleted;
+		    }
+
+		    byte* newData = _parent.DirectAdd(_treeName,
+				sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - entriesDeleted) * _entrySize));
+
+			int srcCopyStart = startPos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
+
+			Memory.Copy(newData, ptr, srcCopyStart);
+			Memory.Copy(newData + srcCopyStart, ptr + srcCopyStart + (_entrySize * entriesDeleted), (header->NumberOfEntries - endPos) * _entrySize);
+
+			header = (FixedSizeTreeHeader.Embedded*)newData;
+			header->NumberOfEntries -= entriesDeleted;
+			header->ValueSize = _valSize;
+			header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+			
+			return entriesDeleted;
+	    }
+
+	    private long DeleteRangeLarge(long start, long end, out bool wasAllRemoved)
+		{
+		    wasAllRemoved = false;
+
+		    var page = FindPageFor(start);
+		    if (page.LastMatch > 0)
+			    return 0;
+
+			var startSearchPosition = page.LastSearchPosition;
+		    long entriesDeleted = 0;
+			BinarySearch(page, end, _entrySize);
+#if DEBUG
+			long i = 0;
+#endif
+			do
+		    {
+#if DEBUG
+			    i++;
+#endif
+				entriesDeleted += DeleteEntriesInPage(page, startSearchPosition, page.LastSearchPosition + 1, out wasAllRemoved);
+				startSearchPosition = 0;
+			    
+				if (page.LastMatch == 0 ||
+			        _cursor.Count == 0 // No more pages
+				    )
+			    {
+				    return entriesDeleted;
+			    }
+
+			    var parentPage = _cursor.Pop();
+			    if (parentPage.IsLeaf)
+			    {
+					page = parentPage;
+					BinarySearch(page, end, _entrySize);
+					continue;
+			    }
+
+				if (DateTime.UtcNow > new DateTime(2015, 9, 1))
+					throw new NotImplementedException("Delete all Debugger.Break() methods");
+		
+			    if (parentPage.LastSearchPosition >= parentPage.FixedSize_NumberOfEntries - 1)
+			    {
+				    if (_cursor.Count > 0)
+					    continue;
+
+				    if (parentPage.IsBranch)
+				    {
+						Debugger.Break();
+						return entriesDeleted; // When this happens?
+				    }
+
+				    // TODO: Please test this, this wasn't been tested
+				    Debugger.Break();
+				    page = parentPage;
+				    BinarySearch(page, end, _entrySize);
+				    continue;
+			    }
+			    
+				parentPage.LastSearchPosition++;
+			    _cursor.Push(parentPage);
+
+			    var childParentNumber = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition);
+				page = _tx.GetReadOnlyPage(childParentNumber);
+				while (page.IsBranch)
+			    {
+					// TODO: Please test this, this wasn't been tested
+					Debugger.Break();
+					_cursor.Push(page);
+					childParentNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
+					page = _tx.GetReadOnlyPage(childParentNumber);
+			    }
+				BinarySearch(page, end, _entrySize);
+		    } while (page.LastMatch >= 0);
+
+			return entriesDeleted;
+	    }
+
+		private int DeleteEntriesInPage(Page page, int startPosition, int endPosition, out bool allEntriesDeleted)
+	    {
+			page = _tx.ModifyPage(page.PageNumber, _parent, page);
+			var entriesDeleted = endPosition - startPosition;
+
+			var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+			largeHeader->NumberOfEntries -= entriesDeleted;
+			page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
+
+			if (page.FixedSize_NumberOfEntries == 0)
+			{
+				allEntriesDeleted = DeleteEntirePage(page);
+				return entriesDeleted;
+			}
+
+			allEntriesDeleted = false;
+
+			// Is root and small enough for embedded, convert
+			if (_cursor.Count == 0)
+			{
+				if (page.FixedSize_NumberOfEntries <= _maxEmbeddedEntries)
+				{
+					DeleteRangeInLargeRootPageAndConvertToEmbedded(page, startPosition, page.LastSearchPosition + 1,
+						page.FixedSize_NumberOfEntries + entriesDeleted - page.LastSearchPosition - 1);
+					return entriesDeleted;
+				}
+			}
+
+			if (page.LastSearchPosition == 0)
+			{
+				// if this is the very first item in the page, we can just change the start position
+				page.FixedSize_StartPosition += (ushort)_entrySize;
+			}
+			else
+			{
+				DeletePartInsideThePage(page, startPosition, endPosition, page.FixedSize_NumberOfEntries + entriesDeleted - page.LastSearchPosition - 1, _entrySize);
+				// deleted and we are done
+			}
+
+			return entriesDeleted;
+	    }
+
+		private void DeletePartInsideThePage(Page page, int startPosition, int endPosition, int copyCount, int size)
+		{
+			System.Diagnostics.Debug.Assert(endPosition > startPosition, "This is probably a bug.");
+			System.Diagnostics.Debug.Assert(copyCount >= 0, "We cannot copy negative amount. This is probably a bug.");
+			UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPosition * size),
+				page.Base + page.FixedSize_StartPosition + (endPosition * size),
+				size * copyCount);
+		}
+
+		private void DeleteRangeInLargeRootPageAndConvertToEmbedded(Page page, int startPosition, int endPosition, int copyCount)
+	    {
+			var ptr = _parent.DirectAdd(_treeName,
+						sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.FixedSize_NumberOfEntries));
+			var header = (FixedSizeTreeHeader.Embedded*)ptr;
+			header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+			header->ValueSize = _valSize;
+			header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
+			_flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+
+			Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
+				page.Base + page.FixedSize_StartPosition,
+				(_entrySize * startPosition));
+
+			Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * startPosition),
+				page.Base + page.FixedSize_StartPosition + (_entrySize * endPosition),
+				(_entrySize * copyCount));
+
+			_parent.FreePage(page);
+	    }
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <returns>True means all items are deleted</returns>
+	    private bool DeleteEntirePage(Page page)
+	    {
+			/*
+				Implementation details:
+					- removed entire page? Update parent
+					- removed entire page? and is root, remove all and delete entry
+			 */
+
+			_parent.FreePage(page);
+
+		    if (_cursor.Count == 0)
+		    {
+				// Root, remove all and delete entry
+				_parent.Delete(_treeName);
+				_flags = null;
+				return true; // This is the root, the tree doesn't have any entires left
+		    }
+
+			// Update parent
+		    var parentPage = _cursor.Pop();
+			var parentPageNumber = parentPage.PageNumber;
+		    parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
+		    parentPage.FixedSize_NumberOfEntries--;
+
+			if (parentPage.LastSearchPosition == 0)
+			{
+				// if this is the very first item in the page, we can just change the start position
+				parentPage.FixedSize_StartPosition += BranchEntrySize;
+			}
+			else
+			{
+				// branch pages must have at least 2 entries, so this is safe to do
+				DeleteEntryInPage (parentPage, BranchEntrySize);
+			}
+			var parentLastSearchPosition = parentPage.LastSearchPosition--;
+
+			// it has only one entry, we can delete it and switch with the last child item
+			if (parentPage.FixedSize_NumberOfEntries == 1)
+			{
+				var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
+				var childPage = _tx.GetReadOnlyPage(lastChildNumber);
+				Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
+				parentPage.PageNumber = parentPageNumber; // overwritten in copy
+				_parent.FreePage(childPage);
+
+				if (parentLastSearchPosition == 0)
+				{
+					_cursor.Push(parentPage);
+				}
+		    }
+			else
+			{
+				_cursor.Push(parentPage);
+			}
+
+			return false; // This is not the root, the tree has more entires
+	    }
+
+	    private void DeleteEntryInPage(Page parentPage, int size)
+	    {
+			DeletePartInsideThePage(parentPage, parentPage.LastSearchPosition, parentPage.LastSearchPosition + 1, parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition, size);
+		}
+
+	    private void RemoveLargeEntry(long key)
         {
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
@@ -489,24 +776,8 @@ namespace Voron.Trees.Fixed
                 // root page
                 if (page.FixedSize_NumberOfEntries <= _maxEmbeddedEntries)
                 {
-                    var ptr = _parent.DirectAdd(_treeName,
-                        sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.FixedSize_NumberOfEntries));
-                    var header = (FixedSizeTreeHeader.Embedded*)ptr;
-                    header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-                    header->ValueSize = _valSize;
-                    header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
-                    _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-
-                    Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
-                        page.Base + page.FixedSize_StartPosition,
-                        (_entrySize * page.LastSearchPosition));
-
-                    Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.LastSearchPosition),
-                        page.Base + page.FixedSize_StartPosition + (_entrySize * page.LastSearchPosition) + _entrySize,
-                        (_entrySize * (page.FixedSize_NumberOfEntries - page.LastSearchPosition)));
-
-
-                    _parent.FreePage(page);
+					DeleteRangeInLargeRootPageAndConvertToEmbedded(page, page.LastSearchPosition, page.LastSearchPosition + 1, 
+						page.FixedSize_NumberOfEntries - page.LastSearchPosition);
                     return;
                 }
             }
@@ -520,43 +791,13 @@ namespace Voron.Trees.Fixed
                     return;
                 }
 
-				UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
-                    page.Base + page.FixedSize_StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
-                    _entrySize * (page.FixedSize_NumberOfEntries - page.LastSearchPosition));
+	            DeleteEntryInPage(page, _entrySize);
                 // deleted and we are done
                 return;
             }
 
             // now we need to remove from parent
-            _parent.FreePage(page);
-
-            var parentPage = _cursor.Pop();
-            var parentPageNumber = parentPage.PageNumber;
-            parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
-            parentPage.FixedSize_NumberOfEntries--;
-
-            if (page.LastSearchPosition == 0)
-            {
-                // if this is the very first item in the page, we can just change the start position
-                parentPage.FixedSize_StartPosition += BranchEntrySize;
-            }
-            else
-            {
-                // branch pages must have at least 2 entries, so this is safe to do
-				UnmanagedMemory.Move(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize),
-                    parentPage.Base + parentPage.FixedSize_StartPosition + ((parentPage.LastSearchPosition + 1) * BranchEntrySize),
-                    BranchEntrySize * (parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition));
-            }
-
-            // it has only one entry, we can delete it and switch with the last child item
-            if (parentPage.FixedSize_NumberOfEntries > 1)
-                return;
-
-            var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
-            var childPage = _tx.GetReadOnlyPage(lastChildNumber);
-            Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
-            parentPage.PageNumber = parentPageNumber;// overwritten in copy
-			_parent.FreePage(childPage);
+		    DeleteEntirePage(page);
         }
 
         private void RemoveEmbeddedEntry(long key)
@@ -567,7 +808,7 @@ namespace Voron.Trees.Fixed
             var pos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, key, _entrySize);
             if (_lastMatch != 0)
             {
-                return; // not here, nothing to do
+				return; // not here, nothing to do
             }
             if (startingEntryCount == 1)
             {
@@ -575,7 +816,7 @@ namespace Voron.Trees.Fixed
                 _flags = null;
                 _parent.Delete(_treeName);
 				header->NumberOfEntries--;
-                return;
+				return;
             }
 
             byte* newData = _parent.DirectAdd(_treeName,
@@ -583,11 +824,12 @@ namespace Voron.Trees.Fixed
 
             int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
             Memory.Copy(newData, ptr, srcCopyStart);
-            header = (FixedSizeTreeHeader.Embedded*)newData;
+			Memory.Copy(newData + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
+			
+			header = (FixedSizeTreeHeader.Embedded*)newData;
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-            Memory.Copy(newData + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
         }
 
         public Slice Read(long key)
@@ -641,5 +883,26 @@ namespace Voron.Trees.Fixed
 
             return null;
         }
+
+	    public long NumberOfEntries
+	    {
+		    get
+		    {
+			    var header = _parent.DirectRead(_treeName);
+			    if (header == null)
+				    return 0;
+
+				var flags = (FixedSizeTreeHeader.OptionFlags)header[1];
+			    switch (flags)
+			    {
+				    case FixedSizeTreeHeader.OptionFlags.Embedded:
+					    return ((FixedSizeTreeHeader.Embedded*) header)->NumberOfEntries;
+				    case FixedSizeTreeHeader.OptionFlags.Large:
+					    return ((FixedSizeTreeHeader.Large*) header)->NumberOfEntries;
+				    default:
+					    return 0;
+			    }
+		    }
+	    }
     }
 }
