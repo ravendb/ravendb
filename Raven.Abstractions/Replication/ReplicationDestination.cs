@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 
 using Raven.Abstractions.Cluster;
@@ -108,6 +110,11 @@ namespace Raven.Abstractions.Replication
 		/// Gets or sets the Client URL of the replication destination
 		/// </summary>
 		public string ClientVisibleUrl { get; set; }
+
+		/// <summary>
+		/// Gets or sets JS scripts that will transform documents when sending them to a destination
+		/// </summary>
+		public Dictionary<string, ScriptedPatchRequest> PatchScripts { get; set; } 
 
 		public string Humane
 		{

@@ -1165,8 +1165,11 @@ more responsive application.
 
 			var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 			var changedData = changes != null ? new List<DocumentsChanges>() : null;
-			var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
-				|| (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
+			
+			var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
+			var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
+
+			var changed = (isObjectEquals == false) || (isMetadataEquals == false);
 
 			if (changes != null && changedData.Count > 0)
 				changes[documentMetadata.Key] = changedData.ToArray();
