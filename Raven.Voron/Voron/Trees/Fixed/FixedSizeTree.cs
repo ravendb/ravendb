@@ -50,7 +50,9 @@ namespace Voron.Trees.Fixed
 
         public long[] Debug(Page p)
         {
-            return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
+	        if (p == null)
+		        return null;
+	        return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
                 p.IsLeaf ? _entrySize : BranchEntrySize);
         }
 
@@ -723,6 +725,7 @@ namespace Voron.Trees.Fixed
 				// branch pages must have at least 2 entries, so this is safe to do
 				DeleteEntryInPage (parentPage, BranchEntrySize);
 			}
+			var parentLastSearchPosition = parentPage.LastSearchPosition--;
 
 			// it has only one entry, we can delete it and switch with the last child item
 			if (parentPage.FixedSize_NumberOfEntries == 1)
@@ -732,8 +735,16 @@ namespace Voron.Trees.Fixed
 				Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
 				parentPage.PageNumber = parentPageNumber; // overwritten in copy
 				_parent.FreePage(childPage);
+
+				if (parentLastSearchPosition == 0)
+				{
+					_cursor.Push(parentPage);
+				}
 		    }
-			_cursor.Push(parentPage);
+			else
+			{
+				_cursor.Push(parentPage);
+			}
 
 			return false; // This is not the root, the tree has more entires
 	    }
@@ -741,7 +752,6 @@ namespace Voron.Trees.Fixed
 	    private void DeleteEntryInPage(Page parentPage, int size)
 	    {
 			DeletePartInsideThePage(parentPage, parentPage.LastSearchPosition, parentPage.LastSearchPosition + 1, parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition, size);
-			parentPage.LastSearchPosition--;
 		}
 
 	    private void RemoveLargeEntry(long key)
