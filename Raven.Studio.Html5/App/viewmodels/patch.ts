@@ -151,6 +151,7 @@ class patch extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',

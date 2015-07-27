@@ -39,6 +39,19 @@ interface Date {
     getUTCSecondsFormatted(): string;
 }
 
+interface Spinner {
+	stop();
+	spin(): Spinner;
+	spin(p1: HTMLElement);
+	el: Node;
+}
+
+declare var Spinner: {
+	 new (spinnerOptions: { lines: number; length: number; width: number; radius: number; scale: number; corners: number;
+		color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
+		className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string }): Spinner;
+}
+
 declare class EventSource {
     constructor(string);
     close();
