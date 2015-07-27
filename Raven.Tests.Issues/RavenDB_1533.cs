@@ -167,7 +167,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldNotThrowWhenDeletingUnchangedLoadedObject()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewRemoteDocumentStore(fiddler:true))
             {
                 var developer1 = new Developer
                 {
