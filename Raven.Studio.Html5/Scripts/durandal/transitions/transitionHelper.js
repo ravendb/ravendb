@@ -59,6 +59,17 @@ define(['durandal/system', 'jquery'], function (system, $) {
         'wobble'
 	];
 
+	var skippedModuleIds = [
+		"viewmodels/indexing",
+		"viewmodels/indexPerformance",
+		"viewmodels/indexStats",
+		"viewmodels/indexBatchSize",
+		"viewmodels/indexPrefetches",
+		"viewmodels/requests",
+		"viewmodels/requestsCount",
+		"viewmodels/requestTracing"
+	];
+
 	function animValue(type) {
 		if (Object.prototype.toString.call(type) == '[object String]') {
 			return type;
@@ -83,19 +94,9 @@ define(['durandal/system', 'jquery'], function (system, $) {
           $newView = $(newChild).removeClass(outAn); // just need to remove outAn here, keeping the animated class so we don't get a "flash"
 
 		return system.defer(function (dfd) {
-			if (newChild) {
-
-				$newView = $(newChild);
-				if (settings.activeView) {
-					outTransition(inTransition);
-				} else {
-					inTransition();
-				}
-			}
-
 			function outTransition(callback) {
 				$previousView = $(activeView);
-				$previousView.addClass('animated')
+				$previousView.addClass('animated');
 				$previousView.addClass(outAn);
 				setTimeout(function () {
 					if (callback) {
@@ -120,11 +121,25 @@ define(['durandal/system', 'jquery'], function (system, $) {
 				}, App.duration);
 			}
 
+			if (newChild) {
+				if (skippedModuleIds.indexOf(settings.model.__moduleId__) > -1) {
+					dfd.resolve(true);
+					return;
+				}
+
+				$newView = $(newChild);
+				if (settings.activeView) {
+					outTransition(inTransition);
+				} else {
+					inTransition();
+				} 
+			}
+
 		}).promise();
 	}
 
 	return App = {
-		duration: 1000 * .35, // seconds
+		duration: 1000 * .23, // seconds
 		create: function (settings) {
 			settings = ensureSettings(settings);
 			return doTrans(settings);

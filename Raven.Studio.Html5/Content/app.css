@@ -6656,18 +6656,6 @@ body {
   text-shadow: rgba(0, 0, 0, 0.5) 0 0 15px;
   text-transform: uppercase;
 }
-.splash-spinner {
-  position: fixed;
-  z-index: 999;
-  height: 2em;
-  width: 2em;
-  overflow: show;
-  margin: auto;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-}
 .navbar-fixed-top .navbar-inner {
   padding-left: 1em;
   padding-right: 1em;
@@ -7184,7 +7172,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   margin-left: 0;
 }
 #watchTrafficContainer .form-group {
-  margin-left: 1%;
+  margin-left: 3px;
 }
 #watchTrafficContainer .selected .column {
   background-color: #ffffcc;
@@ -7925,6 +7913,87 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #indexErrorsContainer .unread td,
 #requestTracingContainer .unread td {
   font-weight: bold;
+}
+#logsContainer .logButtons,
+#alertsContainer .logButtons,
+#indexErrorsContainer .logButtons,
+#requestTracingContainer .logButtons {
+  margin-left: 0;
+}
+#logsContainer .form-group,
+#alertsContainer .form-group,
+#indexErrorsContainer .form-group,
+#requestTracingContainer .form-group {
+  margin-left: 1px;
+}
+#logsContainer .column,
+#alertsContainer .column,
+#indexErrorsContainer .column,
+#requestTracingContainer .column {
+  display: inline-block;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-word-wrap: break-word;
+  word-wrap: break-word;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #ddd;
+  margin: 0;
+  padding: 5px;
+  height: 30px;
+}
+#logsContainer .selected .column,
+#alertsContainer .selected .column,
+#indexErrorsContainer .selected .column,
+#requestTracingContainer .selected .column {
+  background-color: #ffffcc;
+}
+#logsContainer #logTableContainer,
+#alertsContainer #logTableContainer,
+#indexErrorsContainer #logTableContainer,
+#requestTracingContainer #logTableContainer {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+#logsContainer #logTableContainer .logHeaders,
+#alertsContainer #logTableContainer .logHeaders,
+#indexErrorsContainer #logTableContainer .logHeaders,
+#requestTracingContainer #logTableContainer .logHeaders {
+  max-width: 80vw;
+  width: 80vw;
+  margin-left: calc(0vw);
+}
+#logsContainer #logTableContainer .logRecords,
+#alertsContainer #logTableContainer .logRecords,
+#indexErrorsContainer #logTableContainer .logRecords,
+#requestTracingContainer #logTableContainer .logRecords {
+  max-height: 60vh;
+  max-width: 80vw;
+  width: 80vw;
+  overflow-y: auto;
+}
+#logsContainer #logTableContainer .logRecords-small,
+#alertsContainer #logTableContainer .logRecords-small,
+#indexErrorsContainer #logTableContainer .logRecords-small,
+#requestTracingContainer #logTableContainer .logRecords-small {
+  max-height: 30vh;
+}
+#logsContainer #logTableContainer .log-details,
+#alertsContainer #logTableContainer .log-details,
+#indexErrorsContainer #logTableContainer .log-details,
+#requestTracingContainer #logTableContainer .log-details {
+  max-height: 30vh;
+  height: 30vh;
+  overflow-y: auto;
+  border-top-width: 2px;
+  margin-top: 1%;
+  padding-top: 1%;
+  border: thin dashed black;
+  width: 60vw;
+  margin-left: 1%;
 }
 #databaseSettingsContainer #dbDocEditor {
   height: 500px;

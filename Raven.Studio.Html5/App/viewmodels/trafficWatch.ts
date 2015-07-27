@@ -24,18 +24,19 @@ class trafficWatch extends viewModelBase {
     maxRequestDuration = ko.observable<number>(0);
     startTraceTime = ko.observable<Moment>();
     startTraceTimeHumanized :KnockoutComputed<string>;
-    showLogDetails=ko.observable<boolean>(false);
+    showLogDetails = ko.observable<boolean>(false);
     logRecordsElement:Element;
 
     constructor() {
         super();
+
         this.startTraceTimeHumanized = ko.computed(()=> {
             var a = this.now();
             if (!!this.startTraceTime()) {
                 return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
             }
-        return "";
-    });
+			return "";
+		});
     }
 
     canActivate(args): any {
@@ -98,7 +99,6 @@ class trafficWatch extends viewModelBase {
             }
         });
     }
-
 
     configureConnection() {
         var configDialog = new watchTrafficConfigDialog();
@@ -281,7 +281,7 @@ class trafficWatch extends viewModelBase {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
         }
     }
