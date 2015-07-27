@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
+using Raven.Json.Linq;
+
+using Voron;
+using Voron.Impl;
+using Voron.Impl.Paging;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
-	using System;
-	using System.IO;
-	using System.Text;
-
-	using Raven.Abstractions.Extensions;
-	using Raven.Json.Linq;
-
-	using global::Voron;
-	using global::Voron.Impl;
-	using global::Voron.Trees;
-
 	internal abstract class TableBase
 	{
         protected IBufferPool BufferPool { get; private set; }
@@ -43,21 +42,21 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
 		{
-		    var stream = new BufferPoolMemoryStream();
-            stream.Write(value, 0, value.Length);
-		    stream.Position = 0;
-
-            writeBatch.Add((Slice) key, stream, TableName, expectedVersion);
+            Add(writeBatch, (Slice) key, value, expectedVersion);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
+			AssertKey(key);
+
 			writeBatch.Add(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
 		}
 
         public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
 		{
-            var stream = new BufferPoolMemoryStream();
+			AssertKey(key);
+
+			var stream = new BufferPoolMemoryStream();
             value.WriteTo(stream);
             stream.Position = 0;
 
@@ -71,7 +70,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
         public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value, ushort? expectedVersion = null)
         {
-            var stream = new BufferPoolMemoryStream();
+			AssertKey(key);
+
+			var stream = new BufferPoolMemoryStream();
             stream.Write(value, 0, value.Length);
             stream.Position = 0;
 
@@ -80,11 +81,15 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Increment(WriteBatch writeBatch, Slice key, long delta, ushort? expectedVersion = null)
 		{
+			AssertKey(key);
+
 			writeBatch.Increment(key, delta, TableName, expectedVersion);
 		}
 
 		public virtual void MultiAdd(WriteBatch writeBatch, Slice key, Slice value, ushort? expectedVersion = null)
 		{
+			AssertKey(key);
+
 			writeBatch.MultiAdd(key, value, TableName, expectedVersion);
 		}
 
@@ -121,22 +126,32 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Delete(WriteBatch writeBatch, string key, ushort? expectedVersion = null)
 		{
-            writeBatch.Delete((Slice)key, TableName, expectedVersion);
+			Delete(writeBatch, (Slice)key, expectedVersion);
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)
 		{
+			AssertKey(key);
+
 			writeBatch.Delete(key, TableName, expectedVersion);
 		}
 
 		public virtual void MultiDelete(WriteBatch writeBatch, Slice key, Slice value, ushort? expectedVersion = null)
 		{
+			AssertKey(key);
+
 			writeBatch.MultiDelete(key, value, TableName, expectedVersion);
 		}
 
 		public virtual ushort? ReadVersion(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)
 		{
 			return snapshot.ReadVersion(TableName, key, writeBatch);
+		}
+
+		protected void AssertKey(Slice key)
+		{
+			if (AbstractPager.IsKeySizeValid(key.Size, false) == false)
+				throw new ArgumentException(string.Format("The key must be a maximum of {0} bytes in UTF8, key is: '{1}'", AbstractPager.GetMaxKeySize(false), key), "key");
 		}
 
 		//for debugging purposes
