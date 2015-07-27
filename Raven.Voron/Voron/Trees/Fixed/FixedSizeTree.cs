@@ -544,9 +544,9 @@ namespace Voron.Trees.Fixed
 			return entriesDeleted;
 	    }
 
-	    private long DeleteRangeLarge(long start, long end, out bool isAllRemoved)
+	    private long DeleteRangeLarge(long start, long end, out bool wasAllRemoved)
 		{
-		    isAllRemoved = false;
+		    wasAllRemoved = false;
 
 		    var page = FindPageFor(start);
 		    if (page.LastMatch > 0)
@@ -563,7 +563,7 @@ namespace Voron.Trees.Fixed
 #if DEBUG
 			    i++;
 #endif
-				entriesDeleted += DeleteEntiresInPage(page, startSearchPosition, page.LastSearchPosition + 1, out isAllRemoved);
+				entriesDeleted += DeleteEntriesInPage(page, startSearchPosition, page.LastSearchPosition + 1, out wasAllRemoved);
 				startSearchPosition = 0;
 			    
 				if (page.LastMatch == 0 ||
@@ -606,7 +606,7 @@ namespace Voron.Trees.Fixed
 					// TODO: Please test this, this wasn't been tested
 					Debugger.Break();
 					_cursor.Push(page);
-					childParentNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
+					childParentNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
 					page = _tx.GetReadOnlyPage(childParentNumber);
 			    }
 				BinarySearch(page, end, _entrySize);
@@ -615,7 +615,7 @@ namespace Voron.Trees.Fixed
 			return entriesDeleted;
 	    }
 
-		private int DeleteEntiresInPage(Page page, int startPosition, int endPosition, out bool allEntriesDeleted)
+		private int DeleteEntriesInPage(Page page, int startPosition, int endPosition, out bool allEntriesDeleted)
 	    {
 			page = _tx.ModifyPage(page.PageNumber, _parent, page);
 			var entriesDeleted = endPosition - startPosition;
