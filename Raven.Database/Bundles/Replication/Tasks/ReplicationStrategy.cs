@@ -126,6 +126,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public List<string> CollectionsToReplicate { get; set; }
 
+		public Dictionary<string, ScriptedPatchRequest> PatchScripts { get; set; } 
+
 		public string CurrentDatabaseId { get; set; }
 
 		public TransitiveReplicationOptions ReplicationOptionsBehavior { get; set; }
