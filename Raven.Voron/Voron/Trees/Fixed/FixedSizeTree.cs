@@ -581,13 +581,19 @@ namespace Voron.Trees.Fixed
 					continue;
 			    }
 
+				if (DateTime.UtcNow > new DateTime(2015, 9, 1))
+					throw new NotImplementedException("Delete all Debugger.Break() methods");
+		
 			    if (parentPage.LastSearchPosition >= parentPage.FixedSize_NumberOfEntries - 1)
 			    {
 				    if (_cursor.Count > 0)
 					    continue;
 
 				    if (parentPage.IsBranch)
-					    return entriesDeleted;
+				    {
+						Debugger.Break();
+						return entriesDeleted; // When this happens?
+				    }
 
 				    // TODO: Please test this, this wasn't been tested
 				    Debugger.Break();

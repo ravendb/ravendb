@@ -312,5 +312,52 @@ namespace Voron.Tests.FixedSize
 				}
 			}
 		}
+
+		[Theory]
+		[InlineData(100000)]
+		[InlineData(500000)]
+		[InlineData(1000000)]
+		[InlineData(2000000)]
+		public void CanDeleteRange_RandomRanges(int count)
+		{
+			var bytes = new byte[48];
+			var slice = new Slice(bytes);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+				for (int i = 1; i <= count; i++)
+				{
+					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+					fst.Add(i, slice);
+				}
+
+				tx.Commit();
+			}
+
+			var random = new Random();
+			for (var i = 0; i < count/100; i++)
+			{
+				var start = random.Next(count);
+				var end = random.Next(start, count);
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+					bool allRemoved;
+					var itemsRemoved = fst.DeleteRange(start, end, out allRemoved);
+					if (itemsRemoved == -1)
+					{
+						break;
+					}
+					/*Assert.Equal(count - 19999, itemsRemoved);
+					Assert.Equal(false, allRemoved);*/
+
+					tx.Commit();
+				}
+			}
+		}
 	}
 }
