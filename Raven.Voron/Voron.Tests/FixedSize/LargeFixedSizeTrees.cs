@@ -250,7 +250,7 @@ namespace Voron.Tests.FixedSize
 
 		[Theory]
 		[InlineData(1000000)]
-		public void CanDeleteRange_Branch(int count)
+		public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
 		{
 			var bytes = new byte[48];
 			var slice = new Slice(bytes);
