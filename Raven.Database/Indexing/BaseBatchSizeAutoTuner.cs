@@ -195,28 +195,28 @@ namespace Raven.Database.Indexing
 	        var isIndexingUsingTooMuchMemory = IsProcessingUsingTooMuchMemory;
 	        if (isIndexingUsingTooMuchMemory == false) //skip all other heuristics if indexing takes too much memory
 	        {
-			if (
-				// we had as much work to do as we are currently capable of handling,
-				// we might need to increase, but certainly not decrease the batch size
-				amountOfItemsToProcess >= NumberOfItemsToProcessInSingleBatch ||
-				// we haven't gone over the max latency limit, no reason to decrease yet
-				processingDuration < context.Configuration.MaxProcessingRunLatency)
-			{
-				return false;
-			}
+			    if (
+				    // we had as much work to do as we are currently capable of handling,
+				    // we might need to increase, but certainly not decrease the batch size
+				    amountOfItemsToProcess >= NumberOfItemsToProcessInSingleBatch ||
+				    // we haven't gone over the max latency limit, no reason to decrease yet
+				    processingDuration < context.Configuration.MaxProcessingRunLatency)
+			    {
+				    return false;
+			    }
 
-			if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
-				return true;
+			    if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
+				    return true;
 
-			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
+			    // we didn't have a lot of work to do, so let us see if we can reduce the batch size
 
-			// we are at the configured minimum, nothing to do
-			if (NumberOfItemsToProcessInSingleBatch == InitialNumberOfItems)
-				return true;
+			    // we are at the configured minimum, nothing to do
+			    if (NumberOfItemsToProcessInSingleBatch == InitialNumberOfItems)
+				    return true;
 
-			// we were above the max/2 the last few times, we can't reduce the work load now
-			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToProcessInSingleBatch/2))
-				return true;
+			    // we were above the max/2 the last few times, we can't reduce the work load now
+			    if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToProcessInSingleBatch/2))
+				    return true;
 	        }
 
 			var old = NumberOfItemsToProcessInSingleBatch;
@@ -225,7 +225,7 @@ namespace Raven.Database.Indexing
 			// we just reduced the batch size because we have two concurrent runs where we had
 			// less to do than the previous runs. That indicate the the busy period is over, maybe we
 			// run out of data? Or the rate of data entry into the system was just reduce?
-			// At any rate, there is a strong likelyhood of having a lot of garbage in the system
+			// At any rate, there is a strong likelihood of having a lot of garbage in the system
 			// let us ask the GC nicely to clean it
 
 			// but we only want to do it if the change was significant 
