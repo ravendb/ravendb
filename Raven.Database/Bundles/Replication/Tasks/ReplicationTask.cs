@@ -13,6 +13,7 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database;
+using Raven.Database.Bundles.Replication.Tasks.Handlers;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -1329,54 +1330,45 @@ namespace Raven.Bundles.Replication.Tasks
 					var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 					int docsSinceLastReplEtag = 0;
+					List<JsonDocument> fetchedDocs;
 					List<JsonDocument> docsToReplicate;
-					List<JsonDocument> filteredDocsToReplicate;
 					result.LastEtag = lastEtag;
 
 					while (true)
 					{
 						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
+						fetchedDocs = GetDocsToReplicate(actions, prefetchingBehavior, result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
-						filteredDocsToReplicate =
-							docsToReplicate
-								.Where(document =>
-								{
-									var info = docDb.Documents.GetRecentTouchesFor(document.Key);
-									if (info != null)
-									{
-										if (info.TouchedEtag.CompareTo(result.LastEtag) > 0)
-										{
-											log.Debug(
-												"Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
-												document.Key, destinationId, info.TouchedEtag);
-											return false;
-										}
-									}
+						IEnumerable<JsonDocument> handled = fetchedDocs;
 
-									string reason;
-									return destination.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) &&
-										   prefetchingBehavior.FilterDocuments(document);
-								})
-								.ToList();
-
-						docsSinceLastReplEtag += docsToReplicate.Count;
-						result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
-							docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
-						result.CountOfFilteredDocumentsWhichOriginFromDestination +=
-							docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
-
-						if (docsToReplicate.Count > 0)
+						foreach (var handler in new IReplicatedDocsHandler[]
 						{
-							var lastDoc = docsToReplicate.Last();
+							new FilterReplicatedDocs(docDb.Documents, destination, prefetchingBehavior, destinationId, result.LastEtag),
+							new PatchReplicatedDocs(docDb, destination)
+						})
+						{
+							handled = handler.Handle(handled);
+						}
+
+						docsToReplicate = handled.ToList();								
+
+						docsSinceLastReplEtag += fetchedDocs.Count;
+						result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
+							fetchedDocs.Count(doc => destination.IsSystemDocumentId(doc.Key));
+						result.CountOfFilteredDocumentsWhichOriginFromDestination +=
+							fetchedDocs.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
+
+						if (fetchedDocs.Count > 0)
+						{
+							var lastDoc = fetchedDocs.Last();
 							Debug.Assert(lastDoc.Etag != null);
 							result.LastEtag = lastDoc.Etag;
 							if (lastDoc.LastModified.HasValue)
 								result.LastLastModified = lastDoc.LastModified.Value;
 						}
 
-						if (docsToReplicate.Count == 0 || filteredDocsToReplicate.Count != 0)
+						if (fetchedDocs.Count == 0 || docsToReplicate.Count != 0)
 						{
 							break;
 						}
@@ -1393,16 +1385,16 @@ namespace Raven.Bundles.Replication.Tasks
 							return string.Format("No documents to replicate to {0} - last replicated etag: {1}", destination,
 								lastEtag);
 
-						if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
+						if (docsSinceLastReplEtag == docsToReplicate.Count)
 							return string.Format("Replicating {0} docs [>{1}] to {2}.",
 								docsSinceLastReplEtag,
 								lastEtag,
 								destination);
 
-						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
+						var diff = fetchedDocs.Except(docsToReplicate).Select(x => x.Key);
 						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
 							docsSinceLastReplEtag,
-							filteredDocsToReplicate.Count,
+							docsToReplicate.Count,
 							destination,
 							string.Join(", ", diff),
 							lastEtag);
@@ -1413,14 +1405,14 @@ namespace Raven.Bundles.Replication.Tasks
 		                {"StartEtag", lastEtag.ToString()},
 		                {"EndEtag", result.LastEtag.ToString()},
 		                {"Count", docsSinceLastReplEtag},
-		                {"FilteredCount", filteredDocsToReplicate.Count}
+		                {"FilteredCount", docsToReplicate.Count}
 		            });
 
-					result.LoadedDocs = filteredDocsToReplicate;
+					result.LoadedDocs = docsToReplicate;
 					docDb.WorkContext.MetricsCounters.GetReplicationBatchSizeMetric(destination).Mark(docsSinceLastReplEtag);
 					docDb.WorkContext.MetricsCounters.GetReplicationBatchSizeHistogram(destination).Update(docsSinceLastReplEtag);
 
-					result.Documents = new RavenJArray(filteredDocsToReplicate
+					result.Documents = new RavenJArray(docsToReplicate
 						.Select(x =>
 						{
 							JsonDocument.EnsureIdInMetadata(x);
@@ -1771,6 +1763,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				url = url + "/databases/" + destination.Database;
 			}
+
 			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
 			{
 				Url = url,
@@ -1779,12 +1772,18 @@ namespace Raven.Bundles.Replication.Tasks
 
 			replicationStrategy.CollectionsToReplicate = destination.SourceCollections.ToList();
 
+			if (destination.PatchScripts != null)
+			{
+				replicationStrategy.PatchScripts = new Dictionary<string, ScriptedPatchRequest>(destination.PatchScripts, StringComparer.OrdinalIgnoreCase);
+			}
+			
 			if (string.IsNullOrEmpty(destination.Username) == false)
 			{
 				replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
 					? new NetworkCredential(destination.Username, destination.Password)
 					: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
 			}
+
 			return replicationStrategy;
 		}
 
