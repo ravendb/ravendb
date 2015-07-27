@@ -223,75 +223,75 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
 		{
-							using (docDb.DisableAllTriggersForCurrentThread())
-							{
-								var destinations = GetReplicationDestinations();
+			using (docDb.DisableAllTriggersForCurrentThread())
+			{
+				var destinations = GetReplicationDestinations();
 
-								if (destinations.Length == 0)
-								{
-									WarnIfNoReplicationTargetsWereFound();
+				if (destinations.Length == 0)
+				{
+					WarnIfNoReplicationTargetsWereFound();
 					tcsReplicationOnce.SetResult(null);
 					return tcsReplicationOnce.Task;
-								}
-				
-									var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+				}
 
-									var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
-									var destinationForReplication = destinations.Where(
-										dest =>
-										{
-											if (copyOfrunningBecauseOfDataModifications == false) return true;
-											return IsNotFailing(dest, currentReplicationAttempts);
-										}).ToList();
+				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-									CleanupPrefetchingBehaviors(destinations.Select(x => x.ConnectionStringOptions.Url),
-										destinations.Except(destinationForReplication).Select(x => x.ConnectionStringOptions.Url));
+				var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
+				var destinationForReplication = destinations.Where(
+					dest =>
+					{
+						if (copyOfrunningBecauseOfDataModifications == false) return true;
+						return IsNotFailing(dest, currentReplicationAttempts);
+					}).ToList();
 
-									var startedTasks = new List<Task>();
+				CleanupPrefetchingBehaviors(destinations.Select(x => x.ConnectionStringOptions.Url),
+					destinations.Except(destinationForReplication).Select(x => x.ConnectionStringOptions.Url));
 
-									foreach (var dest in destinationForReplication)
-									{
-										var destination = dest;
-										var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
+				var startedTasks = new List<Task>();
+
+				foreach (var dest in destinationForReplication)
+				{
+					var destination = dest;
+					var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
 					if (holder.Wait(0) == false)
 					{
-											log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
-											continue;
-										}
+						log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
+						continue;
+					}
 
-										var replicationTask = Task.Factory.StartNew(
-											() =>
-											{
-												using (LogContext.WithDatabase(docDb.Name))
-												using (CultureHelper.EnsureInvariantCulture())
-												{
-													try
-													{
-														if (ReplicateTo(destination))
-															docDb.WorkContext.NotifyAboutWork();
-													}
-													catch (Exception e)
-													{
-														log.ErrorException("Could not replicate to " + destination, e);
-													}
-												}
-											});
+					var replicationTask = Task.Factory.StartNew(
+						() =>
+						{
+							using (LogContext.WithDatabase(docDb.Name))
+							using (CultureHelper.EnsureInvariantCulture())
+							{
+								try
+								{
+									if (ReplicateTo(destination))
+										docDb.WorkContext.NotifyAboutWork();
+								}
+								catch (Exception e)
+								{
+									log.ErrorException("Could not replicate to " + destination, e);
+								}
+							}
+						});
 
-										startedTasks.Add(replicationTask);
+					startedTasks.Add(replicationTask);
 
-										activeTasks.Enqueue(replicationTask);
-										replicationTask.ContinueWith(
-											_ =>
-											{
-												// here we purge all the completed tasks at the head of the queue
-												Task task;
-												while (activeTasks.TryPeek(out task))
-												{
-													if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-													activeTasks.TryDequeue(out task); // remove it from end
-												}
-											});
-									}
+					activeTasks.Enqueue(replicationTask);
+					replicationTask.ContinueWith(
+						_ =>
+						{
+							// here we purge all the completed tasks at the head of the queue
+							Task task;
+							while (activeTasks.TryPeek(out task))
+							{
+								if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+								activeTasks.TryDequeue(out task); // remove it from end
+							}
+						});
+				}
 
 				return Task.WhenAll(startedTasks.ToArray()).ContinueWith(
 										t =>
@@ -308,8 +308,8 @@ namespace Raven.Bundles.Replication.Tasks
 												}
 											}
 										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
-								}
-							}
+			}
+		}
 
 		private void CleanupPrefetchingBehaviors(IEnumerable<string> allDestinations, IEnumerable<string> failingDestinations)
 		{
@@ -657,7 +657,7 @@ namespace Raven.Bundles.Replication.Tasks
 			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
-				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, string.Format("Replication for URL: {0}" ,destination.ConnectionStringOptions.DefaultDatabase) ));
+				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, string.Format("Replication for URL: {0}", destination.ConnectionStringOptions.DefaultDatabase)));
 
 			prefetchingBehavior.AdditionalInfo = string.Format("For destination: {0}. Last replicated etag: {1}", destination.ConnectionStringOptions.Url, destinationsReplicationInformationForSource.LastDocumentEtag);
 
@@ -1020,7 +1020,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null, bool replicateIndexes = true, bool replicateTransformers = true)
+		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null, bool replicateIndexes = true, bool replicateTransformers = true)
 		{
 			if (docDb.Disposed)
 				return false;
@@ -1042,21 +1042,21 @@ namespace Raven.Bundles.Replication.Tasks
 							var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
 							var replicatedIndexTombstones = new Dictionary<string, int>();
 
-							if(replicateIndexes)
-							ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
+							if (replicateIndexes)
+								ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
 							var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
 							var replicatedTransformerTombstones = new Dictionary<string, int>();
 
-							if(replicateTransformers)
-							ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
-							var candidatesForReplication = new List<Tuple<IndexDefinition,IndexingPriority>>();
+							if (replicateTransformers)
+								ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
+							var candidatesForReplication = new List<Tuple<IndexDefinition, IndexingPriority>>();
 
 							if (docDb.Indexes.Definitions.Length > 0 && replicateIndexes)
 							{
 								var sideBySideIndexes = docDb.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
-																				 .ToDictionary(x => x.Name, x=> x);
-								
+																				 .ToDictionary(x => x.Name, x => x);
+
 								foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
 								{
 									IndexDefinition sideBySideIndexDefinition;
@@ -1073,32 +1073,32 @@ namespace Raven.Bundles.Replication.Tasks
 							{
 								foreach (var definition in docDb.Transformers.Definitions)
 									ReplicateSingleTransformer(destination, definition);
-									}
+							}
 
 							docDb.TransactionalStorage.Batch(actions =>
 							{
 								if (replicateIndexes)
 								{
-								foreach (var indexTombstone in replicatedIndexTombstones)
-								{
+									foreach (var indexTombstone in replicatedIndexTombstones)
+									{
 										if (indexTombstone.Value != replicationDestinations.Length &&
-										    docDb.IndexStorage.HasIndex(indexTombstone.Key) == false)
+											docDb.IndexStorage.HasIndex(indexTombstone.Key) == false)
 											continue;
-									actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
-								}
+										actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+									}
 								}
 
 								if (replicateTransformers)
 								{
-								foreach (var transformerTombstone in replicatedTransformerTombstones)
-								{
+									foreach (var transformerTombstone in replicatedTransformerTombstones)
+									{
 										var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
 										if (transformerTombstone.Value != replicationDestinations.Length &&
-										    transfomerExists == false)
+											transfomerExists == false)
 											continue;
 
-									actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
-								}
+										actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+									}
 								}
 							});
 						}
@@ -1137,7 +1137,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 			replicationRequest.Write(serializedIndexDefinitions);
-			replicationRequest.ExecuteRequest();			
+			replicationRequest.ExecuteRequest();
 		}
 
 		private void ReplicateSingleSideBySideIndex(ReplicationStrategy destination, IndexDefinition indexDefinition, IndexDefinition sideBySideIndexDefinition)
@@ -1199,8 +1199,8 @@ namespace Raven.Bundles.Replication.Tasks
 			return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
-		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, 
-			ReplicationStrategy destination, 
+		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones,
+			ReplicationStrategy destination,
 			Dictionary<string, int> replicatedIndexTombstones)
 		{
 			if (indexTombstones.Count == 0)
@@ -1223,9 +1223,9 @@ namespace Raven.Bundles.Replication.Tasks
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
-				    
-				    replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
-				    replicatedIndexTombstones[tombstone.Key] = value + 1;
+
+					replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
+					replicatedIndexTombstones[tombstone.Key] = value + 1;
 				}
 				catch (Exception e)
 				{
@@ -1236,9 +1236,9 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, 
+		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones,
 			ReplicationStrategy destination,
-            Dictionary<string, int> replicatedTransformerTombstones)
+			Dictionary<string, int> replicatedTransformerTombstones)
 		{
 			if (transformerTombstones.Count == 0)
 				return;
@@ -1260,8 +1260,8 @@ namespace Raven.Bundles.Replication.Tasks
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
-                    replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
-                    replicatedTransformerTombstones[tombstone.Key] = value + 1;
+					replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
+					replicatedTransformerTombstones[tombstone.Key] = value + 1;
 				}
 				catch (Exception e)
 				{
@@ -1317,7 +1317,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var duration = Stopwatch.StartNew();
 			var result = new JsonDocumentsToReplicate
 			{
-			    LastEtag = Etag.Empty,
+				LastEtag = Etag.Empty,
 			};
 			try
 			{
