@@ -351,6 +351,24 @@ namespace Raven.Smuggler
 						}
 					}
 
+					// Load HiLo documents for selected collections
+					databaseOptions.Filters.ForEach(filter =>
+					{
+						if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+						{
+							filter.Values.ForEach(async collectionName =>
+							{
+								var doc = await exportStore.AsyncDatabaseCommands.GetAsync("Raven/Hilo/" + collectionName).ConfigureAwait(false);
+								if (doc == null)
+									return;
+
+								doc.Metadata["@id"] = doc.Key;
+								bulkInsertOperation.Store(doc.DataAsJson, doc.Metadata, doc.Key);
+								totalCount++;
+							});
+						}
+					});
+
 					// In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
 					// but we still need to continue until we finish all the docs.
 					var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();

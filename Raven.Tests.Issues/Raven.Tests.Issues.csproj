@@ -437,6 +437,7 @@
     <Compile Include="RavenDB_3629.cs" />
     <Compile Include="RavenDB_3625.cs" />
     <Compile Include="RavenDB_3647.cs" />
+    <Compile Include="RavenDB_3658.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />
