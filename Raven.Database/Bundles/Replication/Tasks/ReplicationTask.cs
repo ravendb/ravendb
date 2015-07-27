@@ -1772,9 +1772,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 			replicationStrategy.CollectionsToReplicate = destination.SourceCollections.ToList();
 
-			if (destination.PatchScripts != null)
+			if (destination.TransformScripts != null)
 			{
-				replicationStrategy.PatchScripts = new Dictionary<string, ScriptedPatchRequest>(destination.PatchScripts, StringComparer.OrdinalIgnoreCase);
+				replicationStrategy.TransformScripts = new Dictionary<string, string>(destination.TransformScripts, StringComparer.OrdinalIgnoreCase);
 			}
 			
 			if (string.IsNullOrEmpty(destination.Username) == false)

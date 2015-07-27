@@ -114,7 +114,7 @@ namespace Raven.Abstractions.Replication
 		/// <summary>
 		/// Gets or sets JS scripts that will transform documents when sending them to a destination
 		/// </summary>
-		public Dictionary<string, ScriptedPatchRequest> PatchScripts { get; set; } 
+		public Dictionary<string, string> TransformScripts { get; set; } 
 
 		public string Humane
 		{
