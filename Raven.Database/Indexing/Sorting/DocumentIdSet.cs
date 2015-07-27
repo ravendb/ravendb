@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing.Sorting
 
 			public SparseDocumentIdSet(int size)
 			{
-				_bitArraySize = size/_numOfBitArrays;
+				_bitArraySize = (int)Math.Ceiling((double)size/_numOfBitArrays);
 			}
 
 			public void Set(int docId)
@@ -229,7 +229,7 @@ namespace Raven.Database.Indexing.Sorting
 				var idx = docId/_bitArraySize;
 				if (_bitArrays[idx] == null)
 					return false;
-				return _bitArrays[idx].Get(idx);
+				return _bitArrays[idx].Get(docId % _bitArraySize);
 
 			}
 
