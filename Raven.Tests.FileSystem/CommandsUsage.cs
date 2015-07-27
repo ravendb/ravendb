@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -638,7 +639,7 @@ namespace Raven.Tests.FileSystem
 
             var fileSystemSpec = new FileSystemDocument
             {
-                Id = "Raven/FileSystem/" + newFileSystemName,
+				Id = Constants.FileSystem.Prefix + newFileSystemName,
                 Settings =
                  {
                      {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
@@ -650,17 +651,8 @@ namespace Raven.Tests.FileSystem
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
 
-            bool throwsException = false;
-            try
-            {
-                await adminClient.CreateFileSystemAsync(fileSystemSpec);
-            }
-            catch (InvalidOperationException)
-            {
-                throwsException = true;
-            }
-
-            Assert.True(throwsException);
+	        adminClient.Invoking(x => x.CreateFileSystemAsync(fileSystemSpec).Wait())
+					   .ShouldThrow<InvalidOperationException>();
         }
 
         [Fact]

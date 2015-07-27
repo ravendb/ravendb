@@ -77,13 +77,13 @@ namespace Raven.Database.FileSystem.Controllers
         public async Task<HttpResponseMessage> Put(string id, bool update = false)
         {
 			
-			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystem.DataDirectory);
-			if (fileSystemNameFormat.Message != null)
+			MessageWithStatusCode nameFormatErrorMessage;
+			if (IsValidName(id, Database.Configuration.FileSystem.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithObject(new
 				{
-                    Error = fileSystemNameFormat.Message
-				}, fileSystemNameFormat.ErrorCode);
+                    Error = nameFormatErrorMessage.Message
+				}, nameFormatErrorMessage.ErrorCode);
 			}
 
 			if (Authentication.IsLicensedForRavenFs == false)
