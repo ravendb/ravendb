@@ -7,8 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Raven.Abstractions.Data;
-using Raven.Imports.Newtonsoft.Json;
 
 using Raven.Abstractions.Cluster;
 
@@ -144,9 +142,9 @@ namespace Raven.Abstractions.Replication
 				   TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
 				   IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
 				   ((string.Equals(Url, other.Url, StringComparison.InvariantCultureIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
-				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase)));
+				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase))) &&
+				   Extensions.DictionaryExtensions.ContentEquals(TransformScripts, other.TransformScripts);
 		}
-
 
 		public override bool Equals(object obj)
 		{
