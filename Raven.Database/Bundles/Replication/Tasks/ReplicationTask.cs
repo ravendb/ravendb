@@ -81,10 +81,6 @@ namespace Raven.Bundles.Replication.Tasks
 			get { return destinationStats; }
 		}
 
-
-		[Obsolete("Use for debugging only!")]
-		public bool ShouldWaitForWork { get; set; }
-
 		public event Action ReplicationExecuted;
 
 		public ConcurrentDictionary<string, DateTime> Heartbeats
@@ -102,7 +98,6 @@ namespace Raven.Bundles.Replication.Tasks
 		public ReplicationTask()
 		{
 			TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
-			ShouldWaitForWork = true;
 		}
 
 		public void Execute(DocumentDatabase database)
@@ -1193,24 +1188,6 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void ReplicateSingleIndex(ReplicationStrategy destination, IndexDefinition definition)
-		{
-			try
-			{
-				var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(definition.Name), GetDebugInfomration());
-
-				var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethod.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
-				replicationRequest.Write(RavenJObject.FromObject(definition));
-				replicationRequest.ExecuteRequest();
-			}
-			catch (Exception e)
-			{
-				HandleRequestBufferingErrors(e, destination);
-
-				log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-			}
-		}
-
 		private void HandleRequestBufferingErrors(Exception e, ReplicationStrategy destination)
 		{
 			if (destination.ConnectionStringOptions.Credentials != null && string.Equals(e.Message, "This request requires buffering data to succeed.", StringComparison.OrdinalIgnoreCase))
@@ -1860,7 +1837,6 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-	    private readonly Task completedTask = new CompletedTask();
 
 		internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
 		{
