@@ -242,8 +242,8 @@ namespace Voron.Debugging
 
 	    private static void RenderHtmlTreeView(Action<TextWriter> action)
 	    {
-            //if (Debugger.IsAttached == false)
-            //    return;
+            if (Debugger.IsAttached == false)
+                return;
 
             var output = Path.GetTempFileName() + ".html";
 	        using (var sw = new StreamWriter(output))

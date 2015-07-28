@@ -362,7 +362,7 @@ namespace Voron.Tests.FixedSize
 		}
 
         [Theory]
-        [InlineData(5000)]
+        [InlineData(50000)]
         public void Tryouts_BTree(int count)
         {
             var bytes = new byte[255];
@@ -385,7 +385,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(5000)]
         public void Tryouts_BTree2(int count)
         {
-            var bytes = new byte[255];
+            var bytes = new byte[240];
             var slice = new Slice(bytes);
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

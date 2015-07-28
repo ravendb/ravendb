@@ -43,6 +43,9 @@ namespace Voron.Impl.FileHeaders
 
 			[FieldOffset(10)]
 			public long RootPageNumber;
-		}
+
+            [FieldOffset(18)]
+            public int Depth;
+        }
 	}
 }
