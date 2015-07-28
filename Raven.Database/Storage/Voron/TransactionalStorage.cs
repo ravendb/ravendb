@@ -278,6 +278,8 @@ namespace Raven.Storage.Voron
 		    uuidGenerator = generator;
 		    _documentCodecs = documentCodecs;
 
+			Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
+
 		    StorageEnvironmentOptions options = configuration.RunInMemory ?
 				CreateMemoryStorageOptionsFromConfiguration(configuration) :
 		        CreateStorageOptionsFromConfiguration(configuration);
@@ -290,6 +292,8 @@ namespace Raven.Storage.Voron
 			    schemaCreator.UpdateSchemaIfNecessary();
 
 		    SetupDatabaseId();
+
+			Log.Info("Voron storage initialized");
 		}
 
 	    private void SetupDatabaseId()
@@ -483,6 +487,8 @@ namespace Raven.Storage.Voron
 			if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
 				return;
 			
+			Log.Info("Starting to recover from failed compact. Data dir: " + sourcePath);
+
 			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
 				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
 				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
@@ -515,6 +521,8 @@ namespace Raven.Storage.Voron
 
 				Directory.Delete(compactionBackup, true);
 			}
+
+			Log.Info("Successfully recovered from failed compact");
 		}
 
 		public Guid ChangeId()
