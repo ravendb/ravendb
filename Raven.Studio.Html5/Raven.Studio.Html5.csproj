@@ -93,7 +93,6 @@
     <TypeScriptCompile Include="App\commands\timeSeries\updatePointCommand.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
-    <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
