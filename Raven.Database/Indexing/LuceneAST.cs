@@ -125,6 +125,7 @@ namespace Raven.Database.Indexing
         }
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
+	        configuration.FieldName = FieldName;
 	        var matchList = new List<string>();
 			foreach (var match in Matches)
 			{
