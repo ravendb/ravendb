@@ -50,14 +50,14 @@ namespace Raven.Database.Storage
 	public class GetItemsToReduceParams
 	{
 
-		public GetItemsToReduceParams(int index, IEnumerable<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
+		public GetItemsToReduceParams(int index, HashSet<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
 		{
 			Index = index;
 			Level = level;
 			LoadData = loadData;
 			ItemsToDelete = itemsToDelete;
 			ItemsAlreadySeen = new HashSet<Tuple<string, int>>();
-			ReduceKeys = new HashSet<string>(reduceKeys);
+			ReduceKeys = reduceKeys;
 		}
 
 		public int Index { get; private set; }

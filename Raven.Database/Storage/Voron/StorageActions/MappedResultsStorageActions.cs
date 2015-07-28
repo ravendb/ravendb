@@ -503,7 +503,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             });
 
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
+
+            var keysToRemove = new List<string>();
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
@@ -528,8 +530,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 						var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
 						var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
+
 					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
 						var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
+
 						if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 						{
 							if (seenLocally.Add(rowKey))
@@ -548,11 +552,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					while (iterator.MoveNext());
 				}
 
-				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+                keysToRemove.Add(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
                     yield break;
 			}
+
+            foreach (var keyToRemove in keysToRemove)
+                getItemsToReduceParams.ReduceKeys.Remove(keyToRemove);
 		}
 
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
