@@ -7,15 +7,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Actions
 {
 	public class LastCollectionEtags
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		private readonly WorkContext context;
 		private ConcurrentDictionary<string, Entry> lastCollectionEtags;
 
@@ -27,6 +29,8 @@ namespace Raven.Database.Actions
 
 		public void InitializeBasedOnIndexingResults()
 		{
+			Log.Debug("Starting to initialize last collection etags based on indexes ...");
+
 			var indexDefinitions = context.IndexDefinitionStorage.IndexDefinitions.Values.ToList();
 
 			if (indexDefinitions.Count == 0)
