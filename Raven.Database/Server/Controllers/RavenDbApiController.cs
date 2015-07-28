@@ -660,18 +660,6 @@ namespace Raven.Database.Server.Controllers
 			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
 	    }
 
-		protected bool ClientIsV3OrHigher
-	    {
-	        get
-	        {
-	            IEnumerable<string> values;
-	            if (Request.Headers.TryGetValues("Raven-Client-Version", out values) == false)
-                    return false; // probably 1.0 client?
-
-	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
-	        }
-	    }
-
 		protected Etag GetLastDocEtag()
 		{
 			var lastDocEtag = Etag.Empty;

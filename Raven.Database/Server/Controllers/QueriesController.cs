@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Controllers
                                         : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
 				    if (documentByKey == null)
 				    {
-                        if(ClientIsV3OrHigher)
+                        if(ClientIsV3OrHigher(Request))
                             result.Results.Add(null); 
                         continue;
 				    }

@@ -268,16 +268,25 @@ namespace Raven.Database.Server.Controllers
                 return nvc[key];
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-	        
-			foreach (var queryKey in nvc.AllKeys)
-				nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+		    if (!ClientIsV3OrHigher(req))
+		    {
+			    foreach (var queryKey in nvc.AllKeys)
+				    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
 
-		    foreach (var _key in nvc.AllKeys)
-				nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
-
-            req.Properties["Raven.QueryString"] = nvc;
+			    foreach (var _key in nvc.AllKeys)
+				    nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
+		    }
+		    req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
+		protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
+		{
+			IEnumerable<string> values;
+			if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+				return false; // probably 1.0 client?
+
+			return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
+		}
 
 	    protected string[] GetQueryStringValues(string key)
 		{
