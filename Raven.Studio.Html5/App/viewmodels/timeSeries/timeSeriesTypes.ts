@@ -4,7 +4,7 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import timeSeriesDocument = require("models/timeSeries/timeSeriesDocument");
+import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
 import getTypesCommand = require("commands/timeSeries/getTypesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -118,18 +118,18 @@ class timeSeriesTypes extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
         //    ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
-            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeriesDocument) => this.reloadTimeSeriesData(ts)),
+            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
             ko.postbox.subscribe("SortKeys", () => this.sortKeys())
         ];
     }
 
-    private fetchTypes(ts: timeSeriesDocument): JQueryPromise<any> {
+    private fetchTypes(ts: timeSeries): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getTypesCommand(ts).execute().done((results: timeSeriesType[]) => deferred.resolve(results));
         return deferred;
     }
 
-    typesLoaded(types: Array<timeSeriesType>, ts: timeSeriesDocument) {
+    typesLoaded(types: Array<timeSeriesType>, ts: timeSeries) {
         this.types(types);
 
         var typeToSelect = this.typeToSelect ? this.types.first(g => g.name === this.typeToSelect) : this.types()[0];
@@ -293,7 +293,7 @@ class timeSeriesTypes extends viewModelBase {
         return deferred;
     }
 
-    private reloadTimeSeriesData(ts: timeSeriesDocument) {
+    private reloadTimeSeriesData(ts: timeSeries) {
         if (ts.name === this.activeTimeSeries().name) {
             this.refreshKeys().done(() => this.refreshKeysData());
         }

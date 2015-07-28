@@ -1,4 +1,4 @@
-﻿import timeSeries = require("models/timeSeries/timeSeriesDocument");
+﻿import timeSeries = require("models/timeSeries/timeSeries");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");

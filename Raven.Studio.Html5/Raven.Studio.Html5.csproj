@@ -145,9 +145,8 @@
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesPoint.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesDto.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesType.ts" />
-    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
-    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesDocument.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counters.ts" />
@@ -1070,8 +1069,6 @@
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\resources\resource.ts" />
     <TypeScriptCompile Include="App\models\resources\serverSmugglingItem.ts" />
-    <TypeScriptCompile Include="App\models\timeSeries\timeSeries.ts" />
-    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\confirmationDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\deleteDocuments.ts" />

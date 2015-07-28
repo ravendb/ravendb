@@ -7,14 +7,14 @@ import createTimeSeries = require("viewmodels/resources/createTimeSeries");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeriesType = require("models/timeSeries/timeSeriesType");
 import shell = require("viewmodels/shell");
 
 class createResource extends dialogViewModelBase {
     databaseType = database.type;
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
-    timeSeriesType = timeSeries.type;
+    timeSeriesType = timeSeriesType.type;
     resourceType = ko.observable<string>("Database");
     createDatabasePart: createDatabase;
     createFileSystemPart: createFileSystem;

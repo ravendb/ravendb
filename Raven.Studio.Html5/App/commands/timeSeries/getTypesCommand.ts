@@ -1,5 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
-import timeSeries = require("models/timeSeries/timeSeriesDocument");
+import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
 
 class getTypesCommand extends commandBase {

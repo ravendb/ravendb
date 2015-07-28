@@ -2,7 +2,7 @@
 import license = require("models/auth/license");
 import timeSeriesStatistics = require("models/timeSeries/timeSeriesStatistics");
 
-class timeSeriesDocument extends resource {
+class timeSeries extends resource {
     statistics = ko.observable<timeSeriesStatistics>();
     static type = "timeSeries";
     iconName = "fa fa-clock-o";
@@ -42,4 +42,4 @@ class timeSeriesDocument extends resource {
         return (index > 0) ? url.substring(index + 10) : "";
     }
 }
-export = timeSeriesDocument;
+export = timeSeries;
