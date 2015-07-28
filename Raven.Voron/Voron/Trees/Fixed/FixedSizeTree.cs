@@ -142,14 +142,7 @@ namespace Voron.Trees.Fixed
                 return addLargeEntry;
             }
 
-            if (page.FixedSize_StartPosition != Constants.PageHeaderSize)
-            {
-                // we need to move it back, then add the new item
-                UnmanagedMemory.Move(page.Base + Constants.PageHeaderSize,
-                    page.Base + page.FixedSize_StartPosition,
-                    page.FixedSize_NumberOfEntries * _entrySize);
-                page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
-            }
+            ResetStartPosition(page);
 
             var entriesToMove = page.FixedSize_NumberOfEntries - page.LastSearchPosition;
             if (entriesToMove > 0)
@@ -162,6 +155,18 @@ namespace Voron.Trees.Fixed
             isNew = true;
             *((long*)(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize))) = key;
             return (page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
+        }
+
+        private void ResetStartPosition(Page page)
+        {
+            if (page.FixedSize_StartPosition == Constants.PageHeaderSize)
+                return;
+
+            // we need to move it back, then add the new item
+            UnmanagedMemory.Move(page.Base + Constants.PageHeaderSize,
+                page.Base + page.FixedSize_StartPosition,
+                page.FixedSize_NumberOfEntries * (page.IsLeaf ? _entrySize : BranchEntrySize));
+            page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
         }
 
         private Page FindPageFor(long key)
@@ -206,7 +211,7 @@ namespace Voron.Trees.Fixed
                 dataStart[1] = page.PageNumber;
             }
 
-            parentPage = _parent.Tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+            parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
 
             if (page.IsLeaf) // simple case of splitting a leaf pageNum
             {
@@ -238,7 +243,7 @@ namespace Voron.Trees.Fixed
             else // branch page
             {
                 var newPage = _parent.NewPage(PageFlags.Branch | PageFlags.FixedSize, 1);
-                newPage.FixedSize_StartPosition = (ushort) Constants.PageHeaderSize;
+                newPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
                 newPage.FixedSize_ValueSize = _valSize;
                 newPage.FixedSize_NumberOfEntries = 0;
                 if (page.LastMatch > 0)
@@ -248,7 +253,7 @@ namespace Voron.Trees.Fixed
                 {
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
 
-                    var dataStart = (long*) (newPage.Base + newPage.FixedSize_StartPosition);
+                    var dataStart = (long*)(newPage.Base + newPage.FixedSize_StartPosition);
                     dataStart[0] = KeyFor(page.Base + page.FixedSize_StartPosition, page.FixedSize_NumberOfEntries - 1,
                         BranchEntrySize);
                     dataStart[1] = PageValueFor(page.Base + page.FixedSize_StartPosition,
@@ -264,12 +269,12 @@ namespace Voron.Trees.Fixed
                 }
                 // not at end, random inserts, split page 3/4 to 1/4
 
-                var entriesToMove = (ushort) (page.FixedSize_NumberOfEntries/4);
+                var entriesToMove = (ushort)(page.FixedSize_NumberOfEntries / 4);
                 newPage.FixedSize_NumberOfEntries = entriesToMove;
                 page.FixedSize_NumberOfEntries -= entriesToMove;
                 Memory.Copy(newPage.Base + newPage.FixedSize_StartPosition,
-                    page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries*BranchEntrySize),
-                    newPage.FixedSize_NumberOfEntries*BranchEntrySize
+                    page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * BranchEntrySize),
+                    newPage.FixedSize_NumberOfEntries * BranchEntrySize
                     );
 
                 var newKey = KeyFor(newPage.Base + newPage.FixedSize_StartPosition, 0, BranchEntrySize);
@@ -811,36 +816,224 @@ namespace Voron.Trees.Fixed
 
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             largeHeader->NumberOfEntries--;
-            page.FixedSize_NumberOfEntries--;
 
-            if (_cursor.Count == 0)
+            RemoveEntryFromPage(page, page.LastSearchPosition);
+
+            while (page != null)
             {
-                // root pageNum
-                if (page.FixedSize_NumberOfEntries <= _maxEmbeddedEntries)
-                {
-                    DeleteRangeInLargeRootPageAndConvertToEmbedded(page, page.LastSearchPosition, page.LastSearchPosition + 1,
-                        page.FixedSize_NumberOfEntries - page.LastSearchPosition);
-                    return;
-                }
+                page = RebalancePage(page);
             }
+        }
 
-            if (page.FixedSize_NumberOfEntries > 0)
+        private void RemoveEntryFromPage(Page page, int pos)
+        {
+            page.FixedSize_NumberOfEntries--;
+            var size = (ushort)(page.IsLeaf ? _entrySize : BranchEntrySize);
+            if (pos == 0)
             {
-                if (page.LastSearchPosition == 0)
-                {
-                    // if this is the very first item in the pageNum, we can just change the start position
-                    page.FixedSize_StartPosition += (ushort)_entrySize;
-                    return;
-                }
-
-                DeleteEntryInPage(page, _entrySize);
-                // deleted and we are done
+                // optimized, just move the start position
+                page.FixedSize_StartPosition += size;
                 return;
             }
-
-            // now we need to remove from parent
-            DeleteEntirePage(page);
+            // have to move the memory
+            UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (pos * size),
+                   page.Base + page.FixedSize_StartPosition + ((pos + 1) * size),
+                   (page.FixedSize_NumberOfEntries - pos) * size);
         }
+
+        private Page RebalancePage(Page page)
+        {
+            if (_cursor.Count == 0)
+            {
+                // root page
+                if (page.FixedSize_NumberOfEntries <= _maxEmbeddedEntries && page.IsLeaf)
+                {
+                    // and small enough to fit, converting to embedded
+                    var ptr = _parent.DirectAdd(_treeName,
+                        sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.FixedSize_NumberOfEntries));
+                    var header = (FixedSizeTreeHeader.Embedded*)ptr;
+                    header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+                    header->ValueSize = _valSize;
+                    header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
+                    _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+
+                    Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
+                        page.Base + page.FixedSize_StartPosition,
+                        (_entrySize * page.FixedSize_NumberOfEntries));
+
+                    _tx.FreePage(page.PageNumber);
+                }
+                if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
+                {
+                    var childPage = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
+                    var rootPageNum = page.PageNumber;
+                    Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, AbstractPager.PageSize);
+                    page.PageNumber = rootPageNum;//overwritten by copy
+                    _tx.FreePage(childPage);
+                }
+
+                return null;
+            }
+
+
+            var sizeOfEntryInPage = (page.IsLeaf ? _entrySize : BranchEntrySize);
+            var minNumberOfEntriesBeforeRebalance = (AbstractPager.PageMaxSpace / sizeOfEntryInPage) / 4;
+            if (page.FixedSize_NumberOfEntries > minNumberOfEntriesBeforeRebalance)
+            {
+                // if we have more than 25% of the entries that would fit in the page, there is nothing that needs to be done
+                // so we are done
+                return null;
+            }
+
+            // we determined that we require rebalancing...
+
+            var parentPage = _cursor.Pop();
+            parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+
+            if (page.FixedSize_NumberOfEntries == 0)// empty page, delete it and fixup the parent
+            {
+                // fixup the implicit less than ref
+                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
+                {
+                    parentPage.FixedSize_NumberOfEntries--;
+                    // remove the first value
+                    parentPage.FixedSize_StartPosition += BranchEntrySize;
+                    // set the next value (now the first), to be smaller than everything
+                    ((long*)(parentPage.Base + parentPage.FixedSize_StartPosition))[0] = long.MinValue;
+                }
+                else
+                {
+                    // need to remove from midway through. At any rate, we'll rebalance on next call
+                    RemoveEntryFromPage(parentPage, parentPage.LastSearchPosition);
+                }
+                return parentPage;
+            }
+
+            if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
+            {
+                // we can just collapse this to the parent
+                var parentRef = (long*)parentPage.Base + parentPage.FixedSize_StartPosition +
+                                (BranchEntrySize * parentPage.LastSearchPosition);
+                // write the page value to the parent
+                parentRef[0] = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
+                // then delete the page
+                _tx.FreePage(page.PageNumber);
+                return parentPage;
+            }
+
+            if (page.IsLeaf && page.LastSearchPosition == 0)
+            {
+                // special handling for deleting from start of the page
+                // we want to make this efficient, so we will not try to merge leaf pages
+                // where all the deletions happen on the start. That way, they can be removed
+                // without a lot of overhead.
+                return null;
+            }
+
+            System.Diagnostics.Debug.Assert(parentPage.FixedSize_NumberOfEntries >= 2);//otherwise this isn't a valid branch page
+            if (parentPage.LastSearchPosition == 0)
+            {
+                // the current page is the leftmost one, so let us try steal some data
+                // from the one on the right
+                var siblingNum = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, 1);
+                var siblingPage = _tx.GetReadOnlyPage(siblingNum);
+                if (siblingPage.Flags != page.Flags)
+                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+
+                if (siblingPage.FixedSize_NumberOfEntries <= minNumberOfEntriesBeforeRebalance * 2)
+                {
+                    // we can merge both pages into a single one and still have enough over
+                    ResetStartPosition(page);
+                    Memory.Copy(
+                        page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * sizeOfEntryInPage),
+                        siblingPage.Base + siblingPage.FixedSize_StartPosition,
+                        siblingPage.FixedSize_NumberOfEntries * sizeOfEntryInPage
+                        );
+                    page.FixedSize_NumberOfEntries += siblingPage.FixedSize_NumberOfEntries;
+
+                    _tx.FreePage(siblingNum);
+
+                    // now fix parent ref, in this case, just removing it is enough
+                    RemoveEntryFromPage(parentPage, 1);
+
+                    return parentPage;
+                }
+                // too big to just merge, let just take half of the sibling and move on
+                var entriesToTake = (siblingPage.FixedSize_NumberOfEntries / 2);
+                ResetStartPosition(page);
+                Memory.Copy(
+                    page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * sizeOfEntryInPage),
+                    siblingPage.Base + siblingPage.FixedSize_StartPosition,
+                    entriesToTake * sizeOfEntryInPage
+                    );
+                page.FixedSize_NumberOfEntries += (ushort)entriesToTake;
+                siblingPage.FixedSize_NumberOfEntries -= (ushort)entriesToTake;
+                siblingPage.FixedSize_StartPosition += (ushort)(sizeOfEntryInPage * entriesToTake);
+
+                // now update the new separator in the parent
+
+                var newSeperator = KeyFor(siblingPage.Base + siblingPage.FixedSize_StartPosition, 0,
+                    sizeOfEntryInPage);
+
+                var siblingPosInParent =
+                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize));
+                siblingPosInParent[0] = newSeperator;
+
+                return parentPage;
+            }
+            else // we aren't the leftmost item, so we will take from the page on our left
+            {
+                var siblingNum = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition - 1);
+                var siblingPage = _tx.GetReadOnlyPage(siblingNum);
+                if (siblingPage.Flags != page.Flags)
+                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+
+                if (siblingPage.FixedSize_NumberOfEntries <= minNumberOfEntriesBeforeRebalance * 2)
+                {
+                    // we can merge both pages into a single one and still have enough over
+                    ResetStartPosition(siblingPage);
+                    Memory.Copy(
+                        siblingPage.Base + siblingPage.FixedSize_StartPosition + (siblingPage.FixedSize_NumberOfEntries * sizeOfEntryInPage),
+                        page.Base + page.FixedSize_StartPosition,
+                        page.FixedSize_NumberOfEntries * sizeOfEntryInPage
+                        );
+                    siblingPage.FixedSize_NumberOfEntries += page.FixedSize_NumberOfEntries;
+
+                    _tx.FreePage(page.PageNumber);
+
+                    // now fix parent ref, in this case, just removing it is enough
+                    RemoveEntryFromPage(parentPage, parentPage.LastSearchPosition);
+
+                    return parentPage;
+                }
+                // too big to just merge, let just take half of the sibling and move on
+                var entriesToTake = (siblingPage.FixedSize_NumberOfEntries / 2);
+                ResetStartPosition(page);
+                UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (entriesToTake * sizeOfEntryInPage),
+                    page.Base + page.FixedSize_StartPosition,
+                    entriesToTake * sizeOfEntryInPage);
+
+                Memory.Copy(
+                    page.Base + page.FixedSize_StartPosition,
+                    siblingPage.Base + siblingPage.FixedSize_StartPosition + ((siblingPage.FixedSize_NumberOfEntries - entriesToTake) * sizeOfEntryInPage),
+                    entriesToTake * sizeOfEntryInPage
+                    );
+                page.FixedSize_NumberOfEntries += (ushort)entriesToTake;
+                siblingPage.FixedSize_NumberOfEntries -= (ushort)entriesToTake;
+
+                // now update the new separator in the parent
+
+                var newSeperator = KeyFor(page.Base + page.FixedSize_StartPosition, 0,
+                    sizeOfEntryInPage);
+
+                var siblingPosInParent =
+                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize));
+                siblingPosInParent[0] = newSeperator;
+
+                return parentPage;
+            }
+        }
+
 
         private void RemoveEmbeddedEntry(long key)
         {

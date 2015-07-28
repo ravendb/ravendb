@@ -94,9 +94,9 @@ namespace Voron.Tests.FixedSize
 		[Theory]
         [InlineData(8)]
         [InlineData(16)]
-		[InlineData(128)]
-        [InlineData(1024*256)]
-		public void CanRemove_ALot_ForPageSplits(int count)
+        [InlineData(128)]
+        [InlineData(1024 * 256)]
+        public void CanRemove_ALot_ForPageSplits(int count)
 		{
 			var bytes = new byte[48];
 			var slice = new Slice(bytes);
