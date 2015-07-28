@@ -674,13 +674,14 @@ namespace Raven.Database.Server.Controllers
 		{
 			return GetMessageWithObject(Database.GetRemainingScheduledReductions());
 		}
-		[HttpPost]
-		[RavenRoute("debug/remaining-reductions")]
-		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
+
+		[HttpGet]
+		[RavenRoute("debug/clear-remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/clear-remaining-reductions")]
 		public HttpResponseMessage ResetRemainingReductionsTracking()
 		{
-			Database.ResetScheduledReductionsTracking();
-			return GetEmptyMessage();
+		    Database.TransactionalStorage.ResetScheduledReductionsTracking();
+		    return GetEmptyMessage();
 		}
 
 		[HttpGet]

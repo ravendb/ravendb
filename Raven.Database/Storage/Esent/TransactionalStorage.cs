@@ -65,8 +65,7 @@ namespace Raven.Storage.Esent
         private EsentInFlightTransactionalState inFlightTransactionalState;
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
-			= new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+        private ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel = new ConcurrentDictionary<int, RemainingReductionPerLevel>();
 
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
@@ -115,13 +114,12 @@ namespace Raven.Storage.Esent
 
 	    public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
 	    {
-			return configuration.Indexing.DisableMapReduceInMemoryTracking ? null : scheduledReductionsPerViewAndLevel.Value;
+			return configuration.Indexing.DisableMapReduceInMemoryTracking ? null : scheduledReductionsPerViewAndLevel;
 	    }
 
 	    public void ResetScheduledReductionsTracking()
 	    {
-		    if (configuration.Indexing.DisableMapReduceInMemoryTracking) return;
-			scheduledReductionsPerViewAndLevel = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(()=>new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+			scheduledReductionsPerViewAndLevel.Clear();
 	    }
         public TableColumnsCache TableColumnsCache
         {
