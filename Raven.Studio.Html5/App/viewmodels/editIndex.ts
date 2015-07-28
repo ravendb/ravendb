@@ -125,6 +125,7 @@ class editIndex extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addScriptsLabelPopover();

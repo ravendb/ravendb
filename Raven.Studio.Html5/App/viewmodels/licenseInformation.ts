@@ -11,6 +11,7 @@ class licenseInformation extends viewModelBase {
 	connectivityStatus = ko.observable<string>("pending");
 
 	attached() {
+		super.attached();
 		this.checkConnectivity()
 			.done((result) => {
 				this.connectivityStatus(result ? "success" : "failed");

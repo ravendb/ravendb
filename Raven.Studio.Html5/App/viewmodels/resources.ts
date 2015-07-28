@@ -131,6 +131,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.updateHelpLink('Z8DC3Q');
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();

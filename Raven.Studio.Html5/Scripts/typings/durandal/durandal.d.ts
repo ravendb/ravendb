@@ -178,7 +178,7 @@ declare module 'durandal/composition' {
         binding?: (child: HTMLElement, parent: HTMLElement, context: CompositionContext) => void;
         attached?: (child: HTMLElement, parent: HTMLElement, context: CompositionContext) => void;
         compositionComplete?: (child: HTMLElement, parent: HTMLElement, context: CompositionContext) => void;
-        tranistion?: string;
+        transition?: string;
     }
 
     /**

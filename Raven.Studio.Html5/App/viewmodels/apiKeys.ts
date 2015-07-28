@@ -1,11 +1,7 @@
-import app = require("durandal/app");
 import getApiKeysCommand = require("commands/getApiKeysCommand");
 import apiKey = require("models/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabasesCommand = require("commands/getDatabasesCommand");
-import database = require("models/database");
-import databaseAccess = require("models/databaseAccess");
-import shell = require('viewmodels/shell');
+import shell = require("viewmodels/shell");
 
 class apiKeys extends viewModelBase {
 
@@ -31,7 +27,6 @@ class apiKeys extends viewModelBase {
     canActivate(args) {
         var deffered = $.Deferred();
         this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
-
         return deffered;
     }
 

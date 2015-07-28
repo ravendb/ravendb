@@ -52,6 +52,7 @@ class conflicts extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.conflictsSubscription = this.refreshConflictsObservable.throttle(3000).subscribe((e) => this.fetchConflicts(this.activeDatabase()));
     }
 
