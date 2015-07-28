@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
-import database = require("models/database");
-import transformer = require("models/transformer");
+import database = require("models/resources/database");
+import transformer = require("models/database/index/transformer");
 
 class saveTransformerLockModeCommand extends commandBase {
 
