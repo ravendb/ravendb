@@ -5,10 +5,10 @@
 //  See accompanying file GPLEXcopyright.rtf.
 //
 //  GPLEX Version:  1.2.2
-//  Machine:  TALWEISS-PC
-//  DateTime: 7/13/2015 7:57:08 PM
-//  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 7/13/2015 7:56:59 PM>
+//  Machine:  MICHAEL
+//  DateTime: 28/07/2015 17:06:51
+//  UserName: Michael
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 28/07/2015 15:21:39>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
@@ -1624,7 +1624,7 @@ if(InMethod && bStack.Count == 0)
 								}
 								else 
 								{
-									yylval.s = DiscardEscapeChar(yytext);
+									yylval.s = DiscardEscapeChar(yytext, true);
 								}
 								return (int)Token.UNQUOTED_TERM;
             break;

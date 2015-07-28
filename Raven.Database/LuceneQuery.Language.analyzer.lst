@@ -1,3 +1,14 @@
+
+// ==========================================================================
+//  GPLEX error listing for lex source file <LuceneQuery.Language.analyzer.lex>
+// ==========================================================================
+//  Version:  1.2.2
+//  Machine:  MICHAEL
+//  DateTime: 28/07/2015 17:06:51
+//  UserName: Michael
+// ==========================================================================
+
+
 %namespace Raven.Database.Indexing
 %scannertype LuceneQueryScanner
 %visibility internal
@@ -9,7 +20,13 @@ Comment    [ \t\r\n\f]"//"([^\n\r]*)
 Whitespace [ \t\r\n\f]
 Digit      [0-9]
 Number     [+-]?{Digit}+
+//----------^^
+// Warning: No upper bound to range, "'+','-'" included as set class members
+// -------------------------------------------------------------------------
 Decimal    [+-]?{Number}\.{Number}
+//----------^^
+// Warning: No upper bound to range, "'+','-'" included as set class members
+// -------------------------------------------------------------------------
 EscapeChar \\[^]
 TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\],]|{EscapeChar}
 TermChar {TermStartChar}|[,\-\+]
@@ -79,4 +96,5 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {Whitespace}					{/* skip */}
 <<EOF>>							/*This is needed for yywrap to work, do not delete this comment!!!*/
 
-%%
+%%// ==========================================================================
+
