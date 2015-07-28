@@ -668,6 +668,22 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[RavenRoute("debug/remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
+		public HttpResponseMessage CurrentlyRemainingReductions()
+		{
+			return GetMessageWithObject(Database.GetRemainingScheduledReductions());
+		}
+		[HttpPost]
+		[RavenRoute("debug/remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
+		public HttpResponseMessage ResetRemainingReductionsTracking()
+		{
+			Database.ResetScheduledReductionsTracking();
+			return GetEmptyMessage();
+		}
+
+		[HttpGet]
 		[RavenRoute("debug/request-tracing")]
 		[RavenRoute("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()

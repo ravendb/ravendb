@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
@@ -64,6 +65,8 @@ namespace Raven.Storage.Esent
         private EsentInFlightTransactionalState inFlightTransactionalState;
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
+		private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
+			= new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
 
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
@@ -110,6 +113,16 @@ namespace Raven.Storage.Esent
 		    this.onNestedTransactionExit = onNestedTransactionExit;
         }
 
+	    public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
+	    {
+			return configuration.Indexing.DisableMapReduceInMemoryTracking ? null : scheduledReductionsPerViewAndLevel.Value;
+	    }
+
+	    public void ResetScheduledReductionsTracking()
+	    {
+		    if (configuration.Indexing.DisableMapReduceInMemoryTracking) return;
+			scheduledReductionsPerViewAndLevel = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(()=>new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+	    }
         public TableColumnsCache TableColumnsCache
         {
             get { return tableColumnsCache; }
