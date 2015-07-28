@@ -8442,4 +8442,9 @@ a.global_help_link:focus {
 .text-height-fix {
   line-height: 34px;
 }
+.experimental {
+  font-size: 9px;
+  font-weight: bold;
+  color: red;
+}
 /*# sourceMappingURL=app.css.map */

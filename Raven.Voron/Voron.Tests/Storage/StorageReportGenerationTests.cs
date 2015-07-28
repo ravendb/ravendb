@@ -57,7 +57,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var report = Env.GenerateReport(tx);
+				var report = Env.GenerateReport(tx, computeExactSizes:true);
 
 				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
 				Assert.Equal(numberOfTrees, report.Trees.Count);
@@ -118,7 +118,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var report = Env.GenerateReport(tx);
+                var report = Env.GenerateReport(tx, computeExactSizes: true);
 
 				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
 				Assert.Equal(numberOfTrees, report.Trees.Count);
@@ -209,7 +209,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var report = Env.GenerateReport(tx);
+                var report = Env.GenerateReport(tx, computeExactSizes: true);
 
 				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
 				Assert.Equal(1, report.Trees.Count);

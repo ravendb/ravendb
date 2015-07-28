@@ -85,6 +85,7 @@ namespace Raven.Tests.Issues
 				{
 					var cats = session.Query<Cat>()
 						.Customize(q => q.WaitForNonStaleResultsAsOfLastWrite())
+						.OrderBy(x=>x.Id)
 						.Where(cat => cat.Id.In("cats/1", "cats/2") || cat.Id.In("cats/2", "cats/3"))
 						.ToList();
 

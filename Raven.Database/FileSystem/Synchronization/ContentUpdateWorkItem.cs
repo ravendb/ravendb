@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.FileSystem.Synchronization.Multipart;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
@@ -22,12 +22,16 @@ namespace Raven.Database.FileSystem.Synchronization
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly SigGenerator sigGenerator;
+
+		private readonly InMemoryRavenConfiguration configuration;
+
 		private DataInfo fileDataInfo;
 		private SynchronizationMultipartRequest multipartRequest;
 
-		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator) : base(file, sourceServerUrl, storage)
+		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration) : base(file, sourceServerUrl, storage)
 		{
 			this.sigGenerator = sigGenerator;
+			this.configuration = configuration;
 		}
 
 		public override SynchronizationType SynchronizationType
@@ -45,35 +49,35 @@ namespace Raven.Database.FileSystem.Synchronization
 			Cts.Cancel();
 		}
 
-        public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
+		public override async Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient synchronizationServerClient)
         {
             AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-            var destinationMetadata = await destination.Commands.GetMetadataForAsync(FileName);
+			var destinationMetadata = await synchronizationServerClient.GetMetadataForAsync(FileName);
             if (destinationMetadata == null)
             {
                 // if file doesn't exist on destination server - upload it there
-                return await UploadToAsync(destination);
+				return await UploadToAsync(synchronizationServerClient);
             }
 
-            var destinationServerRdcStats = await destination.GetRdcStatsAsync();
+			var destinationServerRdcStats = await synchronizationServerClient.GetRdcStatsAsync();
             if (!IsRemoteRdcCompatible(destinationServerRdcStats))
                 throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
             var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, FileSystemInfo.Url);
 	        if (conflict != null)
 	        {
-		        var report = await HandleConflict(destination, conflict, log);
+				var report = await HandleConflict(synchronizationServerClient, conflict, log);
 
 		        if (report != null)
 			        return report;
 	        }
 
-            using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
-            using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
+            using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName, configuration))
+            using (var remoteSignatureCache = new VolatileSignatureRepository(FileName, configuration))
             {
                 var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
-                var destinationRdcManager = new RemoteRdcManager(destination, localSignatureRepository, remoteSignatureCache);
+				var destinationRdcManager = new RemoteRdcManager(synchronizationServerClient, localSignatureRepository, remoteSignatureCache);
 
                 log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
 
@@ -89,11 +93,11 @@ namespace Raven.Database.FileSystem.Synchronization
                     var destinationSignatureManifest = await destinationRdcManager.SynchronizeSignaturesAsync(FileDataInfo, Cts.Token);
                     if (destinationSignatureManifest.Signatures.Any())
                     {
-                        return await SynchronizeTo(destination, localSignatureRepository, remoteSignatureCache, localSignatureManifest, destinationSignatureManifest);
+						return await SynchronizeTo(synchronizationServerClient, localSignatureRepository, remoteSignatureCache, localSignatureManifest, destinationSignatureManifest);
                     }
                 }
 
-                return await UploadToAsync(destination);
+				return await UploadToAsync(synchronizationServerClient);
             }
         }
 
@@ -106,7 +110,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			}
 		}
 
-        private async Task<SynchronizationReport> SynchronizeTo(IAsyncFilesSynchronizationCommands destination,
+		private async Task<SynchronizationReport> SynchronizeTo(ISynchronizationServerClient synchronizationServerClient,
 																ISignatureRepository localSignatureRepository,
 																ISignatureRepository remoteSignatureRepository,
 																SignatureManifest sourceSignatureManifest,
@@ -123,11 +127,11 @@ namespace Raven.Database.FileSystem.Synchronization
 					needList = needListGenerator.CreateNeedsList(seedSignatureInfo, sourceSignatureInfo, Cts.Token);
 				}
 
-				return await PushByUsingMultipartRequest(destination, localFile, needList);
+				return await PushByUsingMultipartRequest(synchronizationServerClient, localFile, needList);
 			}
 		}
 
-        public async Task<SynchronizationReport> UploadToAsync(IAsyncFilesSynchronizationCommands destination)
+		public async Task<SynchronizationReport> UploadToAsync(ISynchronizationServerClient synchronizationServerClient)
 		{
 			using (var sourceFileStream = StorageStream.Reading(Storage, FileName))
 			{
@@ -143,22 +147,22 @@ namespace Raven.Database.FileSystem.Synchronization
 							                     }
 					                     };
 
-				return await PushByUsingMultipartRequest(destination, sourceFileStream, onlySourceNeed);
+				return await PushByUsingMultipartRequest(synchronizationServerClient, sourceFileStream, onlySourceNeed);
 			}
 		}
 
-        private Task<SynchronizationReport> PushByUsingMultipartRequest(IAsyncFilesSynchronizationCommands destination, Stream sourceFileStream,
+		private Task<SynchronizationReport> PushByUsingMultipartRequest(ISynchronizationServerClient synchronizationServerClient, Stream sourceFileStream,
 																		IList<RdcNeed> needList)
 		{
 			Cts.Token.ThrowIfCancellationRequested();
 
-			multipartRequest = new SynchronizationMultipartRequest(destination, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList);
+			multipartRequest = new SynchronizationMultipartRequest(synchronizationServerClient, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList);
 
 			var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
 
 			log.Debug(
 				"Synchronizing a file '{0}' (ETag {1}) to {2} by using multipart request. Need list length is {3}. Number of bytes that needs to be transfered is {4}",
-				FileName, FileETag, destination, needList.Count, bytesToTransferCount);
+				FileName, FileETag, synchronizationServerClient, needList.Count, bytesToTransferCount);
 
 			return multipartRequest.PushChangesAsync(Cts.Token);
 		}

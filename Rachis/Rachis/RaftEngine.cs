@@ -323,7 +323,15 @@ namespace Rachis
 				throw new NotLeadingException("Cannot modify topology from a non leader node, current leader is: " +
 													(CurrentLeader ?? "no leader"));
 
-			var tcc = new TopologyChangeCommand
+		    var logEntry = PersistentState.GetLogEntry(CommitIndex);
+		    if (logEntry == null)
+		        throw new InvalidOperationException("No log entry for committed for index " + CommitIndex + ", this is probably a brand new cluster with no committed entries or a serious problem");
+
+		    if (logEntry.Term != PersistentState.CurrentTerm)
+		        throw new InvalidOperationException("Cannot modify the cluster topology when the committed index " + CommitIndex + " is in term " + logEntry.Term + " but the current term is " +
+		                                            PersistentState.CurrentTerm + ". Wait until the leader finishes committing entries from the current term and try again");
+
+		    var tcc = new TopologyChangeCommand
 				{
 					Completion = new TaskCompletionSource<object>(),
 					Requested = requested,

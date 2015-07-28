@@ -56,7 +56,7 @@ namespace Raven.Database.Server.Controllers
 		        int nextPageStart = GetNextPageStart();
 			    if (string.IsNullOrEmpty(startsWith))
 			    {
-				    var results = Database.Documents.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
+				    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
 						GetEtagFromQueryString(), cts.Token);
 				    msg = GetMessageWithObject(results);
 			    }
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.DebugException("Failed to deserialize document request." , e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.DebugException("Failed to deserialize document request." , e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -208,7 +208,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.Debug("Failed to deserialize document request." + e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -217,7 +217,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize document request. Error: " + e);
+				Log.Debug("Failed to deserialize document request." + e);
 				return GetMessageWithObject(new
 				{
 					e.Message

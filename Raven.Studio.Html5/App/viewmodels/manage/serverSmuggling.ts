@@ -5,6 +5,7 @@ import serverConnectionInfo = require("models/database/cluster/serverConnectionI
 import performSmugglingCommand = require("commands/operations/performSmugglingCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
+import serverSmugglingLocalStorage = require("common/serverSmugglingLocalStorage");
 
 class serverSmuggling extends viewModelBase {
 	resources = ko.observableArray<serverSmugglingItem>([]);
@@ -20,8 +21,10 @@ class serverSmuggling extends viewModelBase {
 	stripReplicationSelection: KnockoutComputed<checkbox>;
 	disableVersioningSelection: KnockoutComputed<checkbox>;
 
-	showJsonRequest = ko.observable<boolean>(false);
-	jsonRequest: KnockoutComputed<string>;
+    showJsonRequest = ko.observable<boolean>(false);
+    showCurlRequest = ko.observable<boolean>(false);
+    jsonRequest: KnockoutComputed<string>;
+    curlRequest: KnockoutComputed<string>;
 
 	submitEnabled: KnockoutComputed<boolean>;
 	inProgress = ko.observable<boolean>(false);
@@ -110,7 +113,44 @@ class serverSmuggling extends viewModelBase {
 	    this.jsonRequest = ko.computed(() => {
 			var request = this.getJson();
 		    return jsonUtil.syntaxHighlight(request);
-	    });
+        });
+
+        this.curlRequest = ko.computed(() => {
+            var json = JSON.stringify(this.getJson(), null, 0).replaceAll("\"", "\\\"");
+
+            return "curl -i -H \"Accept: application/json\" -H \"Content-Type: application/json\" -X POST --data \"" + json + "\" " + appUrl.serverUrl() + "/admin/serverSmuggling";
+        });
+
+        this.jsonRequest.subscribe(() => this.saveIntoLocalStorage());
+
+        this.restoreFromLocalStorage();
+    }
+
+    restoreFromLocalStorage() {
+        var savedValue = serverSmugglingLocalStorage.get();
+        if (savedValue) {
+            var self = this;
+            var targetServer = this.targetServer();
+            targetServer.url(savedValue.TargetServer.Url);
+            targetServer.domain(savedValue.TargetServer.Domain);
+            targetServer.username(savedValue.TargetServer.Username);
+            targetServer.guessCredentialsType();
+
+            // since resources might change over time we have to apply saved changes carefully. 
+            savedValue.Config.forEach(savedConfig => {
+                var item = self.resources().first(r => r.resource.name === savedConfig.Name);
+                if (item) {
+                    self.selectedResources.push(item);
+                    item.incremental(savedConfig.Incremental);
+                    if (item.hasVersioningBundle()) {
+                        item.shouldDisableVersioningBundle(savedConfig.ShouldDisableVersioningBundle);
+                    }
+                    if (item.hasReplicationBundle()) {
+                        item.stripReplicationInformation(savedConfig.StripReplicationInformation);
+                    }
+                }
+            });
+        }
     }
 
 	toggleSelectAll() {
@@ -170,9 +210,16 @@ class serverSmuggling extends viewModelBase {
 
 	isSelected(item: serverSmugglingItem) {
 		return this.selectedResources().indexOf(item) >= 0;
-	}
+    }
 
-	performMigration() {
+    saveIntoLocalStorage() {
+        var json = this.getJson();
+        json.TargetServer.ApiKey = undefined;
+        json.TargetServer.Password = undefined;
+        serverSmugglingLocalStorage.setValue(json);
+    }
+
+    performMigration() {
 		var request = this.getJson();
 		this.messages([]);
 		this.inProgress(true);
@@ -198,7 +245,11 @@ class serverSmuggling extends viewModelBase {
 
 	toggleJson() {
 		this.showJsonRequest(!this.showJsonRequest());
-	}
+    }
+
+    toggleCurl() {
+        this.showCurlRequest(!this.showCurlRequest());
+    }
 
 	toggleIncremental(item: serverSmugglingItem) {
 		if (this.isSelected(item)) {

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -31,7 +32,7 @@ namespace Raven.Database.FileSystem.Actions
 
 		public void StartSynchronizeDestinationsInBackground()
 		{
-			Task.Factory.StartNew(async () => await SynchronizationTask.Execute(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+			Task.Factory.StartNew(() => SynchronizationTask.Execute(false), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
 
 		public void AssertFileIsNotBeingSynced(string fileName)

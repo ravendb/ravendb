@@ -51,6 +51,7 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
 	clusterMode = ko.computed(() => shell.clusterMode());
+	showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
 
     databaseType = database.type;
     fileSystemType = fileSystem.type;
@@ -62,7 +63,7 @@ class resources extends viewModelBase {
         { value: database.type, name: "Show databases" }, 
         { value: fileSystem.type, name: "Show file systems" }, 
         { value: counterStorage.type, name: "Show counter storages" },
-        { value: timeSeries.type, name: "Show time sereis" }
+        { value: timeSeries.type, name: "Show time series" }
     ];
 
     constructor() {

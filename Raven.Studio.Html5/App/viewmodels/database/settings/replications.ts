@@ -18,8 +18,11 @@ import getEffectiveConflictResolutionCommand = require("commands/database/global
 import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
+import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 
 class replications extends viewModelBase {
+
+    replicationEnabled = ko.observable<boolean>(false);
 
     prefixForHilo = ko.observable<string>("");
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
@@ -62,9 +65,16 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            if (db.activeBundles.contains("Replication")) {
+                this.replicationEnabled(true);
+                $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            } else {
+                this.replicationEnabled(false);
+                deferred.resolve({ can: true });
+            }
+            
         }
         return deferred;
     }
@@ -272,6 +282,22 @@ class replications extends viewModelBase {
         }
         
         this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour());
+    }
+
+    enableReplication() {
+        new enableReplicationCommand(this.activeDatabase())
+            .execute()
+            .done((bundles) => {
+                var db = this.activeDatabase();
+                db.activeBundles(bundles);
+                this.replicationEnabled(true);
+                this.fetchServerPrefixForHiLoCommand(db);
+                this.fetchAutomaticConflictResolution(db);
+                this.fetchReplications(db);
+                this.fetchCollections(db).done(results => {
+                    this.collections(results);
+                });
+            });
     }
 }
 

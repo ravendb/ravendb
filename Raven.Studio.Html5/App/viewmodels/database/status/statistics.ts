@@ -8,7 +8,14 @@ import optional = require("common/optional");
 class statistics extends viewModelBase {
     stats = ko.observable<databaseStatisticsDto>();
     indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
-    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().StaleIndexes.length == 0);
+    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0);
+
+    disabledIndexes = ko.computed(() => {
+        if (this.stats()) {
+            var stats = this.stats();
+            return stats.Indexes.filter(idx => idx.Priority.indexOf("Disabled") >= 0).map(idx => idx.Name);
+        }
+    });
 
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;

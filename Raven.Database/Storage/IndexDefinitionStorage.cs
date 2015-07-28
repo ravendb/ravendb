@@ -98,6 +98,8 @@ namespace Raven.Database.Storage
 
         private void ReadFromDisk()
         {
+			logger.Debug("Reading index definitions from disk...");
+
             foreach (var indexDefinition in ReadIndexDefinitionsFromDisk())
             {
                 try
@@ -115,6 +117,10 @@ namespace Raven.Database.Storage
                 }
             }
 
+			logger.Debug("Read {0} index definitions", indexDefinitions.Count);
+
+			logger.Debug("Reading transformer definitions from disk...");
+
 			foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
             {
                 try
@@ -130,6 +136,8 @@ namespace Raven.Database.Storage
 					logger.WarnException(string.Format("Could not compile transformer '{0} ({1})', skipping bad transformer", transformerDefinition.TransfomerId, transformerDefinition.Name), e);
                 }
             }
+
+			logger.Debug("Read {0} transform definitions", transformDefinitions.Count);
         }
 
 	    private IEnumerable<IndexDefinition> ReadIndexDefinitionsFromDisk()
@@ -425,19 +433,23 @@ namespace Raven.Database.Storage
             return value;
         }
 
-        public IndexCreationOptions FindIndexCreationOptions(IndexDefinition indexDef)
+        public IndexCreationOptions FindIndexCreationOptions(IndexDefinition newIndexDef)
         {
-            var indexDefinition = GetIndexDefinition(indexDef.Name);
-            if (indexDefinition != null)
+            var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
+            if (currentIndexDefinition != null)
             {
-				if (indexDefinition.IsTestIndex) // always update test indexes
+				if (currentIndexDefinition.IsTestIndex) // always update test indexes
 					return IndexCreationOptions.Update;
 
-                indexDef.IndexId = indexDefinition.IndexId;
-                bool result = indexDefinition.Equals(indexDef);
-                return result
-                           ? IndexCreationOptions.Noop
-                           : IndexCreationOptions.Update;
+                newIndexDef.IndexId = currentIndexDefinition.IndexId;
+                bool result = currentIndexDefinition.Equals(newIndexDef);
+
+				if (result) 
+					return IndexCreationOptions.Noop;
+
+	            // try to compare to find changes which doesn't require removing compixled index
+	            return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
+					? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
             }
             return IndexCreationOptions.Create;
         }
@@ -587,6 +599,17 @@ namespace Raven.Database.Storage
 
             File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
+
+		public void UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(TransformerDefinition definition)
+		{
+			transformDefinitions.AddOrUpdate(definition.TransfomerId, s =>
+			{
+				throw new InvalidOperationException(
+					"Cannot find transformer named: " +
+					definition.TransfomerId);
+			}, (s, transformerDefinition) => definition);
+			WriteTransformerDefinition(definition);
+		}
     }
 
 }

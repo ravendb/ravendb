@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
@@ -57,17 +58,17 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [RavenRoute("fs/status")]
-        public HttpResponseMessage Status()
-        {
-            string status = "ready";
-            if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
-                status = "install-rdc";
+		[RavenRoute("fs/status")]
+		public HttpResponseMessage Status()
+		{
+			string status = "ready";
+			if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
+				status = "install-rdc";
 
-            var result = new { Status = status };
+			var result = new { Status = status };
 
-            return GetMessageWithObject(result).WithNoCache();
-        }
+			return GetMessageWithObject(result).WithNoCache();
+		}
 
 		[HttpGet]
 		[RavenRoute("fs/stats")]
@@ -92,7 +93,7 @@ namespace Raven.Database.FileSystem.Controllers
 				stats.Add(fsStats);
 			}
 
-            return GetMessageWithObject(stats).WithNoCache();
+			return GetMessageWithObject(stats).WithNoCache();
 		}
 	}
 }

@@ -18,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Queries;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Tenancy;
@@ -304,7 +305,7 @@ namespace Raven.Database.Server.WebApi
 
 			CurrentOperationContext.User.Value = null;
 
-			LogContext.DatabaseName.Value = databaseName;
+			LogContext.DatabaseName = databaseName;
 			var disposable = LogManager.OpenMappedContext("database", databaseName ?? Constants.SystemDatabase);
 
 			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
@@ -316,7 +317,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				CurrentOperationContext.Headers.Value = null;
 				CurrentOperationContext.User.Value = null;
-				LogContext.DatabaseName.Value = null;
+				LogContext.DatabaseName = null;
 				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
 				{
 
@@ -601,6 +602,8 @@ namespace Raven.Database.Server.WebApi
 					// since shutting down a database can take a while
 					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
 				}
+
+				FacetedQueryRunner.IntArraysPool.Instance.RunIdleOperations();
 			}
 			catch (Exception e)
 			{

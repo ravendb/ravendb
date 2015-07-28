@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server;
 using Raven.Database.Util;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -15,13 +14,13 @@ namespace Raven.Tests
 
 		public DatabaseMemoryTargetTests()
 		{
-			LogContext.DatabaseName.Value = DatabaseName;
+			LogContext.DatabaseName = DatabaseName;
 			sut = new DatabaseMemoryTarget();
 		}
 
 		public void Dispose()
 		{
-			LogContext.DatabaseName.Value = null;
+			LogContext.DatabaseName = null;
 		}
 
 		[Fact]
@@ -67,7 +66,7 @@ namespace Raven.Tests
 		[Fact]
 		public void When_context_database_name_is_null_The_should_be_recorded_for_sys_log()
 		{
-			LogContext.DatabaseName.Value = null;
+			LogContext.DatabaseName = null;
 			sut.Write(new LogEventInfo { LoggerName = "Raven.x", Level = LogLevel.Info });
 			Assert.Equal(1, sut[Constants.SystemDatabase].GeneralLog.Count());
 		}

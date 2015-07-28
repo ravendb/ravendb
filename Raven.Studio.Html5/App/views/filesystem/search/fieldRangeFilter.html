@@ -7,26 +7,40 @@
             </button>
             <h4 class="modal-title">Add range filter </h4>
         </div>
-	    <div class="modal-body">
-		    <div class="form-group">
-			    <label>From: </label>
-				<div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate' }">
-					<input type="text" class="form-control" data-bind="value: from, valueUpdate: 'afterkeydown'" autofocus />
-					<span class="input-group-addon" data-bind="visible:isDateTime()">
-						<span class="fa fa-calendar"></span>
-					</span>
-				</div>
-		    </div>
-		    <div class="form-group">
-			    <label>To: </label>
-				<div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate' }">
-					<input type="text" class="form-control" data-bind="value: to, valueUpdate: 'afterkeydown'" autofocus/>
-					<span class="input-group-addon" data-bind="visible:isDateTime()">
-						<span class="fa fa-calendar"></span>
-					</span>
-				</div>
-		    </div>
-	    </div>
+        <div class="modal-body" data-bind="visible: isDateTime()">
+            <div class="form-group">
+                <label>From: </label>
+                <div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate', isEnabled: datePickerEnabled }">
+                    <input type="text" class="form-control" data-bind="value: from, valueUpdate: 'afterkeydown'" autofocus/>
+                    <span class="input-group-addon" data-bind="visible:isDateTime()">
+                        <span class="fa fa-calendar"></span>
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>To: </label>
+                <div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate', isEnabled: datePickerEnabled }">
+                    <input type="text" class="form-control" data-bind="value: to, valueUpdate: 'afterkeydown'" autofocus/>
+                    <span class="input-group-addon" data-bind="visible:isDateTime()">
+                        <span class="fa fa-calendar"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body" data-bind="visible: !isDateTime()">
+            <div class="form-group">
+                <label>From: </label>
+                <div class="input-group date" id="fromDate">
+                    <input type="text" class="form-control" data-bind="value: from, valueUpdate: 'afterkeydown'" autofocus />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>To: </label>
+                <div class="input-group date" id="toDate">
+                    <input type="text" class="form-control" data-bind="value: to, valueUpdate: 'afterkeydown'" autofocus />
+                </div>
+            </div>
+        </div>
         <div class="modal-body">
             <div class="form-group">
                 <label>Search type</label>

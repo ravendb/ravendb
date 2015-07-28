@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
@@ -198,7 +199,7 @@ namespace Raven.Abstractions.Indexing
 		/// <param name="other">The other.</param>
 		/// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
 		/// <returns></returns>
-		public bool Equals(IndexDefinition other, bool compareIndexIds = true)
+		public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false, bool ignoreMaxIndexOutput = false)
 		{
 			if (ReferenceEquals(null, other))
 				return false;
@@ -209,9 +210,19 @@ namespace Raven.Abstractions.Indexing
 			if (compareIndexIds && !Equals(other.IndexId, IndexId))
 				return false;
 
-			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.Reduce, Reduce) &&
-					(other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument) &&
+			bool mapsReduceEquals;
+			if (ignoreFormatting)
+			{
+				var comparer = new IndexPrettyPrinterEqualityComparer();
+				mapsReduceEquals = Maps.SequenceEqual(other.Maps, comparer) && comparer.Equals(Reduce, other.Reduce);
+			}
+			else
+			{
+				mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Equals(other.Reduce, Reduce);
+			}
+
+			return mapsReduceEquals &&
+					(ignoreMaxIndexOutput || other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument) &&
 					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
 					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
 					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&

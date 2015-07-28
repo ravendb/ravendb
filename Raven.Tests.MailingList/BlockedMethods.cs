@@ -104,10 +104,12 @@ namespace Raven.Tests.MailingList
 
 		private void Compile(string code)
 		{
+			var configuration = new InMemoryRavenConfiguration();
+			configuration.Initialize();
 			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition
 			{
 				Map = code
-			}, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), ".", new InMemoryRavenConfiguration());
+			}, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), ".", configuration);
 			dynamicViewCompiler.GenerateInstance();
 		}
 

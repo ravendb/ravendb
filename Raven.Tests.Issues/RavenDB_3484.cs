@@ -12,6 +12,7 @@ using Raven.Client.Document;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -25,10 +26,11 @@ namespace Raven.Tests.Issues
 			Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions().Strategy);
 		}
 
-		[Fact]
-		public void ShouldRejectWhen_OpenIfFree_StrategyIsUsed()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRejectWhen_OpenIfFree_StrategyIsUsed(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -41,10 +43,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 				
@@ -95,10 +98,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void ShouldReplaceActiveClientWhen_ForceAndKeep_StrategyIsUsed()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldReplaceActiveClientWhen_ForceAndKeep_StrategyIsUsed(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				foreach (var strategyToReplace in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.WaitForFree })
 				{
@@ -142,10 +146,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void OpenIfFree_And_TakeOver_StrategiesCannotDropClientWith_ForceAndKeep_Strategy()
-		{
-			using (var store = NewRemoteDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void OpenIfFree_And_TakeOver_StrategiesCannotDropClientWith_ForceAndKeep_Strategy(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
@@ -164,10 +169,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void ForceAndKeep_StrategyUsageCanTakeOverAnotherClientWith_ForceAndKeep_Strategy()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ForceAndKeep_StrategyUsageCanTakeOverAnotherClientWith_ForceAndKeep_Strategy(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
@@ -218,10 +224,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
@@ -248,10 +255,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
@@ -303,10 +311,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+        public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 

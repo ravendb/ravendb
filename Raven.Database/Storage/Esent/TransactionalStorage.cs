@@ -452,7 +452,7 @@ namespace Raven.Storage.Esent
             });
         }
 
-        public IList<string> ComputeDetailedStorageInformation()
+		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
         {
             return StorageSizes.ReportOn(this);
         }
@@ -649,6 +649,7 @@ namespace Raven.Storage.Esent
                         }
                         return false;
                     case JET_err.DatabaseDirtyShutdown:
+						Output("Dirty shutdown detected, attempting to recover...");
                         try
                         {
                             Api.JetTerm2(instance, TermGrbit.Complete);

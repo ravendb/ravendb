@@ -240,6 +240,7 @@
     <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\Indexing\SetIndexPriority.cs" />
     <Compile Include="Bugs\MapRedue\LargeKeysInVoron.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
@@ -272,6 +273,7 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB-3691.cs" />
     <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Json\JsonCodeGeneratorTests.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
@@ -937,6 +939,7 @@
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Utils\DictionaryComparer.cs" />
+    <Compile Include="Utils\DynamicListTests.cs" />
     <Compile Include="Utils\RavenInternalTestUtil.cs" />
     <Compile Include="Utils\SettingsDat.cs" />
     <Compile Include="Utils\SortedEtagsListTests.cs" />

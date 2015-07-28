@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client;
@@ -9,7 +11,6 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
@@ -302,7 +303,12 @@ namespace Raven.Database.Client
             server.DocumentStore.ExecuteIndex(indexCreationTask);
         }
 
-        /// <summary>
+	    public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+		    server.DocumentStore.ExecuteIndexes(indexCreationTasks);
+	    }
+
+	    /// <summary>
         ///     Executes the index creation.
         /// </summary>
         /// <param name="indexCreationTask"></param>
@@ -311,7 +317,12 @@ namespace Raven.Database.Client
             return server.DocumentStore.ExecuteIndexAsync(indexCreationTask);
         }
 
-		/// <summary>
+	    public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+			return server.DocumentStore.ExecuteIndexesAsync(indexCreationTasks);
+	    }
+
+	    /// <summary>
 		/// Executes the index creation using side-by-side mode.
 		/// </summary>
 		/// <param name="indexCreationTask"></param>

@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -43,6 +44,64 @@ namespace Raven.Database.Server.Controllers
 				indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 
 			return GetMessageWithObject(indexes);
+		}
+
+		[HttpPut]
+		[RavenRoute("indexes")]
+		[RavenRoute("databases/{databaseName}/indexes")]
+		public async Task<HttpResponseMessage> IndexMultiPut()
+		{
+			MultiplePutIndexParam multiplePutIndexParam;
+			try
+			{
+				multiplePutIndexParam = await ReadJsonObjectAsync<MultiplePutIndexParam>().ConfigureAwait(false);
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode) 500); 
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				
+				return GetMessageWithObject(new
+				{
+					Error = e
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+			var definitions = multiplePutIndexParam.Definitions;
+			var priorities = multiplePutIndexParam.Priorities;
+			var indexes = multiplePutIndexParam.IndexesNames;
+			string[] createdIndexes;
+			for (int i =0; i< indexes.Length; i++)
+			{
+				var data = definitions[i];											
+				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+			}
+			try
+			{
+				createdIndexes = Database.Indexes.PutIndexes(indexes, definitions, priorities);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
+
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
+			}
+			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
 		}
 
 		[HttpGet]
@@ -103,16 +162,17 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode)500); 
 
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize index request. Error: " + e);
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -128,7 +188,7 @@ namespace Raven.Database.Server.Controllers
 			// in order to ensure that they don't reset the default value for old clients, we force the default
 			// value to maintain the existing behavior
 			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
-				data.MaxIndexOutputsPerDocument = 16 * 1024;
+                data.MaxIndexOutputsPerDocument = 16 * 1024;
 
 			try
 			{
@@ -138,6 +198,8 @@ namespace Raven.Database.Server.Controllers
 			catch (Exception ex)
 			{
 				var compilationException = ex as IndexCompilationException;
+
+                Log.ErrorException("Cannot create index.", ex);
 
 				return GetMessageWithObject(new
 				{
@@ -253,9 +315,54 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var instance = Database.IndexStorage.GetIndexInstance(index);
+
 			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
+			instance.Priority = indexingPriority;
 
 			return GetEmptyMessage();
+		}
+
+		[HttpPatch]
+		[RavenRoute("indexes/try-recover-corrupted")]
+		[RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
+		public HttpResponseMessage TryRecoverCorruptedIndexes()
+		{
+			foreach (var indexId in Database.IndexStorage.Indexes)
+			{
+				var index = Database.IndexStorage.GetIndexInstance(indexId);
+
+				if(index.Priority != IndexingPriority.Error)
+					continue;
+
+				long taskId;
+				var task = Task.Run(() =>
+				{
+					// try to recover by reopening the index - it will reset it if necessary
+					try
+					{
+						index = Database.IndexStorage.ReopenCorruptedIndex(index);
+
+						Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
+						index.Priority = IndexingPriority.Normal;
+
+						Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+						Database.WorkContext.NotifyAboutWork();
+					}
+					catch (Exception e)
+					{
+						Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+					}
+				});
+
+				Database.Tasks.AddTask(task, null, new TaskActions.PendingTaskDescription
+				{
+					StartTime = SystemTime.UtcNow,
+					TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
+					Payload = index.PublicName
+				}, out taskId);
+			}
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpGet]
@@ -271,7 +378,7 @@ namespace Raven.Database.Server.Controllers
 
 		    return GetMessageWithObject(text);
 		}
-	
+
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
 			var indexDefinition = Database.Indexes.GetIndexDefinition(index);
@@ -285,6 +392,7 @@ namespace Raven.Database.Server.Controllers
 				Index = indexDefinition,
 			});
 		}
+
 
 		private HttpResponseMessage GetIndexSource(string index)
 		{
@@ -353,8 +461,8 @@ namespace Raven.Database.Server.Controllers
 						.ToList();
 				});
 
-                    return GetMessageWithObject(new
-                    {
+				return GetMessageWithObject(new
+				{
 					keys.Count,
 					Results = keys
 				});
@@ -552,7 +660,7 @@ namespace Raven.Database.Server.Controllers
 
 		private void RewriteDateQueriesFromOldClients(IndexQuery indexQuery)
 		{
-			var clientVersion = GetQueryStringValue("Raven-Client-Version");
+			var clientVersion = GetHeader("Raven-Client-Version");
 			if (string.IsNullOrEmpty(clientVersion) == false) // new client
 				return;
 

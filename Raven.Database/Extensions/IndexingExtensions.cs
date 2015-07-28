@@ -4,13 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -20,6 +23,7 @@ using Raven.Database.Indexing.Sorting.AlphaNumeric;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
 using Raven.Database.Util;
+
 using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -253,10 +257,10 @@ namespace Raven.Database.Extensions
 								}
 
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
-
+                                
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-
+							    
                                 if (sortOptions.Value == SortOptions.Short)
 							        sortOptions = SortOptions.Int;
 							    return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
@@ -265,7 +269,7 @@ namespace Raven.Database.Extensions
 							.ToArray());
 		}
 
-		private const string _Range = "_Range";
+        private const string _Range = "_Range";
         private const string _SortHint = "SortHint-";
         private static CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
@@ -300,5 +304,7 @@ namespace Raven.Database.Extensions
 
             return value;
 		}
+
+		
 	}
 }

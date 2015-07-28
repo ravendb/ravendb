@@ -354,16 +354,12 @@ namespace Rachis.Behaviors
 				return;
 			}
 
+
 			Debug.Assert(resp.From != null);
 			_nextIndexes[resp.From] = resp.LastLogIndex + 1;
 			_matchIndexes[resp.From] = resp.LastLogIndex;
 			_lastContact[resp.From] = DateTime.UtcNow;
 
-			if (Engine.CurrentTopology.IsPromotable(resp.From) &&
-				resp.LastLogIndex == Engine.CommitIndex)
-			{
-				PromoteNodeToVoter(resp);
-			}
 
 			_log.Debug("Follower ({0}) has LastLogIndex = {1}", resp.From, resp.LastLogIndex);
 
@@ -374,6 +370,13 @@ namespace Rachis.Behaviors
 				return;
 			}
 
+
+            if (Engine.CurrentTopology.IsPromotable(resp.From) &&
+                resp.LastLogIndex == Engine.CommitIndex)
+            {
+                PromoteNodeToVoter(resp);
+            }
+
 			var maxIndexOnCurrentQuorum = GetMaxIndexOnQuorum();
 			if (maxIndexOnCurrentQuorum <= Engine.CommitIndex)
 			{
@@ -382,7 +385,23 @@ namespace Rachis.Behaviors
 				return;
 			}
 
-			// we update the heartbeat time whenever we get a successful quorum, because
+		    var logEntry = Engine.PersistentState.GetLogEntry(maxIndexOnCurrentQuorum);
+		    if (logEntry == null)
+		    {
+                _log.Debug("maxIndexOnCurrentQuorum = {0} is null? This should probably never happen",maxIndexOnCurrentQuorum);
+		        return;
+		    }
+		    if (logEntry.Term != Engine.PersistentState.CurrentTerm)
+		    {
+                _log.Debug("maxIndexOnCurrentQuorum = {0} is from term {1} while this leader is on term {2}, cannot commit until the quorum index point to an entry in the leader term", 
+                    maxIndexOnCurrentQuorum,
+                    logEntry.Term,
+                    Engine.PersistentState.CurrentTerm
+                    );
+                return;
+		    }
+
+		    // we update the heartbeat time whenever we get a successful quorum, because
 			// that means that we are good to run without any issues. Further handling is done 
 			// in the HandleTimeout, to handle a situation where the leader can't talk to the clients
 			LastHeartbeatTime = DateTime.UtcNow;

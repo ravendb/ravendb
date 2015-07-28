@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
 using Raven.Database.Plugins;
 using Raven.Database.Raft;
 using Raven.Database.Server.Connections;
@@ -41,7 +42,7 @@ namespace Raven.Database.Server
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
 					systemDatabase = new DocumentDatabase(configuration, null);
-					systemDatabase.SpinBackgroundWorkers();
+					systemDatabase.SpinBackgroundWorkers(false);
 				}
 				else
 				{
@@ -64,7 +65,7 @@ namespace Raven.Database.Server
 				{
 					toDispose.Add(task);
 					task.Execute(this);
-			}
+				}
 			}
 			catch
 			{
@@ -130,9 +131,8 @@ namespace Raven.Database.Server
 			toDispose.Add(systemDatabase);
 			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
 			toDispose.Add(requestManager);
-                        toDispose.Add(countersLandlord);
-
-        toDispose.Add(ClusterManager.Value);
+			toDispose.Add(countersLandlord);
+			toDispose.Add(ClusterManager.Value);
 
             var errors = new List<Exception>();
 

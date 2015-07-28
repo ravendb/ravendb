@@ -169,5 +169,15 @@ namespace Raven.Database.Linq.PrivateExtensions
 		{
 			return Max(Enumerable.Select(source, selector));
 		}
+
+		public static IEnumerable<dynamic> Concat(object source, object other)
+		{
+			return new DynamicList(((IEnumerable<object>)source).Concat((IEnumerable<object>)other));
+		}
+
+		public static IEnumerable<dynamic> Intersect(object source, object other)
+		{
+			return new DynamicList(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
+		}
 	}
 }

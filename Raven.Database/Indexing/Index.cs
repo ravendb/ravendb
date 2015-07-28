@@ -23,6 +23,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -32,14 +33,17 @@ using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Analyzers;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
@@ -50,7 +54,7 @@ namespace Raven.Database.Indexing
 	/// <summary>
 	/// 	This is a thread safe, single instance for a particular index.
 	/// </summary>
-	public abstract class Index : IDisposable
+	public abstract class Index : IDisposable,ILowMemoryHandler
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
@@ -112,6 +116,8 @@ namespace Raven.Database.Indexing
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
+
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
@@ -235,7 +241,7 @@ namespace Raven.Database.Indexing
 
 				if (currentIndexSearcherHolder != null)
 				{
-					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
+					var item = currentIndexSearcherHolder.SetIndexSearcher(null, PublicName, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
@@ -307,10 +313,18 @@ namespace Raven.Database.Indexing
 				if (indexWriter == null)
 					return;
 
+				waitReason = "Flush";
 				try
 				{
-					waitReason = "Flush";
-					indexWriter.Commit(highestETag);
+					try
+					{
+						indexWriter.Commit(highestETag);
+					}
+					catch (Exception e)
+					{
+						HandleWriteError(e);
+						throw;
+					}
 
 					ResetWriteErrors();
 				}
@@ -333,15 +347,19 @@ namespace Raven.Database.Indexing
 					
 					EnsureIndexWriter();
 
-					indexWriter.Optimize();
+					try
+					{
+						indexWriter.Optimize();
+					}
+					catch (Exception e)
+					{
+						HandleWriteError(e);
+						throw;
+					}
+
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
 
 					ResetWriteErrors();
-				}
-				catch (Exception e)
-				{
-					IncrementWriteErrors(e);
-					throw;
 				}
 				finally
 				{
@@ -559,8 +577,6 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					IncrementWriteErrors(e);
-
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
 				finally
@@ -672,11 +688,19 @@ namespace Raven.Database.Indexing
 
 		private void CreateIndexWriter()
 		{
-			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-																  ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
-																  : null;
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+			try
+			{
+				snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+				IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+					? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
+					: null;
+				indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+			}
+			catch (Exception e)
+			{
+				HandleWriteError(e);
+				throw;
+			}
 		}
 
 		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
@@ -756,7 +780,8 @@ namespace Raven.Database.Indexing
 							continue;
 						if (standardAnalyzer == null)
 						{
-							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+							standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+							//standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
 							toDispose.Add(standardAnalyzer.Close);
 						}
 						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);
@@ -912,12 +937,12 @@ namespace Raven.Database.Indexing
 		{
 			if (indexWriter == null)
 			{
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), PublicName,wait: false);
 			}
 			else
 			{
 				var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), PublicName, wait: false);
 			}
 		}
 
@@ -1121,11 +1146,12 @@ namespace Raven.Database.Indexing
 
 		#region Nested type: IndexQueryOperation
 
-		internal class IndexQueryOperation
+	    public class IndexQueryOperation
 		{
 			FastVectorHighlighter highlighter;
 			FieldQuery fieldQuery;
 
+            private readonly Stopwatch _queryParseDuration = new Stopwatch();
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -1136,6 +1162,11 @@ namespace Raven.Database.Indexing
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
 			private int alreadyScannedForDuplicates;
+
+		    public TimeSpan QueryParseDuration
+		    {
+                get { return _queryParseDuration.Elapsed; }
+		    }
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1538,7 +1569,8 @@ namespace Raven.Database.Indexing
 
 			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query documentQuery;
+                _queryParseDuration.Start();
+                Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
@@ -1568,7 +1600,9 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(documentQuery);
+			    var afterTriggers = ApplyIndexTriggers(documentQuery);
+                _queryParseDuration.Stop();
+			    return afterTriggers;
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
@@ -1867,39 +1901,70 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public void IncrementWriteErrors(Exception e)
+		private void HandleWriteError(Exception e)
 		{
-			if (e is SystemException) // Don't count transient errors
+			if (disposed)
 				return;
 
-			writeErrors = Interlocked.Increment(ref writeErrors);
-
-			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
+			if (e.GetType() == typeof (SystemException)) // ignore transient errors
 				return;
 
-			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
-			Priority = IndexingPriority.Error;
-
-			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			bool indexCorrupted = false;
+			string errorMessage = null;
+			
+			if (e is IOException)
 			{
-				Name = PublicName,
-				Type = IndexChangeTypes.IndexMarkedAsErrored
-			});
-
-			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
-
-			logIndexing.Warn(msg);
-
-			context.AddError(indexId, PublicName, null, msg);
-
-			context.Database.AddAlert(new Alert
+				errorMessage = string.Format("Index '{0}' got corrupted because it failed in writing to a disk with the following exception message: {1}." +
+				                             " The index priority was set to Error.", PublicName, e.Message);
+				indexCorrupted = true;
+			}
+			else
 			{
-				AlertLevel = AlertLevel.Error,
-				CreatedAt = SystemTime.UtcNow,
-				Message = msg,
-				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
-				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
-			});
+				var errorCount = Interlocked.Increment(ref writeErrors);
+
+				if (errorCount >= WriteErrorsLimit)
+				{
+					errorMessage = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, errorCount);
+					indexCorrupted = true;
+				}
+			}
+
+			if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
+				return;
+
+			using (context.TransactionalStorage.DisableBatchNesting())
+			{
+				try
+				{
+					context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+					Priority = IndexingPriority.Error;
+
+					context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+					{
+						Name = PublicName,
+						Type = IndexChangeTypes.IndexMarkedAsErrored
+					});
+
+					if (string.IsNullOrEmpty(errorMessage))
+						throw new ArgumentException("Error message has to be set");
+
+					logIndexing.WarnException(errorMessage, e);
+					context.AddError(indexId, PublicName, null, e,errorMessage);
+
+					context.Database.AddAlert(new Alert
+					{
+						AlertLevel = AlertLevel.Error,
+						CreatedAt = SystemTime.UtcNow,
+						Message = errorMessage,
+						Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
+						UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+					});
+				}
+				catch (Exception ex)
+				{
+					logIndexing.WarnException(string.Format("Failed to handle corrupted {0} index", PublicName), ex);
+				}
+			}
 		}
 
 		private void ResetWriteErrors()
@@ -1918,6 +1983,55 @@ namespace Raven.Database.Indexing
 			{
 				return obj.IndexId.GetHashCode();
 			}
+		}
+
+		public void HandleLowMemory()
+		{
+			bool tryEnter = false;
+			try
+			{
+				tryEnter = Monitor.TryEnter(writeLock);
+
+				if (tryEnter == false)
+					return;
+
+				try
+				{
+					EnsureIndexWriter();
+					ForceWriteToDisk();
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error while writing in memory index to disk.", e);
+				}
+				RecreateSearcher();
+			}
+			finally
+			{
+				if(tryEnter)
+				Monitor.Exit(writeLock);
+			}
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			var writerEstimator = new RamUsageEstimator(false);
+			return new LowMemoryHandlerStatistics()
+			{
+				Name = "Index",
+				DatabaseName = this.context.DatabaseName,
+				Metadata = new
+				{
+					IndexName = this.PublicName
+				},
+				EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
+			};
 		}
 	}
 }

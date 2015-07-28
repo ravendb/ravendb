@@ -8,6 +8,10 @@ namespace Raven.Database.Util
 {
 	public enum QueryTimings
 	{
+        [Description("Query parsing")]
+        Parse,
+
+		
 		[Description("Lucene search")]
 		Lucene,
 

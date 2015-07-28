@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using Raven.Imports.Newtonsoft.Json;
 
 using Raven.Abstractions.Cluster;
 
@@ -109,6 +109,11 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public string ClientVisibleUrl { get; set; }
 
+		/// <summary>
+		/// Gets or sets JS scripts that will transform documents when sending them to a destination
+		/// </summary>
+		public Dictionary<string, string> TransformScripts { get; set; } 
+
 		public string Humane
 		{
 			get
@@ -137,9 +142,9 @@ namespace Raven.Abstractions.Replication
 				   TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
 				   IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
 				   ((string.Equals(Url, other.Url, StringComparison.InvariantCultureIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
-				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase)));
+				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase))) &&
+				   Extensions.DictionaryExtensions.ContentEquals(TransformScripts, other.TransformScripts);
 		}
-
 
 		public override bool Equals(object obj)
 		{

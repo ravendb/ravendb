@@ -7,7 +7,7 @@
 
 			<div data-bind="with: targetServer">
 				<div class="form-group">
-					<label class="col-sm-4 control-label">Target server Url</label>
+					<label class="col-sm-4 control-label">Destination server Url</label>
 					<div class="col-sm-7">
 						<input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
 					</div>
@@ -129,11 +129,21 @@
 				<div class="form-group">
 					<div class="col-sm-offset-4 col-sm-7">
 						<button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
-						<button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest() ? 'Hide JSON' : 'Show JSON')"></button>
+					    <button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest() ? 'Hide JSON' : 'Show JSON')"></button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleCurl, text: (showCurlRequest() ? 'Hide curl' : 'Show curl')"></button>
 					</div>
 				</div>
 
-				<div data-bind="visible: showJsonRequest()">
+			    <div data-bind="visible: showCurlRequest()">
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Curl Command</label>
+                        <div class="col-sm-7">
+                            <pre data-bind="text: curlRequest"></pre>
+                        </div>
+                    </div>
+			    </div>
+
+			    <div data-bind="visible: showJsonRequest()">
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Method</label>
 						<div class="col-sm-7">

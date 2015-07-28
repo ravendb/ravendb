@@ -21,6 +21,7 @@ using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Runtime.Remoting.Messaging;
 
 namespace Raven.Client.Document.Async
 {
@@ -705,7 +706,8 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
-			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
+			if (id == null)
+				throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
@@ -741,7 +743,7 @@ namespace Raven.Client.Document.Async
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0], token);
+			return LoadAsyncInternal<T>(ids.ToArray(), token);
 		}
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
@@ -858,7 +860,40 @@ namespace Raven.Client.Document.Async
 			return multiLoadOperation.Complete<T>();
 		}
 
-     
+		/// <summary>
+		/// Begins the async multi load operation
+		/// </summary>
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
+
+				multiLoadOperation.Complete<T>();
+			}
+
+			var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token)).ToArray();
+			var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
+			return loadedData;
+		}
 
 		/// <summary>
 		/// Begins the async save changes operation

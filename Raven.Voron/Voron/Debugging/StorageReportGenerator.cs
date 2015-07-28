@@ -20,6 +20,7 @@ namespace Voron.Debugging
 		public long NextPageNumber;
 		public List<Tree> Trees;
 		public List<JournalFile> Journals;
+		public bool IsLightReport { get; set; }
 	}
 
 	public class StorageReportGenerator
@@ -51,36 +52,38 @@ namespace Voron.Debugging
 
 			foreach (var tree in input.Trees)
 			{
-				var densities = new List<double>();
-
-				var allPages = tree.AllPages();
-
-				for (var i = 0; i < allPages.Count; i++)
+				List<double> densities = null;
+				if (!input.IsLightReport)
 				{
-					var page = _tx.GetReadOnlyPage(allPages[i]);
+					densities = new List<double>();				
+					var allPages = tree.AllPages();
 
-					if (page.IsOverflow)
+					for (var i = 0; i < allPages.Count; i++)
 					{
-						var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+						var page = _tx.GetReadOnlyPage(allPages[i]);
 
-						densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
-
-						i += (numberOfPages - 1);
-					}
-					else
-					{
-						if (page.IsFixedSize)
+						if (page.IsOverflow)
 						{
-							var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries * (page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
-							densities.Add(((double)sizeUsed) / AbstractPager.PageSize);
+							var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+
+							densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
+
+							i += (numberOfPages - 1);
 						}
 						else
 						{
-							densities.Add(((double)page.SizeUsed) / AbstractPager.PageSize);
+							if (page.IsFixedSize)
+							{
+								var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
+								densities.Add(((double) sizeUsed)/AbstractPager.PageSize);
+							}
+							else
+							{
+								densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
+							}
 						}
 					}
 				}
-
 				var state = tree.State;
 				var treeReport = new TreeReport
 				{
@@ -91,7 +94,7 @@ namespace Voron.Debugging
 					LeafPages = state.LeafPages,
 					OverflowPages = state.OverflowPages,
 					PageCount = state.PageCount,
-					Density = CalculateTreeDensity(densities)
+					Density = input.IsLightReport?0:CalculateTreeDensity(densities)
 				};
 
 				trees.Add(treeReport);

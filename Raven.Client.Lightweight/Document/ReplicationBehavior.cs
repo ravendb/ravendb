@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -117,19 +116,28 @@ namespace Raven.Client.Document
 
 		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, string[] sourceCollections, CancellationToken cancellationToken)
 		{
-		    while (true)
-		    {
-		        cancellationToken.ThrowIfCancellationRequested();
+			while (true)
+			{
+				try
+				{
+					cancellationToken.ThrowIfCancellationRequested();
 
-				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId, sourceCollections);
+					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId, sourceCollections);
 
-		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
+					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
-		        if (replicated)
-		            return;
+					if (replicated)
+						return;
+				}
+				catch (Exception e)
+				{
+					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
 
-                await Task.Delay(100, cancellationToken);
-		    }
+					throw;
+				}
+
+				await Task.Delay(100, cancellationToken);
+			}
 		}
 
 	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId, string[] sourceCollections = null)
@@ -146,10 +154,10 @@ namespace Raven.Client.Document
 			    var json = await request.ReadResponseJsonAsync();
 			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
 				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
-
+				
 			    return new ReplicatedEtagInfo
 			    {
-				    DestinationUrl = destinationUrl, 
+				    DestinationUrl = destinationUrl,
 					DocumentEtag = etag 
 			    };
 		    }

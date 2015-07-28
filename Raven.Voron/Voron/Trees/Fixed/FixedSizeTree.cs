@@ -6,9 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Platform;
+using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
@@ -73,7 +75,7 @@ namespace Voron.Trees.Fixed
 
         public bool Add(long key, Slice val = null)
         {
-            if (_valSize == 0 && val != null)
+            if (_valSize == 0 && (val != null && val.Size != 0))
                 throw new InvalidOperationException("When the value size is zero, no value can be specified");
             if (_valSize != 0 && val == null)
                 throw new InvalidOperationException("When the value size is not zero, the value must be specified");
@@ -82,7 +84,7 @@ namespace Voron.Trees.Fixed
 
 	        bool isNew;
 	        var pos = DirectAdd(key, out isNew);
-            if (val != null)
+            if (val != null && val.Size != 0)
                 val.CopyTo(pos);
 
 			return isNew;
@@ -208,10 +210,7 @@ namespace Voron.Trees.Fixed
                 page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
             }
 
-            long splitKey;
-            long splitPageNumber;
-            ActuallySplitPage(page, key, out splitKey, out splitPageNumber);
-
+           
             if (parentPage == null) //root
             {
                 var newRootPage = _parent.NewPage(PageFlags.Branch | PageFlags.FixedSize, 1);
@@ -221,14 +220,16 @@ namespace Voron.Trees.Fixed
                 var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largePtr->RootPageNumber = newRootPage.PageNumber;
 
-                newRootPage.FixedSize_NumberOfEntries = 2;
+                newRootPage.FixedSize_NumberOfEntries = 1;
                 var dataStart = (long*)(newRootPage.Base + newRootPage.FixedSize_StartPosition);
                 dataStart[0] = long.MinValue;
                 dataStart[1] = page.PageNumber;
-                dataStart[2] = splitKey;
-                dataStart[3] = splitPageNumber;
                 return;
             }
+
+            long splitKey;
+            long splitPageNumber;
+            ActuallySplitPage(page, key, out splitKey, out splitPageNumber);
 
             parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
 
@@ -904,5 +905,11 @@ namespace Voron.Trees.Fixed
 			    }
 		    }
 	    }
+
+        [Conditional("DEBUG")]
+        public void DebugRenderAndShow()
+        {
+            DebugStuff.RenderAndShow_FixedSizeTree(_tx, _parent, _treeName);
+        }
     }
 }

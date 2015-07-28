@@ -150,7 +150,7 @@ namespace Raven.Database.Config
 			WorkingDir =
 				new StringSetting(settings["Raven/WorkingDir"], @"~\");
 			DataDir =
-				new StringSetting(settings["Raven/DataDir"], @"~\Data");
+				new StringSetting(settings["Raven/DataDir"], @"~\Databases\System");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 
@@ -263,7 +263,9 @@ namespace Raven.Database.Config
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+			Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
 			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 20);
+			Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
             Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
@@ -283,6 +285,8 @@ namespace Raven.Database.Config
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
 			WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
+
+			TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
 
 			FillMonitoringSettings();
 		}
@@ -458,6 +462,8 @@ namespace Raven.Database.Config
 
         public EnumSetting<ImplicitFetchFieldsMode> ImplicitFetchFieldsFromDocumentMode { get; private set; }
 
+		public StringSetting TempPath { get; private set; }
+
 		public class VoronConfiguration
 		{
 			public IntegerSetting MaxBufferPoolSize { get; set; }
@@ -483,7 +489,10 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+
+			public IntegerSetting DisableIndexingFreeSpaceThreshold { get; set; }
 			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+			public BooleanSetting UseLuceneASTParser { get; set; }
 		}
 
 	    public class ClusterConfiguration
@@ -561,7 +570,7 @@ namespace Raven.Database.Config
 			public MonitoringConfiguration()
 			{
 				Snmp = new SnmpConfiguration();
-			}
+	}
 
 			public SnmpConfiguration Snmp { get; private set; }
 

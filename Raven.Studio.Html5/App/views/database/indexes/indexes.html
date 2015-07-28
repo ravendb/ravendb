@@ -93,6 +93,11 @@
 			    <li data-bind="click: deleteAllIndexes"><a href="#">Delete All Indexes</a></li>
 		    </ul>
 	    </div>
+		<div class="btn-group" data-bind="visible: corruptedIndexes().length > 0">
+			<a class="btn btn-danger" title="Try to recover corrupted indexes by reopening them (the index reset might apply)" data-bind="click: tryRecoverCorruptedIndexes">
+				Try to recover corrupted indexes
+			</a>
+		</div>
 		<div class="btn-group">
 			<input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: indexGroups().length > 0" title="Search for an index (Alt+/)">
 		</div>
@@ -140,7 +145,7 @@
 										<small class="text-warning" data-bind="visible: isIdle">Idle</small>
 										<small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
 										<small class="badge" data-bind="visible: isInvalid"><i class="fa fa-bug" /> Invalid index</small>
-										<small class="badge" data-bind="visible: isErrored"><i class="fa fa-bug" /> Errored index</small>
+										<small class="badge" data-bind="visible: isErrored"><i class="fa fa-bug" /> Corrupted index</small>
 										<small class="badge" data-bind="visible: isTestIndex">Test index</small>
 										<small class="badge" data-bind="visible: willReplaceIndex()"><i class="fa fa-arrow-left"></i> Side-by-side index (new)</small>
 										<small class="badge" data-bind="visible: willBeReplacedByIndex()"><i class="fa fa-arrow-right"></i> Size-by-size index (old)</small>

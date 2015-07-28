@@ -21,25 +21,26 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
+                var initialIndexDef = "from doc in docs select new { doc.Date}";
                 Assert.True(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
                                                                  {
-                                                                     Map = "from doc in docs select new { doc.Date}"
+                                                                     Map = initialIndexDef
                                                                  }));
 
                 store.DatabaseCommands.PutIndex("Index1",
                                                 new IndexDefinition
                                                 {
-                                                    Map = "from doc in docs select new { doc.Date}"
+                                                    Map = initialIndexDef
                                                 });
 
                 Assert.False(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Date}"
+                    Map = initialIndexDef
                 }));
 
                 Assert.True(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Date }"
+                    Map = "from doc1 in docs select new { doc1.Date }"
                 }));
 
 

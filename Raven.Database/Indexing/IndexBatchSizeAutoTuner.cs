@@ -62,6 +62,11 @@ namespace Raven.Database.Indexing
 			return lastAmountOfItemsToIndex;
 		}
 
+		protected override string GetName
+		{
+			get { return "IndexBatchSizeAutoTuner"; }
+		}
+
 		public IDisposable ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
 		{
 			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))

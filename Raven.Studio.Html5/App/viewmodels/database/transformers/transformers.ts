@@ -1,6 +1,7 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/database/index/transformer");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
+import saveTransformerLockModeCommand = require("commands/saveTransformerLockModeCommand");
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
@@ -18,7 +19,6 @@ class Transformers extends viewModelBase {
     transformersMutex = true;
     allTransformersExpanded = ko.observable(true);
     expandCollapseTitle = ko.computed(() => this.allTransformersExpanded() ? "Collapse all" : "Expand all");
-
 
     constructor() {
         super();
@@ -138,6 +138,19 @@ class Transformers extends viewModelBase {
     private removeTransformersFromAllGroups(transformers: Array<transformer>) {
         this.transformersGroups().forEach(transGroup => transGroup.transformers.removeAll(transformers));
         this.transformersGroups.remove((item: { entityName: string; transformers: KnockoutObservableArray<transformer> }) => item.transformers().length === 0);
+    }
+
+    updateTransformerLockMode(t: transformer) {
+
+        var originalLockMode = t.lockMode();
+		var newLockMode = t.isLocked() ? 'Unlock' : 'LockedIgnore';
+        if (originalLockMode !== newLockMode) {
+            t.lockMode(newLockMode);
+
+            new saveTransformerLockModeCommand(t.name(), newLockMode, this.activeDatabase())
+                .execute()
+                .fail(() => t.lockMode(originalLockMode));
+}
     }
 }
 

@@ -2,6 +2,7 @@ import durandalRouter = require("plugins/router");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
 
 class adminSettings extends viewModelBase {
 
@@ -14,12 +15,6 @@ class adminSettings extends viewModelBase {
         super();
 
         this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
-
-
-
-
-
-
 
 	    var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
@@ -37,24 +32,30 @@ class adminSettings extends viewModelBase {
 	    var consoleRoute = { route: 'admin/settings/console', moduleId: "viewmodels/manage/console", title: "Administator JS Console", nav: true, hash: appUrl.forAdminJsConsole() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/manage/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
 
+	    var routes = [
+		    apiKeyRoute,
+		    windowsAuthRoute,
+		    clusterRoute,
+		    globalConfigRoute,
+		    serverSmuggling,
+		    backupRoute,
+		    compactRoute,
+		    restoreRoute,
+		    adminLogsRoute,
+		    trafficWatchRoute,
+		    licenseInformation,
+		    debugInfoRoute,
+		    ioTestRoute,
+		    consoleRoute,
+		    studioConfigRoute
+	    ];
+
+		if (!shell.has40Features()) {
+			routes.remove(clusterRoute);
+		}
+
         this.router = durandalRouter.createChildRouter()
-            .map([
-                apiKeyRoute,
-                windowsAuthRoute,
-                clusterRoute,
-                globalConfigRoute,
-				serverSmuggling,
-                backupRoute,
-                compactRoute,
-                restoreRoute,
-                adminLogsRoute,
-                trafficWatchRoute,
-				licenseInformation,
-                debugInfoRoute,
-				ioTestRoute,
-				consoleRoute,
-                studioConfigRoute
-            ])
+            .map(routes)
             .buildNavigationModel();
 
         adminSettings.adminSettingsRouter = this.router;

@@ -20,6 +20,7 @@ import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexes
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import indexPriority = require("models/database/index/indexPriority");
+import tryRecoverCorruptedIndexes = require("commands/database/index/tryRecoverCorruptedIndexes");
 
 class indexes extends viewModelBase {
 
@@ -33,6 +34,7 @@ class indexes extends viewModelBase {
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
+	corruptedIndexes: KnockoutComputed<index[]>;
 	searchText = ko.observable<string>();
 
     constructor() {
@@ -48,6 +50,13 @@ class indexes extends viewModelBase {
 
             return groups;
         });
+
+		this.corruptedIndexes = ko.computed(() => {
+			var corrupted: index[] = [];
+			this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
+
+			return corrupted.distinct();
+	    });
     }
 
     canActivate(args) {
@@ -410,6 +419,10 @@ class indexes extends viewModelBase {
 
 	forceSideBySide(idx: index) {
 		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+	}
+
+	tryRecoverCorruptedIndexes() {
+		new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
 	}
 }
 

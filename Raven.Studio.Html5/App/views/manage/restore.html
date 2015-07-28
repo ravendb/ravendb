@@ -4,7 +4,7 @@
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#restoreDb" aria-controls="restoreDb" role="tab" data-toggle="tab">Database</a></li>
 	    <li role="presentation"><a href="#restoreFs" aria-controls="restoreFs" role="tab" data-toggle="tab">File System</a></li>
-		<li role="presentation"><a href="#restoreCs" aria-controls="restoreFs" role="tab" data-toggle="tab">Counter Storage</a></li>
+        <li role="presentation" data-bind="visible: $root.has40Features"><a href="#restoreCs" aria-controls="restoreFs" role="tab" data-toggle="tab">Counter Storage</a></li>
     </ul>
     <div class="tab-content">
         <div role="tabpanel" class="tab-pane active" id="restoreDb">
@@ -163,7 +163,7 @@
 						<a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
 						<button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
 							<i class="fa fa-cloud-download"></i>
-							<span>Restore Filesystem</span>
+							<span>Restore Counter Storage</span>
 						</button>
 						<button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
 					</div>

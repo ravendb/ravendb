@@ -37,7 +37,7 @@ namespace Raven.Client.FileSystem
 
         public override string FileSystemName
         {
-            get { return Commands.FileSystem; }
+            get { return Commands.FileSystemName; }
         }
 
         public IAsyncAdvancedFilesSessionOperations Advanced

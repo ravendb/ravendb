@@ -100,6 +100,10 @@ class settings extends viewModelBase {
                 this.userDatabasePages.push(bundleName);
             }
         });
+
+        // RavenDB-3640 Allow to enable replication to existing db in studio
+        // even if replication isn't enabled we display button to enable it
+        this.userDatabasePages.push("Replication");
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {

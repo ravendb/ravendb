@@ -18,6 +18,8 @@ class resourceBackup {
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
 
+	has40Features = ko.computed(() => shell.has40Features());
+
     constructor(private type: TenantType, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
         this.searchResults = ko.computed(() => {

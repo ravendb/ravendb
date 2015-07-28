@@ -22,6 +22,7 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
@@ -231,31 +232,31 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-        private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
-        {
-            using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
-            {
-                for (var i = 0; i < count; i++)
-                {
-                    timeout.Delay();
+		private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
+		{
+			using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
+			{
+				for (var i = 0; i < count; i++)
+				{
+					timeout.Delay();
 
-                    while (jsonReader.Read())
-                                                                 {
-                        if (jsonReader.TokenType == JsonToken.StartObject)
-                            break;
-                    }
+					while (jsonReader.Read())
+					{
+						if (jsonReader.TokenType == JsonToken.StartObject)
+							break;
+					}
 
-                    if (jsonReader.TokenType != JsonToken.StartObject)
-                        throw new InvalidOperationException("Could not get document");
+					if (jsonReader.TokenType != JsonToken.StartObject)
+						throw new InvalidOperationException("Could not get document");
 
-                    var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+					var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 
-                    yield return PrepareJsonDocument(doc);
-                }
+					yield return PrepareJsonDocument(doc);
+				}
 
-                increaseDocumentsCount(count);
-            }
-        }
+				increaseDocumentsCount(count);
+			}
+		}
 
         private IEnumerable<JsonDocument> YieldJsonDocumentsInBatch(CancellationTimeout timeout, Stream stream, int count, Action<int> increaseDocumentsCount)
         {

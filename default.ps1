@@ -199,10 +199,15 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 	New-Item $build_dir\Output\Migration -Type directory | Out-Null
+	New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
 	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+task CopyMonitor {
+	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.??? $build_dir\Output\Monitor
 }
 
 task CopySmuggler {
@@ -377,6 +382,7 @@ task DoReleasePart1 -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopySmuggler, `
+	CopyMonitor, `
 	CopyBackup, `
 	CopyMigration, `
 	CopyClient, `
@@ -420,6 +426,11 @@ task UpdateLiveTest {
 </html>
 '@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
 
+
+	Remove-Item "C:\Sites\RavenDB $version\Web\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB $version\Web\Plugins" -ErrorAction SilentlyContinue
+	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "C:\Sites\RavenDB $version\Web\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
+	
 	Remove-Item "C:\Sites\RavenDB $version\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB $version\Web\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB $version\Web\" -Recurse -ErrorAction SilentlyContinue

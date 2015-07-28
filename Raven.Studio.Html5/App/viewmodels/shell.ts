@@ -144,6 +144,8 @@ class shell extends viewModelBase {
 	static clusterMode = ko.observable<boolean>(false);
 	isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
+	static serverMainVersion = ko.observable<number>(4);
+	static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
     localLicenseStatus = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
@@ -154,6 +156,8 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
+
+	static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
 
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
@@ -969,10 +973,15 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        new getServerBuildVersionCommand()
+        new getServerBuildVersionCommand() 
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
-                this.serverBuildVersion(serverBuildResult);
+				this.serverBuildVersion(serverBuildResult);
+
+				var assemblyVersion = serverBuildResult.ProductVersion.split("/")[0].trim();
+				var assemblyVersionTokens = assemblyVersion.split(".");
+				shell.serverMainVersion(parseInt(assemblyVersionTokens[0]));
+		        shell.serverMinorVersion(parseInt(assemblyVersionTokens[1]));
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {

@@ -39,6 +39,8 @@ namespace Raven.Abstractions.Logging
 
 		public void Log(LogLevel logLevel, Func<string> messageFunc)
 		{
+		    if (logger.ShouldLog(logLevel))
+		    {
 			Func<string> wrappedMessageFunc = () =>
 			{
 				try
@@ -52,11 +54,29 @@ namespace Raven.Abstractions.Logging
 				return null;
 			};
 			logger.Log(logLevel, wrappedMessageFunc);
+            }
 
-			if (targets.Length == 0 || targets.All(t => !t.ShouldLog(logger, logLevel)))
+			if (targets.Length == 0)
 				return;
-			var formattedMessage = wrappedMessageFunc();
-            string databaseName = LogContext.DatabaseName.Value;
+		    var shouldLog = false;
+		    // ReSharper disable once LoopCanBeConvertedToQuery - perf
+		    foreach (var target in targets)
+		    {
+                shouldLog |= target.ShouldLog(logger, logLevel);
+		    }
+		    if (shouldLog == false)
+		        return;
+			string formattedMessage;
+		    try
+		    {
+		        formattedMessage = messageFunc();
+		    }
+		    catch (Exception)
+		    {
+		        // nothing to be done here
+				return;
+		    }
+            string databaseName = LogContext.DatabaseName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
@@ -102,6 +122,11 @@ namespace Raven.Abstractions.Logging
 				});
 			}
 		}
+
+	    public bool ShouldLog(LogLevel logLevel)
+	    {
+	        return logger.ShouldLog(logLevel);
+	    }
 
 		#endregion
 	}

@@ -321,6 +321,13 @@ namespace Raven.Client.Connection
 		TransformerDefinition[] GetTransformers(int start, int pageSize);
 
 		/// <summary>
+		/// Sets the transformer's lock mode
+		/// </summary>
+		/// <param name="name">The name of the transformer</param>
+		/// <param name="lockMode">The lock mode to be set</param>
+		void SetTransformerLock(string name, TransformerLockMode lockMode);
+
+		/// <summary>
 		///     Retrieves the document metadata for the specified document key.
 		///     <para>Returns:</para>
 		///     <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
@@ -477,6 +484,14 @@ namespace Raven.Client.Connection
 		/// <param name="name">name of an index</param>
 		/// <param name="indexDef">definition of an index</param>
 		string PutIndex(string name, IndexDefinition indexDef);
+
+		/// <summary>
+		///     Creates multiple indexes with the specified name, based on an index definitions
+		/// </summary>
+		/// <param name="names">names of an indexes</param>
+		/// <param name="definitions">definitiosn of the indexes</param>
+		/// <param name="priorities">The priorities of the indexes</param>
+		List<string> PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities);
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition

@@ -58,7 +58,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 				var md5Sums = FetchMd5Sums(client);
 
 				// create backup
-				await client.Admin.StartBackup(backupDir, null, false, client.FileSystem);
+				await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
 				WaitForBackup(client, true);
 
 				// restore newly created backup
@@ -88,7 +88,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 		{
 			dataPath = NewDataPath("CanRestoreBackupOfEncryptedFileSystem", false);
 
-			using (var server = CreateServer(Ports[0], requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
+			using (var server = CreateServer(8079, requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
 			{
 				var store = server.FilesStore;
 
