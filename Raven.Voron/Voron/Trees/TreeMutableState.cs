@@ -1,5 +1,6 @@
 ﻿using System;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -82,7 +83,8 @@ namespace Voron.Trees
             return string.Format(@" Pages: {1:#,#}, Entries: {2:#,#}
     Depth: {0}, Flags: {3}
     Root Page: {4}
-    Leaves: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages);
+    Leaves: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}
+    Size: {8:F2} Mb", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, ((float)(PageCount * AbstractPager.PageSize) / (1024 * 1024)));
         }
     }
 }
