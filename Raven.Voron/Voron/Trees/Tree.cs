@@ -38,6 +38,10 @@ namespace Voron.Trees
         }
 
         private readonly Transaction _tx;
+        public Transaction Tx
+        {
+            get { return _tx; }
+        }
 
         private Tree(Transaction tx, long root)
         {
@@ -324,7 +328,7 @@ namespace Voron.Trees
                 var p = stack.Pop();
                 if (p.NumberOfEntries == 0 && p != root)
                 {
-                    DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                    DebugStuff.RenderAndShow(_tx, rootPageNumber);
                     throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
                 }
@@ -342,7 +346,7 @@ namespace Voron.Trees
                     var page = p.GetNode(i)->PageNumber;
                     if (pages.Add(page) == false)
                     {
-                        DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                        DebugStuff.RenderAndShow(_tx, rootPageNumber);
                         throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
                     }
                     stack.Push(_tx.GetReadOnlyPage(page));
