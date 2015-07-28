@@ -47,6 +47,8 @@ class deleteDatabaseCommand extends commandBase {
     }
 
     private deleteMultipleResources(): JQueryPromise<any> {
+        var _arguments = arguments;
+
         this.reportInfo("Deleting " + this.resources.length + " resources...");
 
         var dbToDelete = this.resources.filter(r => r.type === TenantType.Database);
@@ -76,7 +78,7 @@ class deleteDatabaseCommand extends commandBase {
 
         var combinedPromise = $.when.apply(null, deleteTasks);
         combinedPromise.done(() => {
-            var deletedResources = [].concat.apply([], arguments);
+            var deletedResources = [].concat.apply([], _arguments);
             this.reportSuccess("Successfully deleted " + deletedResources.length + " resources!");
             mergedPromise.resolve(deletedResources);
         });
@@ -89,6 +91,8 @@ class deleteDatabaseCommand extends commandBase {
     }
 
     private deleteTask(resources: Array<resource>, deletePath: string) {
+        var _arguments = arguments;
+
         var args = {
             ids: resources.map(d => d.name),
             "hard-delete": this.isHardDelete
@@ -101,7 +105,7 @@ class deleteDatabaseCommand extends commandBase {
             .done((resourceNames: string[]) => {
                 task.resolve(resources.filter(r => resourceNames.contains(r.name)));
             })
-            .fail(() => task.reject(arguments));
+            .fail(() => task.reject(_arguments));
         return task;
     }
 

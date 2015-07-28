@@ -365,9 +365,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (key != null && Encoding.UTF8.GetByteCount(key) >= UInt16.MaxValue)
-				throw new ArgumentException(string.Format("The dataKey must be a maximum of {0} bytes in Unicode, key is: '{1}'", UInt16.MaxValue, key), "key");
-
 			Etag existingEtag;
 			Etag newEtag;
 

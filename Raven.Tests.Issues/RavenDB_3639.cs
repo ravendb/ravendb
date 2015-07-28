@@ -16,13 +16,10 @@ namespace Raven.Tests.Issues
 	{
 		protected override void SetupDestination(ReplicationDestination replicationDestination)
 		{
-			replicationDestination.PatchScripts = new Dictionary<string, ScriptedPatchRequest>
+			replicationDestination.TransformScripts = new Dictionary<string, string>
 			{
 				{
-					"users", new ScriptedPatchRequest
-					{
-						Script = @"this.Name = 'patched ' + this.Name;"
-					}
+					"users", @"this.Name = 'patched ' + this.Name;"
 				}
 			};
 		}

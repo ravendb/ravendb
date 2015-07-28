@@ -25,6 +25,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void AddStruct(WriteBatch writeBatch, Slice key, IStructure value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
+			AssertKey(key);
+
 			writeBatch.AddStruct(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
 		}
 	}
