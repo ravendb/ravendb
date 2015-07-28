@@ -18,6 +18,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
@@ -77,6 +78,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getTypesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getPointsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
@@ -140,9 +142,10 @@
     <TypeScriptCompile Include="App\models\filesystem\uploadItem.ts" />
     <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\pointChange.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesKey.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesPoint.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesDto.ts" />
-    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesKey.ts" />
+    <TypeScriptCompile Include="App\models\timeSeries\timeSeriesType.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesDocument.ts" />
@@ -390,7 +393,7 @@
     <Content Include="App\views\shell.html" />
     <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
-    <Content Include="App\views\timeSeries\timeSeries.html" />
+    <Content Include="App\views\timeSeries\timeSeriesTypes.html" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
@@ -1084,7 +1087,7 @@
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editPointDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesStats.ts" />
-    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeries.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />

@@ -1,6 +1,11 @@
+interface timeSeriesTypeDto {
+    Type: string;
+    Fields: string[];
+    KeysCount: number;
+}
+
 interface timeSeriesKeyDto {
     Type: string;
-    NumberOfValues: number;
     Key: string;
     PointsCount: number;
 }
