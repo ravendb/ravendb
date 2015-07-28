@@ -1586,7 +1586,7 @@ namespace Raven.Database.Indexing
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
-							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.indexId.ToString(), indexQuery.Query, currentAnalyzer);
+							var newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.indexId.ToString(), indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
