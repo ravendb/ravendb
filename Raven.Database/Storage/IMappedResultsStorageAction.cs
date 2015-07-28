@@ -13,6 +13,7 @@ using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Sparrow.Collections;
+using Sparrow;
 
 namespace Raven.Database.Storage
 {
@@ -56,7 +57,7 @@ namespace Raven.Database.Storage
 			Level = level;
 			LoadData = loadData;
 			ItemsToDelete = itemsToDelete;
-			ItemsAlreadySeen = new HashSet<Tuple<string, int>>();
+            ItemsAlreadySeen = new HashSet<ReduceKeyAndBucket>();
 			ReduceKeys = reduceKeys;
 		}
 
@@ -65,7 +66,7 @@ namespace Raven.Database.Storage
 		public bool LoadData { get; private set; }
 		public int Take { get; set; }
 		public ConcurrentSet<object> ItemsToDelete { get; private set; }
-		public HashSet<Tuple<string, int>> ItemsAlreadySeen { get; private set; }
+        public HashSet<ReduceKeyAndBucket> ItemsAlreadySeen { get; private set; }
 		public HashSet<string> ReduceKeys { get; private set; }
 	}
 
@@ -81,11 +82,6 @@ namespace Raven.Database.Storage
 			ReduceKey = reduceKey;
 		}
 
-		protected bool Equals(ReduceKeyAndBucket other)
-		{
-			return Bucket == other.Bucket && string.Equals(ReduceKey, other.ReduceKey);
-		}
-
 		public override string ToString()
 		{
 			return Bucket + " - " + ReduceKey;
@@ -96,17 +92,44 @@ namespace Raven.Database.Storage
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != GetType()) return false;
-			return Equals((ReduceKeyAndBucket) obj);
+
+            var y = (ReduceKeyAndBucket) obj;
+
+            return this.Bucket == y.Bucket && string.Equals(this.ReduceKey, y.ReduceKey);
 		}
 
 		public override int GetHashCode()
 		{
-			unchecked
-			{
-				return (Bucket*397) ^ (ReduceKey != null ? ReduceKey.GetHashCode() : 0);
-			}
+            unsafe
+            {
+                fixed (char* buffer = this.ReduceKey)
+                {
+                    return this.Bucket ^ (int)Hashing.XXHash32.CalculateInline((byte*)buffer, this.ReduceKey.Length * sizeof(char));
+                }
+            }
 		}
 	}
+
+    internal sealed class ReduceKeyAndBucketEqualityComparer : IEqualityComparer<ReduceKeyAndBucket>
+    {
+        public static ReduceKeyAndBucketEqualityComparer Instance = new ReduceKeyAndBucketEqualityComparer();
+
+        public bool Equals(ReduceKeyAndBucket x, ReduceKeyAndBucket y)
+        {
+            return x.Bucket == y.Bucket && string.Equals(x.ReduceKey, y.ReduceKey);
+        }
+
+        public int GetHashCode(ReduceKeyAndBucket obj)
+        {
+            unsafe
+            {
+                fixed (char* buffer = obj.ReduceKey)
+                {
+                    return obj.Bucket ^ (int)Hashing.XXHash32.CalculateInline((byte*)buffer, obj.ReduceKey.Length * sizeof(char));
+                }
+            }
+        }
+    }
 
 	public class ScheduledReductionInfo
 	{

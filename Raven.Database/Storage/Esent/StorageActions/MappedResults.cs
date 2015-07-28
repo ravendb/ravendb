@@ -228,8 +228,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
-			
-            var seenLocally = new HashSet<Tuple<string, int>>();
+
+            var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
             var keysToRemove = new List<string>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			{
@@ -260,6 +260,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				{
 					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete.First();
 				}
+
 				do
 				{
 					cancellationToken.ThrowIfCancellationRequested();
@@ -282,7 +283,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 					var bucket = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
 
-					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
+                    var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb); // Tuple.Create(reduceKeyFromDb, bucket);
 					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions);
 					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
