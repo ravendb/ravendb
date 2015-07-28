@@ -664,11 +664,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/currently-indexing")]
 		public HttpResponseMessage CurrentlyIndexing()
 		{
-			var withReduction = GetQueryStringValue("with_reduction");
-			bool isWithReduction = false;
-			if (withReduction != null)
-				bool.TryParse(withReduction, out isWithReduction);
-			return GetMessageWithObject(DebugInfoProvider.GetCurrentlyIndexingForDebug(Database, isWithReduction));
+			return GetMessageWithObject(DebugInfoProvider.GetCurrentlyIndexingForDebug(Database));
 		}
 
 		[HttpGet]
@@ -676,7 +672,15 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
 		public HttpResponseMessage CurrentlyRemainingReductions()
 		{
-			return GetMessageWithObject(Database.SlowlyGetRemainingScheduledReductions());
+			return GetMessageWithObject(Database.GetRemainingScheduledReductions());
+		}
+		[HttpPost]
+		[RavenRoute("debug/remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
+		public HttpResponseMessage ResetRemainingReductionsTracking()
+		{
+			Database.ResetScheduledReductionsTracking();
+			return GetEmptyMessage();
 		}
 
 		[HttpGet]

@@ -34,32 +34,12 @@ class statusDebugCurrentlyIndexing extends viewModelBase {
         if (db) {
             return new getStatusDebugCurrentlyIndexingCommand(db)
                 .execute()
-                .done((results: statusDebugCurrentlyIndexingDto) => {
-					if (this.data()) {
-						results.Indexes.forEach(
-							item => {
-								var index = this.data().Indexes.first(i => i.IndexName === item.IndexName);
-								if (index)
-									item['RemainingReductions'] = index.RemainingReductions;
-							})
-					}
-	            this.data(results)
-            });
+                .done((results: statusDebugCurrentlyIndexingDto) => this.data(results));
         }
 
         return null;
     }
 
-	fetchCurrentlyIndexingWithReductions(): JQueryPromise<statusDebugCurrentlyIndexingDto> {
-        var db = this.activeDatabase();
-        if (db) {
-            return new getStatusDebugCurrentlyIndexingCommand(db, true)
-                .execute()
-                .done((results: statusDebugCurrentlyIndexingDto) => this.data(results)
-            );
-        }
-        return null;
-    }
 }
 
 export = statusDebugCurrentlyIndexing;

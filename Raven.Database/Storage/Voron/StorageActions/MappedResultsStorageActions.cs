@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -44,7 +45,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor)
+		private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;		
+
+        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, 
+			Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor, ConcurrentDictionary<int, RemainingReductionPerLevel> ScheduledReductionsPerViewAndLevel)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
@@ -52,6 +56,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			this.documentCodecs = documentCodecs;
 			this.writeBatch = writeBatch;
 	        this.storageActionsAccessor = storageActionsAccessor;
+	        this.scheduledReductionsPerViewAndLevel = ScheduledReductionsPerViewAndLevel;
 		}
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize)
@@ -488,6 +493,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             scheduledReductionsByView.MultiAdd(writeBatch.Value, viewKeySlice, idSlice);
             scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, (Slice)AppendToKey(viewKey, level, ReduceKeySizeLimited(reduceKeysAndBuckets.ReduceKey), reduceHashKey), idSlice);
+			if (scheduledReductionsPerViewAndLevel != null)
+				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
@@ -688,6 +695,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
 
 				DeleteScheduledReduction(etagAsString, view, CreateKey(view), level, reduceKey);
+				if (scheduledReductionsPerViewAndLevel != null)
+					scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 			}
 
 			return hasResult ? result : null;
@@ -708,39 +717,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var id = iterator.CurrentKey;
 					DeleteScheduledReduction(id, view, viewKey, level, reduceKey);
+					if (scheduledReductionsPerViewAndLevel != null)
+						scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 				}
 				while (iterator.MoveNext());
 			}
 		}
 
-		public Dictionary<int, long> GetRemainingScheduledReductionPerIndex()
+		public Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex()
 		{
-			var res = new Dictionary<int, long>();
-			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var viewIterator = scheduledReductionsByView.Iterate(Snapshot, writeBatch.Value))
+			var res = new Dictionary<int, RemainingReductionPerLevel>();
+			if (scheduledReductionsPerViewAndLevel == null) return null;
+			var iterator = scheduledReductionsPerViewAndLevel.GetEnumerator();
+			do
 			{
-				if (!viewIterator.Seek(Slice.BeforeAllKeys))
-					return res;
-				Slice currentIndex = null;
-				var count = 0L;
-				do
-				{
-					using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, viewIterator.CurrentKey))
-					{
-						if (!iterator.Seek(Slice.BeforeAllKeys))
-							continue;
-						while (iterator.MoveNext())
-						{
-							count++;
-						}						
-						if (count != 0)
-						{
-							res[int.Parse(viewIterator.CurrentKey.ToString())] = count;
-							count = 0L;
-						}
-					}
-				} while (viewIterator.MoveNext());
-			}
+				res.Add(iterator.Current.Key, iterator.Current.Value);
+			} while (iterator.MoveNext());
 			return res;
 		}
 

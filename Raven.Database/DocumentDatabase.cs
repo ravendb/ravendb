@@ -580,9 +580,9 @@ namespace Raven.Database
 			}
 		}
 
-		public Dictionary<string, long> SlowlyGetRemainingScheduledReductions()
+		public Dictionary<string, RemainingReductionPerLevel> GetRemainingScheduledReductions()
 		{
-			Dictionary<string, long> res = new Dictionary<string, long>();
+			Dictionary<string, RemainingReductionPerLevel> res = new Dictionary<string, RemainingReductionPerLevel>();
 			TransactionalStorage.Batch(accessor =>
 			{
 				var remaining = accessor.MapReduce.GetRemainingScheduledReductionPerIndex();
@@ -596,6 +596,10 @@ namespace Raven.Database
 			return res;
 		}
 
+		public void ResetScheduledReductionsTracking()
+		{
+			TransactionalStorage.ResetScheduledReductionsTracking();
+		}
 		public TaskActions Tasks { get; private set; }
 
 		[CLSCompliant(false)]

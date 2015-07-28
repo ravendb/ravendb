@@ -4,17 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -285,16 +281,12 @@ namespace Raven.Database.Util
 			return tasks;
 		}
 
-		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database, bool withRemainingReductions = false)
+		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
 		{
 			var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
 			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-			Dictionary<string,long> remaingingReductions = null;
-			if (withRemainingReductions)
-				remaingingReductions = database.SlowlyGetRemainingScheduledReductions();
-			long remainingReducitons;
 			return new
 			{
 				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
@@ -305,7 +297,6 @@ namespace Raven.Database.Util
 					IsMapReduce = x.IsMapReduce,
 					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
 					Priority = x.Priority,
-					RemainingReductions = remaingingReductions == null ? 0 : remaingingReductions.TryGetValue(x.PublicName, out remainingReducitons) ? remainingReducitons : 0,
 					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
 					{
 						Operation = g.Key,
