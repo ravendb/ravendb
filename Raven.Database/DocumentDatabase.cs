@@ -117,10 +117,7 @@ namespace Raven.Database
 
 				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
-
 				recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
-
-				configuration.Container.SatisfyImportsOnce(this);
 
 				workContext = new WorkContext
 				{

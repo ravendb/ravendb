@@ -146,14 +146,21 @@ namespace Raven.Database.Indexing
 					// a power outage while the server was running.
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
-				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,indexDefinitionStorage.IndexNames,
+
+				log.Debug("Start opening indexes. There are {0} indexes that need to be loaded", indexDefinitionStorage.IndexNames.Length);
+
+				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, indexDefinitionStorage.IndexNames,
 					name =>
 					{
 						var index = OpenIndex(name, onStartup: true, forceFullIndexCheck: false);
 
 						if(index != null)
 							indexes.TryAdd(index.IndexId, index);
+
+						startupLog.Debug("{0}/{1} indexes loaded", indexes.Count, indexDefinitionStorage.IndexNames.Length);
 					});
+
+				log.Debug("Index storage initialized. All indexes have been opened.");
 			}
 			catch (Exception e)
 			{
@@ -164,7 +171,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception ex)
 				{
-					log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+					log.FatalException("Failed to dispose when already getting an error during ctor", ex);
 				}
 				throw;
 			}
