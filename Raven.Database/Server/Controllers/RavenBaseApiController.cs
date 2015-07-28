@@ -272,9 +272,6 @@ namespace Raven.Database.Server.Controllers
 		    {
 			    foreach (var queryKey in nvc.AllKeys)
 				    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
-
-			    foreach (var _key in nvc.AllKeys)
-				    nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
 		    }
 		    req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
