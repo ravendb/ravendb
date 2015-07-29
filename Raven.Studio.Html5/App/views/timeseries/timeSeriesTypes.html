@@ -1,12 +1,12 @@
 ﻿<div class="documents-page no-outline" tabindex="0">
     <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-		<ul class="nav nav-pills nav-stacked document-collections time-series-keys-collection" data-bind="template: { foreach: types, afterAdd: showKeyElement, beforeRemove: hideKeyElement }">
-			<li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }">
+		<ul class="nav nav-pills nav-stacked document-collections time-series-keys-collection" data-bind="template: { foreach: types, afterAdd: showTypeElement, beforeRemove: hideTypeElement }">
+			<li data-bind="event: { mousedown: $parent.selectType.bind($parent) }, css: { active: $data === $parent.selectedType() }">
 				<a href="javascript: void(0)">
 					<div class="collection-name">
 						<div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
 						<span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: { title: name }"></span>
-						<span class="collection-text pull-left text-muted" data-bind="css: { 'text-muted': $data !== $parent.selectedKey() }, text:  '&nbsp;(' + timeSeriesCountWithThousandsSeparator() + ')', updateHighlighting: keysCount()"></span>
+						<span class="collection-text pull-left text-muted" data-bind="css: { 'text-muted': $data !== $parent.selectedType() }, text:  '&nbsp;(' + timeSeriesCountWithThousandsSeparator() + ')', updateHighlighting: keysCount()"></span>
 					</div>
 				</a>
 			</li>
@@ -44,13 +44,13 @@
                 </div>
             </div>
         </div>
-        <div class="documents-select" data-bind="with: selectedKey, visible: hasAnyKeysSelected() && !hasAllKeysSelected() && isAnyKeysAutoSelected()">
+        <div class="documents-select" data-bind="with: selectedType, visible: hasAnyKeysSelected() && !hasAllKeysSelected() && isAnyKeysAutoSelected()">
             <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedKeysIndices().length"></strong> <span data-bind="text: $root.selectedKeysText"></span>.
             <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
                 Select all <strong data-bind="text: keysCount"></strong> time series in <span data-bind="text: name"></span>
             </span>
         </div>
-        <div class="documents-select" data-bind="with: selectedKey, visible: hasAllKeysSelected() && isAllKeysAutoSelected()">
+        <div class="documents-select" data-bind="with: selectedType, visible: hasAllKeysSelected() && isAllKeysAutoSelected()">
             You have selected <strong data-bind="text: $root.selectedKeysIndices().length"></strong> <span data-bind="text: $root.selectedKeysText"></span> in
             <span data-bind="text: name"></span>.
             <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
@@ -58,6 +58,6 @@
             </span>
         </div>
 
-		<div id="keysGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentKeyPagedItems, selectedIndices: selectedKeysIndices, gridSelector: '#keysGrid', collections: types, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyKeysAutoSelected, isAllAutoSelected: isAllKeysAutoSelected, contextMenuOptions: ['ChangeValue', 'Delete'], showIds: false, noResultsMessage: 'No time series were found!' }"></div>
+		<div id="keysGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentTypePagedItems, selectedIndices: selectedKeysIndices, gridSelector: '#keysGrid', collections: types, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyKeysAutoSelected, isAllAutoSelected: isAllKeysAutoSelected, contextMenuOptions: ['ChangeValue', 'Delete'], showIds: false, noResultsMessage: 'No time series were found!' }"></div>
     </div>
 </div> 

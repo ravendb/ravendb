@@ -1,12 +1,12 @@
 ﻿class timeSeriesKey implements documentBase {
     Type: string;
     Key: string;
-    PointsCount: number;
+    Points: number;
 
     constructor(dto: timeSeriesKeyDto) {
         this.Type = dto.Type;
         this.Key = dto.Key;
-        this.PointsCount = dto.PointsCount;
+        this.Points = dto.PointsCount;
     }
 
     getEntityName() {
@@ -14,7 +14,7 @@
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["Key", "Points Count"];
+        return ["Key", "Points"];
     }
 
     getId() {

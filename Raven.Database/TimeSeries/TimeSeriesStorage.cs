@@ -532,7 +532,6 @@ namespace Raven.Database.TimeSeries
 						{
 							var key = it.CurrentKey.ToString();
 							var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
-							fixedTree.DebugRenderAndShow();
 							yield return new TimeSeriesKey
 							{
 								Type = type.Type,

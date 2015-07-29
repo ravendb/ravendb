@@ -119,7 +119,7 @@ class timeSeriesTypes extends viewModelBase {
         return [
         //    ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
             ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
-            ko.postbox.subscribe("SortKeys", () => this.sortKeys())
+            ko.postbox.subscribe("SortTypes", () => this.sortTypes())
         ];
     }
 
@@ -322,23 +322,23 @@ class timeSeriesTypes extends viewModelBase {
         return null;
     }
 
-	private sortKeys() {
+	private sortTypes() {
 		this.types.sort((c1: timeSeriesType, c2: timeSeriesType) => {
 			return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
 		});
 	}
 
-	// Animation callbacks for the keys list
-	showKeyElement(element) {
+	// Animation callbacks for the types list
+	showTypeElement(element) {
 		if (element.nodeType === 1 && timeSeriesTypes.isInitialized()) {
 			$(element).hide().slideDown(500, () => {
-				ko.postbox.publish("SortKeys");
+				ko.postbox.publish("SortTypes");
 				$(element).highlight();
 			});
 		}
 	}
 
-	hideKeyElement(element) {
+	hideTypeElement(element) {
 		if (element.nodeType === 1) {
 			$(element).slideUp(1000, () => { $(element).remove(); });
 		}
