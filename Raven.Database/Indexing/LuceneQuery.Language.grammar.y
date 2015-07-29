@@ -22,7 +22,7 @@
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
 %token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN COMMA ALL_DOC
-%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
+%token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM QUOTED_WILDCARD_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
 
 %type <s> prefix_operator methodName fieldname  fuzzy_modifier boost_modifier proximity_modifier
 %type <o> operator
@@ -244,11 +244,19 @@ term: QUOTED_TERM        {
 		//Console.WriteLine("Found rule term -> NULL");
 		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.Null};
 	}
+
+	| QUOTED_WILDCARD_TERM
+	{
+		//Console.WriteLine("Found rule term -> QUOTED_WILDCARD_TERM");
+		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.QuotedWildcard};
+	}
+
 	| WILDCARD_TERM
 	{
 		//Console.WriteLine("Found rule term -> WILDCARD_TERM");
 		$$ = new TermLuceneASTNode(){Term=$1, Type=TermLuceneASTNode.TermType.WildCardTerm};
 	}
+
 	| PREFIX_TERM
 	{
 		//Console.WriteLine("Found rule term -> PREFIX_TERM");

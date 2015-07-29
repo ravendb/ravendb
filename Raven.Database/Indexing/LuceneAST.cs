@@ -161,6 +161,7 @@ namespace Raven.Database.Indexing
 						yield return attribute.Term;
 					}
 					break;
+				case TermType.QuotedWildcard:
 				case TermType.WildCardTerm:
 				case TermType.PrefixTerm:				    
 					yield return GetWildcardTerm(configuration).Text;
@@ -184,6 +185,10 @@ namespace Raven.Database.Indexing
 
 	    private Term GetWildcardTerm(LuceneASTQueryConfiguration configuration)
 	    {
+		    var isQuotedWildcard = Type == TermType.QuotedWildcard;
+		    if (isQuotedWildcard)
+			    Term = Term.Substring(1, Term.Length - 2); //ignore quotes
+
 			var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
 			var terms = new List<string>();
 			while (tokenStream.IncrementToken())
@@ -191,7 +196,7 @@ namespace Raven.Database.Indexing
 				var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
 				terms.Add(attribute.Term);
 			}
-
+			
 			if (terms.Count == 0)
 			{
 				return new Term(configuration.FieldName, Term);
@@ -265,14 +270,24 @@ This edge-case has a very slim chance of happening, but still we should not igno
 		        case TermType.Long:
 					return new TermQuery(new Term(configuration.FieldName, Term)) { Boost = boost };
 	        }
+
+	        if (Type == TermType.QuotedWildcard)
+	        {
+				var res = AnalyzedWildCardQueries(configuration);
+				res.Boost = boost;
+				return res;		        
+	        }
+
 			if (Type == TermType.WildCardTerm)
 			{
 				var res = AnalyzedWildCardQueries(configuration);
 				res.Boost = boost;
 				return res;
 			}
+
 	        var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
-	        List<string> terms = new List<string>();
+	        var terms = new List<string>();
+			
 			while (tokenStream.IncrementToken())
 			{
 				var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
@@ -336,6 +351,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public enum TermType
         {
             Quoted,
+			QuotedWildcard,
             UnQuoted,
             Float,
 			Double,

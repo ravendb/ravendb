@@ -2,7 +2,7 @@
 %scannertype LuceneQueryScanner
 %visibility internal
 %tokentype Token
-
+ 
 %option stack, minimize, parser, verbose, persistbuffer, noembedbuffers , unicode 
 
 Comment    [ \t\r\n\f]"//"([^\n\r]*)
@@ -15,8 +15,10 @@ TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\],]|{EscapeChar}
 TermChar {TermStartChar}|[,\-\+]
 WildCardStartChar {TermStartChar}|[\*\?]
 WildCardChar [\*\?]|{TermChar}
-QuotedChar [^\"\\]|{EscapeChar}
+QuotedChar [^\*\?\"\\]|{EscapeChar}
+QuotedWildcardChar {QuotedChar}|[\*\?]
 UnanalizedTerm \[\[(([^\]])|([\]][^\]]+))*\]\]
+QuotedWildcardTerm \"{QuotedWildcardChar}*\"
 QuotedTerm \"{QuotedChar}*\"
 UnquotedTerm {TermStartChar}{TermChar}*
 PrefixTerm {UnquotedTerm}"\*"
@@ -56,6 +58,7 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {Method}						{ yylval.s = yytext; return (int)Token.METHOD;}
 {UnanalizedTerm}				{ yylval.s = DiscardEscapeChar(yytext); return (int)Token.UNANALIZED_TERM;}
 {QuotedTerm}					{ yylval.s = yytext; return (int)Token.QUOTED_TERM;}
+{QuotedWildcardTerm}			{ yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;}
 {Comment}						{/* skip */}
 {Decimal}						{ yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
 "Dx"({Decimal}|{Number})	    { yylval.s = yytext; return (int)Token.DOUBLE_NUMBER;}
