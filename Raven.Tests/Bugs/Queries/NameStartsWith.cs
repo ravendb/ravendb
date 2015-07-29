@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FluentAssertions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -34,28 +35,40 @@ namespace Raven.Tests.Bugs.Queries
 
 					session.SaveChanges();
 				}
-				using (IDocumentSession session = documentStore.OpenSession())
+				
+
+				using (var session = documentStore.OpenSession())
 				{
+					var result5 = session.Query<User, User_Entity>()
+										.Customize(x => x.WaitForNonStaleResults())
+										.Where(x => x.Name.StartsWith("King S"))
+										.ToArray();
+
+					result5.Length.Should().Be(1);
+
 					var result1 = session.Query<User, User_Entity>()
 						.Customize(x=>x.WaitForNonStaleResults())
 						.Where(x => x.Name.StartsWith("Mrs"))
 						.ToArray();
-					Assert.True(result1.Length == 1);
+					result1.Length.Should().Be(1);
 
 					var result2 = session.Query<User, User_Entity>()
+						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs."))
 								.ToArray();
-					Assert.True(result2.Length == 1);
+					result2.Length.Should().Be(1);
 
 					var result3 = session.Query<User, User_Entity>()
+						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs. S"))
 								.ToArray();
-					Assert.True(result3.Length == 1);
+					result3.Length.Should().Be(1);
 
 					var result4 = session.Query<User, User_Entity>()
+						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs. Shaba"))
 								.ToArray();
-					Assert.True(result4.Length == 1);
+					result4.Length.Should().Be(1);
 
 				}
 			}
