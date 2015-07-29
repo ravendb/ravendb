@@ -119,6 +119,8 @@ namespace Raven.Tests.Bundles.Expiration
 				session.SaveChanges();
 			}
 
+            WaitForIndexing(database);
+
 			var expiredDocumentsCleaner = ravenDbServer.SystemDatabase.StartupTasks.OfType<ExpiredDocumentsCleaner>().First();
 			while (expiredDocumentsCleaner.TimerCallback() == false)
 			{
