@@ -6,6 +6,7 @@
 
 using System.Globalization;
 using System.IO;
+using Mono.CSharp;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -355,7 +356,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var structReader = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (structReader == null)
+						continue;
 				    var item = structReader.ReadString(DocumentReferencesFields.Key);
 				    if (result.Add(item))
 				        yield return item;
@@ -432,7 +434,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					result.Add(value.ReadString(DocumentReferencesFields.Reference));
 				}
 				while (iterator.MoveNext());
@@ -462,6 +465,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				        {
 					        ushort version;
 					        var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+							if (value == null)
+								continue;
 					        var currentKeyStr = docRefIterator.CurrentKey.ToString();
 					        DocCountWithSampleDocIds docData;
 					        if (keysToRef.TryGetValue(currentKeyStr, out docData) == false)
@@ -555,6 +560,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 ushort version;
                 var value = LoadStruct(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
+				if (value == null)
+					continue;
                 var reference = value.ReadString(DocumentReferencesFields.Reference);
                 var view = value.ReadInt(DocumentReferencesFields.IndexId).ToString(CultureInfo.InvariantCulture);
                 var key = value.ReadString(DocumentReferencesFields.Key);

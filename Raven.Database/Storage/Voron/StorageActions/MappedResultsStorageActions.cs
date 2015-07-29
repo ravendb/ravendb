@@ -207,6 +207,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
 
@@ -261,6 +263,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
 					var documentId = value.ReadString(MappedResultFields.DocId);
@@ -305,7 +309,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					if (string.IsNullOrEmpty(sourceId) == false)
 					{
 						var docId = value.ReadString(MappedResultFields.DocId);
@@ -346,6 +351,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     ushort version;
                     var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
                     var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
                     yield return new MappedResultInfo
                     {
@@ -378,7 +385,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     ushort version;
                     var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
                     var docId = value.ReadString(MappedResultFields.DocId);
 
 					if (StringHelper.Compare(startsWith, docId, needExactMatch) == false)
@@ -410,6 +418,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
@@ -445,7 +455,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					yield return new ScheduledReductionDebugInfo
 					{
 						Key = value.ReadString(ScheduledReductionFields.ReduceKey),
@@ -522,7 +533,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 						ushort version;
 						var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
-
+						if (value == null)
+							continue;
 						var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);
 
 						var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
@@ -594,6 +606,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
@@ -640,6 +654,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
@@ -799,6 +815,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 
 					allKeysToReduce.Add(value.ReadString(ScheduledReductionFields.ReduceKey));
                     processedItems++;
@@ -914,7 +932,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					yield return value.ReadInt(MappedResultFields.Bucket);
 				}
 				while (iterator.MoveNext());
@@ -947,6 +966,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 						ushort version;
 						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+						if (value == null)
+							continue;
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 						var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
@@ -997,7 +1018,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceKeyTypes, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					yield return new ReduceTypePerKey(value.ReadString(ReduceKeyTypeFields.ReduceKey), (ReduceType) value.ReadInt(ReduceKeyTypeFields.ReduceType));
 
 					count++;
@@ -1078,7 +1100,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 ushort version;
                 var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
-
+				if (value == null)
+					continue;
                 var view = value.ReadInt(ReduceResultFields.IndexId);
                 var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
                 var level = value.ReadInt(ReduceResultFields.Level);
