@@ -132,8 +132,14 @@ class timeSeriesTypes extends viewModelBase {
     typesLoaded(types: Array<timeSeriesType>, ts: timeSeries) {
         this.types(types);
 
-        var typeToSelect = this.typeToSelect ? this.types.first(g => g.name === this.typeToSelect) : this.types()[0];
-        typeToSelect.activate();
+        if (this.typeToSelect)
+            this.types.first(g => g.name === this.typeToSelect).activate();
+        else {
+            var allTypes = this.types();
+            if (allTypes.length > 0) {
+                allTypes[0].activate();
+            }
+        }
     }
 
     newKey() {
