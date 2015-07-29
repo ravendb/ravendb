@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
+using ICSharpCode.NRefactory.CSharp.Refactoring;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -949,7 +949,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+				    
 					yield return value.ReadInt(MappedResultFields.Bucket);
 				}
 				while (iterator.MoveNext());
