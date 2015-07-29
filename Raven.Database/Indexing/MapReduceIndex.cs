@@ -676,15 +676,14 @@ namespace Raven.Database.Indexing
                 parent.Write((indexWriter, analyzer, stats) =>
                 {
                     stats.Operation = IndexingWorkStats.Status.Reduce;
-                    try
-                    {
-                        performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, MappedResultsByBucket.Sum(x => x.Count()));
 
+                    try
+                    {                                                
                         if (Level == 2)
                         {
                             RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
                         }
-
+                        
                         foreach (var mappedResults in MappedResultsByBucket)
                         {
                             var input = mappedResults.Select(x =>
@@ -715,7 +714,7 @@ namespace Raven.Database.Indexing
 
                                 stats.ReduceSuccesses++;
                             }
-                        }
+                        }                        
                     }
                     catch (Exception e)
                     {
@@ -743,6 +742,9 @@ namespace Raven.Database.Indexing
                                 },
                                 x => x.Dispose());
                         }
+
+                        // TODO: Check if we need to report "Bucket Counts" or "Total Input Elements"?
+                        performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount);
                     }
 
                     return new IndexedItemsInfo(null)

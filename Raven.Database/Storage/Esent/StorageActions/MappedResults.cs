@@ -249,8 +249,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
-			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
+
+            var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
+            var keysToRemove = new List<string>();
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
@@ -279,7 +281,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				{
 					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete.First();
 				}
-				reader.IndexId = getItemsToReduceParams.Index;
+
+                reader.IndexId = getItemsToReduceParams.Index;
+
 				do
 				{
 					cancellationToken.ThrowIfCancellationRequested();
@@ -300,11 +304,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
 					if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
 						continue;
 
-					var bucket =
-							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
+					var bucket = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
 
-					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
+                    var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb); 
 					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions, getItemsToReduceParams.Level);
+
 					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
@@ -320,13 +324,17 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 					if (getItemsToReduceParams.Take <= 0)
 						yield break;
-				} while (Api.TryMoveNext(session, ScheduledReductions));
+				} 
+                while (Api.TryMoveNext(session, ScheduledReductions));
 
-				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+                keysToRemove.Add(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
 					break;
 			}
+
+            foreach (var keyToRemove in keysToRemove)
+                getItemsToReduceParams.ReduceKeys.Remove(keyToRemove);
 		}
 
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
