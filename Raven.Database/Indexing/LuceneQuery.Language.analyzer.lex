@@ -2,7 +2,7 @@
 %scannertype LuceneQueryScanner
 %visibility internal
 %tokentype Token
-
+ 
 %option stack, minimize, parser, verbose, persistbuffer, noembedbuffers , unicode 
 
 Comment    [ \t\r\n\f]"//"([^\n\r]*)
