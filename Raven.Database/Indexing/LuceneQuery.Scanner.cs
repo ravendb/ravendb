@@ -52,9 +52,7 @@ namespace Raven.Database.Indexing
             if (lastCommaIndex != commaIndex)
             {
                 var currentContext = MkBuffCtx();
-                byte[] inputBuffer = System.Text.Encoding.Default.GetBytes(newSource);
-                var stream = new MemoryStream(inputBuffer);
-                SetSource(stream);
+				SetSource(newSource,0);
 
 	            var buildBuffer = buffer as BuildBuffer;
 	            if (buildBuffer != null)  //precaution
