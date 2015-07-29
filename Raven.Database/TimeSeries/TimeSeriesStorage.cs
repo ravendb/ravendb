@@ -555,19 +555,7 @@ namespace Raven.Database.TimeSeries
 							var typeTreeName = rootIt.CurrentKey.ToString();
 							var type = storage.GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
 							var tree = tx.ReadTree(typeTreeName);
-							long keysCount = 0;
-							// TODO: Use NumberOfItems instead of iteration
-							using (var it = tree.Iterate())
-							{
-								if (it.Seek(Slice.BeforeAllKeys))
-								{
-									do
-									{
-										keysCount++;
-									} while (it.MoveNext());
-								}
-							}
-							type.KeysCount = keysCount;
+							type.KeysCount = tree.State.EntriesCount;
 							yield return type;
 						} while (rootIt.MoveNext());
 					}
@@ -1029,16 +1017,7 @@ namespace Raven.Database.TimeSeries
 									{
 										keys++;
 										var fixedTree = tree.FixedTreeFor(it.CurrentKey.ToString(), (byte)(type.Fields.Length * sizeof(double)));
-										using (var fixedIt = fixedTree.Iterate())
-										{
-											if (fixedIt.Seek(DateTime.MinValue.Ticks))
-											{
-												do
-												{
-													points++;
-												} while (fixedIt.MoveNext());
-											}
-										}
+										points += fixedTree.NumberOfEntries;
 									} while (it.MoveNext());
 								}
 							}
