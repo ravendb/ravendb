@@ -119,7 +119,7 @@ namespace Raven.Database.Server
 			if (Environment.OSVersion.Version.Major > 5)
 			{
 				cmd = "netsh";
-				args = string.Format(@"http delete urlacl url={1}+:{0}/", port, useSsl ? "http://" : "https://");
+				args = string.Format(@"http delete urlacl url={1}+:{0}/", port, useSsl ? "https://" : "http://");
 			}
 			else
 			{
@@ -151,14 +151,14 @@ namespace Raven.Database.Server
 			return false;
 		}
 
-		private static int TryUnregisterHttpPort(int port, bool useSsl)
+		internal static int TryUnregisterHttpPort(int port, bool useSsl, bool hideWindow = false)
 		{
 			string args;
 			string cmd;
 			GetArgsForHttpAclDeleteCmd(port, useSsl, out args, out cmd);
 
 			Console.WriteLine("Trying to revoke rights for http.sys");
-			return RunAs(cmd, args, -155);
+			return RunAs(cmd, args, -155, hideWindow);
 		}
 
 		private static int TryGrantingHttpPrivileges(int port, bool useSsl)
@@ -171,7 +171,7 @@ namespace Raven.Database.Server
 			return RunAs(cmd, args, -144);
 		}
 
-		private static int RunAs(string cmd, string args, int errorCode)
+		private static int RunAs(string cmd, string args, int errorCode, bool hideWindow = false)
 		{
 			try
 			{
@@ -181,6 +181,7 @@ namespace Raven.Database.Server
 					Verb = "runas",
 					Arguments = args,
 					FileName = cmd,
+					WindowStyle = hideWindow ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
 				});
 				process.WaitForExit();
 				return process.ExitCode;
