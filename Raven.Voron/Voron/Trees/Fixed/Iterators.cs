@@ -172,8 +172,7 @@ namespace Voron.Trees.Fixed
                     if (_currentPage == null)
                         throw new InvalidOperationException("No current page was set");
 
-                    return _parent.KeyFor(_currentPage.Base + _currentPage.FixedSize_StartPosition,
-                        _currentPage.LastSearchPosition, _parent._entrySize);
+                    return _parent.KeyFor(_currentPage,_currentPage.LastSearchPosition);
                 }
             }
 
@@ -202,7 +201,7 @@ namespace Voron.Trees.Fixed
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
-                            var childParentNumber = _parent.PageValueFor(_currentPage.Base + _currentPage.FixedSize_StartPosition,_currentPage.LastSearchPosition);
+                            var childParentNumber = _parent.PageValueFor(_currentPage,_currentPage.LastSearchPosition);
                             _currentPage = _parent._tx.GetReadOnlyPage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;

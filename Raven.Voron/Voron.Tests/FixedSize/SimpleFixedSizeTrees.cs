@@ -214,10 +214,9 @@ namespace Voron.Tests.FixedSize
 			{
 				var fst = tx.State.Root.FixedTreeFor("test", 8);
 
-				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(2, 5, out allRemoved);
-				Assert.Equal(4, itemsRemoved);
-				Assert.Equal(false, allRemoved);
+				var itemsRemoved = fst.DeleteRange(2, 5);
+				Assert.Equal(4, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(false, itemsRemoved.TreeRemoved);
 
 				tx.Commit();
 			}
@@ -265,10 +264,9 @@ namespace Voron.Tests.FixedSize
 			{
 				var fst = tx.State.Root.FixedTreeFor("test", 8);
 
-				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(2, 35, out allRemoved);
-				Assert.Equal(15, itemsRemoved);
-				Assert.Equal(false, allRemoved);
+				var itemsRemoved = fst.DeleteRange(2, 35);
+				Assert.Equal(15, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(false, itemsRemoved.TreeRemoved);
 
 				tx.Commit();
 			}
@@ -325,10 +323,9 @@ namespace Voron.Tests.FixedSize
 			{
 				var fst = tx.State.Root.FixedTreeFor("test", 8);
 
-				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks, out allRemoved);
-				Assert.Equal(10, itemsRemoved);
-				Assert.Equal(true, allRemoved);
+				var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
+				Assert.Equal(10, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(true, itemsRemoved.TreeRemoved);
 
 				tx.Commit();
 			}

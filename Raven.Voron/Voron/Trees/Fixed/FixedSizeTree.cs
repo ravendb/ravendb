@@ -181,14 +181,14 @@ namespace Voron.Trees.Fixed
             while (page.IsLeaf == false)
             {
                 _cursor.Push(page);
-                BinarySearch(page, key, BranchEntrySize);
+                BinarySearch(page, key);
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                     page.LastSearchPosition--;
-                var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
+                var childPageNumber = PageValueFor(page, page.LastSearchPosition);
                 page = _tx.GetReadOnlyPage(childPageNumber);
             }
 
-            BinarySearch(page, key, _entrySize);
+            BinarySearch(page, key);
             return page;
         }
 
@@ -254,9 +254,8 @@ namespace Voron.Trees.Fixed
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
 
                     var dataStart = (long*)(newPage.Base + newPage.FixedSize_StartPosition);
-                    dataStart[0] = KeyFor(page.Base + page.FixedSize_StartPosition, page.FixedSize_NumberOfEntries - 1,
-                        BranchEntrySize);
-                    dataStart[1] = PageValueFor(page.Base + page.FixedSize_StartPosition,
+                    dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
+                    dataStart[1] = PageValueFor(page,
                         page.FixedSize_NumberOfEntries - 1);
 
                     newPage.FixedSize_NumberOfEntries++;
@@ -277,7 +276,7 @@ namespace Voron.Trees.Fixed
                     newPage.FixedSize_NumberOfEntries * BranchEntrySize
                     );
 
-                var newKey = KeyFor(newPage.Base + newPage.FixedSize_StartPosition, 0, BranchEntrySize);
+                var newKey = KeyFor(newPage, 0);
 
                 AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, newKey, newPage.PageNumber);
 
@@ -298,7 +297,7 @@ namespace Voron.Trees.Fixed
             {
                 parentPage = PageSplit(parentPage, key);
                 System.Diagnostics.Debug.Assert(parentPage != null);
-                BinarySearch(parentPage, key, BranchEntrySize);
+                BinarySearch(parentPage, key);
                 position = parentPage.LastSearchPosition;
                 if (parentPage.LastMatch > 0)
                     position++;
@@ -397,9 +396,11 @@ namespace Voron.Trees.Fixed
             return (dataStart + sizeof(long));
         }
 
-        private void BinarySearch(Page page, long val, int size)
+        private void BinarySearch(Page page, long val)
         {
-            page.LastSearchPosition = BinarySearch(page.Base + page.FixedSize_StartPosition, page.FixedSize_NumberOfEntries, val, size);
+            page.LastSearchPosition = BinarySearch(page.Base + page.FixedSize_StartPosition,
+                page.FixedSize_NumberOfEntries, val,
+                page.IsLeaf ? _entrySize : BranchEntrySize);
             page.LastMatch = _lastMatch;
         }
 
@@ -413,7 +414,8 @@ namespace Voron.Trees.Fixed
             while (low <= high)
             {
                 position = (low + high) >> 1;
-                _lastMatch = val.CompareTo(KeyFor(p, position, size));
+                var curKey = KeyFor(p, position, size);
+                _lastMatch = val.CompareTo(curKey);
                 if (_lastMatch == 0)
                     break;
 
@@ -426,6 +428,12 @@ namespace Voron.Trees.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private long KeyFor(Page page, int num)
+        {
+            return KeyFor(page.Base + page.FixedSize_StartPosition, num, page.IsLeaf ? _entrySize : BranchEntrySize);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long KeyFor(byte* p, int num, int size)
         {
             var lp = (long*)(p + (num * size));
@@ -433,9 +441,9 @@ namespace Voron.Trees.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long PageValueFor(byte* p, int num)
+        private long PageValueFor(Page page, int num)
         {
-            var lp = (long*)(p + (num * (BranchEntrySize)) + sizeof(long));
+            var lp = (long*)((page.Base + page.FixedSize_StartPosition) + (num * (BranchEntrySize)) + sizeof(long));
             return lp[0];
         }
 
@@ -464,7 +472,7 @@ namespace Voron.Trees.Fixed
                         {
                             for (int j = 0; j < p.FixedSize_NumberOfEntries; j++)
                             {
-                                var chhildNumber = PageValueFor(p.Base + p.FixedSize_StartPosition, j);
+                                var chhildNumber = PageValueFor(p, j);
                                 stack.Push(_tx.GetReadOnlyPage(chhildNumber));
                             }
                         }
@@ -497,10 +505,10 @@ namespace Voron.Trees.Fixed
 
                     while (page.IsLeaf == false)
                     {
-                        BinarySearch(page, key, BranchEntrySize);
+                        BinarySearch(page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
-                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
+                        var childPageNumber = PageValueFor(page, page.LastSearchPosition);
                         page = _tx.GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Base + page.FixedSize_StartPosition;
@@ -528,50 +536,56 @@ namespace Voron.Trees.Fixed
             }
         }
 
-        public long DeleteRange(long start, long end, out bool allRemoved)
+        public struct RangeDeletionResult
+        {
+            public long NumberOfEntriesDeleted;
+            public bool TreeRemoved;
+        }
+
+        public RangeDeletionResult DeleteRange(long start, long end)
         {
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 
+            long entriedDeleted;
             switch (_flags)
             {
                 case null:
-                    allRemoved = false;
-                    return -1;
+                    entriedDeleted = 0;
+                    break;
                 case FixedSizeTreeHeader.OptionFlags.Embedded:
-                    return DeleteRangeEmbedded(start, end, out allRemoved);
+                    entriedDeleted = DeleteRangeEmbedded(start, end);
+                    break;
                 case FixedSizeTreeHeader.OptionFlags.Large:
-                    return DeleteRangeLarge(start, end, out allRemoved);
+                    entriedDeleted = DeleteRangeLarge(start, end);
+                    break;
+                default:
+                    throw new InvalidOperationException("Flags value is not valid: " + _flags);
             }
-
-            throw new InvalidOperationException("Flags value is not valid: " + _flags);
+            return new RangeDeletionResult
+            {
+                NumberOfEntriesDeleted = entriedDeleted,
+                TreeRemoved = _flags == null
+            };
         }
 
-        private long DeleteRangeEmbedded(long start, long end, out bool allRemoved)
+        private long DeleteRangeEmbedded(long start, long end)
         {
-            allRemoved = false;
-
             byte* ptr = _parent.DirectRead(_treeName);
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
             if (_lastMatch > 0)
-            {
-                return 0; // Greater than the values we have, nothing to do
-            }
+                return 0;
             var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-            if (_lastMatch < 0)
-            {
-                return 0; // End key is before all the values we have, nothing to do
-            }
-
+            if (startPos == endPos && _lastMatch != 0)
+                return 0;
             byte entriesDeleted = (byte)(endPos - startPos + 1);
 
             if (entriesDeleted == header->NumberOfEntries)
             {
                 _parent.Delete(_treeName);
                 _flags = null;
-                allRemoved = true;
                 return entriesDeleted;
             }
 
@@ -591,221 +605,158 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-        private long DeleteRangeLarge(long start, long end, out bool wasAllRemoved)
-        {
-            wasAllRemoved = false;
-
-            var page = FindPageFor(start);
-            if (page.LastMatch > 0)
-                return 0;
-
-            var startSearchPosition = page.LastSearchPosition;
-            long entriesDeleted = 0;
-            BinarySearch(page, end, _entrySize);
-#if DEBUG
-            long i = 0;
-#endif
-            do
-            {
-#if DEBUG
-                i++;
-#endif
-                entriesDeleted += DeleteEntriesInPage(page, startSearchPosition, page.LastSearchPosition + 1, out wasAllRemoved);
-                startSearchPosition = 0;
-
-                if (page.LastMatch == 0 ||
-                    _cursor.Count == 0 // No more pages
-                    )
-                {
-                    return entriesDeleted;
-                }
-
-                var parentPage = _cursor.Pop();
-                if (parentPage.IsLeaf)
-                {
-                    page = parentPage;
-                    BinarySearch(page, end, _entrySize);
-                    continue;
-                }
-
-                if (DateTime.UtcNow > new DateTime(2015, 9, 1))
-                    throw new NotImplementedException("Delete all Debugger.Break() methods");
-
-                if (parentPage.LastSearchPosition >= parentPage.FixedSize_NumberOfEntries - 1)
-                {
-                    if (_cursor.Count > 0)
-                        continue;
-
-                    if (parentPage.IsBranch)
-                    {
-                        Debugger.Break();
-                        return entriesDeleted; // When this happens?
-                    }
-
-                    // TODO: Please test this, this wasn't been tested
-                    Debugger.Break();
-                    page = parentPage;
-                    BinarySearch(page, end, _entrySize);
-                    continue;
-                }
-
-                parentPage.LastSearchPosition++;
-                _cursor.Push(parentPage);
-
-                var childParentNumber = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition);
-                page = _tx.GetReadOnlyPage(childParentNumber);
-                while (page.IsBranch)
-                {
-                    // TODO: Please test this, this wasn't been tested
-                    Debugger.Break();
-                    _cursor.Push(page);
-                    childParentNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
-                    page = _tx.GetReadOnlyPage(childParentNumber);
-                }
-                BinarySearch(page, end, _entrySize);
-            } while (page.LastMatch >= 0);
-
-            return entriesDeleted;
-        }
-
-        private int DeleteEntriesInPage(Page page, int startPosition, int endPosition, out bool allEntriesDeleted)
-        {
-            page = _tx.ModifyPage(page.PageNumber, _parent, page);
-            var entriesDeleted = endPosition - startPosition;
-
-            var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-            largeHeader->NumberOfEntries -= entriesDeleted;
-            page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
-
-            if (page.FixedSize_NumberOfEntries == 0)
-            {
-                allEntriesDeleted = DeleteEntirePage(page);
-                return entriesDeleted;
-            }
-
-            allEntriesDeleted = false;
-
-            // Is root and small enough for embedded, convert
-            if (_cursor.Count == 0)
-            {
-                if (page.FixedSize_NumberOfEntries <= _maxEmbeddedEntries)
-                {
-                    DeleteRangeInLargeRootPageAndConvertToEmbedded(page, startPosition, page.LastSearchPosition + 1,
-                        page.FixedSize_NumberOfEntries + entriesDeleted - page.LastSearchPosition - 1);
-                    return entriesDeleted;
-                }
-            }
-
-            if (page.LastSearchPosition == 0)
-            {
-                // if this is the very first item in the pageNum, we can just change the start position
-                page.FixedSize_StartPosition += (ushort)_entrySize;
-            }
-            else
-            {
-                DeletePartInsideThePage(page, startPosition, endPosition, page.FixedSize_NumberOfEntries + entriesDeleted - page.LastSearchPosition - 1, _entrySize);
-                // deleted and we are done
-            }
-
-            return entriesDeleted;
-        }
-
-        private void DeletePartInsideThePage(Page page, int startPosition, int endPosition, int copyCount, int size)
-        {
-            System.Diagnostics.Debug.Assert(endPosition > startPosition, "This is probably a bug.");
-            System.Diagnostics.Debug.Assert(copyCount >= 0, "We cannot copy negative amount. This is probably a bug.");
-            UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPosition * size),
-                page.Base + page.FixedSize_StartPosition + (endPosition * size),
-                size * copyCount);
-        }
-
-        private void DeleteRangeInLargeRootPageAndConvertToEmbedded(Page page, int startPosition, int endPosition, int copyCount)
-        {
-            var ptr = _parent.DirectAdd(_treeName,
-                        sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.FixedSize_NumberOfEntries));
-            var header = (FixedSizeTreeHeader.Embedded*)ptr;
-            header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-            header->ValueSize = _valSize;
-            header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
-            _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-
-            Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
-                page.Base + page.FixedSize_StartPosition,
-                (_entrySize * startPosition));
-
-            Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * startPosition),
-                page.Base + page.FixedSize_StartPosition + (_entrySize * endPosition),
-                (_entrySize * copyCount));
-
-            _parent.FreePage(page);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns>True means all items are deleted</returns>
-        private bool DeleteEntirePage(Page page)
+        private long DeleteRangeLarge(long start, long end)
         {
             /*
-				Implementation details:
-					- removed entire pageNum? Update parent
-					- removed entire pageNum? and is root, remove all and delete entry
-			 */
-
-            _parent.FreePage(page);
-
-            if (_cursor.Count == 0)
+             * We use the following logic here:
+             * - Find the start page, then find the next page to its right.
+             * - If the next page's last value is smaller than the end, remove the page
+             * - Now we have to rebalance the tree. Doing so may cause the structure of the tree to change, 
+             *   so we need to find the start page again. 
+             * - We need special handling for the end node and for the start node only.
+             */
+            long entriesDeleted = 0;
+            Page page;
+            FixedSizeTreeHeader.Large* largeHeader;
+            while (true)
             {
-                // Root, remove all and delete entry
-                _parent.Delete(_treeName);
-                _flags = null;
-                return true; // This is the root, the tree doesn't have any entires left
+                page = FindPageFor(start);
+                if (page.LastMatch > 0)
+                    page.LastSearchPosition++;
+                if (page.LastSearchPosition < page.FixedSize_NumberOfEntries)
+                {
+                    var key = KeyFor(page, page.LastSearchPosition);
+                    if (key > end)
+                        return entriesDeleted; // the start is beyond the last end in the tree, done with it
+                }
+
+                if (_cursor.Count == 0)
+                    break; // single node, no next page to find
+                var nextPage = GetNextLeafPage();
+                if (nextPage == null)
+                    break; // no next page, we are at the end
+                var lastKey = KeyFor(nextPage, nextPage.FixedSize_NumberOfEntries - 1);
+                if (lastKey >= end)
+                    break; // we can't delete the entire page, special case handling follows
+
+                entriesDeleted += nextPage.FixedSize_NumberOfEntries;
+                largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+                largeHeader->NumberOfEntries -= nextPage.FixedSize_NumberOfEntries;
+
+
+                var treeDeleted = RemoveEntirePage(nextPage); // this will rebalance the tree if needed
+                System.Diagnostics.Debug.Assert(treeDeleted == false);
             }
 
-            // Update parent
-            var parentPage = _cursor.Pop();
-            var parentPageNumber = parentPage.PageNumber;
-            parentPage = _tx.ModifyPage(parentPageNumber, _parent, parentPage);
-            parentPage.FixedSize_NumberOfEntries--;
-
-            if (parentPage.LastSearchPosition == 0)
+            // we now know that the tree contains a maximum of 2 pages with the range
+            // now remove the start range from the start page, we do this twice to cover the case 
+            // where the start & end are on separate pages
+            largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+            int rangeRemoved = 1;
+            while (rangeRemoved > 0 &&
+                _flags == FixedSizeTreeHeader.OptionFlags.Large // we may revert to embedded by the deletions, or remove entirely
+                )
             {
-                // if this is the very first item in the pageNum, we can just change the start position
-                parentPage.FixedSize_StartPosition += BranchEntrySize;
+                page = FindPageFor(start);
+                if (page.LastMatch > 0)
+                    page.LastSearchPosition++;
+                if (page.LastSearchPosition < page.FixedSize_NumberOfEntries)
+                {
+                    var key = KeyFor(page, page.LastSearchPosition);
+                    if (key > end)
+                        break; // we are done
+                }
+                else // we have no entries to delete on the current page, move to the next one to delete the end range
+                {
+                    page = GetNextLeafPage();
+                    if (page == null)
+                        break;
+                }
+
+                rangeRemoved = RemoveRangeFromPage(page, end);
+                if (_flags == FixedSizeTreeHeader.OptionFlags.Large)// we might have converted to embedded, in which case we can't use it
+                    largeHeader->NumberOfEntries -= rangeRemoved;
+                entriesDeleted += rangeRemoved;
+            }
+            if (_flags == FixedSizeTreeHeader.OptionFlags.Embedded)
+            {
+                // we converted to embeded in the delete, but might still have some range there
+                return entriesDeleted + DeleteRangeEmbedded(start, end);
+            }
+            // note that because we call RebalancePage from RemoveRangeFromPage
+            return entriesDeleted;
+        }
+
+        private Page GetNextLeafPage()
+        {
+            while (_cursor.Count > 0)
+            {
+                var page = _cursor.Peek();
+                if (++page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
+                {
+                    _cursor.Pop();
+                    continue;
+                }
+
+                var nextPageNum = PageValueFor(page, page.LastSearchPosition);
+                var childPage = _tx.GetReadOnlyPage(nextPageNum);
+                if (childPage.IsLeaf)
+                    return childPage;
+                _cursor.Push(childPage);
+            }
+            return null;
+        }
+
+        private int RemoveRangeFromPage(Page page, long rangeEnd)
+        {
+            var startPos = page.LastSearchPosition;
+            BinarySearch(page, rangeEnd);
+            var endPos = page.LastSearchPosition;
+            if (page.LastMatch < 0)
+                endPos--;
+            if (startPos == endPos && page.LastMatch != 0)
+                return 0;
+
+            var entriesDeleted = (endPos - startPos + 1);
+            UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos * _entrySize),
+                page.Base + page.FixedSize_StartPosition + ((endPos + 1) * _entrySize),
+                ((page.FixedSize_NumberOfEntries - endPos - 1) * _entrySize)
+                );
+            page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
+            if (page.FixedSize_NumberOfEntries == 0)
+            {
+                if (RemoveEntirePage(page))
+                    return entriesDeleted;
             }
             else
             {
-                // branch pages must have at least 2 entries, so this is safe to do
-                DeleteEntryInPage(parentPage, BranchEntrySize);
-            }
-            var parentLastSearchPosition = parentPage.LastSearchPosition--;
-
-            // it has only one entry, we can delete it and switch with the last child item
-            if (parentPage.FixedSize_NumberOfEntries == 1)
-            {
-                var lastChildNumber = *(long*)(parentPage.Base + parentPage.FixedSize_StartPosition + sizeof(long));
-                var childPage = _tx.GetReadOnlyPage(lastChildNumber);
-                Memory.Copy(parentPage.Base, childPage.Base, parentPage.PageSize);
-                parentPage.PageNumber = parentPageNumber; // overwritten in copy
-                _parent.FreePage(childPage);
-
-                if (parentLastSearchPosition == 0)
+                while (page != null)
                 {
-                    _cursor.Push(parentPage);
+                    page = RebalancePage(page);
                 }
             }
-            else
-            {
-                _cursor.Push(parentPage);
-            }
-
-            return false; // This is not the root, the tree has more entires
+            return entriesDeleted;
         }
 
-        private void DeleteEntryInPage(Page parentPage, int size)
+        private bool RemoveEntirePage(Page page)
         {
-            DeletePartInsideThePage(parentPage, parentPage.LastSearchPosition, parentPage.LastSearchPosition + 1, parentPage.FixedSize_NumberOfEntries - parentPage.LastSearchPosition, size);
+            _tx.FreePage(page.PageNumber);
+            if (_cursor.Count == 0) //remove the root page
+            {
+                _parent.Delete(_treeName);
+                _flags = null;
+                return true;
+            }
+            var parentPage = _cursor.Pop();
+            parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+            RemoveEntryFromPage(parentPage, parentPage.LastSearchPosition);
+            while (parentPage != null)
+            {
+                parentPage = RebalancePage(parentPage);
+            }
+            return false;
         }
+
 
         private void RemoveLargeEntry(long key)
         {
@@ -838,7 +789,7 @@ namespace Voron.Trees.Fixed
             // have to move the memory
             UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (pos * size),
                    page.Base + page.FixedSize_StartPosition + ((pos + 1) * size),
-                   (page.FixedSize_NumberOfEntries - pos) * size);
+                   (page.FixedSize_NumberOfEntries - pos + 1) * size);
         }
 
         private Page RebalancePage(Page page)
@@ -865,7 +816,7 @@ namespace Voron.Trees.Fixed
                 }
                 if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
                 {
-                    var childPage = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
+                    var childPage = PageValueFor(page, 0);
                     var rootPageNum = page.PageNumber;
                     Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, AbstractPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
@@ -915,7 +866,7 @@ namespace Voron.Trees.Fixed
                 var parentRef = (long*)parentPage.Base + parentPage.FixedSize_StartPosition +
                                 (BranchEntrySize * parentPage.LastSearchPosition);
                 // write the page value to the parent
-                parentRef[0] = PageValueFor(page.Base + page.FixedSize_StartPosition, 0);
+                parentRef[0] = PageValueFor(page, 0);
                 // then delete the page
                 _tx.FreePage(page.PageNumber);
                 return parentPage;
@@ -935,7 +886,7 @@ namespace Voron.Trees.Fixed
             {
                 // the current page is the leftmost one, so let us try steal some data
                 // from the one on the right
-                var siblingNum = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, 1);
+                var siblingNum = PageValueFor(parentPage, 1);
                 var siblingPage = _tx.GetReadOnlyPage(siblingNum);
                 if (siblingPage.Flags != page.Flags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
@@ -972,8 +923,7 @@ namespace Voron.Trees.Fixed
 
                 // now update the new separator in the parent
 
-                var newSeperator = KeyFor(siblingPage.Base + siblingPage.FixedSize_StartPosition, 0,
-                    sizeOfEntryInPage);
+                var newSeperator = KeyFor(siblingPage, 0);
 
                 var siblingPosInParent =
                     (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize));
@@ -983,7 +933,7 @@ namespace Voron.Trees.Fixed
             }
             else // we aren't the leftmost item, so we will take from the page on our left
             {
-                var siblingNum = PageValueFor(parentPage.Base + parentPage.FixedSize_StartPosition, parentPage.LastSearchPosition - 1);
+                var siblingNum = PageValueFor(parentPage, parentPage.LastSearchPosition - 1);
                 var siblingPage = _tx.GetReadOnlyPage(siblingNum);
                 if (siblingPage.Flags != page.Flags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
@@ -1023,11 +973,10 @@ namespace Voron.Trees.Fixed
 
                 // now update the new separator in the parent
 
-                var newSeperator = KeyFor(page.Base + page.FixedSize_StartPosition, 0,
-                    sizeOfEntryInPage);
+                var newSeperator = KeyFor(page, 0);
 
                 var siblingPosInParent =
-                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize));
+                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize));
                 siblingPosInParent[0] = newSeperator;
 
                 return parentPage;
@@ -1050,7 +999,6 @@ namespace Voron.Trees.Fixed
                 // only single entry, just remove it
                 _flags = null;
                 _parent.Delete(_treeName);
-                header->NumberOfEntries--;
                 return;
             }
 
@@ -1087,15 +1035,15 @@ namespace Voron.Trees.Fixed
 
                     while (page.IsLeaf == false)
                     {
-                        BinarySearch(page, key, BranchEntrySize);
+                        BinarySearch(page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
-                        var childPageNumber = PageValueFor(page.Base + page.FixedSize_StartPosition, page.LastSearchPosition);
+                        var childPageNumber = PageValueFor(page, page.LastSearchPosition);
                         page = _tx.GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Base + page.FixedSize_StartPosition;
 
-                    BinarySearch(page, key, _entrySize);
+                    BinarySearch(page, key);
                     if (_lastMatch != 0)
                         return null;
                     return new Slice(dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize);

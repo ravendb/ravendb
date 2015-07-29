@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using Voron.Debugging;
 using Voron.Util.Conversion;
 using Xunit;
@@ -12,26 +13,26 @@ using Xunit.Extensions;
 
 namespace Voron.Tests.FixedSize
 {
-	public class LargeFixedSizeTrees : StorageTest
-	{
-		
+    public class LargeFixedSizeTrees : StorageTest
+    {
+
         [Theory]
-		[InlineData(8)]
+        [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
-        [InlineData(1024 * 256)]
+        [InlineData(1024*256)]
         public void CanAdd_ALot_ForPageSplits(int count)
         {
-	        var bytes = new byte[48];
+            var bytes = new byte[48];
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
-	                EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, bytes);
-					Assert.NotNull(fst.Read(i));
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    fst.Add(i, bytes);
+                    Assert.NotNull(fst.Read(i));
                 }
 
                 tx.Commit();
@@ -39,16 +40,16 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
-					Assert.True(fst.Contains(i));
-	                var read = fst.Read(i);
-	                read.CopyTo(bytes);
-	                Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
+                    Assert.True(fst.Contains(i));
+                    var read = fst.Read(i);
+                    read.CopyTo(bytes);
+                    Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
                 }
-	            tx.Commit();
+                tx.Commit();
             }
         }
 
@@ -56,7 +57,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
-        [InlineData(1024 * 256)]
+        [InlineData(1024*256)]
         public void CanCIterate_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
@@ -91,312 +92,292 @@ namespace Voron.Tests.FixedSize
             }
         }
 
-		[Theory]
+        [Theory]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
-        [InlineData(1024 * 256)]
+        [InlineData(1024*256)]
         public void CanRemove_ALot_ForPageSplits(int count)
-		{
-			var bytes = new byte[48];
-			var slice = new Slice(bytes);
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 0; i < count; i++)
-				{
-					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, slice);
-				}
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 0; i < count; i++)
-				{
-					fst.Delete(i);
-				}
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 0; i < count; i++)
-				{
-					Assert.False(fst.Contains(i), i.ToString());
-				}
-				tx.Commit();
-			}
-		}
-
-		[Theory]
-		[InlineData(8)]
-		[InlineData(16)]
-		[InlineData(128)]
-		[InlineData(1024 * 256)]
-		public void CanDeleteRange(int count)
-		{
-			var bytes = new byte[48];
-			var slice = new Slice(bytes);
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					Assert.Equal(i - 1, fst.NumberOfEntries);
-					fst.Add(i, slice);
-				}
-
-				tx.Commit();
-				Assert.Equal(count, fst.NumberOfEntries);
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-				Assert.Equal(count, fst.NumberOfEntries);
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(4, count - 3, out allRemoved);
-				Assert.Equal(count - 6, itemsRemoved);
-				Assert.Equal(false, allRemoved);
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					if (i >= 4 && i <= count - 3)
-					{
-						Assert.False(fst.Contains(i), i.ToString());
-						Assert.Null(fst.Read(i));
-					}
-					else
-					{
-						Assert.True(fst.Contains(i), i.ToString());
-						Assert.Equal(i, fst.Read(i).CreateReader().ReadLittleEndianInt64());
-					}
-				}
-				tx.Commit();
-			}
-		}
-
-		[Theory]
-		[InlineData(8)]
-		[InlineData(16)]
-		[InlineData(128)]
-		[InlineData(1024 * 256)]
-		public void CanDeleteAllRange(int count)
-		{
-			var bytes = new byte[48];
-			var slice = new Slice(bytes);
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, slice);
-				}
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				bool allRemoved;
-				var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks, out allRemoved);
-				Assert.Equal(count, itemsRemoved);
-				Assert.Equal(true, allRemoved);
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					Assert.False(fst.Contains(i), i.ToString());
-					Assert.Null(fst.Read(i));
-				}
-				tx.Commit();
-			}
-		}
-
-		[Theory]
-		[InlineData(1000000)]
-		public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
-		{
-			var bytes = new byte[48];
-			var slice = new Slice(bytes);
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, slice);
-				}
-
-				tx.Commit();
-			}
-
-			var random = new Random();
-			for (var i = 0; i < count/100; i++)
-			{
-				var start = Math.Floor(random.Next(count)/(decimal) 72)*72;
-				start += 1;
-				var end = Math.Min(count, start + 71);
-
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-					bool allRemoved;
-					var itemsRemoved = fst.DeleteRange((long) start, (long) end, out allRemoved);
-					if (itemsRemoved == -1)
-					{
-						break;
-					}
-					/*Assert.Equal(count - 19999, itemsRemoved);
-					Assert.Equal(false, allRemoved);*/
-
-					tx.Commit();
-				}
-			}
-
-			for (var i = 0; i < count; i++)
-			{
-				var start = random.Next(count);
-				var end = random.Next(start, count);
-
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-					bool allRemoved;
-					var itemsRemoved = fst.DeleteRange((long)start, (long)end, out allRemoved);
-					if (itemsRemoved == -1)
-						break;
-					/*Assert.Equal(count - 19999, itemsRemoved);
-					Assert.Equal(false, allRemoved);*/
-
-					tx.Commit();
-				}
-			}
-		}
-
-		[Theory]
-		[InlineData(100000)]
-		[InlineData(500000)]
-		[InlineData(1000000)]
-		[InlineData(2000000)]
-		public void CanDeleteRange_RandomRanges(int count)
-		{
-			var bytes = new byte[48];
-			var slice = new Slice(bytes);
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-				for (int i = 1; i <= count; i++)
-				{
-					EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-					fst.Add(i, slice);
-				}
-
-				tx.Commit();
-			}
-
-			var random = new Random();
-			for (var i = 0; i < count/100; i++)
-			{
-				var start = random.Next(count);
-				var end = random.Next(start, count);
-
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-
-					bool allRemoved;
-					var itemsRemoved = fst.DeleteRange(start, end, out allRemoved);
-					if (itemsRemoved == -1)
-					{
-						break;
-					}
-					/*Assert.Equal(count - 19999, itemsRemoved);
-					Assert.Equal(false, allRemoved);*/
-
-					tx.Commit();
-				}
-			}
-		}
-
-        [Theory]
-        [InlineData(50000)]
-        public void Tryouts_BTree(int count)
         {
-            var bytes = new byte[255];
+            var bytes = new byte[48];
             var slice = new Slice(bytes);
-
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: (byte)bytes.Length);
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
 
-                for (int i = 1; i <= count; i++)
+                for (int i = 0; i < count; i++)
                 {
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
                     fst.Add(i, slice);
                 }
 
-                fst.DebugRenderAndShow();
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 0; i < count; i++)
+                {
+                    fst.Delete(i);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.False(fst.Contains(i), i.ToString());
+                }
                 tx.Commit();
             }
         }
+
         [Theory]
-        [InlineData(5000)]
-        public void Tryouts_BTree2(int count)
+        [InlineData(8)]
+        [InlineData(16)]
+        [InlineData(128)]
+        [InlineData(1024*256)]
+        public void CanDeleteRange(int count)
         {
-            var bytes = new byte[240];
+            var bytes = new byte[48];
             var slice = new Slice(bytes);
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
                 for (int i = 1; i <= count; i++)
                 {
-                    tx.State.Root.Add(new Slice(i.ToString("000000")), slice);
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    Assert.Equal(i - 1, fst.NumberOfEntries);
+                    fst.Add(i, slice);
                 }
 
-                DebugStuff.RenderAndShow(tx, tx.State.Root.State.RootPageNumber);
                 tx.Commit();
+                Assert.Equal(count, fst.NumberOfEntries);
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                Assert.Equal(count, fst.NumberOfEntries);
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                var itemsRemoved = fst.DeleteRange(4, count - 3);
+                Assert.Equal(count - 6, itemsRemoved.NumberOfEntriesDeleted);
+                Assert.Equal(false, itemsRemoved.TreeRemoved);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 1; i <= count; i++)
+                {
+                    if (i >= 4 && i <= count - 3)
+                    {
+                        Assert.False(fst.Contains(i), i.ToString());
+                        Assert.Null(fst.Read(i));
+                    }
+                    else
+                    {
+                        Assert.True(fst.Contains(i), i.ToString());
+                        Assert.Equal(i, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                    }
+                }
+                tx.Commit();
+            }
+        }
+
+        [Theory]
+        [InlineData(8)]
+        [InlineData(16)]
+        [InlineData(128)]
+        [InlineData(1024*256)]
+        public void CanDeleteAllRange(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 1; i <= count; i++)
+                {
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    fst.Add(i, slice);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
+                Assert.Equal(count, itemsRemoved.NumberOfEntriesDeleted);
+                Assert.Equal(true, itemsRemoved.TreeRemoved);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 1; i <= count; i++)
+                {
+                    Assert.False(fst.Contains(i), i.ToString());
+                    Assert.Null(fst.Read(i));
+                }
+                tx.Commit();
+            }
+        }
+
+        [Theory]
+        [InlineData(250)]
+        [InlineData(1000)]
+        [InlineData(94000)]
+        [InlineData(100000)]
+        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+            var status = new BitArray(count + 1);
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 1; i <= count; i++)
+                {
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    fst.Add(i, slice);
+                    status[i] = true;
+                }
+
+                tx.Commit();
+            }
+            var random = new Random(1346);
+            // del exactly 1 page
+            for (var i = 0; i < count/100; i++)
+            {
+                var start = Math.Floor(random.Next(count)/(decimal) 72)*72;
+                start += 1;
+                var end = Math.Min(count, start + 71);
+
+                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    for (int j = (int) start; j <= (int) end; j++)
+                    {
+                        status[j] = false;
+                    }
+                    fst.DeleteRange((long) start, (long) end);
+
+                    tx.Commit();
+                }
+            }
+
+            // random size
+            for (var i = 0; i < count; i++)
+            {
+                var start = random.Next(count);
+                var end = random.Next(start, count);
+
+                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    for (int j = (int) start; j <= (int) end; j++)
+                    {
+                        status.Set(j, false);
+                    }
+                    fst.DeleteRange((long) start, (long) end);
+
+                    tx.Commit();
+                }
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                for (int i = 0; i < count; i++)
+                {
+                    if (status[i] != fst.Contains(i))
+                    {
+                        fst.DebugRenderAndShow();
+                        Assert.False(true, i.ToString());
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(1000)]
+        [InlineData(100000)]
+        [InlineData(500000)]
+        [InlineData(1000000)]
+        [InlineData(2000000)]
+        public void CanDeleteRange_RandomRanges(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+
+            var status = new BitArray(count + 1);
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 1; i <= count; i++)
+                {
+                    EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    fst.Add(i, slice);
+                    status[i] = true;
+                }
+
+                tx.Commit();
+            }
+
+            var random = new Random(1234);
+            for (var i = 0; i < count/100; i++)
+            {
+                var start = random.Next(count);
+                var end = random.Next(start, count);
+
+                Console.WriteLine($"{start } -> {end}");
+                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    for (int j = start; j <= end; j++)
+                    {
+                        status[j] = false;
+                    }
+                    fst.DeleteRange(start, end);
+
+                    tx.Commit();
+                }
+            }
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                for (int i = 0; i <= count; i++)
+                {
+                    Assert.Equal(status[i], fst.Contains(i));
+                }
             }
         }
     }
