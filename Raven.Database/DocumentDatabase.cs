@@ -596,11 +596,7 @@ namespace Raven.Database
 			return res;
 		}
 
-		public void ResetScheduledReductionsTracking()
-		{
-			TransactionalStorage.ResetScheduledReductionsTracking();
-		}
-		public TaskActions Tasks { get; private set; }
+	    public TaskActions Tasks { get; private set; }
 
 		[CLSCompliant(false)]
 		public ITransactionalStorage TransactionalStorage { get; private set; }
