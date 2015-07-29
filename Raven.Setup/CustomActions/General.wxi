@@ -18,4 +18,12 @@
 
 	<CustomAction Id='LaunchFirstRunPage' Directory="TARGETDIR" ExeCommand='[WEBBROWSER] [FirstRunUrl]' Return='asyncNoWait' Impersonate="no" Execute="immediate" />
 
+	<CustomAction Id="CheckPortAvailability" Return="check" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="CheckPortAvailability" />
+
+	<CustomAction Id="TryRevokePortReservation" Return="check" Impersonate="no" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="TryRevokePortReservation" />
+
+	<Property Id="PORT_AVAILABILITY" />
+
+	<Property Id="REVOKE_PORT_RESERVATION" Value="1" />
+
 </Include>

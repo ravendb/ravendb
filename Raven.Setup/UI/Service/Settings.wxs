@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
-    <CustomAction Id="CheckPortAvailability" Return="check" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="CheckPortAvailability" />
-    
-    <Property Id="PORT_AVAILABILITY" />
-      
+
     <UI>
       <Dialog Id="ServiceSettings" Width="370" Height="270" Title="[ProductName] Setup">
           <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
