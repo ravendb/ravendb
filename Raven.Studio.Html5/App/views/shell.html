@@ -256,9 +256,11 @@
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
     </div>
-    
-    <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
-</div>
+
+	<div id="splash-spinner">
+	<div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+
+	</div>
 
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">

@@ -1,12 +1,7 @@
-﻿import app = require("durandal/app");
+﻿
 import getLogsCommand = require("commands/getLogsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import database = require("models/database");
 import moment = require("moment");
-import appUrl = require("common/appUrl");
-import changeSubscription = require('models/changeSubscription');
-import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
 
 class logs extends viewModelBase {
@@ -28,6 +23,7 @@ class logs extends viewModelBase {
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
+	showLogDetails = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -71,6 +67,11 @@ class logs extends viewModelBase {
     }
 
     attached() {
+		super.attached();
+		this.showLogDetails.subscribe(x => {
+                $(".logRecords").toggleClass("logRecords-small");
+        });
+
         var logsRecordsContainerWidth = $("#logRecordsContainer").width();
         var widthUnit = 0.08;
         this.columnWidths[0](100 * widthUnit);
@@ -88,9 +89,14 @@ class logs extends viewModelBase {
     fetchLogs(): JQueryPromise<logDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            return new getLogsCommand(db)
+	        var deferred = $.Deferred();
+            new getLogsCommand(db)
                 .execute()
-                .done((results: logDto[]) => this.processLogResults(results));
+                .done((results: logDto[]) => {
+		            this.processLogResults(results);
+		            deferred.resolve(results);
+	            });
+	        return deferred;
         }
 
         return null;
@@ -145,7 +151,14 @@ class logs extends viewModelBase {
 
     selectLog(log: logDto) {
         this.selectedLog(log);
+		this.showLogDetails(true);
+		$(".logRecords").addClass("logRecords-small");
     }
+
+	unSelectLog(log: logDto) {
+		this.selectedLog(null);
+		this.showLogDetails(false);
+	}
 
     tableKeyDown(sender: any, e: KeyboardEvent) {
         var isKeyUp = e.keyCode === 38;

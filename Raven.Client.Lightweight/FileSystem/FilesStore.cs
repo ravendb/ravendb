@@ -39,8 +39,6 @@ namespace Raven.Client.FileSystem
 
         public FilesStore()
         {
-            Credentials = CredentialCache.DefaultNetworkCredentials;
-
             SharedOperationsHeaders = new NameValueCollection();
 	        Conventions = new FilesConvention();
         }
@@ -52,7 +50,10 @@ namespace Raven.Client.FileSystem
         public ICredentials Credentials 
         {
             get { return credentials; }
-            set { credentials = credentials ?? CredentialCache.DefaultNetworkCredentials; }
+	        set
+	        {
+		        credentials = value ?? CredentialCache.DefaultNetworkCredentials;
+	        }
         }
         private ICredentials credentials;
 
@@ -210,7 +211,7 @@ namespace Raven.Client.FileSystem
 
         public IFilesStore Initialize(bool ensureFileSystemExists = true, bool failIfCannotCreate = true)
         {
-            if (initialized)
+			if (initialized)
                 return this;
 
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
@@ -367,18 +368,21 @@ namespace Raven.Client.FileSystem
 
         private void HandleConnectionStringOptions()
         {
-            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
-            parser.Parse();
+	        if (!String.IsNullOrWhiteSpace(ConnectionStringName))
+	        {
+		        var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+		        parser.Parse();
 
-            var options = parser.ConnectionStringOptions;
-            if (options.Credentials != null)
-                this.Credentials = options.Credentials;
-            if (string.IsNullOrEmpty(options.Url) == false)
-                this.Url = options.Url;
-            if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
-                this.DefaultFileSystem = options.DefaultFileSystem;
-            if (string.IsNullOrEmpty(options.ApiKey) == false)
-                this.ApiKey = options.ApiKey;
+		        var options = parser.ConnectionStringOptions;
+		        if (options.Credentials != null)
+			        Credentials = options.Credentials;
+		        if (string.IsNullOrEmpty(options.Url) == false)
+			        Url = options.Url;
+		        if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
+			        DefaultFileSystem = options.DefaultFileSystem;
+		        if (string.IsNullOrEmpty(options.ApiKey) == false)
+			        ApiKey = options.ApiKey;
+	        }
         }
 
         protected void EnsureNotClosed()

@@ -120,8 +120,9 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true,                
-            };
+	            UseEmbeddedHttpServer = true,          
+            };			
+
 	        ravenDbServer.Initialize();
 
             servers.Add(ravenDbServer);
@@ -138,7 +139,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null)
+                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -157,11 +158,13 @@ namespace Raven.Tests.Helpers
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
-                ApiKey = apiKey
+                ApiKey = apiKey,
+				ConnectionStringName = connectionStringName
             };
 
 			ModifyStore(store);
-            store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
+
+            store.Initialize(ensureFileSystemExists: true);
 
             this.filesStores.Add(store);
 

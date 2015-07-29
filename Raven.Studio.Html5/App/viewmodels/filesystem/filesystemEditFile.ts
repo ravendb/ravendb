@@ -48,6 +48,7 @@ class filesystemEditFile extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.setupKeyboardShortcuts();
     }
 
@@ -98,7 +99,7 @@ class filesystemEditFile extends viewModelBase {
     }
 
     downloadFile() {
-        var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + this.fileName();
+        var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + encodeURIComponent(this.fileName());
         window.location.assign(url);
     }
 

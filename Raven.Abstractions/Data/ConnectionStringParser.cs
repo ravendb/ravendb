@@ -290,10 +290,10 @@ namespace Raven.Abstractions.Data
 
                 // I am sure there are more elegant solutions than this one. But it makes the job done. 
                 // Clear separation and same parsing logic as long as inheritance tree is well constructed and the calls are topologically ordered.
-                bool processed = ProcessConnectionStringOption( this.ConnectionStringOptions as ConnectionStringOptions, networkCredential, key, value );
-                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as RavenConnectionStringOptions, key, value );
-                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as EmbeddedRavenConnectionStringOptions, key, value );
-                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as FilesConnectionStringOptions, key, value );
+                bool processed = ProcessConnectionStringOption( ConnectionStringOptions, networkCredential, key, value );
+                processed |= ProcessConnectionStringOption( ConnectionStringOptions as RavenConnectionStringOptions, key, value );
+                processed |= ProcessConnectionStringOption( ConnectionStringOptions as EmbeddedRavenConnectionStringOptions, key, value );
+                processed |= ProcessConnectionStringOption( ConnectionStringOptions as FilesConnectionStringOptions, key, value );
 
                 if ( ! processed )
                     throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));

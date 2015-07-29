@@ -155,13 +155,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			token.ThrowIfCancellationRequested();
 
-			RemoveAllDocumentReferencesByView(id);
+			RemoveAllDocumentReferencesByView(id, token);
 
 			var mappedResultsStorageActions = (MappedResultsStorageActions)currentStorageActionsAccessor.MapReduce;
 
-			mappedResultsStorageActions.DeleteMappedResultsForView(id);
-			mappedResultsStorageActions.DeleteScheduledReductionForView(id);
-			mappedResultsStorageActions.RemoveReduceResultsForView(id);
+			mappedResultsStorageActions.DeleteMappedResultsForView(id, token);
+			mappedResultsStorageActions.DeleteScheduledReductionForView(id, token);
+			mappedResultsStorageActions.RemoveReduceResultsForView(id, token);
 		}
 
 		public void SetIndexPriority(int id, IndexingPriority priority)
@@ -285,7 +285,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             RemoveDocumentReferenceByKey((Slice)key);
 		}
 
-		public void RemoveAllDocumentReferencesByView(int view)
+		public void RemoveAllDocumentReferencesByView(int view, CancellationToken token)
 		{
 			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
 
@@ -293,7 +293,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
-                    RemoveDocumentReference(iterator, PulseTransaction);
+                    RemoveDocumentReference(iterator, PulseTransaction, token);
 				}
 			}
 		}
@@ -316,7 +316,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
-                    RemoveDocumentReference(iterator);
+                    RemoveDocumentReference(iterator, null, CancellationToken.None);
 				}
 			}
 
@@ -542,11 +542,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-                RemoveDocumentReference(iterator);
+                RemoveDocumentReference(iterator, null, CancellationToken.None);
 			}
 		}
 
-        private void RemoveDocumentReference(global::Voron.Trees.IIterator iterator, Action afterDocumentReferenceRemove = null)
+        private void RemoveDocumentReference(global::Voron.Trees.IIterator iterator, Action afterDocumentReferenceRemove, CancellationToken token)
         {
             var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
             var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
@@ -577,7 +577,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (afterDocumentReferenceRemove != null)
                     afterDocumentReferenceRemove();
             }
-            while (iterator.MoveNext());
+            while (iterator.MoveNext() && token.IsCancellationRequested == false);
         }
 
 		private int ReadPriority(string key)

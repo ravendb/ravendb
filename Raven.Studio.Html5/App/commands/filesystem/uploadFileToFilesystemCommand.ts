@@ -18,7 +18,7 @@ class uploadFileToFilesystemCommand extends commandBase {
         }
 
         var fileName = this.directory +"/"+ this.source.name;
-        var url = '/files?name=' + fileName + '&uploadId=' + this.uploadId;
+        var url = '/files?name=' + encodeURIComponent(fileName) + '&uploadId=' + this.uploadId;
 
         var customHeaders = {
             'RavenFS-Size': this.source.size

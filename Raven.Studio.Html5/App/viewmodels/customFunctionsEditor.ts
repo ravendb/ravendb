@@ -35,6 +35,7 @@ class customFunctionsEditor extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         $("#customFunctionsExample").popover({
             html: true,
             trigger: 'hover',

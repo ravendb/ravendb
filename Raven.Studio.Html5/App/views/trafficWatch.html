@@ -18,7 +18,7 @@
         </div>
         <div class="form-group statsBar">
             <strong class="col-sm-12">Stats:</strong>
-            <div class="small col-sm-offset-1 col-sm-11" data-bind="with:logConfig">
+            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: logConfig">
                 <strong>Status: </strong><label data-bind="text:($root.isConnected()==true?'Connected':'Disconnected'), css:{'text-danger':$root.isConnected() == false, 'text-success':$root.isConnected()==true}"></label>
                 <strong>; Watched Resource: </strong><label data-bind="text:ResourceName"></label>
                 <strong>; Trace Start Time :</strong><label data-bind="text:$root.startTraceTimeHumanized()"></label>
@@ -63,53 +63,52 @@
                     <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: Resource, attr: { title: Resource }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: Method, attr: { title: Method }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: Url"></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo ? 'Y' : 'N'"></div>
                 </div>
             </div>
-            <div class="form-group log-details panel panel-default" data-bind="visible:showLogDetails">
-                <div class="col-md-10">
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Time</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="text: TimeStampText() +' ' + Time()"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Duration</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="text: Duration"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Resource Name</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="text: Resource"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Method</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="text: Method"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Url</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="text: Url"></p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <label class="col-md-2 text-right control-label">Custom Info</label>
-                        <div class="col-md-10" data-bind="with: selectedLog">
-                            <p class="form-control-static" data-bind="html: CustomInfo"></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-2">
-                    <button class="btn btn-default" data-bind="click:function(){this.showLogDetails(false)}">Hide</button>
+            <div class="form-group log-details panel panel-default" data-bind="visible: showLogDetails">
+				<div class="col-md-11" data-bind="with: selectedLog">
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Time</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="text: TimeStampText() +' ' + Time()"></p>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Duration</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="text: Duration"></p>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Resource Name</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="text: Resource"></p>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Method</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="text: Method"></p>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Url</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="text: Url"></p>
+						</div>
+					</div>
+					<div class="row">
+						<label class="col-md-2 text-right control-label">Custom Info</label>
+						<div class="col-md-10">
+							<p class="form-control-static" data-bind="html: !!CustomInfo ? CustomInfo : '-'"></p>
+						</div>
+					</div>
+				</div>
+                <div class="col-sm-1">
+                    <button class="btn btn-default" data-bind="click: function(){ this.showLogDetails(false) }">Hide</button>
                 </div>
             </div>
         </div>
     </div>
-    
 </section>
