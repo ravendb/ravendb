@@ -273,7 +273,10 @@ namespace Voron.Tests.FixedSize
 
                 tx.Commit();
             }
-            var random = new Random(1346);
+
+			var tc = Environment.TickCount;
+			Console.WriteLine("Seed: " + tc);
+			var random = new Random(tc);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
             {
@@ -288,6 +291,7 @@ namespace Voron.Tests.FixedSize
                     {
                         status[j] = false;
                     }
+                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange((long) start, (long) end);
 
                     tx.Commit();
@@ -309,6 +313,7 @@ namespace Voron.Tests.FixedSize
                     {
                         status.Set(j, false);
                     }
+                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
@@ -355,8 +360,10 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-            var random = new Random(1234);
-            for (var i = 0; i < count/100; i++)
+			var tc = Environment.TickCount;
+			Console.WriteLine("Seed: " + tc);
+			var random = new Random(tc);
+			for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
                 var end = random.Next(start, count);
@@ -371,6 +378,7 @@ namespace Voron.Tests.FixedSize
                     {
                         status[j] = false;
                     }
+                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
@@ -381,7 +389,15 @@ namespace Voron.Tests.FixedSize
                 var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
-                    Assert.Equal(status[i], fst.Contains(i));
+	                try
+	                {
+		                Assert.Equal(status[i], fst.Contains(i));
+	                }
+	                catch
+	                {
+		                Console.WriteLine("Failed at: " + i);
+		                throw;
+	                }
                 }
             }
         }
@@ -436,7 +452,15 @@ namespace Voron.Tests.FixedSize
 
                 for (int i = 0; i < count; i++)
                 {
-                    Assert.Equal(status[i*3], fst.Contains(i*3));
+	                try
+	                {
+						Assert.Equal(status[i * 3], fst.Contains(i * 3));
+					}
+					catch
+	                {
+		                Console.WriteLine("Failed at: " + i);
+		                throw;
+	                }
                 }
             }
         }
