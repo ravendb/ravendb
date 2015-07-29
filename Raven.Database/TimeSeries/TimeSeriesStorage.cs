@@ -532,23 +532,12 @@ namespace Raven.Database.TimeSeries
 						{
 							var key = it.CurrentKey.ToString();
 							var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
-							long pointsCount = 0;
-							using (var fixedIt = fixedTree.Iterate())
-							{
-								if (fixedIt.Seek(DateTime.MinValue.Ticks))
-								{
-									do
-									{
-										pointsCount++;
-									} while (fixedIt.MoveNext());
-								}
-							}
-
+							fixedTree.DebugRenderAndShow();
 							yield return new TimeSeriesKey
 							{
 								Type = type.Type,
 								Key = key,
-								PointsCount = pointsCount,
+								PointsCount = fixedTree.NumberOfEntries,
 							};
 						} while (it.MoveNext());
 					}
@@ -568,6 +557,7 @@ namespace Raven.Database.TimeSeries
 							var type = storage.GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
 							var tree = tx.ReadTree(typeTreeName);
 							long keysCount = 0;
+							// TODO: Use NumberOfItems instead of iteration
 							using (var it = tree.Iterate())
 							{
 								if (it.Seek(Slice.BeforeAllKeys))
@@ -618,7 +608,7 @@ namespace Raven.Database.TimeSeries
 
 					tree = tx.State.GetTree(tx, SeriesTreePrefix + currentType.Type);
 				}
-			
+
 				if (values.Length != currentType.Fields.Length)
 					throw new ArgumentOutOfRangeException("values", string.Format("Appended values should be the same length the series values length which is {0} and not {1}", currentType.Fields.Length, values.Length));
 
@@ -640,27 +630,24 @@ namespace Raven.Database.TimeSeries
 					rollupsToClear.Add(clearKey, new RollupRange(type, key, time));
 				}
 
-				var bufferSize = (byte)(currentType.Fields.Length*sizeof (double));
+				var bufferSize = (byte) (currentType.Fields.Length*sizeof (double));
 				byte[] valBuffer;
 				if (valBuffers.TryGetValue(bufferSize, out valBuffer) == false)
 				{
-					valBuffer = new byte[bufferSize];
+					valBuffers[bufferSize] = valBuffer = new byte[bufferSize];
 				}
 				for (int i = 0; i < values.Length; i++)
 				{
-					EndianBitConverter.Big.CopyBytes(values[i], valBuffer, i * sizeof(double));
+					EndianBitConverter.Big.CopyBytes(values[i], valBuffer, i*sizeof (double));
 				}
 
 				var fixedTree = tree.FixedTreeFor(key, bufferSize);
-				using (var it = fixedTree.Iterate())
+				if (fixedTree.NumberOfEntries == 0)
 				{
-					if (it.Seek(DateTime.MinValue.Ticks) == false)
-					{
-						storage.UpdateKeysCount(tx, 1);
-					}
+					storage.UpdateKeysCount(tx, 1);
 				}
-				var isNew = fixedTree.Add(time.Ticks, valBuffer);
-				if (isNew)
+				var newPointWasAppended = fixedTree.Add(time.Ticks, valBuffer);
+				if (newPointWasAppended)
 				{
 					storage.UpdatePointsCount(tx, 1);
 				}
