@@ -760,10 +760,9 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				bool isAllRemoved;
-				var numberOfEntriesRemoved = fixedTree.DeleteRange(start, end, out isAllRemoved);
-				storage.UpdatePointsCount(tx, -numberOfEntriesRemoved);
-				if (isAllRemoved)
+				var result = fixedTree.DeleteRange(start, end);
+				storage.UpdatePointsCount(tx, -result.NumberOfEntriesDeleted);
+				if (result.TreeRemoved)
 					storage.UpdateKeysCount(tx, -1);
 			}
 		}
