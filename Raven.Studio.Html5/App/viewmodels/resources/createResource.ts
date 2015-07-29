@@ -7,14 +7,10 @@ import createTimeSeries = require("viewmodels/resources/createTimeSeries");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import timeSeriesType = require("models/timeSeries/timeSeriesType");
+import timeSeries = require("models/timeSeries/timeSeries");
 import shell = require("viewmodels/shell");
 
 class createResource extends dialogViewModelBase {
-    databaseType = database.type;
-    fileSystemType = fileSystem.type;
-    counterStorageType = counterStorage.type;
-    timeSeriesType = timeSeriesType.type;
     resourceType = ko.observable<string>("Database");
     createDatabasePart: createDatabase;
     createFileSystemPart: createFileSystem;
@@ -22,19 +18,19 @@ class createResource extends dialogViewModelBase {
     createTimeSeriesPart: createTimeSeries;
 
     resourceTypes = ko.observableArray([
-        { resourceType: this.databaseType, title: "Database", iconName: "fa fa-database fa-2x", experimental: false },
-        { resourceType: this.fileSystemType, title: "File System", iconName: "fa fa-file-image-o fa-2x", experimental: false },
-        { resourceType: this.counterStorageType, title: "Counter Storage", iconName: "fa fa-sort-numeric-desc fa-2x", experimental: false },
-        { resourceType: this.timeSeriesType, title: "Time Series", iconName: "fa fa-clock-o fa-2x", experimental: false }
+        { resourceType: database.type, title: "Database", iconName: "fa fa-database fa-2x", experimental: false },
+        { resourceType: fileSystem.type, title: "File System", iconName: "fa fa-file-image-o fa-2x", experimental: false },
+        { resourceType: counterStorage.type, title: "Counter Storage", iconName: "fa fa-sort-numeric-desc fa-2x", experimental: false },
+        { resourceType: timeSeries.type, title: "Time Series", iconName: "fa fa-clock-o fa-2x", experimental: false }
     ]);
-    checkedResource = ko.observable<string>(this.databaseType);
+    checkedResource = ko.observable<string>(database.type);
 
     constructor() {
         super();
 
 		if (!shell.has40Features()) {
-			this.resourceTypes().first(r => r.resourceType === this.counterStorageType).experimental = true;
-			this.resourceTypes().first(r => r.resourceType === this.timeSeriesType).experimental = true;
+			this.resourceTypes().first(r => r.resourceType === counterStorage.type).experimental = true;
+			this.resourceTypes().first(r => r.resourceType === timeSeries.type).experimental = true;
 		}
 
 
@@ -45,19 +41,19 @@ class createResource extends dialogViewModelBase {
         this.checkedResource.subscribe((resourceType: string) => {
             var resourceTypeText = "";
             switch (resourceType) {
-                case this.databaseType:
+                case database.type:
                     this.enableDbTab();
                     resourceTypeText = "Database";
                     break;
-                case this.fileSystemType:
+                case fileSystem.type:
                     this.enableFsTab();
                     resourceTypeText = "File System";
                     break;
-                case this.counterStorageType:
+                case counterStorage.type:
                     this.enableCsTab();
                     resourceTypeText = "Counter Storage";
                     break;
-                case this.timeSeriesType:
+                case timeSeries.type:
                     this.enableTsTab();
                     resourceTypeText = "Time Series";
                     break;
@@ -111,16 +107,16 @@ class createResource extends dialogViewModelBase {
 
     nextOrCreate() {
         switch (this.checkedResource()) {
-            case this.databaseType:
+            case database.type:
                 this.createDatabasePart.nextOrCreate();
                 break;
-            case this.fileSystemType:
+            case fileSystem.type:
                 this.createFileSystemPart.nextOrCreate();
                 break;
-            case this.counterStorageType:
+            case counterStorage.type:
                 this.createCounterStoragePart.nextOrCreate();
                 break;
-            case this.timeSeriesType:
+            case timeSeries.type:
                 this.createTimeSeriesPart.nextOrCreate();
                 break;
             default:
