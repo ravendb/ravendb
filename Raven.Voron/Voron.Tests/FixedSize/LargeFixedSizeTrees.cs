@@ -253,7 +253,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(250)]
         [InlineData(1000)]
         [InlineData(94000)]
-        [InlineData(100000)]
+        [InlineData(1000000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
         {
             var bytes = new byte[48];
@@ -303,11 +303,13 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-                    for (int j = (int) start; j <= (int) end; j++)
+					if (fst.NumberOfEntries == 0)
+						break;
+					for (int j = start; j <= end; j++)
                     {
                         status.Set(j, false);
                     }
-                    fst.DeleteRange((long) start, (long) end);
+                    fst.DeleteRange(start, end);
 
                     tx.Commit();
                 }
@@ -363,7 +365,9 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-                    for (int j = start; j <= end; j++)
+					if (fst.NumberOfEntries == 0)
+						break;
+					for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
@@ -414,7 +418,9 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
-                    for (int j = start; j <= end; j++)
+	                if (fst.NumberOfEntries == 0)
+		                break;
+	                for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
