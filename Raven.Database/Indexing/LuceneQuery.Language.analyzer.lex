@@ -3,7 +3,7 @@
 %visibility internal
 %tokentype Token
 
-%option stack, minimize, parser, verbose, persistbuffer, noembedbuffers 
+%option stack, minimize, parser, verbose, persistbuffer, noembedbuffers , unicode 
 
 Comment    [ \t\r\n\f]"//"([^\n\r]*)
 Whitespace [ \t\r\n\f]
@@ -25,6 +25,7 @@ PrefixTerm {UnquotedTerm}"\*"
 WildCardTerm  {WildCardStartChar}{WildCardChar}*
 Method \@[^<]+\<[^>]+\>
 DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{Digit}{7}Z?
+
 
 %{
 
