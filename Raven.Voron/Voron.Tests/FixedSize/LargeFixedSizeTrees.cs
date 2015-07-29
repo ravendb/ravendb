@@ -380,5 +380,67 @@ namespace Voron.Tests.FixedSize
 				}
 			}
 		}
+
+		[Theory]
+		[InlineData(1000000)]
+		public void CanDeleteRange_RandomRanges_WithGaps(int count)
+		{
+			var bytes = new byte[48];
+			var slice = new Slice(bytes);
+
+			var random = new Random();
+
+			var biggestId = 1;
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+				try
+				{
+					for (var i = 1; i <= count; i++)
+					{
+						biggestId += random.Next(biggestId + 1, biggestId + 1024);
+						EndianBitConverter.Little.CopyBytes(biggestId, bytes, 0);
+						fst.Add(biggestId, slice);
+					}
+				}
+				catch
+				{
+					Console.WriteLine("Biggest ID: {0}.", biggestId);
+				}
+
+				tx.Commit();
+			}
+
+			for (var i = 0; i < count; i++)
+			{
+				var start = random.Next(biggestId);
+				var end = random.Next(start, biggestId);
+
+				try
+				{
+					using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+					{
+						var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+						bool allRemoved;
+						var itemsRemoved = fst.DeleteRange(start, end, out allRemoved);
+						if (itemsRemoved == -1)
+						{
+							break;
+						}
+						/*Assert.Equal(count - 19999, itemsRemoved);
+						Assert.Equal(false, allRemoved);*/
+
+						tx.Commit();
+					}
+				}
+				catch
+				{
+					Console.WriteLine("Start: {0}. End: {1}. Biggest ID: {2}.", start, end, biggestId);
+					throw;
+				}
+			}
+		}
 	}
 }
