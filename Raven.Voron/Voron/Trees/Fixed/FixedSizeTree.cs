@@ -578,7 +578,8 @@ namespace Voron.Trees.Fixed
             if (_lastMatch > 0)
                 return 0;
             var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-            if (startPos == endPos && _lastMatch != 0)
+            var key = KeyFor(ptr + sizeof (FixedSizeTreeHeader.Embedded), endPos, _entrySize);
+            if (startPos == endPos && key > end)
                 return 0;
             byte entriesDeleted = (byte)(endPos - startPos + 1);
 
@@ -714,8 +715,12 @@ namespace Voron.Trees.Fixed
             var endPos = page.LastSearchPosition;
             if (page.LastMatch < 0)
                 endPos--;
-            if (startPos == endPos && page.LastMatch != 0)
-                return 0;
+            if (startPos == endPos)
+            {
+                var key = KeyFor(page, startPos);
+                if (key > rangeEnd)
+                    return 0;
+            }
 
             var entriesDeleted = (endPos - startPos + 1);
             UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos * _entrySize),
@@ -1075,7 +1080,7 @@ namespace Voron.Trees.Fixed
                 if (header == null)
                     return 0;
 
-                var flags = (FixedSizeTreeHeader.OptionFlags)header[1];
+                var flags = ((FixedSizeTreeHeader.Embedded*) header)->Flags;
                 switch (flags)
                 {
                     case FixedSizeTreeHeader.OptionFlags.Embedded:

@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using Voron.Debugging;
+using Voron.Tests.Util;
 using Voron.Util.Conversion;
 using Xunit;
 using Xunit.Extensions;
@@ -377,6 +378,59 @@ namespace Voron.Tests.FixedSize
                 for (int i = 0; i <= count; i++)
                 {
                     Assert.Equal(status[i], fst.Contains(i));
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(100)]
+        [InlineData(10000)]
+        [InlineData(75000)]
+        [InlineData(1000000)]
+        public void CanDeleteRange_RandomRanges_WithGaps(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+
+            var status = new BitArray(count * 3);
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                for (var i = 1; i < count; i++)
+                {
+                    fst.Add(i*3, slice);
+                    status[i*3] = true;
+                }
+
+                tx.Commit();
+            }
+            var tc = Environment.TickCount;
+            Console.WriteLine("Seed: " + tc);
+            var random = new Random(tc);
+            for (var i = 0; i < count/10; i++)
+            {
+                var start = random.Next(status.Length);
+                var end = random.Next(start, status.Length);
+                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    for (int j = start; j <= end; j++)
+                    {
+                        status[j] = false;
+                    }
+                    Console.WriteLine($"{start}->{end}");
+                    fst.DeleteRange(start, end);
+
+                    tx.Commit();
+                }
+            }
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.Equal(status[i*3], fst.Contains(i*3));
                 }
             }
         }
