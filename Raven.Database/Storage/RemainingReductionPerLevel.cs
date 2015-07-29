@@ -35,8 +35,6 @@ namespace Raven.Database.Storage
 				case 2:
 					Interlocked.Increment(ref remainingReductionsLevel2);
 					break;
-				default:
-					throw new ArgumentOutOfRangeException(string.Format("Unexpected reduce level {0}", level));
 			}
 			return this;
 		}
@@ -54,8 +52,7 @@ namespace Raven.Database.Storage
 				case 2:
 					Interlocked.Decrement(ref remainingReductionsLevel2);
 					break;
-				default:
-					throw new ArgumentOutOfRangeException(string.Format("Unexpected reduce level {0}", level));
+			
 			}
 			return this;
 		}
