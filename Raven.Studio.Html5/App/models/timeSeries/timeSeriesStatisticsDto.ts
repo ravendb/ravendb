@@ -5,5 +5,5 @@ interface timeSeriesStatisticsDto {
     RequestsPerSecond: number;
     TypesCount: number;
     KeysCount: number;
-    ValuesCount: number;
+    PointsCount: number;
 }

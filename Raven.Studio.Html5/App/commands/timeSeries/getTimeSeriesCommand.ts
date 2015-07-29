@@ -1,4 +1,4 @@
-﻿import timeSeries = require("models/timeSeries/timeSeriesDocument");
+﻿import timeSeries = require("models/timeSeries/timeSeries");
 import commandBase = require("commands/commandBase");
 
 class getTimeSeriesCommand extends commandBase {

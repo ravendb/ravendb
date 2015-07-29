@@ -98,6 +98,8 @@ namespace Raven.Database.Storage
 
         private void ReadFromDisk()
         {
+			logger.Debug("Reading index definitions from disk...");
+
             foreach (var indexDefinition in ReadIndexDefinitionsFromDisk())
             {
                 try
@@ -115,6 +117,10 @@ namespace Raven.Database.Storage
                 }
             }
 
+			logger.Debug("Read {0} index definitions", indexDefinitions.Count);
+
+			logger.Debug("Reading transformer definitions from disk...");
+
 			foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
             {
                 try
@@ -130,6 +136,8 @@ namespace Raven.Database.Storage
 					logger.WarnException(string.Format("Could not compile transformer '{0} ({1})', skipping bad transformer", transformerDefinition.TransfomerId, transformerDefinition.Name), e);
                 }
             }
+
+			logger.Debug("Read {0} transform definitions", transformDefinitions.Count);
         }
 
 	    private IEnumerable<IndexDefinition> ReadIndexDefinitionsFromDisk()

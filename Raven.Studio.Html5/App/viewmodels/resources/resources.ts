@@ -28,7 +28,7 @@ import createDefaultFsSettingsCommand = require("commands/filesystem/createDefau
 import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 import counterStorage = require("models/counter/counterStorage");
 import createCounterStorageCommand = require("commands/resources/createCounterStorageCommand");
-import timeSeries = require("models/timeSeries/timeSeriesDocument");
+import timeSeries = require("models/timeSeries/timeSeries");
 import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
 
 class resources extends viewModelBase {
@@ -238,7 +238,7 @@ class resources extends viewModelBase {
     }
 
     getTimeSeriesUrl(ts: timeSeries) {
-        return appUrl.forTimeSeriesKey(null, null, ts);
+        return appUrl.forTimeSeriesType(null, ts);
     }
 
     selectResource(rs: resource, activateResource: boolean = true) {
