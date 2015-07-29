@@ -575,13 +575,13 @@ namespace Voron.Trees.Fixed
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
-            if (_lastMatch > 0)
-                return 0;
-            var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-            var key = KeyFor(ptr + sizeof (FixedSizeTreeHeader.Embedded), endPos, _entrySize);
-            if (startPos == endPos && key > end)
-                return 0;
-            byte entriesDeleted = (byte)(endPos - startPos + 1);
+	        if (_lastMatch > 0)
+		        startPos++;
+			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
+	        if (startPos > endPos)
+		        return 0;
+
+	        byte entriesDeleted = (byte)(endPos - startPos + 1);
 
             if (entriesDeleted == header->NumberOfEntries)
             {
