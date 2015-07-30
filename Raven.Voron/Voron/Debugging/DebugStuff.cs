@@ -290,15 +290,21 @@ namespace Voron.Debugging
 	    [Conditional("DEBUG")]
 	    public static void RenderAndShow(Tree tree)
 	    {
-	        RenderAndShow(tree.Tx, tree.State.RootPageNumber);
+		    var headerData = string.Format("<p>Branch Pages: {0:#,#;;0}, Leaf Pages: {1:#,#;;0}, Overflow Pages: {2:#,#;;0}, Depth: {3:#,#;;0}, " +
+		                                   "Page Count: {4:#,#;;0}, Entries Count: {5:#,#;;0}, KeysPrefixing: {6}.</p>",
+										   tree.State.BranchPages, tree.State.LeafPages, tree.State.OverflowPages, tree.State.Depth,
+										   tree.State.PageCount, tree.State.EntriesCount, tree.State.KeysPrefixing);
+		    RenderAndShow(tree.Tx, tree.State.RootPageNumber, headerData);
 	    }
 
-        [Conditional("DEBUG")]
-		public static void RenderAndShow(Transaction tx, long startPageNumber)
+		[Conditional("DEBUG")]
+		public static void RenderAndShow(Transaction tx, long startPageNumber, string headerData = null)
 		{
             RenderHtmlTreeView(writer =>
             {
-                writer.WriteLine("<div class='css-treeview'><ul>");
+	            if (headerData != null)
+		            writer.WriteLine(headerData);
+	            writer.WriteLine("<div class='css-treeview'><ul>");
 
                 var page = tx.GetReadOnlyPage(startPageNumber);
                 RenderPage(tx, page, writer, "Root", true);
