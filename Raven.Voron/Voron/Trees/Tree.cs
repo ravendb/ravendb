@@ -197,9 +197,12 @@ namespace Voron.Trees
 
         internal byte* DirectAdd(MemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
         {
-            Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
+			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
-            if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
+	        if (State.InWriteTransaction)
+				State.IsModified = true;
+
+			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
 			if (AbstractPager.IsKeySizeValid(key.Size, KeysPrefixing) == false)

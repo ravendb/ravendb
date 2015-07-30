@@ -290,10 +290,7 @@ namespace Voron.Debugging
 	    [Conditional("DEBUG")]
 	    public static void RenderAndShow(Tree tree)
 	    {
-		    var headerData = string.Format("<p>Branch Pages: {0:#,#;;0}, Leaf Pages: {1:#,#;;0}, Overflow Pages: {2:#,#;;0}, Depth: {3:#,#;;0}, " +
-		                                   "Page Count: {4:#,#;;0}, Entries Count: {5:#,#;;0}, KeysPrefixing: {6}.</p>",
-										   tree.State.BranchPages, tree.State.LeafPages, tree.State.OverflowPages, tree.State.Depth,
-										   tree.State.PageCount, tree.State.EntriesCount, tree.State.KeysPrefixing);
+		    var headerData = string.Format("<p>{0}</p>", tree.State);
 		    RenderAndShow(tree.Tx, tree.State.RootPageNumber, headerData);
 	    }
 
