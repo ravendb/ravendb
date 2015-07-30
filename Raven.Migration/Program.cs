@@ -7,6 +7,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Migration.MigrationTasks;
+using Raven.Smuggler.Helpers;
 
 namespace Raven.Migration
 {
@@ -23,6 +24,7 @@ namespace Raven.Migration
 		public Program()
 		{
 			optionSet = new OptionSet();
+			optionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			optionSet.Add("fs-server:", OptionCategory.None, "The url of the RavenDB instance where attachments will be copied to the specified file system", value =>
 			{
 				use2NdConnection = true;
