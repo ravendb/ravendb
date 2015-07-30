@@ -216,12 +216,10 @@ task CopySmuggler {
 task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
 }
 
 task CopyMigration {
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Migration
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
 }
 
