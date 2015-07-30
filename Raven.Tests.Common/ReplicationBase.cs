@@ -16,6 +16,7 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Listeners;
@@ -36,6 +37,7 @@ namespace Raven.Tests.Common
     {
         protected int PortRangeStart = 9000;
         protected int RetriesCount = 500;
+	    private volatile bool hasWaitEnded;
 
 	    protected ReplicationBase()
         {
@@ -571,5 +573,51 @@ namespace Raven.Tests.Common
             if (waitToStart)
                 SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
         }
+
+		protected bool WaitForIndexToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+		{
+			var mre = new ManualResetEventSlim();
+			hasWaitEnded = false;
+			Task.Run(() =>
+			{
+				while (hasWaitEnded == false)
+				{
+					var stats = commands.GetStatistics();
+					if (stats.Indexes.Any(x => x.Name == indexName))
+					{
+						mre.Set();
+						break;
+					}
+					Thread.Sleep(25);
+				}
+			});
+
+			var success = mre.Wait(timeoutInMilliseconds);
+			hasWaitEnded = true;
+			return success;
+		}
+
+		protected bool WaitForIndexToReplicate(IAsyncDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+		{
+			var mre = new ManualResetEventSlim();
+			hasWaitEnded = false;
+			Task.Run(async () =>
+			{
+				while (hasWaitEnded == false)
+				{
+					var stats = await commands.GetStatisticsAsync().ConfigureAwait(false);
+					if (stats.Indexes.Any(x => x.Name == indexName))
+					{
+						mre.Set();
+						break;
+					}
+					Thread.Sleep(25);
+				}
+			});
+
+			var success = mre.Wait(timeoutInMilliseconds);
+			hasWaitEnded = true;
+			return success;
+		}
     }
 }
