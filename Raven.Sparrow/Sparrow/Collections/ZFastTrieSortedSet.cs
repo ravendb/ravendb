@@ -58,7 +58,7 @@ namespace Sparrow.Collections
 
             public bool IsExitNodeOf(Func<TKey, BitVector> binarizeFunc, int length, int lcpLength)
             {
-                return this.NameLength <= lcpLength && lcpLength < Extent(binarizeFunc).Count && lcpLength == length;
+                return this.NameLength <= lcpLength && (lcpLength < Extent(binarizeFunc).Count || lcpLength == length );
             }
 
             public Leaf GetRightLeaf()
@@ -287,7 +287,7 @@ namespace Sparrow.Collections
         }
 
         private readonly Func<TKey, BitVector> binarizeFunc;
-        private readonly Dictionary<uint, Internal> nodesTable = new Dictionary<uint, Internal>();
+        private readonly Dictionary<uint, List<Internal>> nodesTable = new Dictionary<uint, List<Internal>>();
 
         private int size;
 
@@ -412,22 +412,20 @@ namespace Sparrow.Collections
                 if (isCutLow && exitNodeAsInternal != null)
                 {
                     int handleSize = exitNodeAsInternal.GetHandleLength() / BitVector.BitsPerByte;
-
                     fixed (ulong* bitsPtr = searchKey.Bits)
                     {
                         //  We replace the exit node entry with the new internal node       
                         uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState);
-                        nodesTable[hash] = exitNodeAsInternal;
+                        InsertNodeInTable(hash, exitNodeAsInternal);
                         exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
                     }
 
                     var handle = exitNodeAsInternal.Handle(binarizeFunc);                    
-                    fixed ( ulong* bitsPtr = handle.Bits)
+                    fixed (ulong* bitsPtr = handle.Bits)
                     {
                         //  We add a new exit node entry
                         uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState, cutPoint.LongestPrefix);
-                        nodesTable[hash] = exitNodeAsInternal;
-
+                        InsertNodeInTable(hash, exitNodeAsInternal);
                     }                    
 
                     //  We update the jumps for the exit node.                
@@ -439,11 +437,10 @@ namespace Sparrow.Collections
                     exitNodeAsLeaf.NameLength = cutPoint.LongestPrefix + 1;
 
                     int handleSize = newInternal.GetHandleLength() / BitVector.BitsPerByte;
-
                     fixed (ulong* bitsPtr = newInternal.Handle(binarizeFunc).Bits)
                     {
                         uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, handleSize, hashState);
-                        nodesTable[hash] = newInternal;
+                        InsertNodeInTable(hash, newInternal);
                     }
                 }
             }
@@ -457,6 +454,18 @@ namespace Sparrow.Collections
             size++;
 
             return true;
+        }
+
+        private void InsertNodeInTable(uint hash, Internal node)
+        {
+            List<Internal> values;
+            if (!this.nodesTable.TryGetValue(hash, out values))
+            {
+                values = new List<Internal>();
+                this.nodesTable[hash] = values;
+            }                
+            
+            values.Add(node);
         }
 
         private void UpdateJumps(Internal node)
@@ -850,7 +859,7 @@ namespace Sparrow.Collections
             throw new NotImplementedException();
         }
 
-        internal ExitNode FindExitNode(TKey key)
+        internal ExitNode FindExitNode(TKey key, Stack<Internal> stack = null)
         {
             Contract.Requires(size != 0);
 
@@ -860,10 +869,13 @@ namespace Sparrow.Collections
             if (size == 1)
                 return new ExitNode(searchKey.LongestCommonPrefixLength(this.Root.Extent(binarizeFunc)), this.Root, searchKey);
 
+            if (stack == null)
+                stack = new Stack<Internal>();
+
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
-            Internal parexOrExitNode = FatBinarySearch(searchKey, state);
+            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count);
             
             // Check if the node is either the parex(key) and/or exit(key). 
             Node candidateNode;
@@ -883,8 +895,8 @@ namespace Sparrow.Collections
                 return new ExitNode(lcpLength, parexOrExitNode, searchKey);
 
             // With very low priority we screw up and therefore we start again but without skipping anything. 
-            parexOrExitNode = FatBinarySearchExact(searchKey, state);
-            if ( parexOrExitNode.Extent(binarizeFunc).IsPrefix(searchKey) )
+            parexOrExitNode = FatBinarySearchExact(searchKey, state, stack, -1, searchKey.Count);
+            if (parexOrExitNode.Extent(binarizeFunc).IsProperPrefix(searchKey))
             {
                 if (parexOrExitNode.ExtentLength < searchKey.Count && searchKey[parexOrExitNode.ExtentLength])
                     candidateNode = parexOrExitNode.Right;
@@ -899,14 +911,144 @@ namespace Sparrow.Collections
             return new ExitNode(searchKey.LongestCommonPrefixLength(candidateNode.Extent(binarizeFunc)), candidateNode, searchKey);
         }
 
-        private Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state)
+        private unsafe Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack, int startBit, int endBit)
         {
-            throw new NotImplementedException();
+            Contract.Requires(searchKey != null);
+            Contract.Requires(state != null);
+            Contract.Requires(stack != null);
+            Contract.Requires(startBit < endBit - 1);
+
+            endBit--;
+
+            Internal top = stack.Count != 0 ? stack.Peek() : null;
+
+            if (startBit == -1)
+            {
+                Contract.Assert(this.Root is Internal);
+
+                top = (Internal)this.Root;
+                stack.Push(top);
+                startBit = top.ExtentLength;
+            }
+
+            uint checkMask = (uint)(-1 << Bits.CeilLog2(endBit - startBit));
+            while (endBit - startBit > 0)
+            {
+                Contract.Assert(checkMask != 0);
+
+                int current = endBit & (int)checkMask;
+                if ((startBit & checkMask) != current)
+                {
+                    // We calculate the hash up to the word it makes sense. 
+                    uint hash;
+                    fixed (ulong* key = searchKey.Bits)
+                    {
+                        hash = Hashing.Iterative.XXHash32.Calculate((byte*)key, current / BitVector.BitsPerByte, state);
+                    }
+
+                    bool found = false;
+
+                    List<Internal> items;
+                    if (nodesTable.TryGetValue(hash, out items))
+                    {
+                        // We don't care, we just get the first match. It could be a false positive though (with very low probability).
+                        var item = items.First();
+
+                        // Add it to the stack, update search and continue
+                        top = item;
+                        if (stack != null)
+                            stack.Push(top);
+
+                        startBit = item.ExtentLength;
+                        found = true;
+                    }
+
+                    // We haven't found an exact match. 
+                    if (!found)
+                    {
+                        endBit = current - 1;
+                    }
+                }
+
+                checkMask >>= 1;
+            }
+
+            return top;
         }
 
-        private Internal FatBinarySearchExact(BitVector searchKey, Hashing.Iterative.XXHash32Block state)
+        private unsafe Internal FatBinarySearchExact(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack, int startBit, int endBit)
         {
-            throw new NotImplementedException();
+            Contract.Requires(searchKey != null);
+            Contract.Requires(state != null);
+            Contract.Requires(stack != null);
+            Contract.Requires(startBit < endBit - 1);
+
+            endBit--;
+
+            Internal top = stack.Count != 0 ? stack.Peek() : null;
+           
+            if ( startBit == -1 )
+            {
+                Contract.Assert(this.Root is Internal);
+
+                top = (Internal) this.Root;
+                stack.Push(top);
+                startBit = top.ExtentLength;
+            }
+
+            int checkMask = -1 << Bits.CeilLog2(endBit - startBit);
+            while (endBit - startBit > 0)
+            {
+                Contract.Assert(checkMask != 0);
+
+                int current = endBit & checkMask;
+                if ((startBit & checkMask) != current)
+                {
+                    // We calculate the hash up to the word it makes sense. 
+                    uint hash;
+                    fixed (ulong* key = searchKey.Bits)
+                    {
+                        hash = Hashing.Iterative.XXHash32.Calculate((byte*)key, current / BitVector.BitsPerByte, state);
+                    }
+
+                    bool found = false;
+
+                    List<Internal> items;
+                    if (nodesTable.TryGetValue(hash, out items))
+                    {
+                        // Try all items to find an exact match
+                        foreach (var item in items)
+                        {
+                            // If the node matches the handle length, the reference ptr name is equal and it is not a false positive
+                            if (item.GetHandleLength() == current &&
+                                 searchKey.CompareTo(item.ReferencePtr.Name(binarizeFunc), 0, current) == 0 &&
+                                // Make sure it is not a false positive
+                                 item.ExtentLength < current)
+                            {
+
+                                // Add it to the stack, update search and continue
+                                top = item;
+                                if (stack != null)
+                                    stack.Push(top);
+
+                                startBit = item.ExtentLength;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // We haven't found an exact match. 
+                    if (!found)
+                    {
+                        endBit = current - 1;
+                    }
+                }
+
+                checkMask >>= 1;
+            }
+
+            return top;
         }
 
 

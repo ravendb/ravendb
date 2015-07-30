@@ -441,22 +441,24 @@ namespace Sparrow.Binary
             return new BitVector(values.Length * BitVector.BitsPerByte, newValue);
         }
 
-        public static BitVector Of(string value)
+        public static BitVector Of(string value, bool prefixFree = false)
         {
-            int lastLong = value.Length / 4;
-            int size = lastLong;
-            if (value.Length % 4 != 0)
+            int prefixAdjustment = (prefixFree ? 1 : 0);
+
+            int valueLength = value.Length + prefixAdjustment;            
+            int size = valueLength / 4;
+            if (valueLength % 4 != 0)
                 size++;
 
-            int position;
-            ulong[] newValue = new ulong[size];
+            int position = 0;
+            int lastLong = value.Length / 4;
+            ulong[] newValue = new ulong[size];            
             for (int i = 0; i < lastLong; i++)
-            {
-                position = i * 4;
+            {                
                 newValue[i] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16 | (ulong)value[position + 3];
+                position += 4;
             }
 
-            position = (newValue.Length - 1) * 4;
             switch( value.Length % 4)
             {
                 case 3: newValue[newValue.Length - 1] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16; break;
@@ -465,7 +467,7 @@ namespace Sparrow.Binary
                 default: break;
             }
 
-            return new BitVector(value.Length * BitVector.BitsPerWord / 4, newValue);
+            return new BitVector((value.Length + prefixAdjustment) * BitVector.BitsPerWord / 4, newValue);
                 
         }
 
@@ -513,6 +515,11 @@ namespace Sparrow.Binary
         public int CompareTo(BitVector other, out int equalBits)
         {
             return CompareToInline(other, out equalBits);
+        }
+
+        public int CompareTo(BitVector other, int startAt, int length)
+        {
+            throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -588,6 +595,17 @@ namespace Sparrow.Binary
             CompareToInline(other, out equalBits);
 
             return equalBits == this.Count;
+        }
+
+        public bool IsProperPrefix(BitVector other)
+        {
+            if (this.Count >= other.Count)
+                return false;
+
+            int equalBits;
+            CompareToInline(other, out equalBits);
+
+            return equalBits == this.Count && equalBits != other.Count;
         }
     }
 }

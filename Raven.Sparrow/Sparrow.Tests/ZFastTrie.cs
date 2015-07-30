@@ -11,10 +11,13 @@ namespace Sparrow.Tests
 {
     public class ZFastTrieTest
     {
+        private readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
+
+
         [Fact]
         public void Construction()
         {
-            var tree = new ZFastTrieSortedSet<string, string>(x => BitVector.Of(x));
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.Equal(0, tree.Count);
             Assert.Null(tree.FirstKeyOrDefault());
             Assert.Null(tree.LastKeyOrDefault());
@@ -26,7 +29,7 @@ namespace Sparrow.Tests
         {
             var key = "oren";
 
-            var tree = new ZFastTrieSortedSet<string, string>(x => BitVector.Of(x));
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(key, "eini"));
             Assert.Equal(key, tree.FirstKey());
             Assert.Equal(key, tree.LastKey());
@@ -52,7 +55,7 @@ namespace Sparrow.Tests
         {
             var key = "oren";
 
-            var tree = new ZFastTrieSortedSet<string, string>(x => BitVector.Of(x));
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(key, "eini"));
 
             var successor = tree.SuccessorInternal(key);
@@ -84,7 +87,7 @@ namespace Sparrow.Tests
             string greaterKey = "oren";
             string greatestKey = "zz";
 
-            var tree = new ZFastTrieSortedSet<string, string>(x => BitVector.Of(x));
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(lesserKey, "eini"));
             Assert.True(tree.Add(greaterKey, "Eini"));
 
@@ -102,8 +105,9 @@ namespace Sparrow.Tests
 
             // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
             // Therefore the successor of the key "oren" is greater or equal to "oren"
-            Assert.Equal(greaterKey, tree.SuccessorOrDefault(lesserKey));
+            Assert.Equal(lesserKey, tree.SuccessorOrDefault(lesserKey));
             Assert.Equal(greaterKey, tree.SuccessorOrDefault(greaterKey));
+            Assert.Equal(greaterKey, tree.SuccessorOrDefault(lesserKey + "1"));
             Assert.Null(tree.SuccessorOrDefault(greatestKey));
 
             // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1] 
@@ -120,7 +124,7 @@ namespace Sparrow.Tests
             string midKey = "aa";
             string greaterKey = "oren";
 
-            var tree = new ZFastTrieSortedSet<string, string>(x => BitVector.Of(x));
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(lesserKey, "eini"));
             Assert.True(tree.Add(greaterKey, "Eini"));
 

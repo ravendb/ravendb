@@ -112,6 +112,23 @@ namespace Sparrow.Tests
             Assert.Equal(80, vector2.Count);
         }
 
+        [Fact]
+        public void Construction_PrefixFree()
+        {
+            var vector = BitVector.Of("1", false);
+            var prefixFreeVector = BitVector.Of("1", true);
+
+            Assert.Equal(vector.Count + 16, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of("10", false);
+            prefixFreeVector = BitVector.Of("10", true);
+            
+            Assert.Equal(vector.Count + 16, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+        }
+
+
         [Theory]
         [PropertyData("VectorSize")]
         public void SetBy_Index(int vectorSize)
