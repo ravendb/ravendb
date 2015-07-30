@@ -851,5 +851,11 @@ namespace Voron.Trees
 		    
 			return numberOfEntries;
 	    }
-    }
+
+		[Conditional("DEBUG")]
+		public void DebugRenderAndShow()
+		{
+			DebugStuff.RenderAndShow(this);
+		}
+	}
 }

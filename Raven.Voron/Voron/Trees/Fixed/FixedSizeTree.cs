@@ -1096,7 +1096,6 @@ namespace Voron.Trees.Fixed
             }
         }
 
-
         [Conditional("DEBUG")]
         public void DebugRenderAndShow()
         {
