@@ -578,8 +578,11 @@ namespace Voron.Trees.Fixed
 	        if (_lastMatch > 0)
 		        startPos++;
 			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-	        if (startPos > endPos)
-		        return 0;
+			if (_lastMatch < 0)
+				endPos--;
+
+			if (startPos > endPos)
+				return 0;
 
 	        byte entriesDeleted = (byte)(endPos - startPos + 1);
 
