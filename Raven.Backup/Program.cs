@@ -1,6 +1,7 @@
 ﻿using System;
 using NDesk.Options;
 using Raven.Abstractions;
+using Raven.Smuggler.Helpers;
 
 namespace Raven.Backup
 {
@@ -44,6 +45,7 @@ namespace Raven.Backup
             dispatcher = new BackupOperationDispatcher();
 
 			optionSet = new OptionSet();
+			optionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			optionSet.Add("url=", OptionCategory.None, "RavenDB server {0:url}", url => op.ServerUrl = url);
 			optionSet.Add("dest=", OptionCategory.None, "Full {0:path} to backup folder", path => op.BackupPath = path);
 			optionSet.Add("nowait", OptionCategory.None, "Return immediately without waiting for a response from the server", _ => op.NoWait = true);
