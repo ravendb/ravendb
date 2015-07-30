@@ -253,7 +253,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(250)]
         [InlineData(1000)]
         [InlineData(94000)]
-        [InlineData(1000000)]
+        [InlineData(300000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
         {
             var bytes = new byte[48];
@@ -406,7 +406,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(100)]
         [InlineData(10000)]
         [InlineData(75000)]
-        [InlineData(1000000)]
+        [InlineData(300000)]
         public void CanDeleteRange_RandomRanges_WithGaps(int count)
         {
             var bytes = new byte[48];
