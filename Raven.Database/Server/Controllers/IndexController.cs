@@ -286,7 +286,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var index = id;
 
-			var isReplication = GetQueryStringValue(Constants.IsIndexReplicatedUrlParamName);
+			var isReplication = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
 			if (Database.Indexes.DeleteIndex(index) &&
 				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
 			{
