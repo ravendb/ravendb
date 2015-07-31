@@ -243,6 +243,7 @@ namespace Raven.Database.Config
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
 			Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
+			Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
 
 			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
@@ -449,6 +450,7 @@ namespace Raven.Database.Config
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 
 			public IntegerSetting DisableIndexingFreeSpaceThreshold { get; set; }
+			public BooleanSetting DisableMapReduceInMemoryTracking { get; set; }
 		}
 
 		public class PrefetcherConfiguration

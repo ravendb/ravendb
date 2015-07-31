@@ -275,11 +275,11 @@ namespace Raven.Database.Indexing
 							token.ThrowIfCancellationRequested();
 
 
-                            var requiredReduceNextTimeSet = new HashSet<ReduceKeyAndBucket>(persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)));
+                            var requiredReduceNextTimeSet = new HashSet<ReduceKeyAndBucket>(persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)), ReduceKeyAndBucketEqualityComparer.Instance);
 
 							using (StopwatchScope.For(removeReduceResultsDuration))
 							{
-                                foreach (var mappedResultInfo in requiredReduceNextTimeSet)//.OrderBy(x => x.Bucket))
+                                foreach (var mappedResultInfo in requiredReduceNextTimeSet)
 								{
 									token.ThrowIfCancellationRequested();
 
@@ -289,7 +289,7 @@ namespace Raven.Database.Indexing
 
 							if (level != 2)
 							{
-                                var reduceKeysAndBucketsSet = new HashSet<ReduceKeyAndBucket>(requiredReduceNextTimeSet.Select(x => new ReduceKeyAndBucket(x.Bucket / 1024, x.ReduceKey)));
+                                var reduceKeysAndBucketsSet = new HashSet<ReduceKeyAndBucket>(requiredReduceNextTimeSet.Select(x => new ReduceKeyAndBucket(x.Bucket / 1024, x.ReduceKey)), ReduceKeyAndBucketEqualityComparer.Instance);
 
 								using (StopwatchScope.For(scheduleReductionsDuration))
 								{

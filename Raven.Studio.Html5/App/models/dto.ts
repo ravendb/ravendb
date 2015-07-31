@@ -883,6 +883,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
+	RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;

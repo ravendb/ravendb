@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,8 +25,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
+		private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;
 		private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
-
 		public static byte[] HashReduceKey(string reduceKey)
 		{
 			return localSha1.Value.Compute20(Encoding.UTF8.GetBytes(reduceKey));
@@ -153,6 +154,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], level);
 				map.Save();
 			}
+			if (scheduledReductionsPerViewAndLevel != null)
+				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}
 
 		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
@@ -166,11 +169,15 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			var currentEtagBinary = Guid.Empty.ToByteArray();
 			foreach (OptimizedDeleter reader in itemsToDelete.Where(x => x != null))
 			{
+				if (scheduledReductionsPerViewAndLevel != null)
+				{
+					scheduledReductionsPerViewAndLevel.AddOrUpdate(reader.IndexId, new RemainingReductionPerLevel(), (key, oldvalue) => oldvalue.Add(reader.ItemsToDeletePerViewAndLevel));
+				}
 				foreach (var sortedBookmark in reader.GetSortedBookmarks())
 				{
 					Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
 					var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
-					                                    tableColumnsCache.ScheduledReductionColumns["etag"]);
+					                                    tableColumnsCache.ScheduledReductionColumns["etag"]);					
 					if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
 					{
 						hasResult = true;
@@ -187,8 +194,20 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
+		public Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex()
+		{			
+			var res = new Dictionary<int, RemainingReductionPerLevel>();
+			if (scheduledReductionsPerViewAndLevel == null) return res;
+			var iterator = scheduledReductionsPerViewAndLevel.GetEnumerator();
+			while (iterator.MoveNext())
+			{
+				res.Add(iterator.Current.Key,iterator.Current.Value);
+			} 			
+			return res;
+		}
+
 		public void DeleteScheduledReduction(int view, int level, string reduceKey)
-		{
+		{			
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
 			Api.MakeKey(session, ScheduledReductions, view, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
@@ -221,6 +240,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 					continue;
 
 				Api.JetDelete(Session, ScheduledReductions);
+				if (scheduledReductionsPerViewAndLevel != null)
+					scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 			} while (Api.TryMoveNext(Session, ScheduledReductions));
 		}
 
@@ -228,8 +249,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
-			
-            var seenLocally = new HashSet<Tuple<string, int>>();
+
+            var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
             var keysToRemove = new List<string>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			{
@@ -260,6 +281,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				{
 					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete.First();
 				}
+
+                reader.IndexId = getItemsToReduceParams.Index;
+
 				do
 				{
 					cancellationToken.ThrowIfCancellationRequested();
@@ -282,8 +306,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 					var bucket = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
 
-					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
-					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions);
+                    var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb); 
+					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions, getItemsToReduceParams.Level);
+
 					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
