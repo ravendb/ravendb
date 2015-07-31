@@ -1345,7 +1345,7 @@ namespace Raven.Bundles.Replication.Tasks
 						foreach (var handler in new IReplicatedDocsHandler[]
 						{
 							new FilterReplicatedDocs(docDb.Documents, destination, prefetchingBehavior, destinationId, result.LastEtag),
-							new PatchReplicatedDocs(docDb, destination)
+							new TransformReplicatedDocs(docDb, destination)
 						})
 						{
 							handled = handler.Handle(handled);
