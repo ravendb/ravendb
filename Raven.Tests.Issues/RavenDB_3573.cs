@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
 				sourceReplicationTask.Pause();
 
 				SetupReplication(source.DatabaseCommands, destination);
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //now the old index replicated to destination
+				sourceReplicationTask.IndexReplication.Execute(); //now the old index replicated to destination
 
 				var sideBySideIndexReplicated = new ManualResetEventSlim();
 
@@ -104,7 +104,7 @@ namespace Raven.Tests.Issues
 						sideBySideIndexReplicated.Set();
 				};
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				Assert.True(sideBySideIndexReplicated.Wait(2000));
 
@@ -145,7 +145,7 @@ namespace Raven.Tests.Issues
 
 				//do side-by-side index replication -> but since in the destination there is no original index, 
 				//simply create the side-by-side index as if it replaced the old index already
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				var definition = destination.DatabaseCommands.GetIndex(testIndex.IndexName);
 				Assert.NotNull(definition);
@@ -178,13 +178,13 @@ namespace Raven.Tests.Issues
 				SetupReplication(source.DatabaseCommands, destination);
 
 				//replicate the original index
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				testIndex.SideBySideExecute(source);
 
 				//do side-by-side index replication -> since in the destination there is original index, 
 				//simply create the side-by-side index as so it will replace the original when it catches up
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				var originalDefinition = destination.DatabaseCommands.GetIndex(testIndex.IndexName);
 				Assert.NotNull(originalDefinition);
@@ -234,7 +234,7 @@ namespace Raven.Tests.Issues
 
 				//replicate the original index
 				await sourceReplicationTask.ExecuteReplicationOnce(true);
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				destinationDatabase.SpinBackgroundWorkers();
 
@@ -248,7 +248,7 @@ namespace Raven.Tests.Issues
 
 				//do side-by-side index replication -> since in the destination there is original index, 
 				//simply create the side-by-side index as so it will replace the original when it catches up
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				var originalDefinition = destination.DatabaseCommands.GetIndex(testIndex.IndexName);
 				Assert.NotNull(originalDefinition);
@@ -300,11 +300,11 @@ namespace Raven.Tests.Issues
 
 				SetupReplication(source.DatabaseCommands, destination);
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate the usual index
+				sourceReplicationTask.IndexReplication.Execute(); //replicate the usual index
 
 				source.SideBySideExecuteIndex(testIndex);
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate the side-by-side index
+				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index
 
 				//sanity check
 				Assert.NotNull(destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName));
@@ -313,7 +313,7 @@ namespace Raven.Tests.Issues
 
 				source.SideBySideExecuteIndex(testIndex2); //replaces the testIndex side-by-side index on source
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //should replicate the replaced side-by-sude index to destination
+				sourceReplicationTask.IndexReplication.Execute(); //should replicate the replaced side-by-sude index to destination
 
 				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName);
 				Assert.NotNull(sideBySideIndex);
@@ -364,11 +364,11 @@ namespace Raven.Tests.Issues
 
 				SetupReplication(source.DatabaseCommands, destination);
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate the usual index
+				sourceReplicationTask.IndexReplication.Execute(); //replicate the usual index
 
 				source.SideBySideExecuteIndex(testIndex);
 
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate the side-by-side index
+				sourceReplicationTask.IndexReplication.Execute();//replicate the side-by-side index
 
 				destinationDatabase.Indexes.DeleteIndex(testIndex.IndexName); //delete the original index
 
@@ -376,7 +376,7 @@ namespace Raven.Tests.Issues
 				Assert.NotNull(sideBySideIndex);
 
 				VerifyReplacementDocumentIsThere("ReplacementOf/" + testIndex.IndexName, destinationDatabase);
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate the side-by-side index again
+				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index again
 
 				var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
 				Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));

@@ -774,11 +774,20 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
 			{
-				replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, true, false);
+				replicationTask.IndexReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
+
 				return GetEmptyMessage();
 			}
 
-			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: true, replicateTransformers: false);
+			var indexName = GetQueryStringValue("indexName");
+
+			if (string.IsNullOrEmpty(indexName) == false)
+			{
+				replicationTask.IndexReplication.Execute(indexName);
+				return GetEmptyMessage();
+			}
+
+			replicationTask.IndexReplication.Execute();
 			return GetEmptyMessage();
 		}
 
@@ -795,11 +804,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
 			{
-				replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, false);
+				replicationTask.TransformerReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
 				return GetEmptyMessage();
 			}
 
-			replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: false);
+			var transformerName = GetQueryStringValue("transformerName");
+
+			if (string.IsNullOrEmpty(transformerName) == false)
+			{
+				replicationTask.TransformerReplication.Execute(transformerName);
+				return GetEmptyMessage();
+			}
+
+			replicationTask.TransformerReplication.Execute();
 			return GetEmptyMessage();
 		}
 
