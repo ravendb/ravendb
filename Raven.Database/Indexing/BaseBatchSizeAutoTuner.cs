@@ -116,7 +116,7 @@ namespace Raven.Database.Indexing
 			// not all 10
 			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelProcessingTasks)));
 
-			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
+			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemoryInMb - sizedPlusIndexingCost;
 
 			if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return false;
@@ -143,7 +143,7 @@ namespace Raven.Database.Indexing
                 // if we just loaded > 256 MB to index, that is big enough for right now
 				// remember, this value refer to just the data on disk, not including
 				// the memory to do the actual indexing
-				double sizeInMb = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
+				double sizeInMb = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemoryInMb - sizeToKeepFree));
 				return (long)sizeInMb * 1024 * 1024;
 			}
 		}
@@ -158,7 +158,7 @@ namespace Raven.Database.Indexing
 
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
 		{
-			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false &&
+			if (MemoryStatistics.AvailableMemoryInMb >= context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false &&
 				IsProcessingUsingTooMuchMemory == false)
 			{
 				// there is enough memory available for the next indexing run
@@ -177,7 +177,7 @@ namespace Raven.Database.Indexing
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false)
+			if (MemoryStatistics.AvailableMemoryInMb > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false)
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;

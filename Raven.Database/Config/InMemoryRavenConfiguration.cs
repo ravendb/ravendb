@@ -975,8 +975,8 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				var availableMemory = MemoryStatistics.AvailableMemory;
-				var minFreeMemory = (MemoryLimitForProcessingInMb * 2L * 1024L * 1024L);
+				var availableMemory = MemoryStatistics.AvailableMemoryInMb;
+				var minFreeMemory = (MemoryLimitForProcessingInMb * 2L);
 				// we have more memory than the twice the limit, we can use the default limit
 				if (availableMemory > minFreeMemory)
 					return MemoryLimitForProcessingInMb * 1024L * 1024L;
@@ -987,7 +987,7 @@ namespace Raven.Database.Config
 				// of memory available for processing based on the amount of memory we actually have available,
 				// assuming that we have multiple concurrent users of memory at the same time.
 				// we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
-				return Math.Min(availableMemory / 4, 16 * 1024 * 1024);
+                return Math.Min(availableMemory * 1024L * 1024L / 4, 16 * 1024 * 1024);
 
 			}
 		}

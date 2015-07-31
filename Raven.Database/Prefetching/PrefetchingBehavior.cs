@@ -177,6 +177,10 @@ namespace Raven.Database.Prefetching
 			bool docsLoaded;
 			int prefetchingQueueSizeInBytes;
 			var prefetchingDurationTimer = Stopwatch.StartNew();
+
+            // We take an snapshot because the implementation of accessing Values from a ConcurrentDictionary involves a lock.
+            // Taking the snapshot should be safe enough. 
+            long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
 			do
 			{
 				var nextEtagToIndex = GetNextDocEtag(etag);
@@ -202,7 +206,7 @@ namespace Raven.Database.Prefetching
 				(take.HasValue == false || result.Count < take.Value) && 
 				docsLoaded &&
 				prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
-				((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.DynamicMemoryLimitForProcessing)));
+                ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.DynamicMemoryLimitForProcessing)));
 
 			return result;
 		}
@@ -341,12 +345,16 @@ namespace Raven.Database.Prefetching
 		{
 			List<JsonDocument> jsonDocs = null;
 
+            // We take an snapshot because the implementation of accessing Values from a ConcurrentDictionary involves a lock.
+            // Taking the snapshot should be safe enough. 
+            long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
+
 			context.TransactionalStorage.Batch(actions =>
 			{
 				//limit how much data we load from disk --> better adhere to memory limits
 				var totalSizeAllowedToLoadInBytes =
 					(context.Configuration.DynamicMemoryLimitForProcessing) -
-					(prefetchingQueue.LoadedSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
+                    (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
 
 				// at any rate, we will load a min of 512Kb docs
 				var maxSize = Math.Max(
@@ -427,7 +435,7 @@ namespace Raven.Database.Prefetching
 			}
 
 			// ensure we don't do TOO much future caching
-			if (MemoryStatistics.AvailableMemory <
+			if (MemoryStatistics.AvailableMemoryInMb <
 				context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 

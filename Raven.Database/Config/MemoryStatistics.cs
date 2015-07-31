@@ -311,7 +311,7 @@ namespace Raven.Database.Config
             }
         }
 
-        public static int AvailableMemory
+        public static int AvailableMemoryInMb
         {
             get
             {
