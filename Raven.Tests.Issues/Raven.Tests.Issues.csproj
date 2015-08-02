@@ -156,6 +156,8 @@
     <Compile Include="ActualValueInJsonReaderException.cs" />
     <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3559.cs" />
+    <Compile Include="RavenDB-3609.cs" />
+    <Compile Include="RavenDB-3726.cs" />
     <Compile Include="RavenDB_3488.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />

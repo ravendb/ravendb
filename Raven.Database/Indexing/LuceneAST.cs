@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
 using System.Globalization;
 using System.IO;
@@ -124,6 +125,7 @@ namespace Raven.Database.Indexing
         }
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
+	        configuration.FieldName = FieldName;
 	        var matchList = new List<string>();
 			foreach (var match in Matches)
 			{
@@ -151,17 +153,20 @@ namespace Raven.Database.Indexing
 		    switch (Type)
 		    {
 			    case TermType.Quoted:
-				case TermType.UnQuoted:				
+				case TermType.UnQuoted:
 					var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
 					while (tokenStream.IncrementToken())
 					{
 						var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
 						yield return attribute.Term;
 					}
-				    break;
+					break;
+				case TermType.QuotedWildcard:
 				case TermType.WildCardTerm:
-				case TermType.PrefixTerm:
-			    case TermType.Float:
+				case TermType.PrefixTerm:				    
+					yield return GetWildcardTerm(configuration).Text;
+					break;
+				case TermType.Float:
 			    case TermType.Double:
 				case TermType.Hex:
 			    case TermType.DateTime:
@@ -178,29 +183,44 @@ namespace Raven.Database.Indexing
 		    }
 	    }
 
-		private Query AnalyzedWildCardQueries(LuceneASTQueryConfiguration configuration)
+	    private Term GetWildcardTerm(LuceneASTQueryConfiguration configuration)
 	    {
+		    var isQuotedWildcard = Type == TermType.QuotedWildcard;
+		    if (isQuotedWildcard)
+			    Term = Term.Substring(1, Term.Length - 2); //ignore quotes
+
 			var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
-			List<string> terms = new List<string>();
+			var terms = new List<string>();
 			while (tokenStream.IncrementToken())
 			{
 				var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
 				terms.Add(attribute.Term);
 			}
+			
 			if (terms.Count == 0)
 			{
-				return new WildcardQuery(new Term(configuration.FieldName, Term)); 
+				return new Term(configuration.FieldName, Term);
 			}
+
 			var sb = new StringBuilder();
+
 			if (terms.Count == 1)
 			{
-				var term = terms.First();
-				if (Term.StartsWith("*") && !term.StartsWith("*")) sb.Append('*');
-				sb.Append(term);
-				if (Term.EndsWith("*") && !term.EndsWith("*")) sb.Append('*');
-				return new WildcardQuery(new Term(configuration.FieldName,sb.ToString()));
+				var firstTerm = terms.First();
+
+				Debug.Assert(firstTerm.Length == Term.Length,
+@"if analyzer changes length of term and removes wildcards after processing it, 
+there is no way to know where to put the wildcard character back after the analysis. 
+This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
+
+				if (Term.StartsWith("*") && !firstTerm.StartsWith("*")) sb.Append('*');
+				sb.Append(firstTerm);
+				if (Term.EndsWith("*") && !firstTerm.EndsWith("*")) sb.Append('*');
+
+				return new Term(configuration.FieldName, sb.ToString());
 			}
-			foreach (var term in terms)
+
+			foreach (var currentTerm in terms)
 			{
 				if (sb.Length < Term.Length)
 				{
@@ -210,11 +230,24 @@ namespace Raven.Database.Indexing
 						sb.Append(c);
 					}
 				}
-				sb.Append(term);
+				sb.Append(currentTerm);
 			}
-			return new WildcardQuery(new Term(configuration.FieldName, sb.ToString()));
 
+		    var analyzedTermString = sb.ToString();
+
+			Debug.Assert(analyzedTermString.Length == Term.Length,
+@"if analyzer changes length of term and removes wildcards after processing it, 
+there is no way to know where to put the wildcard character back after the analysis. 
+This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
+
+		    return new Term(configuration.FieldName, analyzedTermString);
 	    }
+
+		private Query AnalyzedWildCardQueries(LuceneASTQueryConfiguration configuration)
+	    {
+			return new WildcardQuery(GetWildcardTerm(configuration));
+	    }
+
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
 	        var boost = string.IsNullOrEmpty(Boost) ? 1 : float.Parse(Boost);
@@ -237,14 +270,24 @@ namespace Raven.Database.Indexing
 		        case TermType.Long:
 					return new TermQuery(new Term(configuration.FieldName, Term)) { Boost = boost };
 	        }
+
+	        if (Type == TermType.QuotedWildcard)
+	        {
+				var res = AnalyzedWildCardQueries(configuration);
+				res.Boost = boost;
+				return res;		        
+	        }
+
 			if (Type == TermType.WildCardTerm)
 			{
 				var res = AnalyzedWildCardQueries(configuration);
 				res.Boost = boost;
 				return res;
 			}
+
 	        var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
-	        List<string> terms = new List<string>();
+	        var terms = new List<string>();
+			
 			while (tokenStream.IncrementToken())
 			{
 				var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
@@ -308,6 +351,7 @@ namespace Raven.Database.Indexing
         public enum TermType
         {
             Quoted,
+			QuotedWildcard,
             UnQuoted,
             Float,
 			Double,

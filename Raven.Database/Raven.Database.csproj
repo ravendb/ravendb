@@ -238,7 +238,10 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />
-    <Compile Include="Bundles\Replication\Tasks\Handlers\PatchReplicatedDocs.cs" />
+    <Compile Include="Bundles\Replication\Tasks\Handlers\TransformReplicatedDocs.cs" />
+    <Compile Include="Bundles\Replication\Tasks\IndexReplicationTask.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationTaskBase.cs" />
+    <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="GplexBuffers.cs" />

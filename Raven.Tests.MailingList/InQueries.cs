@@ -11,7 +11,8 @@ namespace Raven.Tests.MailingList
 		public class User
 		{
 			public string Country { get; set; }
-		}
+		}	
+
 
 		[Fact]
 		public void WhenQueryContainsQuestionMark()

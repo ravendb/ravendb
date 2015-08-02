@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using ICSharpCode.NRefactory.CSharp.Refactoring;
 using QUT.GplexBuffers;
 using QUT.Gppg;
+using Raven.Unix.Native;
 
 namespace Raven.Database.Indexing
 {
@@ -12,13 +11,37 @@ namespace Raven.Database.Indexing
     {
         public bool InMethod;
 
+	    private static int FindUnescapedCommaIndex(string str, bool lookFromTheEnd = false)
+	    {
+		    int commaIndex;
+			int cutoffIndex = lookFromTheEnd ? str.Length - 1 : 0;
+
+		    do
+		    {
+				commaIndex = lookFromTheEnd ? str.LastIndexOf(',', cutoffIndex) : str.IndexOf(',', cutoffIndex);
+				if(commaIndex == -1 || //didn't find any commas
+				   commaIndex == 0 || //first character in a string is a comma - this means we found unescaped string -> ",`" is not escaped comma
+				   commaIndex == str.Length - 1) //last character in a string is a comma - this means we found unescaped string -> "`," is not escaped comma
+					break;
+			    
+			    cutoffIndex = lookFromTheEnd ? commaIndex - 1 : commaIndex + 1;
+		    } while (!(str[commaIndex] == ',' &&
+					  (commaIndex == 0 || str[commaIndex - 1] != '`') &&
+					  (commaIndex == (str.Length - 1) || str[commaIndex + 1] != '`')));
+
+		    return commaIndex;
+	    }
+
         public string HandleTermInMethod()
         {
-            var commaIndex = yytext.IndexOf(',');
-			if (commaIndex == -1) return DiscardEscapeChar(yytext);
-	        var firstTerm = DiscardEscapeChar(yytext.Substring(0, commaIndex));
-            var lastCommaIndex = yytext.LastIndexOf(',');
-            var newSource = yytext.Substring(commaIndex, lastCommaIndex - commaIndex);//.Replace(",", " , ");
+	        var commaIndex = FindUnescapedCommaIndex(yytext);
+			if (commaIndex == -1) 
+				return DiscardEscapeChar(yytext,true);
+
+			var firstTerm = DiscardEscapeChar(yytext.Substring(0, commaIndex), true);
+	        var lastCommaIndex = FindUnescapedCommaIndex(yytext, true);
+
+            var newSource = yytext.Substring(commaIndex, lastCommaIndex - commaIndex);
             var rewind = yytext.Length - lastCommaIndex - 1;
             tokTxt = null;
             tokECol -= rewind;
@@ -29,11 +52,13 @@ namespace Raven.Database.Indexing
             if (lastCommaIndex != commaIndex)
             {
                 var currentContext = MkBuffCtx();
-                byte[] inputBuffer = System.Text.Encoding.Default.GetBytes(newSource);
-                MemoryStream stream = new MemoryStream(inputBuffer);
-                SetSource(stream);
-                (buffer as BuildBuffer).SetPaddingOn = true;
-                bStack.Push(currentContext);
+				SetSource(newSource,0);
+
+	            var buildBuffer = buffer as BuildBuffer;
+	            if (buildBuffer != null)  //precaution
+					buildBuffer.SetPaddingOn = true;
+
+	            bStack.Push(currentContext);
             }
             //CommaPaddingStream
             return firstTerm;
@@ -63,11 +88,14 @@ namespace Raven.Database.Indexing
 		/// <c>\\u0041</c> to <c>A</c>.
 		/// 
 		/// </summary>
-		private String DiscardEscapeChar(String input)
+		private String DiscardEscapeChar(String input, bool shouldEscapeCommas = false)
 		{
-			if (input.IndexOf('\\') == -1) return input;
+			if (input.IndexOf('\\') == -1)
+			{
+				return shouldEscapeCommas ? input.Replace("`,`", ",") : input;
+			}
 			// Create char array to hold unescaped char sequence
-			char[] output = new char[input.Length];
+			var output = new char[input.Length];
 
 			// The Length of the output can be less than the input
 			// due to discarded escape chars. This variable holds
@@ -85,9 +113,33 @@ namespace Raven.Database.Indexing
 			// Used to calculate the codepoint of the escaped unicode character
 			int codePoint = 0;
 
+			var isSkippingEscapedComma = false;
 			for (int i = 0; i < input.Length; i++)
 			{
-				char curChar = input[i];
+				var curChar = input[i];
+
+				if (shouldEscapeCommas)
+				{
+					if (curChar == '`' &&
+					    (i + 2) < input.Length &&
+					    input[i + 1] == ',' &&
+					    input[i + 2] == '`')
+					{
+						isSkippingEscapedComma = true;
+						continue;
+					}
+
+					if (isSkippingEscapedComma)
+					{
+						if (curChar == '`' && i > 0 && input[i - 1] == ',')
+						{
+							output[Length++] = ',';
+							isSkippingEscapedComma = false;
+						}
+						continue;
+					}
+				}
+
 				if (codePointMultiplier > 0)
 				{
 					codePoint += HexToInt(curChar) * codePointMultiplier;

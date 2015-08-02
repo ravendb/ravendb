@@ -13,14 +13,14 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 {
-	public class PatchReplicatedDocs : IReplicatedDocsHandler
+	public class TransformReplicatedDocs : IReplicatedDocsHandler
 	{
 		private readonly static ILog Log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentDatabase database;
 		private readonly ReplicationStrategy strategy;
 
-		public PatchReplicatedDocs(DocumentDatabase database, ReplicationStrategy strategy)
+		public TransformReplicatedDocs(DocumentDatabase database, ReplicationStrategy strategy)
 		{
 			this.database = database;
 			this.strategy = strategy;

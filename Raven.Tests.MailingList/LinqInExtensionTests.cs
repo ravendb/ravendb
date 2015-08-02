@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using FluentAssertions;
 using Raven.Client.Linq;
 using Raven.Tests.Common;
 
@@ -28,17 +29,43 @@ namespace Raven.Tests.MailingList
 						nameList.Add(doc.Name);
 						count += (doc.Name.Length + 1);
 					}
-
 					session.SaveChanges();
 
-					var foundDocs = session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Where(doc => doc.Name.In(nameList)).ToList();
+					var foundDocs = session.Query<TestDoc>()
+										   .Where(doc => doc.Name.In(nameList)).ToList();
 
-					WaitForUserToContinueTheTest(store);
+					foundDocs.Should().HaveSameCount(nameList);
+				}
+			}
+		}
 
-					session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Where(doc => doc.Name.In(nameList)).ToList();
-					Assert.True(foundDocs.Count == nameList.Count);
+		[Fact]
+		public void InListOver256Chars2()
+		{
+			using (var store = NewRemoteDocumentStore(fiddler: true))
+			{
+				using (var session = store.OpenSession())
+				{
+					var nameList = new List<string>();
+					var count = 0;
+					var index = 0;
+					while (count < 0x100)
+					{
+						var doc = new TestDoc { Name = new string('a', 300) + index };
+						session.Store(doc);
 
+						nameList.Add(doc.Name);
+						count += (doc.Name.Length + 1);
+						index++;
+					}
+					session.SaveChanges();
+					WaitForIndexing(store);
 
+					var foundDocs = session.Query<TestDoc>()
+										   .Where(doc =>
+											   doc.Name.In(nameList)).ToList();
+
+					foundDocs.Should().HaveSameCount(nameList);
 				}
 			}
 		}

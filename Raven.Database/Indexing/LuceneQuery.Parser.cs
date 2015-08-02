@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Raven.Database.Indexing
 {
@@ -25,10 +22,10 @@ namespace Raven.Database.Indexing
         }
         public void Parse(string s)
         {
-            byte[] inputBuffer = System.Text.Encoding.Default.GetBytes(s);
-            MemoryStream stream = new MemoryStream(inputBuffer);
-            this.Scanner = new LuceneQueryScanner(stream);
-            this.Parse();
+	        var luceneQueryScanner = new LuceneQueryScanner();
+	        luceneQueryScanner.SetSource(s, 0);
+	        Scanner = luceneQueryScanner;
+            Parse();
         }
     }
 }
