@@ -322,7 +322,7 @@ namespace Raven.Client.Indexes
             {
                 try
                 {
-                    replicateIndexRequest.ExecuteRawResponseAsync().Wait();
+                    AsyncHelpers.RunSync(() => replicateIndexRequest.ExecuteRawResponseAsync());
                 }
                 catch (Exception)
                 {
@@ -338,6 +338,7 @@ namespace Raven.Client.Indexes
             if (serverClient == null)
                 return;
             var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
+			
 			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethods.Post))
             {
                 try
