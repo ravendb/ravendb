@@ -81,5 +81,28 @@ namespace Raven.Tests.MailingList
 				}
 			}
 		}
+
+		[Fact]
+		public void WhenElementcontainsCommasInMiddleOfList()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User
+					{
+						Country = "Asia,Japan"
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var collection = session.Query<User>().Where(x => x.Country.In(new[]{"Korea","Asia,Japan","China"})).ToList();
+
+					Assert.NotEmpty(collection);
+				}
+			}
+		}
 	}
 }

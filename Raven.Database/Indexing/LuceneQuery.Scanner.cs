@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using GeoAPI.IO;
 using QUT.GplexBuffers;
 using QUT.Gppg;
+using Lucene.Net.QueryParsers;
 using Raven.Unix.Native;
 
 namespace Raven.Database.Indexing
@@ -54,7 +56,7 @@ namespace Raven.Database.Indexing
                 var currentContext = MkBuffCtx();
 				SetSource(newSource,0);
 
-	            var buildBuffer = buffer as BuildBuffer;
+	            var buildBuffer = buffer as StringBuffer;
 	            if (buildBuffer != null)  //precaution
 					buildBuffer.SetPaddingOn = true;
 
@@ -78,8 +80,7 @@ namespace Raven.Database.Indexing
 		public override void yyerror(string format, params object[] args)
 		{
 			base.yyerror(format, args);
-			Console.WriteLine(format, args);
-			Console.WriteLine();
+			throw new Lucene.Net.QueryParsers.ParseException(string.Format(format, args));
 		}
 		/// <summary> Returns a String where the escape char has been
 		/// removed, or kept only once if there was a double escape.
@@ -222,5 +223,6 @@ namespace Raven.Database.Indexing
 		{
 			return (int)(((uint)number) >> bits);
 		}
+
     }
 }

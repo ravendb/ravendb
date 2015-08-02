@@ -185,11 +185,9 @@ namespace Raven.Database.Indexing
 
 	    private Term GetWildcardTerm(LuceneASTQueryConfiguration configuration)
 	    {
-		    var isQuotedWildcard = Type == TermType.QuotedWildcard;
-		    if (isQuotedWildcard)
-			    Term = Term.Substring(1, Term.Length - 2); //ignore quotes
-
-			var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
+		    var qouted = Type == TermType.QuotedWildcard;
+			var reader = new StringReader(qouted ? Term.Substring(1, Term.Length - 2) : Term);
+			var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, reader);
 			var terms = new List<string>();
 			while (tokenStream.IncrementToken())
 			{
@@ -203,21 +201,20 @@ namespace Raven.Database.Indexing
 			}
 
 			var sb = new StringBuilder();
-
+		    int expectedLength;
 			if (terms.Count == 1)
 			{
 				var firstTerm = terms.First();
-
-				Debug.Assert(firstTerm.Length == Term.Length,
-@"if analyzer changes length of term and removes wildcards after processing it, 
-there is no way to know where to put the wildcard character back after the analysis. 
-This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
-
 				if (Term.StartsWith("*") && !firstTerm.StartsWith("*")) sb.Append('*');
 				sb.Append(firstTerm);
 				if (Term.EndsWith("*") && !firstTerm.EndsWith("*")) sb.Append('*');
-
-				return new Term(configuration.FieldName, sb.ToString());
+				var res = sb.ToString();
+				expectedLength = (qouted ? 2 : 0) + res.Length;
+				Debug.Assert(expectedLength  == Term.Length,
+@"if analyzer changes length of term and removes wildcards after processing it, 
+there is no way to know where to put the wildcard character back after the analysis. 
+This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
+				return new Term(configuration.FieldName, res);
 			}
 
 			foreach (var currentTerm in terms)
@@ -234,8 +231,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
 			}
 
 		    var analyzedTermString = sb.ToString();
-
-			Debug.Assert(analyzedTermString.Length == Term.Length,
+		    expectedLength = analyzedTermString.Length + (qouted ? 2 : 0);
+			Debug.Assert(expectedLength == Term.Length,
 @"if analyzer changes length of term and removes wildcards after processing it, 
 there is no way to know where to put the wildcard character back after the analysis. 
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
