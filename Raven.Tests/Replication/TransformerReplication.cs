@@ -141,8 +141,8 @@ namespace Raven.Tests.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				replicationTask.TransformerReplication.TimeToWaitBeforeSendingDeletesOfTransformersToSiblings = TimeSpan.Zero;
+				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
 				var transformersOnDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(1, transformersOnDestination1.Count(x => x.Name == transformer.TransformerName));
@@ -155,7 +155,7 @@ namespace Raven.Tests.Replication
 
 				//now delete the transformer at the source and verify that the deletion is replicated
 				source.DatabaseCommands.ForDatabase("testDB").DeleteTransformer(transformer.TransformerName);
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
 				transformersOnDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				Assert.Equal(0, transformersOnDestination1.Count(x => x.Name == transformer.TransformerName));
@@ -270,7 +270,7 @@ namespace Raven.Tests.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
 						{ userTransformer.TransformerName, 

@@ -146,7 +146,7 @@ namespace Raven.Tests.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				SpinWait.SpinUntil(() => replicationTask.IndexReplication.Execute());
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
@@ -203,7 +203,7 @@ namespace Raven.Tests.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				replicationTask.SendLastQueriedTask(null);
+				replicationTask.IndexReplication.SendLastQueried();
 
 				var indexNames = new[] { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 
@@ -556,8 +556,8 @@ namespace Raven.Tests.Replication
 
 				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
-				replicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				replicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
+				SpinWait.SpinUntil(() => replicationTask.IndexReplication.Execute());
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
@@ -573,7 +573,7 @@ namespace Raven.Tests.Replication
 
 				//the index is now replicated on all servers.
 				//now delete the index and verify that deletion is replicated
-				SpinWait.SpinUntil(() => replicationTask.ReplicateIndexesAndTransformersTask(null));
+				SpinWait.SpinUntil(() => replicationTask.IndexReplication.Execute());
 
 
 				indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();

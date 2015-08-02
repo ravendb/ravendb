@@ -56,17 +56,17 @@ namespace Raven.Tests.Issues
 
 				var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
 				sourceReplicationTask.Pause();
-				sourceReplicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
+				sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
 
 				SetupReplication(source.DatabaseCommands, destination);
 
 				WaitForIndexing(source);
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate index create
+				sourceReplicationTask.IndexReplication.Execute(); //replicate index create
 
 				source.DatabaseCommands.DeleteIndex(testIndex.IndexName);
 
 				shouldRecordRequests = true;
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 
 				Assert.Equal(1, requestLog.Count(x => x.Method.Method == "DELETE"));
@@ -96,7 +96,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 				var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
-				sourceReplicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
+				sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
 
 				sourceReplicationTask.Pause(); //pause replciation task _before_ setting up replication
 
@@ -116,7 +116,7 @@ namespace Raven.Tests.Issues
 				sourceDatabase.SpinBackgroundWorkers();
 				WaitForIndexing(source); //now old index should be a tombstone and side-by-side replaced it.
 				mre.Wait();
-				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+				sourceReplicationTask.IndexReplication.Execute();
 
 				Assert.Equal(0,requestLog.Count(x => x.Method.Method == "DELETE"));
 			}
