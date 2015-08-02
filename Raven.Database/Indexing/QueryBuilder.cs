@@ -65,9 +65,11 @@ namespace Raven.Database.Indexing
 							DefaultOperator = indexQuery.DefaultOperator,
 							FieldName = indexQuery.DefaultField ?? string.Empty
 						});
+					// The parser should throw ParseException in this case.
+					if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
 					return res;
 				}
-				catch (Exception pe)
+				catch (ParseException pe)
 				{
 					throw new ParseException("Could not parse: '" + query + "'", pe);
 				}

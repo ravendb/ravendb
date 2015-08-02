@@ -13,7 +13,7 @@ namespace Raven.Database.Util
 	{
 		public static void TimeBomb()
 		{
-			if (SystemTime.UtcNow > new DateTime(2015, 8, 1))
+			if (SystemTime.UtcNow > new DateTime(2016, 8, 1))
 				throw new NotImplementedException("Development time bomb.");
 		}
 	}
