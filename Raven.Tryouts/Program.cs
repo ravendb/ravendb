@@ -21,9 +21,9 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 1000; i++)
 			{
-				using (var test = new RavenDB_3570())
+				using (var test = new RavenDB_3629())
 				{
-					test.RavenFSWithWindowsCredentialsInConnectionStringShouldWork();
+					test.Referenced_files_should_be_replicatedB();
 				}			
 				Console.WriteLine(i);
 			}
