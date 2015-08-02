@@ -311,7 +311,7 @@ namespace Raven.Database.Config
             }
         }
 
-        public static int AvailableMemory
+        public static int AvailableMemoryInMb
         {
             get
             {
@@ -345,14 +345,16 @@ namespace Raven.Database.Config
                     // Used Memory (UM) = WS - DO = CLR + LU - DO = (LO + DO) + LU - DO = LO + LU
                     // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
                                         
-                    long totalMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+                    long alreadyAvailableMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+
+                    long workingSet = Process.GetCurrentProcess().WorkingSet64;
                     long liveObjectMemory = GC.GetTotalMemory(false);                                                            
                     
                     // There is still no way for us to query the amount of unmanaged memory in the working set
                     // so we will have to live with the over-estimation of the total available memory. 
 					// to compensate for that, we will already remove 20% of the live object used as the size
 					// of unmanaged memory we use
-	                long availableMemory = totalMemory - liveObjectMemory - ((int)(liveObjectMemory * 0.2));
+                    long availableMemory = alreadyAvailableMemory + (workingSet - liveObjectMemory - ((int)(liveObjectMemory * 0.2)));
                     int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
 
                     if (Environment.Is64BitProcess)

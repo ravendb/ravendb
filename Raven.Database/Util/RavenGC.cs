@@ -59,7 +59,7 @@ namespace Raven.Database.Util
 		private static void ReleaseMemoryBeforeGC()
 		{
 
-			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
+			if (MemoryStatistics.AvailableMemoryInMb < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemoryInMb)/10)
 			{
 				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < fiveSecondsInTicks)
 					return;

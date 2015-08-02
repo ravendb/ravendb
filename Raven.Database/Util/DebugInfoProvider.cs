@@ -195,7 +195,7 @@ namespace Raven.Database.Util
 				try
 				{
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
-					availableMemory = MemoryStatistics.AvailableMemory;
+					availableMemory = MemoryStatistics.AvailableMemoryInMb;
 
 					using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
 					{
