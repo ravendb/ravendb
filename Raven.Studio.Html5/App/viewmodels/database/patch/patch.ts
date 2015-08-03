@@ -2,9 +2,11 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import patchParam = require("models/database/patch/patchParam");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import collection = require("models/database/documents/collection");
+import customColumns = require("models/database/documents/customColumns");
 import document = require("models/database/documents/document");
 import pagedList = require("common/pagedList");
 import jsonUtil = require("common/jsonUtil");
@@ -31,7 +33,7 @@ class patch extends viewModelBase {
     indexNames = ko.observableArray<string>();
     collections = ko.observableArray<collection>();
 
-    currentGroupPagedItems = ko.observable<pagedList>();
+    currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
 
     patchDocument = ko.observable<patchDocument>();
@@ -68,7 +70,7 @@ class patch extends viewModelBase {
             if (this.beforePatchEditor) { 
                 var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
                 this.beforePatchEditor.getSession().setValue(text);
-    }
+            }
         });
         this.beforePatch = ko.computed({
             read: () => {
@@ -135,12 +137,12 @@ class patch extends viewModelBase {
         this.selectedDocumentIndices.subscribe(list => {
             var firstCheckedOnList = list.last();
             if (firstCheckedOnList != null) {
-                this.currentGroupPagedItems().getNthItem(firstCheckedOnList)
+                this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         this.documentKey(document.__metadata.id);
                         this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
 		                this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
-                    });
+	                });
             } else {
                 this.clearDocumentPreview();
             }
@@ -204,7 +206,7 @@ class patch extends viewModelBase {
                 this.fetchAllIndexes();
                 break;
             default:
-                this.currentGroupPagedItems(null);
+                this.currentCollectionPagedItems(null);
                 break;
         }
     }
@@ -231,7 +233,7 @@ class patch extends viewModelBase {
     setSelectedCollection(coll: collection) {
         this.patchDocument().selectedItem(coll.name);
         var list = coll.getDocuments();
-        this.currentGroupPagedItems(list);
+        this.currentCollectionPagedItems(list);
         list.fetch(0, 20);
         $("#matchingDocumentsGrid").resize();
     }
@@ -264,7 +266,7 @@ class patch extends viewModelBase {
                 return command.execute();
             };
             var resultsList = new pagedList(resultsFetcher);
-            this.currentGroupPagedItems(resultsList);
+            this.currentCollectionPagedItems(resultsList);
             return resultsList;
         }
         return null;
@@ -347,7 +349,7 @@ class patch extends viewModelBase {
     }
 
     executePatchOnSelected() {
-        this.confirmAndExecutePatch(this.getCountersGrid().getSelectedItems().map(doc => doc.__metadata.id));
+        this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
     }
 
     executePatchOnAll() {
@@ -435,7 +437,7 @@ class patch extends viewModelBase {
         }
     }
 
-    private getCountersGrid(): virtualTable {
+    private getDocumentsGrid(): virtualTable {
         var gridContents = $(patch.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
@@ -446,7 +448,7 @@ class patch extends viewModelBase {
 
 	activateBeforeDoc() {
 		this.beforePatchDocMode(true);
-}
+	}
 
 	activateBeforeMeta() {
 		this.beforePatchDocMode(false);
@@ -458,7 +460,7 @@ class patch extends viewModelBase {
 
 	activateAfterMeta() {
 		this.afterPatchDocMode(false);
-	}
+    }
 
     indexFields = ko.observableArray<string>();
     selectedIndex = ko.observable<string>();
@@ -470,7 +472,7 @@ class patch extends viewModelBase {
 
         queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.dynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
 
-}
+    }
 
 
     fetchIndexFields(indexName: string) {
