@@ -851,6 +851,7 @@
     <TypeScriptCompile Include="App\models\database\replication\conflictsInfo.ts" />
     <TypeScriptCompile Include="App\models\database\replication\conflictVersion.ts" />
     <TypeScriptCompile Include="App\models\database\replication\replicationConfig.ts" />
+    <TypeScriptCompile Include="App\models\database\replication\replicationPatchScript.ts" />
     <TypeScriptCompile Include="App\models\database\replication\replicationDestination.ts" />
     <TypeScriptCompile Include="App\models\database\replication\replicationsSetup.ts" />
     <TypeScriptCompile Include="App\models\database\replication\topology.ts" />
