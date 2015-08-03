@@ -272,21 +272,22 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[RavenRoute("debug/indexing-batch-stats")]
 		[RavenRoute("databases/{databaseName}/debug/indexing-batch-stats")]
-		public HttpResponseMessage IndexingBatchStats()
+		public HttpResponseMessage IndexingBatchStats(int lastId = 0)
 		{
+			
 			var indexingBatches = Database.WorkContext.LastActualIndexingBatchInfo.ToArray();
-
-			return GetMessageWithObject(indexingBatches);
+			var indexingBatchesTrimmed = indexingBatches.SkipWhile(x => x.Id < lastId).ToArray();
+			return GetMessageWithObject(indexingBatchesTrimmed);
 		}
 
 		[HttpGet]
 		[RavenRoute("debug/reducing-batch-stats")]
 		[RavenRoute("databases/{databaseName}/debug/reducing-batch-stats")]
-		public HttpResponseMessage ReducingBatchStats()
+		public HttpResponseMessage ReducingBatchStats(int lastId = 0)
 		{
 			var reducingBatches = Database.WorkContext.LastActualReducingBatchInfo.ToArray();
-
-			return GetMessageWithObject(reducingBatches);
+			var reducingBatchesTrimmed = reducingBatches.SkipWhile(x => x.Id < lastId).ToArray();
+			return GetMessageWithObject(reducingBatchesTrimmed);
 		}
 
 		[HttpGet]
