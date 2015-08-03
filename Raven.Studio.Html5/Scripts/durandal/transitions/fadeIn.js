@@ -1,4 +1,4 @@
-define(['durandal/system', 'durandal/transitions/transitionHelper'], function (system, helper) {
+define(['durandal/system', 'transitions/transitionHelper'], function (system, helper) {
 	var settings = {
 		inAnimation: 'fadeIn',
 		outAnimation: 'fadeOut'
