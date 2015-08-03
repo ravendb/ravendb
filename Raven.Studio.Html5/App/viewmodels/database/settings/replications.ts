@@ -10,6 +10,7 @@ import saveReplicationDocumentCommand = require("commands/database/replication/s
 import saveAutomaticConflictResolutionDocument = require("commands/database/replication/saveAutomaticConflictResolutionDocument");
 import getServerPrefixForHiLoCommand = require("commands/database/documents/getServerPrefixForHiLoCommand");
 import replicateAllIndexesCommand = require("commands/database/replication/replicateAllIndexesCommand");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import replicateAllTransformersCommand = require("commands/database/replication/replicateAllTransformersCommand");
 import deleteLocalReplicationsSetupCommand = require("commands/database/globalConfig/deleteLocalReplicationsSetupCommand");
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
@@ -19,6 +20,7 @@ import getCollectionsCommand = require("commands/database/documents/getCollectio
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
+import replicationPatchScript = require("models/database/replication/replicationPatchScript");
 
 class replications extends viewModelBase {
 
@@ -60,6 +62,11 @@ class replications extends viewModelBase {
         var tokens = behaviour.split(",");
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
     });
+
+    constructor() {
+        super();
+        aceEditorBindingHandler.install();
+    }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
@@ -298,6 +305,10 @@ class replications extends viewModelBase {
                     this.collections(results);
                 });
             });
+    }
+
+    createNewTransformativeReplication(destination: replicationDestination) {
+        destination.transformScripts.push(new replicationPatchScript());
     }
 }
 
