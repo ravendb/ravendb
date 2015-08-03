@@ -381,7 +381,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal")]
+		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
