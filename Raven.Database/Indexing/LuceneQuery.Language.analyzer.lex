@@ -3,7 +3,7 @@
 %visibility internal
 %tokentype Token
  
-%option stack, minimize, parser, verbose, persistbuffer, noembedbuffers , unicode 
+%option stack, minimize, parser, verbose, persistbuffer, noembedbuffers  
 
 Comment    [ \t\r\n\f]"//"([^\n\r]*)
 Whitespace [ \t\r\n\f]
