@@ -7,6 +7,8 @@ namespace Raven.Abstractions.Data
 {
 	public class IndexingBatchInfo
 	{
+	    public long Id { get; set; }
+
 		/// <summary>
 		/// Type of batch (Standard, Precomputed).
 		/// </summary>
