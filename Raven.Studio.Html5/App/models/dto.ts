@@ -461,6 +461,7 @@ interface replicationDestinationDto {
     SourceCollections: string[];
     HasGlobal?: boolean;
     HasLocal?: boolean;
+    TransformScripts: dictionary<string>;
 }
 
 interface configurationDocumentDto<TClass> {
