@@ -18,7 +18,7 @@ namespace Raven.Client.Linq
 
 		public static Type GetMemberType(this MemberInfo member)
 		{
-			switch (member.MemberType())
+			switch (member.MemberType)
 			{
 				case MemberTypes.Field:
 					return ((FieldInfo)member).FieldType;

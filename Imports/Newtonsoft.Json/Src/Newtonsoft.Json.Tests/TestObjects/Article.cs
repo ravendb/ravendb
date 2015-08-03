@@ -25,17 +25,17 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class Article
-  {
-    public string Name;
-
-    public Article()
+    public class Article
     {
-    }
+        public string Name;
 
-    public Article(string name)
-    {
-      Name = name;
+        public Article()
+        {
+        }
+
+        public Article(string name)
+        {
+            Name = name;
+        }
     }
-  }
 }

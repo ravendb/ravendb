@@ -26,7 +26,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using System.Runtime.InteropServices;
-
+using Raven.Abstractions.Data;
 using TaskActions = Raven.Database.FileSystem.Actions.TaskActions;
 
 namespace Raven.Database.FileSystem
@@ -115,6 +115,8 @@ namespace Raven.Database.FileSystem
             search.Initialize(this);
 
 			SecondStageInitialization();
+
+			synchronizationTask.Start();
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled
@@ -148,6 +150,10 @@ namespace Raven.Database.FileSystem
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
+					if (Environment.Is64BitProcess == false && configuration.Storage.Voron.AllowOn32Bits == false)
+					{
+						throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+					}
                     return new Storage.Voron.TransactionalStorage(configuration);
                 case InMemoryRavenConfiguration.EsentTypeName:
                     return new Storage.Esent.TransactionalStorage(configuration);
@@ -315,6 +321,12 @@ namespace Raven.Database.FileSystem
 			if (disposed)
 				return;
 
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metricsCounters.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
+
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
 
@@ -377,5 +389,6 @@ namespace Raven.Database.FileSystem
 	        Storage.Batch(accessor => { fsStats.FileCount = accessor.GetFileCount(); });
             return fsStats;
 	    }
+
     }
 }

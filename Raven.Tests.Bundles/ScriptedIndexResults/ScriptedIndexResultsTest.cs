@@ -22,27 +22,7 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var s = store.OpenSession())
-				{
-					s.Store(new Raven.Abstractions.Data.ScriptedIndexResults
-					{
-						Id = Raven.Abstractions.Data.ScriptedIndexResults.IdPrefix + new Animals_Stats().IndexName,
-						IndexScript = @"
-var docId = 'AnimalTypes/'+ key;
-var type = LoadDocument(docId) || {};
-type.Count = this.Count;
-PutDocument(docId, type);",
-						DeleteScript = @"
-var docId = 'AnimalTypes/'+ key;
-var type = LoadDocument(docId);
-if(type == null)
-	return;
-type.Count = 0;
-PutDocument(docId, type);
-"
-					});
-					s.SaveChanges();
-				}
+				new Animals_Stats_With_Scripts().Execute(store);
 				using (var s = store.OpenSession())
 				{
 					s.Store(new Animal
@@ -64,8 +44,6 @@ PutDocument(docId, type);
 
 					s.SaveChanges();
 				}
-
-				new Animals_Stats().Execute(store);
 
 				WaitForIndexing(store);
 
@@ -82,28 +60,8 @@ PutDocument(docId, type);
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var s = store.OpenSession())
-				{
-					s.Store(new Raven.Abstractions.Data.ScriptedIndexResults
-					{
-						Id = Raven.Abstractions.Data.ScriptedIndexResults.IdPrefix + new Animals_Stats().IndexName,
-						IndexScript = @"
-var docId = 'AnimalTypes/'+ key;
-var type = LoadDocument(docId) || {};
-type.Count = this.Count;
-PutDocument(docId, type);",
-						DeleteScript = @"
-var docId = 'AnimalTypes/'+ key;
-var type = LoadDocument(docId);
-if(type == null)
-	return;
-type.Count = 0;
-PutDocument(docId, type);
-"
-					});
-					s.SaveChanges();
-				}
-				using (var s = store.OpenSession())
+                new Animals_Stats_With_Scripts().Execute(store);
+                using (var s = store.OpenSession())
 				{
 					s.Store(new Animal
 					{
@@ -124,8 +82,6 @@ PutDocument(docId, type);
 
 					s.SaveChanges();
 				}
-
-				new Animals_Stats().Execute(store);
 
 				WaitForIndexing(store);
 

@@ -1,17 +1,11 @@
 ﻿using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Core.ScriptedPatching
 {
-	public class ScriptedPatchTests : RavenTestBase
+	public class ScriptedPatchTests : RavenCoreTestBase
 	{
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-		{
-			configuration.Settings["Raven/MaxStepsForScript"] = "5000";
-		}
-
 		public class Foo
 		{
 			public string Id { get; set; }
@@ -31,9 +25,56 @@ namespace Raven.Tests.Core.ScriptedPatching
 		}
 
 		[Fact]
+		public void Max_script_steps_can_be_increased_from_inside_script()
+		{
+			using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
+			{
+				document.Settings["Raven/MaxStepsForScript"] = "5000";
+				document.Settings[Constants.AllowScriptsToAdjustNumberOfSteps] = "true";
+			}))
+			{
+				var foo = new Foo
+				{
+					BarId = "bar/1",
+					FirstName = "Joe"
+				};
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Bar
+					{
+						Id = "bar/1",
+						LastName = "Doe"
+					});
+
+					session.Store(foo);
+					session.SaveChanges();
+				}
+
+				Assert.Throws<ErrorResponseException>(() =>
+				{
+					store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+					{
+						Script = @"for(var i = 0;i < 7500;i++){}"
+					});
+				});
+
+				Assert.DoesNotThrow(() =>
+				 store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+				 {
+					 Script = @"IncreaseNumberOfAllowedStepsBy(4500); for(var i = 0;i < 7500;i++){}"
+				 }));
+			}
+		}
+
+		[Fact]
 		public void Load_document_should_increase_max_steps_in_algorithm()
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
+			{
+				document.Settings["Raven/MaxStepsForScript"] = "5000";
+				document.Settings[Constants.AllowScriptsToAdjustNumberOfSteps] = "true";
+			}))
 			{
 				var foo = new Foo
 				{

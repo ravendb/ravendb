@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +16,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
@@ -55,8 +57,13 @@ namespace Raven.Storage.Voron
 		private TableStorage tableStorage;
 
 	    private readonly IBufferPool bufferPool;
+		private Action onNestedTransactionExit;
+		private Action onNestedTransactionEnter;
 
-		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible)
+		private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
+			= new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
@@ -69,6 +76,8 @@ namespace Raven.Storage.Voron
             bufferPool = new BufferPool(
 				configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
 				int.MaxValue); // 2GB max buffer size (voron limit)
+			this.onNestedTransactionEnter = onNestedTransactionEnter;
+			this.onNestedTransactionExit = onNestedTransactionExit;
 		}
 
 		public void Dispose()
@@ -99,7 +108,18 @@ namespace Raven.Storage.Voron
 			}
 		}
 
+		public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
+		{
+			return configuration.Indexing.DisableMapReduceInMemoryTracking?null: scheduledReductionsPerViewAndLevel.Value;
+		}
+
+		public void ResetScheduledReductionsTracking()
+		{
+			if (configuration.Indexing.DisableMapReduceInMemoryTracking) return;
+			scheduledReductionsPerViewAndLevel = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+		}
 		public Guid Id { get; private set; }
+		public IDocumentCacher DocumentCacher { get { return documentCacher; }}
 
 		public IDisposable WriteLock()
 		{
@@ -107,10 +127,22 @@ namespace Raven.Storage.Voron
 			return exitLockDisposable;
 		}
 
+		/// <summary>
+		/// Force current operations inside context to be performed directly
+		/// </summary>
+		/// <returns></returns>
 		public IDisposable DisableBatchNesting()
 		{
 			disableBatchNesting.Value = new object();
-			return new DisposableAction(() => disableBatchNesting.Value = null);
+			if (onNestedTransactionEnter != null)
+				onNestedTransactionEnter();
+
+			return new DisposableAction(() =>
+			{
+				if (onNestedTransactionExit != null)
+					onNestedTransactionExit();
+				disableBatchNesting.Value = null;
+			});
 		}
 
 		public IStorageActionsAccessor CreateAccessor()
@@ -163,6 +195,8 @@ namespace Raven.Storage.Voron
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+					if (Environment.StackTrace.Contains(".Finalize()") == false)
+						throw e;
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
@@ -190,7 +224,8 @@ namespace Raven.Storage.Voron
 			if (afterStorageCommit != null)
 				afterStorageCommit();
 
-			onCommit(); // call user code after we exit the lock
+			if (onCommit != null)
+				onCommit(); // call user code after we exit the lock
 		}
 
         private Action ExecuteBatch(Action<IStorageActionsAccessor> action)
@@ -259,7 +294,8 @@ namespace Raven.Storage.Voron
 			var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
 			schemaCreator.CreateSchema();
 			schemaCreator.SetupDatabaseIdAndSchemaVersion();
-			schemaCreator.UpdateSchemaIfNecessary();
+            if (!configuration.Storage.PreventSchemaUpdate)
+			    schemaCreator.UpdateSchemaIfNecessary();
 
 		    SetupDatabaseId();
 		}
@@ -379,7 +415,7 @@ namespace Raven.Storage.Voron
 		}
         public bool SupportsDtc { get { return false; } }
 
-	    public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+		public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
 	    {
 			if (ravenConfiguration.RunInMemory)
 				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

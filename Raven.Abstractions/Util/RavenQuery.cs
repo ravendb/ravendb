@@ -39,8 +39,6 @@ namespace Raven.Abstractions.Util
 			{
 				return "\"\"";
 			}
-
-			bool isPhrase = false;
 			int start = 0;
 			int length = term.Length;
 			StringBuilder buffer = null;
@@ -96,16 +94,10 @@ namespace Raven.Abstractions.Util
 					case ' ':
 					case '\t':
 						{
-							if (!isPhrase && makePhrase)
+							if (makePhrase)
 							{
-								if (buffer == null)
-								{
-									// allocate builder with headroom
-									buffer = new StringBuilder(length * 2);
-								}
-
-								buffer.Insert(0, "\"");
-								isPhrase = true;
+                                //If it is a phrase there is no need to double escape just escape the original term.
+							    return new StringBuilder(term).Insert(0,"\"").Append("\"").ToString();								
 							}
 							break;
 						}
@@ -134,12 +126,6 @@ namespace Raven.Abstractions.Util
 			{
 				// append any trailing substring
 				buffer.Append(term, start, length - start);
-			}
-
-			if (isPhrase)
-			{
-				// quoted phrase
-				buffer.Append('"');
 			}
 
 			return buffer.ToString();

@@ -29,7 +29,7 @@ namespace Raven.Database.Storage.Esent.Debug
 				{
 					{Constants.Esent.LogFileSize, "1"}
 				}
-			}, () => { }, () => { }))
+			}, () => { }, () => { }, () => { }, () => { }))
 			{
 				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
@@ -37,7 +37,7 @@ namespace Raven.Database.Storage.Esent.Debug
 			}
 		}
 
-	    public static List<string> ReportOn(TransactionalStorage transactionalStorage)
+		public static List<string> ReportOn(TransactionalStorage transactionalStorage)
 		{
 			var list = new List<string>();
 			transactionalStorage.Batch(accessor =>
@@ -51,16 +51,16 @@ namespace Raven.Database.Storage.Esent.Debug
 			return list;
 		}
 
-		public static IEnumerable<Tuple<string, int>> GetSizes(Session session, JET_DBID db)
+		private static IEnumerable<Tuple<string, long>> GetSizes(Session session, JET_DBID db)
 		{
 			int dbPages;
 			Api.JetGetDatabaseInfo(session, db, out dbPages, JET_DbInfo.Filesize);
 
-			var dbTotalSize = dbPages*SystemParameters.DatabasePageSize;
-            yield return Tuple.Create("Total db size: " + SizeHelper.Humane(dbTotalSize), dbTotalSize);
+			var dbTotalSize = (long)dbPages * SystemParameters.DatabasePageSize;
+			yield return Tuple.Create("Total db size: " + SizeHelper.Humane(dbTotalSize), dbTotalSize);
 
-			 foreach (var tableName in Api.GetTableNames(session, db))
-			 {
+			foreach (var tableName in Api.GetTableNames(session, db))
+			{
 				using (var tbl = new Table(session, db, tableName, OpenTableGrbit.None))
 				{
 					Api.JetComputeStats(session, tbl);
@@ -68,20 +68,20 @@ namespace Raven.Database.Storage.Esent.Debug
 					JET_OBJECTINFO result;
 					Api.JetGetTableInfo(session, tbl, out result, JET_TblInfo.Default);
 					var sb = new StringBuilder(tableName).AppendLine();
-					var usedSize = result.cPage*SystemParameters.DatabasePageSize;
+					var usedSize = (long)result.cPage * SystemParameters.DatabasePageSize;
 					int ownedPages;
 					Api.JetGetTableInfo(session, tbl, out ownedPages, JET_TblInfo.SpaceOwned);
 
 					sb.Append("\tOwned Size: ")
-                      .Append(SizeHelper.Humane(ownedPages * SystemParameters.DatabasePageSize))
+					  .Append(SizeHelper.Humane((long)ownedPages * SystemParameters.DatabasePageSize))
 					  .AppendLine();
 
 
 					sb.Append("\tUsed Size: ")
-                      .Append(SizeHelper.Humane(usedSize))
+					  .Append(SizeHelper.Humane(usedSize))
 					  .AppendLine();
-					
-					
+
+
 					sb.Append("\tRecords: ").AppendFormat("{0:#,#;;0}", result.cRecord).AppendLine();
 					sb.Append("\tIndexes:").AppendLine();
 
@@ -90,12 +90,12 @@ namespace Raven.Database.Storage.Esent.Debug
 						sb.Append("\t\t")
 						  .Append(index.Name)
 						  .Append(": ")
-                          .Append(SizeHelper.Humane(index.Pages * (SystemParameters.DatabasePageSize)))
+						  .Append(SizeHelper.Humane((long)index.Pages * (SystemParameters.DatabasePageSize)))
 						  .AppendLine();
 					}
-					yield return Tuple.Create(sb.ToString(), ownedPages * SystemParameters.DatabasePageSize);
-				} 
-			 }
-		 }
+					yield return Tuple.Create(sb.ToString(), (long)ownedPages * SystemParameters.DatabasePageSize);
+				}
+			}
+		}
 	}
 }

@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
                         {
                             s.SaveChanges();
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             wasExceptionThrown = true;
                         }

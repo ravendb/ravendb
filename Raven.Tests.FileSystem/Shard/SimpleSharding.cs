@@ -51,6 +51,23 @@ namespace Raven.Tests.FileSystem.Shard
             Assert.Equal(expected, actual);
 		}
 
+		[Fact]
+		public async Task CanRename()
+		{
+			var fileName = await shardedClient.UploadAsync("test.bin", new RavenJObject()
+			{
+				{
+					"Owner", "Admin"
+				}
+			}, new MemoryStream());
+
+			Assert.NotNull(await shardedClient.GetMetadataForAsync(fileName));
+
+			var renamed = await shardedClient.RenameAsync(fileName, "new.bin");
+
+			Assert.NotNull(await shardedClient.GetMetadataForAsync(renamed));
+		}
+
 	    [Fact]
 	    public async Task CanBrowseWithSharding()
 	    {

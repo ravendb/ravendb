@@ -18,15 +18,21 @@ namespace Raven.Abstractions.Data
 			ConnectionId = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
 			BatchOptions = new SubscriptionBatchOptions();
 			ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
+			TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
+			Strategy = SubscriptionOpeningStrategy.OpenIfFree;
 		}
 
 		public string ConnectionId { get; private set; }
 
 		public SubscriptionBatchOptions BatchOptions { get; set; }
 
+		public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
+
 		public TimeSpan ClientAliveNotificationInterval { get; set; }
 
 		public bool IgnoreSubscribersErrors { get; set; }
+
+		public SubscriptionOpeningStrategy Strategy { get; set; }
 	}
 
 	public class SubscriptionBatchOptions

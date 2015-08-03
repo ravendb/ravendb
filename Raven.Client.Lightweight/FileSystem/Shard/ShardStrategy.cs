@@ -22,17 +22,17 @@ namespace Raven.Client.FileSystem.Shard
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
-            this.shards = new Dictionary<string, IAsyncFilesCommands>(shards, StringComparer.OrdinalIgnoreCase);
 
+            this.shards = new Dictionary<string, IAsyncFilesCommands>(shards, StringComparer.OrdinalIgnoreCase);
 
 			Conventions = shards.First().Value.Conventions.Clone();
 
-			ShardAccessStrategy = new SequentialShardAccessStrategy();
+			ShardAccessStrategy = new SequentialShardAccessStrategy(shards);
 			ShardResolutionStrategy = new DefaultShardResolutionStrategy(shards.Keys, this);
 			ModifyFileName = (convention, shardId, documentId) => convention.IdentityPartsSeparator + shardId + convention.IdentityPartsSeparator + documentId;
 		}
 
-        public FilesConvention Conventions { get; set; }
+		public FilesConvention Conventions { get; set; }
 
 		/// <summary>
 		/// Gets or sets the shard resolution strategy.

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
@@ -12,6 +13,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -28,6 +30,7 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Client.Linq.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -70,11 +73,10 @@ namespace Raven.Tests.Helpers
 			CommonInitializationUtil.Initialize();
 
 			// Make sure to delete the Data folder which we be used by tests that do not call the NewDataPath from whatever reason.
-			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
+			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Databases".ToFullPath());
 			ClearDatabaseDirectory(dataFolder);
 			pathsToDelete.Add(dataFolder);
 		}
-
 
 	    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 		{
@@ -138,118 +140,221 @@ namespace Raven.Tests.Helpers
 			return newDataDir;
 		}
 
-		public EmbeddableDocumentStore NewDocumentStore(
-			bool runInMemory = true,
-			string requestedStorage = null,
-			ComposablePartCatalog catalog = null,
-			string dataDir = null,
-			bool enableAuthentication = false,
-			string activeBundles = null,
-			int? port = null,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			Action<EmbeddableDocumentStore> configureStore = null,
-			[CallerMemberName] string databaseName = null)
-		{
-			databaseName = NormalizeDatabaseName(databaseName);
+        /// <summary>
+        /// Creates a new Embeddable document store.
+        /// </summary>
+        /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
+        /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
+        /// <param name="catalog">Custom bundles that are not provided by RavenDb.</param>
+		/// <param name="dataDir">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Databases\System</b></param>
+        /// <param name="enableAuthentication"></param>
+        /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
+        /// <param name="port">The port to use when creating the http listener. Allowed: 1 - 65,536 or * (find first available port from 8079 and upward).<br/>Default: <b>8079</b></param>
+        /// <param name="anonymousUserAccessMode">Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users, Admin - all (including administrative actions).<br/>Default: <b>Get</b></param>
+        /// <param name="configureStore">An action delegate which allows you to configure the document store instance that is returned. eg. <code>configureStore: store => store.DefaultDatabase = "MasterDb"</code></param>
+        /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
+        /// <param name="indexes">A collection of indexes to execute.</param>
+        /// <param name="transformers">A collection of transformers to execute.</param>
+        /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
+        /// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executed.</param>
+        /// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>noStaleQueries</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
+        /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
+        public EmbeddableDocumentStore NewDocumentStore(
+            bool runInMemory = true,
+            string requestedStorage = null,
+            ComposablePartCatalog catalog = null,
+            string dataDir = null,
+            bool enableAuthentication = false,
+            string activeBundles = null,
+            int? port = null,
+            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+            Action<EmbeddableDocumentStore> configureStore = null,
+            [CallerMemberName] string databaseName = null,
+            IEnumerable<AbstractIndexCreationTask> indexes = null,
+            IEnumerable<AbstractTransformerCreationTask> transformers = null,
+            IEnumerable<IEnumerable> seedData = null,
+            bool noStaleQueries = false)
+        {
+            databaseName = NormalizeDatabaseName(databaseName);
 
-			var storageType = GetDefaultStorageType(requestedStorage);
-			var dataDirectory = dataDir ?? NewDataPath(databaseName);
-			var documentStore = new EmbeddableDocumentStore
-			{
-				UseEmbeddedHttpServer = port.HasValue,
-				Configuration =
-				{
-					DefaultStorageTypeName = storageType,
-					DataDirectory = Path.Combine(dataDirectory, "System"),
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = port == null ? 8079 : port.Value,
-					AnonymousUserAccessMode = anonymousUserAccessMode,
-				}
-			};
+            var storageType = GetDefaultStorageType(requestedStorage);
+            var dataDirectory = dataDir ?? NewDataPath(databaseName);
+            var documentStore = new EmbeddableDocumentStore
+            {
+                UseEmbeddedHttpServer = port.HasValue,
+                Configuration =
+                {
+                    DefaultStorageTypeName = storageType,
+                    DataDirectory = Path.Combine(dataDirectory, "System"),
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                    RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+                    Port = port ?? 8079,
+                    AnonymousUserAccessMode = anonymousUserAccessMode
+                }
+            };
 
-			documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-			documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
+            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
 
-			if (activeBundles != null)
-			{
-				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
-			}
+            if (activeBundles != null)
+            {
+                documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
+            }
 
-			if (catalog != null)
-				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
+            if (catalog != null)
+            {
+                documentStore.Configuration.Catalog.Catalogs.Add(catalog);
+            }
 
-			try
-			{
-				if (configureStore != null)
-					configureStore(documentStore);
-				ModifyStore(documentStore);
-				ModifyConfiguration(documentStore.Configuration);
-				documentStore.Configuration.PostInit();
-				documentStore.Initialize();
+            try
+            {
+                if (configureStore != null)
+                {
+                    configureStore(documentStore);
+                }
 
-				if (enableAuthentication)
-				{
-					EnableAuthentication(documentStore.SystemDatabase);
-				}
+                ModifyStore(documentStore);
+                ModifyConfiguration(documentStore.Configuration);
+                documentStore.Configuration.PostInit();
+                documentStore.Initialize();
 
-				CreateDefaultIndexes(documentStore);
+                if (enableAuthentication)
+                {
+                    EnableAuthentication(documentStore.SystemDatabase);
+                }
 
-				return documentStore;
-			}
-			catch
-			{
-				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
-				documentStore.Dispose();
-				throw;
-			}
-			finally
-			{
-				stores.Add(documentStore);
-			}
-		}
+                CreateDefaultIndexes(documentStore);
 
-		public static void EnableAuthentication(DocumentDatabase database)
-		{
-			var license = GetLicenseByReflection(database);
-			license.Error = false;
-			license.Status = "Commercial";
-		    license.Attributes["ravenfs"] = "true";
+                if (indexes != null)
+                {
+                    ExecuteIndexes(indexes, documentStore);
+                }
+
+                if (noStaleQueries)
+                {
+                    documentStore.Listeners.RegisterListener(new NoStaleQueriesListener());
+                }
+
+                if (transformers != null)
+                {
+                    ExecuteTransformers(transformers, documentStore);
+                }
+
+                if (seedData != null)
+                {
+                    StoreSeedData(seedData, documentStore);
+                }
+
+                return documentStore;
+            }
+            catch
+            {
+                // We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+                documentStore.Dispose();
+                throw;
+            }
+            finally
+            {
+                stores.Add(documentStore);
+            }
+        }
+
+        public static void EnableAuthentication(DocumentDatabase database)
+        {
+            var license = GetLicenseByReflection(database);
+            license.Error = false;
+            license.Status = "Commercial";
+            license.Attributes["ravenfs"] = "true";
             license.Attributes["counters"] = "true";
-			// rerun this startup task
-			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
-		}
+            // rerun this startup task
+            database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+        }
 
-		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
-			bool runInMemory = true,
-			string dataDirectory = null,
-			string requestedStorage = null,
-			bool enableAuthentication = false,
-			bool ensureDatabaseExists = true,
-			Action<DocumentStore> configureStore = null,
-			string activeBundles = null)
-		{
-			databaseName = NormalizeDatabaseName(databaseName);
+        /// <summary>
+        /// Creates a new document store connecting to a remote RavenDb server.
+        /// </summary>
+        /// <param name="fiddler">Are all requests to the remote RavenDb server passed through Fiddler? (NOTE: This is only* for a localhost RavenDb server).</param>
+        /// <param name="ravenDbServer">A RavenDb server.</param>
+        /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
+        /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
+		/// <param name="dataDirectory">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Databases\System</b></param>
+        /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
+        /// <param name="enableAuthentication"></param>
+        /// <param name="ensureDatabaseExists">For a multi-tenant RavenDb server, creates the database if it doesn't already exist.</param>
+        /// <param name="configureStore">An action delegate which allows you to configure the document store instance that is returned. eg. <code>configureStore: store => store.DefaultDatabase = "MasterDb"</code></param>
+        /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
+        /// <param name="indexes">A collection of indexes to execute.</param>
+        /// <param name="transformers">A collection of transformers to execute.</param>
+        /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
+        /// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executred.</param>
+        /// <returns></returns>
+        public DocumentStore NewRemoteDocumentStore(bool fiddler = false,
+            RavenDbServer ravenDbServer = null,
+            [CallerMemberName] string databaseName = null,
+            bool runInMemory = true,
+            string dataDirectory = null,
+            string requestedStorage = null,
+            bool enableAuthentication = false,
+            bool ensureDatabaseExists = true,
+            Action<DocumentStore> configureStore = null,
+            string activeBundles = null,
+            IEnumerable<AbstractIndexCreationTask> indexes = null,
+            IEnumerable<AbstractTransformerCreationTask> transformers = null,
+            IEnumerable<IEnumerable> seedData = null,
+            bool noStaleQueries = false)
+        {
+            databaseName = NormalizeDatabaseName(databaseName);
 
-			checkPorts = true;
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName, activeBundles: activeBundles);
-			ModifyServer(ravenDbServer);
-			var store = new DocumentStore
-			{
-				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
-				DefaultDatabase = databaseName
-			};
-			pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
-			stores.Add(store);
-			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+            checkPorts = true;
+            ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory,
+                dataDirectory: dataDirectory,
+                requestedStorage: requestedStorage,
+                enableAuthentication: enableAuthentication,
+                databaseName: databaseName,
+                activeBundles: activeBundles);
+            ModifyServer(ravenDbServer);
+            var documentStore = new DocumentStore
+            {
+                Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
+                DefaultDatabase = databaseName
+            };
+            pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
+            stores.Add(documentStore);
+            documentStore.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
-			if (configureStore != null)
-				configureStore(store);
-			ModifyStore(store);
+            if (configureStore != null)
+            {
+                configureStore(documentStore);
+            }
 
-			store.Initialize(ensureDatabaseExists);
-			return store;
-		}
+            ModifyStore(documentStore);
+
+            documentStore.Initialize(ensureDatabaseExists);
+
+            if (indexes != null)
+            {
+                ExecuteIndexes(indexes, documentStore);
+            }
+
+            if (noStaleQueries)
+            {
+                // When querying any map/reduce indexes, we'll wait until
+                // the index has stopped being stale.
+                documentStore.Listeners.RegisterListener(new NoStaleQueriesListener());
+            }
+
+            if (transformers != null)
+            {
+                ExecuteTransformers(transformers, documentStore);
+            }
+
+            if (seedData != null)
+            {
+                StoreSeedData(seedData, documentStore);
+            }
+
+            return documentStore;
+        }
 
         protected RavenDbServer GetServer(int port = 8079)
         {
@@ -366,7 +471,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null, Action onCommit = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -381,10 +486,16 @@ namespace Raven.Tests.Helpers
 			ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
 			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
+			Action onCommitNotification = () =>
+			{
+				if (onCommit != null)
+					onCommit();
+			};
+
 			if (storageType == "voron")
-				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { }, () => { });
+				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
 			else
-				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { }, () => { });
+				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
 
 			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
@@ -411,21 +522,38 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store, string db = null, TimeSpan? timeout = null)
+        /// <summary>
+        /// The current process is paused until all the indexes stop being stale.
+        /// </summary>
+        /// <param name="store">The document store where the indexes exist.</param>
+        /// <param name="database">The name of the database where the commands exist.</param>
+        /// <param name="timeout">The maximum time you'll wait for the indexes to complete.</param>
+		public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
 		{
 			var databaseCommands = store.DatabaseCommands;
-			if (db != null)
-				databaseCommands = databaseCommands.ForDatabase(db);
-			timeout = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20));
-			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
-			if (!spinUntil)
-			{
-				var statistics = databaseCommands.GetStatistics();
-				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
-			}
-		}
+		    if (database != null)
+		    {
+		        databaseCommands = databaseCommands.ForDatabase(database);
+		    }
+		    
+            timeout = timeout ?? (Debugger.IsAttached
+		        ? TimeSpan.FromMinutes(5)
+		        : TimeSpan.FromSeconds(20));
 
+			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+		    if (spinUntil)
+		    {
+		        return;
+		    }
+
+		    var statistics = databaseCommands.GetStatistics();
+		    var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+		    var errorMessage = string.Format("The indexes stayed stale for more than {0}{1}{2}",
+		        timeout.Value,
+		        Environment.NewLine,
+		        stats);
+		    throw new TimeoutException(errorMessage);
+		}
 
 		public void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus, Func<PeriodicExportStatus, Etag> compareSelector)
 		{
@@ -443,6 +571,10 @@ namespace Raven.Tests.Helpers
 
 		}
 
+        /// <summary>
+        /// The current process is paused until all the indexes stop being stale.
+        /// </summary>
+        /// <param name="db">The document database where the indexes exist.</param>
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
 			if (!SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)))
@@ -451,8 +583,10 @@ namespace Raven.Tests.Helpers
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
-                throw new Exception("WaitForAllRequestsToComplete failed");
+		    if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
+		    {
+		        throw new Exception("WaitForAllRequestsToComplete failed");
+		    }
 		}
 
 		protected PeriodicExportStatus GetPeriodicBackupStatus(DocumentDatabase db)
@@ -589,7 +723,7 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForDocument failed");
 		}
 
-		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
+	    protected static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
@@ -606,7 +740,7 @@ namespace Raven.Tests.Helpers
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.SystemDatabase);
+				server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
@@ -636,7 +770,6 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-
 		/// <summary>
 		///     Let the studio knows that it shouldn't display the warning about sys db access
 		/// </summary>
@@ -661,10 +794,17 @@ namespace Raven.Tests.Helpers
 			documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
 		}
 
+	/*    private void isServerExsist(string url)
+	    {
+		    checkPorts.CompareTo(url);
+
+	    }*/
+
 		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
+
 
 			using (var documentStore = new DocumentStore
 			{
@@ -673,6 +813,18 @@ namespace Raven.Tests.Helpers
 			{
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
                 var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+				var request = WebRequest.Create(documentsPage);
+
+				try
+				{
+					var response = request.GetResponse();
+				}
+				catch (WebException ex)
+				{
+					
+					throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter",ex);
+				}
+
                 Process.Start(documentsPage); // start the server
 
 				do
@@ -832,29 +984,31 @@ namespace Raven.Tests.Helpers
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
 
-		protected string NormalizeDatabaseName(string databaseName)
-		{
-			if (string.IsNullOrEmpty(databaseName))
-				return null;
+        protected string NormalizeDatabaseName(string databaseName)
+        {
+            if (string.IsNullOrEmpty(databaseName))
+            {
+                return null;
+            }
 
-			if (databaseName.Length < 50)
-			{
-				DatabaseNames.Add(databaseName);
-				return databaseName;
-			}
+            if (databaseName.Length < 50)
+            {
+                DatabaseNames.Add(databaseName);
+                return databaseName;
+            }
 
-			var prefix = databaseName.Substring(0, 30);
-			var suffix = databaseName.Substring(databaseName.Length - 10, 10);
-			var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
+            var prefix = databaseName.Substring(0, 30);
+            var suffix = databaseName.Substring(databaseName.Length - 10, 10);
+            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-			var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
 
-			DatabaseNames.Add(name);
+            DatabaseNames.Add(name);
 
-			return name;
-		}
+            return name;
+        }
 
-		protected static void DeployNorthwind(DocumentStore store, string databaseName = null)
+        protected static void DeployNorthwind(DocumentStore store, string databaseName = null)
 		{
 			if (string.IsNullOrEmpty(databaseName) == false)
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(databaseName);
@@ -865,5 +1019,65 @@ namespace Raven.Tests.Helpers
 			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 			request.ExecuteRequest();
 		}
+
+        private static void StoreSeedData(IEnumerable<IEnumerable> seedData,
+            IDocumentStore documentStore)
+        {
+            if (seedData == null)
+            {
+                throw new ArgumentNullException("seedData");
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                foreach (var collection in seedData)
+                {
+                    foreach (var item in collection)
+                    {
+                        session.Store(item);
+                    }
+                }
+
+                session.SaveChanges();
+            }
+        }
+
+        private static void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> indexes,
+            IDocumentStore documentStore)
+        {
+            if (indexes == null)
+            {
+                throw new ArgumentNullException("indexes");
+            }
+
+            if (documentStore == null)
+            {
+                throw new ArgumentNullException("documentStore");
+            }
+
+            foreach (var index in indexes)
+            {
+                index.Execute(documentStore);
+            }
+        }
+
+        private static void ExecuteTransformers(IEnumerable<AbstractTransformerCreationTask> transformers,
+            IDocumentStore documentStore)
+        {
+            if (transformers == null)
+            {
+                throw new ArgumentNullException("transformers");
+            }
+
+            if (documentStore == null)
+            {
+                throw new ArgumentNullException("documentStore");
+            }
+
+            foreach (var transformer in transformers)
+            {
+                transformer.Execute(documentStore);
+            }
+        }
 	}
 }

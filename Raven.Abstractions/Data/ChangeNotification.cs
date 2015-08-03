@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Data
 	public class DocumentChangeNotification : EventArgs
 	{
 		/// <summary>
-		/// Type of change that occured on document.
+		/// Type of change that occurred on document.
 		/// </summary>
 		public DocumentChangeTypes Type { get; set; }
 
@@ -86,7 +86,9 @@ namespace Raven.Abstractions.Data
 
 		IndexDemotedToDisabled = 256,
 
-        IndexMarkedAsErrored = 512
+        IndexMarkedAsErrored = 512,
+
+		SideBySideReplace = 1024
 	}
 
     public enum TransformerChangeTypes
@@ -100,7 +102,7 @@ namespace Raven.Abstractions.Data
 	public class IndexChangeNotification : EventArgs
 	{
 		/// <summary>
-		/// Type of change that occured on index.
+		/// Type of change that occurred on index.
 		/// </summary>
 		public IndexChangeTypes Type { get; set; }
 
@@ -123,7 +125,7 @@ namespace Raven.Abstractions.Data
     public class TransformerChangeNotification : EventArgs
     {
 		/// <summary>
-		/// Type of change that occured on transformer.
+		/// Type of change that occurred on transformer.
 		/// </summary>
         public TransformerChangeTypes Type { get; set; }
 
@@ -141,12 +143,12 @@ namespace Raven.Abstractions.Data
 	public class ReplicationConflictNotification : EventArgs
 	{
 		/// <summary>
-		/// Type of conflict that occured (None, DocumentReplicationConflict, AttachmentReplicationConflict).
+		/// Type of conflict that occurred (None, DocumentReplicationConflict, AttachmentReplicationConflict).
 		/// </summary>
 		public ReplicationConflictTypes ItemType { get; set; }
 
 		/// <summary>
-		/// Identifier of a document/attachment on which replication conflict occured.
+		/// Identifier of a document/attachment on which replication conflict occurred.
 		/// </summary>
 		public string Id { get; set; }
 
@@ -156,7 +158,7 @@ namespace Raven.Abstractions.Data
 		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Operation type on which conflict occured (Put, Delete).
+		/// Operation type on which conflict occurred (Put, Delete).
 		/// </summary>
 		public ReplicationOperationTypes OperationType { get; set; }
 
@@ -204,4 +206,25 @@ namespace Raven.Abstractions.Data
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
     }
+
+	public class DataSubscriptionChangeNotification : EventArgs
+	{
+		/// <summary>
+		/// Subscription identifier for which a notification was created
+		/// </summary>
+		public long Id { get; set; }
+
+		/// <summary>
+		/// Type of subscription change
+		/// </summary>
+		public DataSubscriptionChangeTypes Type { get; set; }
+	}
+
+	public enum DataSubscriptionChangeTypes
+	{
+		None = 0,
+
+		SubscriptionOpened = 1,
+		SubscriptionReleased = 2
+	}
 }

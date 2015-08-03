@@ -9,7 +9,9 @@ using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
-	using System.Runtime.CompilerServices;
+    using Sparrow;
+    using Sparrow.Platform;
+    using System.Runtime.CompilerServices;
     using Voron.Util;
 
 	public unsafe class Page
@@ -45,15 +47,43 @@ namespace Voron.Trees
             set { _header->PageNumber = value; } 
         }
 
-	    public PageFlags Flags { get { return _header->Flags; } set {_header->Flags = value; } }
+	    public PageFlags Flags 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->Flags; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set {_header->Flags = value; } 
+        }
 
-        public ushort Lower { get { return _header->Lower; } set { _header->Lower = value; } }
+        public ushort Lower 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->Lower; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->Lower = value; } 
+        }
 
-        public ushort Upper { get { return _header->Upper; } set { _header->Upper = value; } }
+        public ushort Upper 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->Upper; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->Upper = value; } 
+        }
 
-        public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
+        public int OverflowSize 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->OverflowSize; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->OverflowSize = value; } 
+        }
 
-		public ushort PageSize { get { return _pageSize; } }
+		public ushort PageSize 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _pageSize; } 
+        }
 
         public ushort* KeysOffsets
         {
@@ -61,20 +91,100 @@ namespace Voron.Trees
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
         }
 
-		public NodeHeader* Search(MemorySlice key)
-		{
-			if(KeysPrefixed)
-				key.PrepareForSearching();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private NodeHeader* Search( Slice key )
+        {
+            int numberOfEntries = NumberOfEntries;
+            if (numberOfEntries == 0)
+            {
+                LastSearchPosition = 0;
+                LastMatch = 1;
+                return null;
+            }
+
+            switch (key.Options)
+            {
+                case SliceOptions.Key:
+                    {
+                        var pageKey = new Slice(SliceOptions.Key);
+
+                        if (numberOfEntries == 1)
+                        {
+                            var node = GetNode(0);
+
+                            SetNodeKey(node, ref pageKey);
+                            LastMatch = SliceComparer.CompareInline(key, pageKey);
+                            LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                            return LastSearchPosition == 0 ? node : null;
+                        }
+
+                        int low = IsLeaf ? 0 : 1;
+                        int high = numberOfEntries - 1;
+                        int position = 0;
+
+                        while (low <= high)
+                        {
+                            position = (low + high) >> 1;
+
+                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+
+                            SetNodeKey(node, ref pageKey);
+
+                            LastMatch = SliceComparer.CompareInline(key, pageKey);
+                            if (LastMatch == 0)
+                                break;
+
+                            if (LastMatch > 0)
+                                low = position + 1;
+                            else
+                                high = position - 1;
+                        }
+
+                        if (LastMatch > 0) // found entry less than key
+                        {
+                            position++; // move to the smallest entry larger than the key
+                        }
+
+                        Debug.Assert(position < ushort.MaxValue);
+                        LastSearchPosition = position;
+
+                        if (position >= numberOfEntries)
+                            return null;
+
+                        return GetNode(position);
+                    }
+                case SliceOptions.BeforeAllKeys:
+                    {
+                        LastSearchPosition = 0;
+                        LastMatch = 1;
+                        return GetNode(0);
+                    }
+                case SliceOptions.AfterAllKeys:
+                    {
+                        LastMatch = -1;
+                        LastSearchPosition = numberOfEntries - 1;
+                        return GetNode(LastSearchPosition);
+                    }
+                default:
+                    throw new NotSupportedException("This SliceOptions is not supported. Make sure you have updated this code when adding a new one.");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private NodeHeader* SearchPrefixed( MemorySlice key )
+        {
+            key.PrepareForSearching();
 
             int numberOfEntries = NumberOfEntries;
             if (numberOfEntries == 0)
-			{
-				LastSearchPosition = 0;
-				LastMatch = 1;
-				return null;
-			}
-           
-            switch( key.Options )
+            {
+                LastSearchPosition = 0;
+                LastMatch = 1;
+                return null;
+            }
+
+            switch (key.Options)
             {
                 case SliceOptions.Key:
                     {
@@ -139,6 +249,20 @@ namespace Voron.Trees
                 default:
                     throw new NotSupportedException("This SliceOptions is not supported. Make sure you have updated this code when adding a new one.");
             }
+        }
+
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public NodeHeader* Search(MemorySlice key)
+		{
+            if (KeysPrefixed)
+            {
+                return SearchPrefixed(key);
+            }
+            else
+            {
+                return Search((Slice)key);
+            }                
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -181,6 +305,12 @@ namespace Voron.Trees
 		{
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
+		}
+
+		public bool HasPrefixes
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _prefixSection->NextPrefixId > 0; }
 		}
 
         public ushort NumberOfEntries
@@ -317,7 +447,7 @@ namespace Voron.Trees
 		        return;
 	        }
 	        newNode->DataSize = other->DataSize;
-            MemoryUtils.Copy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
+            Memory.Copy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
@@ -345,6 +475,21 @@ namespace Voron.Trees
 		{
 			public byte PrefixId;
 			public ushort PrefixUsage;
+			public PrefixNode PrefixNode;
+		}
+
+		public PrefixNode[] GetPrefixes()
+		{
+			var prefixes = new PrefixNode[_prefixSection->NextPrefixId];
+
+			for (byte prefixId = 0; prefixId < _prefixSection->NextPrefixId; prefixId++)
+			{
+				var prefix = new PrefixNode();
+				prefix.Set(_base + _prefixSection->PrefixOffsets[prefixId], PageNumber);
+				prefixes[prefixId] = prefix;
+			}
+
+			return prefixes;
 		}
 
 	    private bool TryUseExistingPrefix(MemorySlice key, out PrefixedSlice prefixedSlice)
@@ -355,13 +500,13 @@ namespace Voron.Trees
 				return false;
 		    }
 
-			var prefix = new PrefixNode();
-
 		    BestPrefixMatch bestMatch = null;
 
 			for (byte prefixId = 0; prefixId < _prefixSection->NextPrefixId; prefixId++)
 			{
 				AssertPrefixNode(prefixId);
+
+				var prefix = new PrefixNode();
 
 				prefix.Set(_base + _prefixSection->PrefixOffsets[prefixId], PageNumber);
 
@@ -371,7 +516,10 @@ namespace Voron.Trees
 
 				if (length == prefix.PrefixLength) // full prefix usage
 				{
-					prefixedSlice = new PrefixedSlice(prefixId, length, key.Skip(length));
+					prefixedSlice = new PrefixedSlice(prefixId, length, key.Skip(length))
+					{
+						Prefix = prefix
+					};
 					return true;
 				}
 
@@ -382,19 +530,24 @@ namespace Voron.Trees
 					bestMatch = new BestPrefixMatch
 					{
 						PrefixId = prefixId,
-						PrefixUsage = length
+						PrefixUsage = length,
+						PrefixNode = prefix
 					};
 				}
 				else if (length > bestMatch.PrefixUsage)
 				{
 					bestMatch.PrefixId = prefixId;
 					bestMatch.PrefixUsage = length;
+					bestMatch.PrefixNode = prefix;
 				}
 			}
 
 		    if (bestMatch != null && bestMatch.PrefixUsage > MinPrefixLength(key))
 		    {
-			    prefixedSlice = new PrefixedSlice(bestMatch.PrefixId, bestMatch.PrefixUsage, key.Skip(bestMatch.PrefixUsage));
+			    prefixedSlice = new PrefixedSlice(bestMatch.PrefixId, bestMatch.PrefixUsage, key.Skip(bestMatch.PrefixUsage))
+			    {
+				    Prefix = bestMatch.PrefixNode
+			    };
 			    return true;
 		    }
 
@@ -484,7 +637,7 @@ namespace Voron.Trees
             return node;
         }
 
-		private void WritePrefix(Slice prefix, int prefixId)
+		public void WritePrefix(Slice prefix, int prefixId)
 		{
 			var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefix.Size;
 			prefixNodeSize += prefixNodeSize & 1;
@@ -510,22 +663,25 @@ namespace Voron.Trees
 
         public int SizeLeft
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _header->Upper - _header->Lower; }
         }
 
         public int SizeUsed
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return _pageSize - SizeLeft; }
         }
 
         public byte* Base
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _base; }
         }
 
         public int LastSearchPositionOrLastEntry
         {
-
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 return LastSearchPosition >= NumberOfEntries
@@ -552,6 +708,18 @@ namespace Voron.Trees
 
 		        var slice = CreateNewEmptyKey();
 
+		        if (KeysPrefixed && HasPrefixes)
+		        {
+					var prefixes = GetPrefixes();
+
+					for (int prefixId = 0; prefixId < prefixes.Length; prefixId++)
+					{
+						var prefix = prefixes[prefixId];
+
+						copy.WritePrefix(new Slice(prefix.ValuePtr, prefix.PrefixLength), prefixId);
+					}
+		        }
+
 				for (int j = 0; j < i; j++)
 				{
 					var node = GetNode(j);
@@ -559,7 +727,7 @@ namespace Voron.Trees
 					copy.CopyNodeDataToEndOfPage(node, copy.PrepareKeyToInsert(slice, copy.NumberOfEntries));
 				}
 
-                MemoryUtils.Copy(_base + Constants.PageHeaderSize,
+                Memory.Copy(_base + Constants.PageHeaderSize,
 									 copy._base + Constants.PageHeaderSize,
 									 _pageSize - Constants.PageHeaderSize);
 
@@ -587,7 +755,7 @@ namespace Voron.Trees
 			if(KeysPrefixed == false)
 				return;
 
-			StdLib.memset((byte*)_prefixSection->PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
+			UnmanagedMemory.Set((byte*)_prefixSection->PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
 			_prefixSection->NextPrefixId = 0;
 	    }
 
@@ -633,7 +801,7 @@ namespace Voron.Trees
 		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
 		    {
 			    var tempPage = tmp.GetTempPage(KeysPrefixed);
-                MemoryUtils.Copy(tempPage.Base, Base, _pageSize);
+                Memory.Copy(tempPage.Base, Base, _pageSize);
 
 			    var numberOfEntries = NumberOfEntries;
 
@@ -644,7 +812,7 @@ namespace Voron.Trees
 					var node = tempPage.GetNode(i);
 				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
 				    size += size & 1;
-                    MemoryUtils.Copy(Base + Upper - size, (byte*)node, size);
+                    Memory.Copy(Base + Upper - size, (byte*)node, size);
 				    Upper -= (ushort) size;
 				    KeysOffsets[i] = Upper;
 			    }
@@ -663,13 +831,14 @@ namespace Voron.Trees
 				    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
-                    MemoryUtils.Copy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
+                    Memory.Copy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
 					_prefixSection->PrefixOffsets[i] = Upper;
 			    }
 		    }
 	    }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    private bool HasSpaceFor(int len)
         {
             return len <= SizeLeft;
@@ -681,11 +850,13 @@ namespace Voron.Trees
             return HasSpaceFor(tx, requiredSpace);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasSpaceFor(MemorySlice key, int len)
         {
             return HasSpaceFor(GetRequiredSpace(key, len));
         }
 
+         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetRequiredSpace(MemorySlice key, int len)
         {
 	        return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize + SizeOf.NewPrefix(key);
@@ -693,10 +864,8 @@ namespace Voron.Trees
 
 	    public int PageMaxSpace
 	    {
-		    get
-		    {
-				return _pageSize - Constants.PageHeaderSize;
-		    }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		    get { return _pageSize - Constants.PageHeaderSize; }
 	    }
 
 	    public string this[int i]
@@ -704,47 +873,65 @@ namespace Voron.Trees
             get { return GetNodeKey(i).ToString(); }
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    public void SetNodeKey(NodeHeader* node, ref MemorySlice sliceInstance)
-	    {
-			if (KeysPrefixed == false)
-			{
-				sliceInstance.Set(node);
-				return;
-			}
 
-			if (node->KeySize == 0)
-			{
-				sliceInstance = PrefixedSlice.Empty;
-				return;
-			}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetNodeKey(NodeHeader* node, ref Slice slice)
+        {
+            Slice.SetInline(slice,node);
+        }
 
-			PrefixedSlice prefixedSlice;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetNodeKey(NodeHeader* node, ref PrefixedSlice slice)
+        {
+            if (node->KeySize == 0)
+            {
+                slice = PrefixedSlice.Empty;
+                return;
+            }
 
-			if (sliceInstance != null && sliceInstance != PrefixedSlice.Empty)
-			{
-				sliceInstance.Set(node);
-				prefixedSlice = (PrefixedSlice)sliceInstance;
-			}
-			else
-				sliceInstance = prefixedSlice = new PrefixedSlice(node);
+            if (slice != null && slice != PrefixedSlice.Empty)
+            {
+                slice.Set(node);
+            }
+            else
+            {
+                slice = new PrefixedSlice(node);
+            }
 
-			if (prefixedSlice.Header.PrefixId == PrefixedSlice.NonPrefixedId)
-			{
-				Debug.Assert(prefixedSlice.Header.PrefixUsage == 0);
+            if (slice.Header.PrefixId == PrefixedSlice.NonPrefixedId)
+            {
+                Debug.Assert(slice.Header.PrefixUsage == 0);
 
-				return;
-			}
+                return;
+            }
 
-			Debug.Assert(prefixedSlice.Header.PrefixId < PrefixCount);
+            Debug.Assert(slice.Header.PrefixId < PrefixCount);
 
-			if (prefixedSlice.Prefix == null)
-				prefixedSlice.Prefix = new PrefixNode();
+            if (slice.Prefix == null)
+                slice.Prefix = new PrefixNode();
 
-			AssertPrefixNode(prefixedSlice.Header.PrefixId);
+            AssertPrefixNode(slice.Header.PrefixId);
 
-			prefixedSlice.Prefix.Set(_base + _prefixSection->PrefixOffsets[prefixedSlice.Header.PrefixId], PageNumber);	   
-	    }
+            slice.Prefix.Set(_base + _prefixSection->PrefixOffsets[slice.Header.PrefixId], PageNumber);
+        }
+
+        // REVIEW: Removed forced inlining for now until we can see if we improve without needing it. 
+        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetNodeKey(NodeHeader* node, ref MemorySlice sliceInstance)
+        {
+            if (KeysPrefixed)
+            {
+                var slice = (PrefixedSlice)sliceInstance;
+                SetNodeKey(node, ref slice);
+                sliceInstance = slice;
+            }                
+            else
+            {
+                Slice slice = (Slice)sliceInstance;
+                SetNodeKey(node, ref slice);
+                sliceInstance = slice;
+            }
+        }
 
 		public MemorySlice GetNodeKey(int nodeNumber)
 		{
@@ -761,7 +948,7 @@ namespace Voron.Trees
 				var key = new byte[keySize];
 
 				fixed (byte* ptr = key)
-                    MemoryUtils.Copy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+                    Memory.CopyInline(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
 				return new Slice(key);
 			}
@@ -775,7 +962,7 @@ namespace Voron.Trees
 			var nonPrefixedData = new byte[nonPrefixedSize];
 
 			fixed (byte* ptr = nonPrefixedData)
-                MemoryUtils.Copy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
+                Memory.CopyInline(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
 
 			var prefixedSlice = new PrefixedSlice(prefixHeader->PrefixId, prefixHeader->PrefixUsage, new Slice(nonPrefixedData));
 
@@ -790,7 +977,7 @@ namespace Voron.Trees
 			var prefixData = new byte[prefixLength];
 
 			fixed (byte* ptr = prefixData)
-                MemoryUtils.Copy(ptr, (byte*)prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
+                Memory.CopyInline(ptr, (byte*)prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
 
 			prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader{ PrefixLength =  prefixLength }, prefixData, PageNumber);
 
@@ -817,6 +1004,11 @@ namespace Voron.Trees
         {
             if (NumberOfEntries == 0)
                 return;
+
+			if (IsBranch && NumberOfEntries < 2)
+			{
+				throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
+			}
 
             var prev = GetNodeKey(0);
             var pages = new HashSet<long>();
@@ -909,9 +1101,9 @@ namespace Voron.Trees
 		public MemorySlice CreateNewEmptyKey()
 		{
 			if(KeysPrefixed)
-				return new PrefixedSlice(SliceOptions.Key);
-			
-			return new Slice(SliceOptions.Key);
+                return new PrefixedSlice(SliceOptions.Key);
+
+            return new Slice(SliceOptions.Key);
 		}
     }
 }

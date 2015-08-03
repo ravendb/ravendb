@@ -15,8 +15,6 @@ namespace Raven.Database.Indexing
 	{
 		private readonly Dictionary<Etag, List<IndexToWorkOn>> empty = new Dictionary<Etag, List<IndexToWorkOn>>();
 
-		private RoughEtagEqualityAndComparison comparison = new RoughEtagEqualityAndComparison();
-
 		public Dictionary<Etag, List<IndexToWorkOn>> GroupMapIndexes(IList<IndexToWorkOn> indexes)
 		{
 			if (indexes.Count == 0)
@@ -24,8 +22,8 @@ namespace Raven.Database.Indexing
 
 			var indexesByIndexedEtag = indexes
                 .Where(x => x.Index.IsMapIndexingInProgress == false) // indexes with precomputed docs are processed separately
-				.GroupBy(x => x.LastIndexedEtag, comparison)
-				.OrderByDescending(x => x.Key, comparison)
+				.GroupBy(x => x.LastIndexedEtag, RoughEtagEqualityAndComparison.Instance)
+				.OrderByDescending(x => x.Key, RoughEtagEqualityAndComparison.Instance)
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 0)
@@ -39,6 +37,8 @@ namespace Raven.Database.Indexing
 		// at that point, it doesn't matter much, it would be gone within one or two indexing cycles
 		public class RoughEtagEqualityAndComparison : IEqualityComparer<Etag>, IComparer<Etag>
 		{
+			public static RoughEtagEqualityAndComparison Instance = new RoughEtagEqualityAndComparison();
+
 		    public bool Equals(Etag x, Etag y)
 		    {
 		        return Compare(x, y) == 0;

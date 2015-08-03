@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document
 {
@@ -162,5 +163,23 @@ namespace Raven.Client.Document
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		TResult[] Load<TResult>(IEnumerable<ValueType> ids);
+
+        /// <summary>
+        /// Loads the specified id with a specific transformer.
+        /// </summary>
+        /// <typeparam name="TTransformer"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+
+        /// <summary>
+        /// Loads the specified ids with a specific transformer.
+        /// </summary>
+        /// <typeparam name="TTransformer"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="ids">The id.</param>
+        /// <returns></returns>
+        TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 	}
 }

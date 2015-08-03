@@ -6,7 +6,6 @@ import indexPriority = require("models/indexPriority");
 import luceneField = require("models/luceneField");
 import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import jsonUtil = require("common/jsonUtil");
@@ -33,9 +32,6 @@ class editIndex extends viewModelBase {
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
-    priority = ko.observable<indexPriority>().extend({ required: true });
-    priorityLabel: KnockoutComputed<string>;
-    priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
     hasExistingReduce: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
@@ -64,8 +60,6 @@ class editIndex extends viewModelBase {
 
         this.appUrls = appUrl.forCurrentDatabase();
 
-        this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
-        this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
         this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
@@ -123,9 +117,6 @@ class editIndex extends viewModelBase {
         if (this.isEditingExistingIndex()) {
             this.editExistingIndex(indexToEditName);
         }
-        else {
-            this.priority(indexPriority.normal);
-        }
         this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
@@ -134,6 +125,7 @@ class editIndex extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addScriptsLabelPopover();
@@ -141,7 +133,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        var checkedFieldsArray = [indexDef.storeAllFields, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
 
         indexDef.luceneFields().forEach((lf: luceneField) => {
             checkedFieldsArray.push(lf.name);
@@ -200,7 +192,7 @@ class editIndex extends viewModelBase {
 
     private fetchIndexData(unescapedIndexName: string): JQueryPromise<any> {
         var indexName = decodeURIComponent(unescapedIndexName);
-        return $.when(this.fetchIndexToEdit(indexName), this.fetchIndexPriority(indexName));
+        return $.when(this.fetchIndexToEdit(indexName));
     }
 
     private fetchIndexToEdit(indexName: string): JQueryPromise<any> {
@@ -218,24 +210,7 @@ class editIndex extends viewModelBase {
         return deferred;
     }
 
-    private fetchIndexPriority(indexName: string): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        new getDatabaseStatsCommand(this.activeDatabase())
-            .execute()
-            .done((stats: databaseStatisticsDto) => {
-                var lowerIndexName = indexName.toLowerCase();
-                var matchingIndex = stats.Indexes.first(i => i.Name.toLowerCase() === lowerIndexName);
-                if (matchingIndex) {
-                    var priorityWithoutWhitespace = matchingIndex.Priority.replace(", ", ",");
-                    this.priority(index.priorityFromString(priorityWithoutWhitespace));
-                }
-                deferred.resolve();
-            })
-            .fail(() => deferred.reject());
-
-        return deferred;
-    }
+   
 
     createNewIndexDefinition(): indexDefinition {
         return indexDefinition.empty();
@@ -305,42 +280,6 @@ class editIndex extends viewModelBase {
         }
     }
 
-    idlePriority() {
-        this.priority(indexPriority.idleForced);
-    }
-
-    disabledPriority() {
-        this.priority(indexPriority.disabledForced);
-    }
-
-    abandonedPriority() {
-        this.priority(indexPriority.abandonedForced);
-    }
-
-    normalPriority() {
-        this.priority(indexPriority.normal);
-    }
-
-    getPriorityFriendlyName(): string {
-        // Instead of showing things like "Idle,Forced", just show Idle.
-        
-        var priority = this.priority();
-        if (!priority) {
-            return "";
-        }
-        if (priority === indexPriority.idleForced) {
-            return index.priorityToString(indexPriority.idle);
-        }
-        if (priority === indexPriority.disabledForced) {
-            return index.priorityToString(indexPriority.disabled);
-        }
-        if (priority === indexPriority.abandonedForced) {
-            return index.priorityToString(indexPriority.abandoned);
-        }
-
-        return index.priorityToString(priority);
-    }
-
     addMap() {
         this.editedIndex().maps.push(ko.observable<string>());
     }
@@ -357,6 +296,10 @@ class editIndex extends viewModelBase {
         field.indexFieldNames = this.editedIndex().fields();
         field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeStoreAllFields() {
+        this.editedIndex().setOrRemoveStoreAllFields(false);
     }
 
     removeMaxIndexOutputs() {
@@ -520,7 +463,7 @@ class editIndex extends viewModelBase {
     private saveIndex(index: indexDefinitionDto): JQueryPromise<any> {
         var commands = [];
 
-        commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
+        commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
         if (this.scriptedIndex() !== null) {
             commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
         }

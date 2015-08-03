@@ -28,8 +28,7 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-
-        /// <summary>
+	    /// <summary>
         /// Gets the database commands.
         /// </summary>
         /// <value>The database commands.</value>
@@ -347,8 +346,7 @@ namespace Raven.Client.Document
             return Load<T>(documentKeys);
         }
 
-
-		private T[] LoadUsingTransfomerInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
 		    if (transformer == null) 
                 throw new ArgumentNullException("transformer");
@@ -361,6 +359,24 @@ namespace Raven.Client.Document
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
         }
 
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            if (transformer == null)
+                throw new ArgumentNullException("transformer");
+            if (ids.Length == 0)
+                return new T[0];
+
+            IncrementRequestCount();
+
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return ids.Select(Load<T>).ToArray();
+            }
+            var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+
+            var multiLoadResult = DatabaseCommands.Get(ids, includePaths, transformer, transformerParameters);
+            return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
+        }
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {
@@ -388,10 +404,6 @@ namespace Raven.Client.Document
 
             return multiLoadOperation.Complete<T>();
         }
-
-
-
-
 
         public T[] LoadInternal<T>(string[] ids)
         {
@@ -525,7 +537,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
 		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
@@ -535,7 +547,7 @@ namespace Raven.Client.Document
 			if (configure != null)
             configure(configuration);
 
-			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
 		public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
@@ -544,7 +556,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
@@ -553,7 +565,7 @@ namespace Raven.Client.Document
 			if (configure != null)
             configure(configuration);
 
-			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
 		public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -564,7 +576,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -575,7 +587,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
 		}
 
         /// <summary>
@@ -600,9 +612,12 @@ namespace Raven.Client.Document
 
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
-            var queryProvider = (IRavenQueryProvider)query.Provider;
+			var queryProvider = (IRavenQueryProvider)query.Provider;
+			
 			var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
+	
             return Stream(docQuery, out queryHeaderInformation);
+
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
@@ -619,7 +634,6 @@ namespace Raven.Client.Document
             if (!waitForNonStaleResultsWasSetGloably && (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow))
 				throw new NotSupportedException(
 					"Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
-
 			IncrementRequestCount();
             var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
@@ -631,26 +645,28 @@ namespace Raven.Client.Document
             {
                 var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.DisableEntitiesTracking = true;
+				
                 while (enumerator.MoveNext())
                 {
-                    var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
-
+                    var ravenJObject = enumerator.Current;
+                    var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
+					query.InvokeAfterStreamExecuted(ref ravenJObject);
                     string key = null;
                     Etag etag = null;
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
                               meta.Value<string>(Constants.DocumentIdFieldName) ??
-                              enumerator.Current.Value<string>(Constants.DocumentIdFieldName);
+                              ravenJObject.Value<string>(Constants.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)
                             etag = Etag.Parse(value);
                     }
-
+				
                     yield return new StreamResult<T>
                     {
-                        Document = queryOperation.Deserialize<T>(enumerator.Current),
+                        Document = queryOperation.Deserialize<T>(ravenJObject),
                         Etag = etag,
                         Key = key,
                         Metadata = meta

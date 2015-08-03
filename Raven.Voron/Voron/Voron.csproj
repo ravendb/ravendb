@@ -91,7 +91,8 @@
     <Compile Include="Platform\Win32\Win32Helper.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
-    <Compile Include="SliceComparisonMethods.cs" />
+    <Compile Include="PrefixedSliceComparisonMethods.cs" />
+    <Compile Include="SliceComparer.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
     <Compile Include="Structure.cs" />
@@ -101,7 +102,6 @@
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
     <Compile Include="Trees\Tree.MultiTree.cs" />
-    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
     <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
@@ -128,7 +128,6 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
-    <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
@@ -167,17 +166,14 @@
     <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
-    <Compile Include="Util\MemoryUtils.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
-    <Compile Include="Util\SkipList.cs" />
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
-    <Compile Include="Impl\StdLib.cs" />
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
@@ -199,5 +195,10 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

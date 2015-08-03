@@ -18,11 +18,12 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Queries;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.WebApi
 {
@@ -59,19 +60,25 @@ namespace Raven.Database.Server.WebApi
 		}
 
 
-		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
+		public event EventHandler<RequestWebApiEventArgs> BeforeRequest;
+		public event EventHandler<RequestWebApiEventArgs> AfterRequest;
 
-		public virtual void OnBeforeRequest(BeforeRequestWebApiEventArgs e)
+		public virtual void OnBeforeRequest(RequestWebApiEventArgs e)
 		{
 			var handler = BeforeRequest;
 			if (handler != null) handler(this, e);
 		}
 
+		public virtual void OnAfterRequest(RequestWebApiEventArgs e)
+		{
+			var handler = AfterRequest;
+			if (handler != null) handler(this, e);
+		}
 
 		public RequestManager(DatabasesLandlord landlord)
 		{
-
 			BeforeRequest += OnBeforeRequest;
+			AfterRequest += OnAfterRequest;
 			cancellationTokenSource = new CancellationTokenSource();
 			this.landlord = landlord;
 			
@@ -83,22 +90,54 @@ namespace Raven.Database.Server.WebApi
 		}
 
 
-		private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
+		private void OnBeforeRequest(object sender, RequestWebApiEventArgs args)
 		{
-
 			var documentDatabase = args.Database;
 			if (documentDatabase != null)
 			{
 				documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
 				documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
+				return;
 			}
-
 
 			var fileSystem = args.FileSystem;
 			if (fileSystem != null)
 			{
 				fileSystem.MetricsCounters.ConcurrentRequests.Mark();
 				fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var counters = args.Counters;
+			if (counters != null)
+			{
+				counters.MetricsCounters.RequestsPerSecondCounter.Mark();
+				Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
+			}
+		}
+
+		private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
+		{
+			var documentDatabase = args.Database;
+			if (documentDatabase != null)
+			{
+				Interlocked.Decrement(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var fileSystem = args.FileSystem;
+			if (fileSystem != null)
+			{
+				Interlocked.Decrement(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
+				return;
+			}
+
+			var counters = args.Counters;
+			if (counters != null)
+			{
+				Interlocked.Decrement(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
 		}
 
@@ -145,22 +184,33 @@ namespace Raven.Database.Server.WebApi
 			cancellationToken.ThrowIfCancellationRequested();
 
 			Stopwatch sw = Stopwatch.StartNew();
+
 			try
 			{
 				Interlocked.Increment(ref concurrentRequests);
 
-				if (controller.SetupRequestToProperDatabase(this))
+				RequestWebApiEventArgs args;
+				if (controller.TrySetupRequestToProperResource(out args))
 				{
-					if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+					OnBeforeRequest(args);
+
+					try
 					{
-						response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+						if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-                            Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
-						};
+							response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+							{
+								Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
+							};
+						}
+						else
+						{
+							response = await action();
+						}
 					}
-					else
+					finally
 					{
-						response = await action();
+						OnAfterRequest(args);
 					}
 				}
 			}
@@ -168,7 +218,6 @@ namespace Raven.Database.Server.WebApi
 			{
 				response = onHttpException(httpException);
 			}
-
 			finally
 			{
 
@@ -177,7 +226,6 @@ namespace Raven.Database.Server.WebApi
 				{
 					FinalizeRequestProcessing(controller, response, sw);
 				}
-
 				catch (Exception e)
 				{
 
@@ -326,8 +374,6 @@ namespace Raven.Database.Server.WebApi
                     controller.InnerRequestsCount
 					);
 			}
-
-
 			catch (Exception e)
 			{
 
@@ -549,6 +595,8 @@ namespace Raven.Database.Server.WebApi
 					// since shutting down a database can take a while
 					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
 				}
+
+				FacetedQueryRunner.IntArraysPool.Instance.RunIdleOperations();
 			}
 			catch (Exception e)
 			{

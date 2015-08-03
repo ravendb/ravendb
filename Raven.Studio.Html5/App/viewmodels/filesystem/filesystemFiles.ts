@@ -3,6 +3,8 @@ import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import shell = require("viewmodels/shell");
 
+import changesContext = require("common/changesContext");
+
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
@@ -20,13 +22,14 @@ import uploadQueueHelper = require("common/uploadQueueHelper");
 import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
+import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
+import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
 
 class filesystemFiles extends viewModelBase {
 
     static revisionsFolderId = "/$$revisions$$";
 
     appUrls: computedAppUrls;
-    fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     selectedFilesText: KnockoutComputed<string>;
@@ -41,7 +44,7 @@ class filesystemFiles extends viewModelBase {
     folderNotificationSubscriptions = {};
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
-
+     //id = ko.observable<string)>(); 
     inRevisionsFolder = ko.observable<boolean>(false);
 
     private activeFilesystemSubscription: any;
@@ -97,7 +100,8 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    attached(view, parent) {
+    attached() {
+	    super.attached();
         this.collapseUploadQueuePanel();
     }
 
@@ -120,72 +124,75 @@ class filesystemFiles extends viewModelBase {
         }
 
         if (!this.folderNotificationSubscriptions[newFolder]) {
-            this.folderNotificationSubscriptions[newFolder] = shell.currentResourceChangesApi()
+            this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
                     if (!callbackFolder)
                         return;
                     switch (e.Action) {
 
-                        case "Add": {
-                            var eventFolder = folder.getFolderFromFilePath(e.File);
+                    case "Add":
+                    {
+                        var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
-                                return;
-                            }
+                        if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
+                            return;
+                        }
 
-                            //check if the file is new at the folder level to add it
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
+                        //check if the file is new at the folder level to add it
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
+                        } else {
+                            //check if a new folder at this level was added so we add it to the tree
+                            var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
+                            if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
+                                var newNode = {
+                                    key: subPaths[1].path,
+                                    title: subPaths[1].name,
+                                    isLazy: true,
+                                    isFolder: true,
+                                };
+                                this.addedFolder(newNode);
                             }
-                            else {
-                                //check if a new folder at this level was added so we add it to the tree
-                                var subPaths = eventFolder.getSubpathsFrom(callbackFolder.path);
-                                if (subPaths.length > 1 && !treeBindingHandler.nodeExists(filesystemFiles.treeSelector, subPaths[1].path)) {
-                                    var newNode = {
-                                        key: subPaths[1].path,
-                                        title: subPaths[1].name,
-                                        isLazy: true,
-                                        isFolder: true,
-                                    };
-                                    this.addedFolder(newNode);
-                                }
-                            }
+                        }
 
-                            break;
-                        }
-                        case "Delete": {
-                            var eventFolder = folder.getFolderFromFilePath(e.File);
+                        break;
+                    }
+                    case "Delete":
+                    {
+                        var eventFolder = folder.getFolderFromFilePath(e.File);
 
-                            //check if the file is new at the folder level to remove it from the table
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            else {
-                                //reload node and its children
-                                treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
-                            }
-                            break;
+                        //check if the file is new at the folder level to remove it from the table
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
+                        } else {
+                            //reload node and its children
+                            treeBindingHandler.reloadNode(filesystemFiles.treeSelector, callbackFolder.path);
                         }
-                        case "Renaming": {
-                            //nothing to do here
+                        break;
+                    }
+                    case "Renaming":
+                    {
+                        //nothing to do here
+                    }
+                    case "Renamed":
+                    {
+                        //reload files to load the new names
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
                         }
-                        case "Renamed": {
-                            //reload files to load the new names
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            break;
+                        break;
+                    }
+                    case "Update":
+                    {
+                        //check if the file is new at the folder level to add it
+                        if (callbackFolder.isFileAtFolderLevel(e.File)) {
+                            this.loadFiles();
                         }
-                        case "Update": {
-                            //check if the file is new at the folder level to add it
-                            if (callbackFolder.isFileAtFolderLevel(e.File)) {
-                                this.loadFiles();
-                            }
-                            break;
-                        }
-                        default:
-                            console.error("unknown notification action");
+                        break;
+                    }
+                    default:
+                        console.error("unknown notification action");
                     }
                 });
         }
@@ -193,7 +200,7 @@ class filesystemFiles extends viewModelBase {
 
     createPagedList(directory): pagedList {
         var fetcher;
-        if (directory === filesystemFiles.revisionsFolderId) { 
+        if (directory === filesystemFiles.revisionsFolderId) {
             fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {
             fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
@@ -218,6 +225,7 @@ class filesystemFiles extends viewModelBase {
             this.loadFiles();
         }
     }
+
     editSelectedFile() {
         var grid = this.getFilesGrid();
         if (grid) {
@@ -280,8 +288,28 @@ class filesystemFiles extends viewModelBase {
             if (selectedFolder == null)
                 selectedFolder = "";
 
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + encodeURIComponent(selectedItem.getId());
             window.location.assign(url);
+        }
+    }
+
+    renameSelectedFile() {
+
+        var grid = this.getFilesGrid();
+        if (grid) {
+            var selectedItem = <file>grid.getSelectedItems(1).first();
+            var currentFileName = selectedItem.getId();
+            var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
+            dialog.onExit().done((newName: string) => {
+                var currentFilesystemName = this.activeFilesystem().name;
+                var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+                if (recentFilesForCurFilesystem) {
+                    recentFilesForCurFilesystem.recentFiles.remove(currentFileName);
+                }
+                selectedItem.setId(newName);
+                grid.refreshCollectionData();
+            });
+            app.showDialog(dialog);
         }
     }
 

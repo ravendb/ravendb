@@ -510,9 +510,9 @@ namespace Raven.Tests.FileSystem
 
 	            var stats = await anotherClient.Admin.GetStatisticsAsync();
 
-	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystem);
+	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
                 Assert.NotNull(stats1);
-	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystem);
+	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
 	            Assert.NotNull(stats2);
 
                 Assert.Equal(2, stats1.Metrics.Requests.Count);

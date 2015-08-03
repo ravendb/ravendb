@@ -63,13 +63,13 @@ namespace Raven.Client.Document
         private const int BigDocumentSize = 64 * 1024;
 
         public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
-			Task<int> previousTask = null)
+			Task<int> previousTask = null, Guid? existingOperationId = null)
         {
             this.options = options;
 	        this.previousTask = previousTask;
 	        using (NoSynchronizationContext.Scope())
             {
-                OperationId = Guid.NewGuid();
+				OperationId = existingOperationId.HasValue?existingOperationId.Value:Guid.NewGuid();
                 operationClient = client;
                 queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 

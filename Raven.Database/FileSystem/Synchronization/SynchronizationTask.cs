@@ -1,28 +1,24 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
 using NLog;
-using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
-using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
-using Raven.Client.FileSystem;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Client.FileSystem.Connection;
-using System.Collections.Concurrent;
-using Raven.Abstractions.Data;
-using System.Threading;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization
@@ -36,33 +32,26 @@ namespace Raven.Database.FileSystem.Synchronization
 		private readonly SynchronizationQueue synchronizationQueue;
 		private readonly SynchronizationStrategy synchronizationStrategy;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
+		private readonly SynchronizationTaskContext context;
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
 
-		private readonly IObservable<long> timer;
 		private int failedAttemptsToGetDestinationsConfig;
-		private IDisposable timerSubscription;
+		private long workCounter;
 
-		public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher,
-								   InMemoryRavenConfiguration systemConfiguration)
+		public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher, InMemoryRavenConfiguration systemConfiguration)
 		{
 			this.storage = storage;
 			this.publisher = publisher;
 			this.systemConfiguration = systemConfiguration;
-            this.timer = Observable.Interval(systemConfiguration.FileSystem.MaximumSynchronizationInterval);
 
+			context = new SynchronizationTaskContext();
 			synchronizationQueue = new SynchronizationQueue();
-			synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);
-
-		    LastSuccessfulSynchronizationTime = DateTime.MinValue;            
-
-			InitializeTimer();
+			synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);	
 		}
 
-        public DateTime LastSuccessfulSynchronizationTime { get; private set; }
-
-		public string FileSystemUrl
+		private string FileSystemUrl
 		{
 			get { return string.Format("{0}/fs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
 		}
@@ -72,12 +61,17 @@ namespace Raven.Database.FileSystem.Synchronization
 			get { return synchronizationQueue; }
 		}
 
+		public SynchronizationTaskContext Context
+		{
+			get { return context; }
+		}
+
         public void IncomingSynchronizationStarted(string fileName, FileSystemInfo sourceFileSystemInfo, Guid sourceFileETag, SynchronizationType type)
         {
             var activeForDestination = activeIncomingSynchronizations.GetOrAdd(sourceFileSystemInfo.Url,
                                                        new ConcurrentDictionary<string, SynchronizationDetails>());
 
-            var syncDetails = new SynchronizationDetails()
+            var syncDetails = new SynchronizationDetails
             {
                 DestinationUrl = sourceFileSystemInfo.Url,
                 FileETag = sourceFileETag,
@@ -106,7 +100,7 @@ namespace Raven.Database.FileSystem.Synchronization
             SynchronizationDetails removingItem;
             if (activeSourceTasks.TryRemove(fileName, out removingItem))
             {
-                Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
+                Log.Debug("File '{0}' with ETag {1} was removed from an active incoming synchronizations for a source {2}",
                           fileName, sourceFileETag, sourceFileSystemInfo);
             }
         }
@@ -121,17 +115,7 @@ namespace Raven.Database.FileSystem.Synchronization
             }
         }
 
-		private void InitializeTimer()
-		{
-			timerSubscription = timer.Subscribe(tick => StartSynchronizeDestinationsInBackground());
-		}
-
-		private void StartSynchronizeDestinationsInBackground()
-        {
-            Task.Factory.StartNew(async () => await Execute(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
-        }
-
-        public async Task<DestinationSyncResult> SynchronizeDestinationAsync(string fileSystemDestination, bool forceSyncingContinuation = true)
+		public async Task<DestinationSyncResult> SynchronizeDestinationAsync(string fileSystemDestination, bool forceSyncingAll)
         {
 	        var destination = GetSynchronizationDestinations().FirstOrDefault(x => x.Url.Equals(fileSystemDestination, StringComparison.OrdinalIgnoreCase));
 
@@ -143,7 +127,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 	        if (destination.Enabled == false)
 		    {
-				return new DestinationSyncResult()
+				return new DestinationSyncResult
 		        {
 			        Exception = new InvalidOperationException("Configured synchronization destination is disabled")
 		        };
@@ -151,39 +135,117 @@ namespace Raven.Database.FileSystem.Synchronization
 
 			Log.Debug("Starting to synchronize a destination server {0}", destination.Url);
 
-			if (CanSynchronizeTo(destination.Url) == false)
+			if (AvailableSynchronizationRequestsTo(destination.Url) <= 0)
 			{
 				Log.Debug("Could not synchronize to {0} because no synchronization request was available", destination.Url);
 
 				throw new SynchronizationException(string.Format("No synchronization request was available for file system '{0}'", destination.FileSystem));
 			}
 
-			return await SynchronizeDestinationAsync(destination, forceSyncingContinuation);
+	        return await CreateDestinationResult(destination, await SynchronizeDestinationAsync(destination, forceSyncingAll));
         }
 
-        public async Task<DestinationSyncResult[]> Execute(bool forceSyncingContinuation = true)
+		public async Task<DestinationSyncResult> CreateDestinationResult(SynchronizationDestination destination, IEnumerable<Task<SynchronizationReport>> synchronizations)
 		{
-			var destinationSyncTasks = new List<Task<DestinationSyncResult>>();
-
-			foreach (var destination in GetSynchronizationDestinations())
+			try
 			{
+				var reports = await Task.WhenAll(synchronizations);
+
+				var destinationSyncResult = new DestinationSyncResult
+				{
+					DestinationServer = destination.ServerUrl,
+					DestinationFileSystem = destination.FileSystem
+				};
+
+				if (reports.Length > 0)
+				{
+					var successfulSynchronizationsCount = reports.Count(x => x.Exception == null);
+
+					var failedSynchronizationsCount = reports.Count(x => x.Exception != null);
+
+					if (successfulSynchronizationsCount > 0 || failedSynchronizationsCount > 0)
+					{
+						Log.Debug(
+							"Synchronization to a destination {0} has completed. {1} file(s) were synchronized successfully, {2} synchronization(s) were failed",
+							destination.Url, successfulSynchronizationsCount, failedSynchronizationsCount);
+					}
+
+					destinationSyncResult.Reports = reports;
+				}
+
+				return destinationSyncResult;
+			}
+			catch (Exception ex)
+			{
+				Log.WarnException(string.Format("Failed to perform a synchronization to a destination {0}", destination), ex);
+
+				return new DestinationSyncResult
+				{
+					DestinationServer = destination.ServerUrl,
+					DestinationFileSystem = destination.FileSystem,
+					Exception = ex
+				};
+			}
+		}
+
+		public void Start()
+		{
+			var task = new Task(() =>
+			{
+				Log.Debug("Starting the synchronization task");
+
+				var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+
+				while (context.DoWork)
+				{
+					try
+					{
+						var result = Execute(true);
+						var synchronizations = result.Values.SelectMany(x => x.Result as IEnumerable<Task>);
+
+						Task.WaitAny(synchronizations.ToArray()); // if any synchronization slot gets released try to schedule another synchronization 
+					}
+					catch (Exception e)
+					{
+						Log.ErrorException("Failed to perform synchronization", e.SimplifyException());
+					}
+
+					var runningBecauseOfDataModifications = context.WaitForWork(timeToWait, ref workCounter);
+
+					timeToWait = runningBecauseOfDataModifications
+						? TimeSpan.FromSeconds(30)
+						: systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+				}
+			}, TaskCreationOptions.LongRunning);
+
+			task.Start();
+		}
+
+		public Dictionary<SynchronizationDestination, Task<IEnumerable<Task<SynchronizationReport>>>> Execute(bool forceSyncingAll)
+        {
+	        var destinationSyncs = new Dictionary<SynchronizationDestination, Task<IEnumerable<Task<SynchronizationReport>>>>();
+
+			foreach (var dst in GetSynchronizationDestinations())
+			{
+				SynchronizationDestination destination = dst;
+
                 // If the destination is disabled, we skip it.
-                if (!destination.Enabled)
+				if (destination.Enabled == false)
                     continue;
 
-				Log.Debug("Starting to synchronize a destination server {0}", destination.Url);
+				Log.Debug("Starting to synchronize a destination server {0}", dst.Url);
 
-				if (!CanSynchronizeTo(destination.Url))
+				if (AvailableSynchronizationRequestsTo(destination.Url) <= 0)
 				{
-					Log.Debug("Could not synchronize to {0} because no synchronization request was available", destination.Url);
+					Log.Debug("Could not synchronize to {0} because no synchronization request was available", dst.Url);
 					continue;
 				}
 
-				destinationSyncTasks.Add(SynchronizeDestinationAsync(destination, forceSyncingContinuation));
+				destinationSyncs.Add(destination, SynchronizeDestinationAsync(destination, forceSyncingAll));
 			}
 
-			return await Task.WhenAll(destinationSyncTasks);
-		}
+	        return destinationSyncs;
+        }
 
 		public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
 		{
@@ -195,13 +257,13 @@ namespace Raven.Database.FileSystem.Synchronization
                                   : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
             }
 
-		    var destinationClient = new AsyncFilesServerClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials).Synchronization;
+			var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials);
 
             RavenJObject destinationMetadata;
 
             try
             {
-                destinationMetadata = await destinationClient.Commands.GetMetadataForAsync(fileName);
+                destinationMetadata = await destinationClient.GetMetadataForAsync(fileName);
             }
             catch (Exception ex)
             {
@@ -232,106 +294,67 @@ namespace Raven.Database.FileSystem.Synchronization
             return await PerformSynchronizationAsync(destinationClient, work);
 		}
 
-        private async Task<DestinationSyncResult> SynchronizeDestinationAsync(SynchronizationDestination destination,
-																			  bool forceSyncingContinuation)
+		private async Task<IEnumerable<Task<SynchronizationReport>>> SynchronizeDestinationAsync(SynchronizationDestination destination, bool forceSyncingAll)
 		{
-			try
+			ICredentials credentials = null;
+			if (string.IsNullOrEmpty(destination.Username) == false)
 			{
-                ICredentials credentials = null;
-                if (string.IsNullOrEmpty(destination.Username) == false)
-                {
-                    credentials = string.IsNullOrEmpty(destination.Domain)
-                                      ? new NetworkCredential(destination.Username, destination.Password)
-                                      : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-                }
+				credentials = string.IsNullOrEmpty(destination.Domain)
+					? new NetworkCredential(destination.Username, destination.Password)
+					: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+			}
 
-                var destinationClient = new AsyncFilesServerClient(destination.ServerUrl, destination.FileSystem,
-                                                                  apiKey: destination.ApiKey, credentials: credentials).Synchronization;
+			var synchronizationServerClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey, credentials);
 
-				var lastETag = await destinationClient.GetLastSynchronizationFromAsync(storage.Id);
+			var lastETag = await synchronizationServerClient.GetLastSynchronizationFromAsync(storage.Id);
 
-				var activeTasks = synchronizationQueue.Active;
-				var filesNeedConfirmation = GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
+			var activeTasks = synchronizationQueue.Active;
+			var filesNeedConfirmation = GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
 
-				var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, destinationClient);
+			var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, synchronizationServerClient);
 
-				var needSyncingAgain = new List<FileHeader>();
+			var needSyncingAgain = new List<FileHeader>();
 
-				foreach (var confirmation in confirmations)
+			foreach (var confirmation in confirmations)
+			{
+				if (confirmation.Status == FileStatus.Safe)
 				{
-					if (confirmation.Status == FileStatus.Safe)
+					Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
+					RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+				}
+				else
+				{
+					storage.Batch(accessor =>
 					{
-						Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
-						RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
-					}
-					else
-					{
-						storage.Batch(accessor =>
+						var fileHeader = accessor.ReadFile(confirmation.FileName);
+
+						if (fileHeader != null)
 						{
-							var fileHeader = accessor.ReadFile(confirmation.FileName);
+							needSyncingAgain.Add(fileHeader);
 
-							if (fileHeader != null)
-							{
-								needSyncingAgain.Add(fileHeader);
-
-								Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
-							}
-						});
-					}
+							Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
+						}
+					});
 				}
-
-				await EnqueueMissingUpdatesAsync(destinationClient, lastETag, needSyncingAgain);
-
-                var reports = await Task.WhenAll(SynchronizePendingFilesAsync(destination, destinationClient, forceSyncingContinuation));
-
-				var destinationSyncResult = new DestinationSyncResult
-				{
-					DestinationServer = destination.ServerUrl,
-                    DestinationFileSystem = destination.FileSystem
-				};
-
-				if (reports.Length > 0)
-				{
-					var successfulSynchronizationsCount = reports.Count(x => x.Exception == null);
-
-					var failedSynchronizationsCount = reports.Count(x => x.Exception != null);
-
-					if (successfulSynchronizationsCount > 0 || failedSynchronizationsCount > 0)
-					{
-						Log.Debug(
-							"Synchronization to a destination {0} has completed. {1} file(s) were synchronized successfully, {2} synchronization(s) were failed",
-							destination.Url, successfulSynchronizationsCount, failedSynchronizationsCount);
-					}
-
-					destinationSyncResult.Reports = reports;
-				}
-
-				return destinationSyncResult;
 			}
-			catch (Exception ex)
+
+			if (synchronizationQueue.NumberOfPendingSynchronizationsFor(destination.Url) < AvailableSynchronizationRequestsTo(destination.Url))
 			{
-				Log.WarnException(string.Format("Failed to perform a synchronization to a destination {0}", destination), ex);
-
-				return new DestinationSyncResult
-				{
-					DestinationServer = destination.ServerUrl,
-                    DestinationFileSystem = destination.FileSystem,
-					Exception = ex
-				};
+				await EnqueueMissingUpdatesAsync(synchronizationServerClient, lastETag, needSyncingAgain);
 			}
+
+			return SynchronizePendingFilesAsync(synchronizationServerClient, forceSyncingAll);
 		}
 
-        private async Task EnqueueMissingUpdatesAsync(IAsyncFilesSynchronizationCommands destination,
+		private async Task EnqueueMissingUpdatesAsync(ISynchronizationServerClient synchronizationServerClient,
 													  SourceSynchronizationInformation lastEtag,
                                                       IList<FileHeader> needSyncingAgain)
 		{
 			LogFilesInfo("There were {0} file(s) that needed synchronization because the previous one went wrong: {1}",
 						 needSyncingAgain);
 
-            var commands = (IAsyncFilesCommandsImpl)destination.Commands;
-
             var filesToSynchronization = new HashSet<FileHeader>(GetFilesToSynchronization(lastEtag, 100),
-																 new FileHeaderNameEqualityComparer());
+																 FileHeaderNameEqualityComparer.Instance);
 
 			LogFilesInfo("There were {0} file(s) that needed synchronization because of greater ETag value: {1}",
 						 filesToSynchronization);
@@ -352,7 +375,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			if (!filteredFilesToSynchronization.Any())
 				return;
 
-            var baseUrl = commands.UrlFor();
+			var baseUrl = synchronizationServerClient.BaseUrl;
 
 			foreach (var fileHeader in filteredFilesToSynchronization)
 			{
@@ -363,7 +386,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 try
                 {
-                    destinationMetadata = await destination.Commands.GetMetadataForAsync(file);
+                    destinationMetadata = await synchronizationServerClient.GetMetadataForAsync(file);
                 }
                 catch (Exception ex)
                 {
@@ -383,7 +406,7 @@ namespace Raven.Database.FileSystem.Synchronization
 					if (reason == NoSyncReason.ContainedInDestinationHistory)
 					{
                         var etag = localMetadata.Value<Guid>(Constants.MetadataEtagField);
-                        await destination.IncrementLastETagAsync(storage.Id, baseUrl, etag);
+                        await synchronizationServerClient.IncrementLastETagAsync(storage.Id, baseUrl, etag);
                         RemoveSyncingConfiguration(file, baseUrl);
 					}
 
@@ -406,63 +429,59 @@ namespace Raven.Database.FileSystem.Synchronization
 			}
 		}
 
-        private IEnumerable<Task<SynchronizationReport>> SynchronizePendingFilesAsync(SynchronizationDestination destination, IAsyncFilesSynchronizationCommands destinationCommands, bool forceSyncingContinuation)
+		private IEnumerable<Task<SynchronizationReport>> SynchronizePendingFilesAsync(ISynchronizationServerClient destinationCommands, bool forceSyncingAll)
 		{
-            var commands = (IAsyncFilesCommandsImpl)destinationCommands.Commands;
+			var destinationUrl = destinationCommands.BaseUrl;
 
-            var destinationUrl = commands.UrlFor();
+	        while (AvailableSynchronizationRequestsTo(destinationUrl) > 0)
+	        {
+		        SynchronizationWorkItem work;
+		        if (synchronizationQueue.TryDequePending(destinationUrl, out work) == false)
+			        break;
 
-            for (var i = 0; i < AvailableSynchronizationRequestsTo(destinationUrl); i++)
-			{
-				SynchronizationWorkItem work;
-                if (!synchronizationQueue.TryDequePendingSynchronization(destinationUrl, out work))
-					break;
+		        if (synchronizationQueue.IsDifferentWorkForTheSameFileBeingPerformed(work, destinationUrl))
+		        {
+			        Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName,
+				        destinationCommands);
 
-                if (synchronizationQueue.IsDifferentWorkForTheSameFileBeingPerformed(work, destinationUrl))
-				{
-					Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName,
-							  destinationCommands);
+			        if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work)) // add it again at the end of the queue
+			        {
+				        // add it again at the end of the queue
+				        publisher.Publish(new SynchronizationUpdateNotification
+				        {
+					        FileName = work.FileName,
+					        DestinationFileSystemUrl = destinationUrl,
+					        SourceServerId = storage.Id,
+					        SourceFileSystemUrl = FileSystemUrl,
+					        Type = work.SynchronizationType,
+					        Action = SynchronizationAction.Enqueue,
+					        Direction = SynchronizationDirection.Outgoing
+				        });
+			        }
 
-                    if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work)) // add it again at the end of the queue
-                    {
-                        // add it again at the end of the queue
-                        publisher.Publish(new SynchronizationUpdateNotification
-                        {
-                            FileName = work.FileName,
-                            DestinationFileSystemUrl = destinationUrl,
-                            SourceServerId = storage.Id,
-                            SourceFileSystemUrl = FileSystemUrl,
-                            Type = work.SynchronizationType,
-                            Action = SynchronizationAction.Enqueue,
-                            Direction = SynchronizationDirection.Outgoing
-                        });
-                    }
-				}
-				else
-				{
-					var workTask = PerformSynchronizationAsync(destinationCommands, work);
-					if (forceSyncingContinuation)
-						workTask.ContinueWith(async t =>
-						{
-							if (CanSynchronizeTo(destinationUrl))
-								await SynchronizeDestinationAsync(destination, true);
-						});
+			        continue;
+		        }
 
-                    yield return workTask;
-				}
-			}
+		        var workTask = PerformSynchronizationAsync(destinationCommands, work);
+
+		        if (forceSyncingAll)
+		        {
+			        workTask.ContinueWith(_ => context.NotifyAboutWork()); // synchronization slot released, next file can be synchronized
+		        }
+
+		        yield return workTask;
+	        }
 		}
 
-        private async Task<SynchronizationReport> PerformSynchronizationAsync(IAsyncFilesSynchronizationCommands destination,
+		private async Task<SynchronizationReport> PerformSynchronizationAsync(ISynchronizationServerClient synchronizationServerClient,
 																			  SynchronizationWorkItem work)
 		{
-            var commands = (IAsyncFilesCommandsImpl)destination.Commands;
-            string destinationUrl = commands.UrlFor();
+			var destinationUrl = synchronizationServerClient.BaseUrl;
 
 			Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}",
                        work.GetType().Name, work.FileName, destinationUrl);
 
-            if (!CanSynchronizeTo(destinationUrl))
+			if (AvailableSynchronizationRequestsTo(destinationUrl) <= 0)
 			{
 				Log.Debug("The limit of active synchronizations to {0} server has been achieved. Cannot process a file '{1}'.",
                           destinationUrl, work.FileName);
@@ -506,7 +525,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 			try
 			{
-				report = await work.PerformAsync(destination);
+				report = await work.PerformAsync(synchronizationServerClient);
 			}
 			catch (Exception ex)
 			{
@@ -524,13 +543,13 @@ namespace Raven.Database.FileSystem.Synchronization
 
 				if (work.SynchronizationType == SynchronizationType.ContentUpdate)
 				{
-					moreDetails = string.Format(". {0} bytes were transfered and {1} bytes copied. Need list length was {2}",
+					moreDetails = string.Format(". {0} bytes were transferred and {1} bytes copied. Need list length was {2}",
 												report.BytesTransfered, report.BytesCopied, report.NeedListLength);
 				}
 
-                UpdateSuccessfulSynchronizationTime();
+                context.UpdateSuccessfulSynchronizationTime();
 
-                Log.Debug("{0} to {1} has finished successfully{2}", work.ToString(), destinationUrl, moreDetails);
+                Log.Debug("{0} to {1} has finished successfully{2}", work, destinationUrl, moreDetails);
 			}
 			else
 			{
@@ -547,7 +566,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
             Queue.SynchronizationFinished(work, destinationUrl);
 
-			if (!synchronizationCancelled)
+			if (synchronizationCancelled == false)
                 CreateSyncingConfiguration(fileName, work.FileETag, destinationUrl, work.SynchronizationType);
 
 			publisher.Publish(new SynchronizationUpdateNotification
@@ -588,12 +607,12 @@ namespace Raven.Database.FileSystem.Synchronization
 			return filesToSynchronization;
 		}
 
-		private async Task<SynchronizationConfirmation[]> ConfirmPushedFiles(IList<SynchronizationDetails> filesNeedConfirmation, IAsyncFilesSynchronizationCommands commands)
+		private async Task<SynchronizationConfirmation[]> ConfirmPushedFiles(IList<SynchronizationDetails> filesNeedConfirmation, ISynchronizationServerClient synchronizationServerClient)
 		{
 			if (!filesNeedConfirmation.Any())
 				return new SynchronizationConfirmation[0];
 
-            return await commands.GetConfirmationForFilesAsync(filesNeedConfirmation.Select(x => new Tuple<string, Etag>(x.FileName, x.FileETag)));
+			return await synchronizationServerClient.GetConfirmationForFilesAsync(filesNeedConfirmation.Select(x => new Tuple<string, Etag>(x.FileName, x.FileETag)));
 		}
 
         private IEnumerable<SynchronizationDetails> GetSyncingConfigurations(SynchronizationDestination destination)
@@ -605,7 +624,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				storage.Batch(
 					accessor =>
 					{
-						configObjects = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNamePrefix + Uri.EscapeUriString(destination.Url), 0, 100)
+						configObjects = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNameForFile(string.Empty, destination.Url), 0, 100)
 									            .Select(config => config.JsonDeserialization<SynchronizationDetails>())
                                                 .ToList();
 					});
@@ -701,7 +720,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
                 yield break;
             }
-            if (destinationsStrings.Count() == 0)
+            if (destinationsStrings.Any() == false)
             {
                 Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations + " does not contain any destination");
                 yield break;
@@ -713,20 +732,12 @@ namespace Raven.Database.FileSystem.Synchronization
             }
 		}
 
-        private bool CanSynchronizeTo(string destinationFileSystemUrl)
+		private int AvailableSynchronizationRequestsTo(string destinationFileSystemUrl)
 		{
-			return SynchronizationConfigAccessor.GetOrDefault(storage).MaxNumberOfSynchronizationsPerDestination > synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
-		}
+			var max = SynchronizationConfigAccessor.GetOrDefault(storage).MaxNumberOfSynchronizationsPerDestination;
+			var active = synchronizationQueue.NumberOfActiveSynchronizationsFor(destinationFileSystemUrl);
 
-        private int AvailableSynchronizationRequestsTo(string destinationFileSystemUrl)
-		{
-	        if (destinationFileSystemUrl == null)
-	        {
-		        Debugger.Launch();
-		        Debugger.Break();
-	        }
-
-			return SynchronizationConfigAccessor.GetOrDefault(storage).MaxNumberOfSynchronizationsPerDestination - synchronizationQueue.NumberOfActiveSynchronizationTasksFor(destinationFileSystemUrl);
+			return max - active;
 		}
 
 		public void Cancel(string fileName)
@@ -734,11 +745,6 @@ namespace Raven.Database.FileSystem.Synchronization
 			Log.Debug("Cancellation of active synchronizations of a file '{0}'", fileName);
 			Queue.CancelActiveSynchronizations(fileName);
 		}
-
-        private void UpdateSuccessfulSynchronizationTime()
-        {
-            LastSuccessfulSynchronizationTime = SystemTime.UtcNow;
-        }
 
         private static void LogFilesInfo(string message, ICollection<FileHeader> files)
 		{
@@ -748,8 +754,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public void Dispose()
 		{
-			if (timerSubscription != null)
-				timerSubscription.Dispose();
+			context.Dispose();
 		}
 	}
 }

@@ -80,6 +80,8 @@ interface databaseStatisticsDto {
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
+	CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+	CountOfIndexesExcludingDisabledAndAbandoned: number;
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
@@ -91,6 +93,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
+	Is64Bit: boolean;
 }
 
 interface indexStatisticsDto {
@@ -465,6 +468,11 @@ interface replicationClientConfigurationDto {
     FailoverBehavior?: string;
 }
 
+interface environmentColorDto {
+    Name: string;
+    BackgroundColor: string;
+}
+
 interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;
@@ -492,6 +500,7 @@ interface transformerDto {
     definition: {
         TransformResults: string;
         Name: string;
+		LockMode: string;
     }
 }
 
@@ -516,6 +525,7 @@ interface savedTransformerDto {
     {
         "TransformResults": string;
         "Name": string;
+		"LockMode": string;
     }
 }
 
@@ -594,7 +604,8 @@ interface databaseDocumentDto {
 
 interface restoreRequestDto {
     BackupLocation: string;
-    
+	IndexesLocation: string;
+	JournalsLocation: string;
 }
 
 interface databaseRestoreRequestDto extends restoreRequestDto {
@@ -615,6 +626,7 @@ interface restoreStatusDto {
 
 interface compactStatusDto {
     Messages: string[];
+    LastProgressMessage: string;
     State: string;
 }
 
@@ -790,6 +802,36 @@ interface statusDebugChangesDto {
     WatchedFolders: Array<string>;
 }
 
+interface statusDebugDataSubscriptionsDto {
+    SubscriptionId: number;
+    Criteria: subscriptionCriteriaDto;
+    AckEtag: string;
+    TimeOfSendingLastBatch: string;
+    TimeOfLastClientActivity: string;
+    IsOpen: boolean;
+    ConnectionOptions: subscriptionConnectionOptionsDto;
+}
+
+interface subscriptionCriteriaDto {
+    KeyStartsWith: string;
+    BelongsToAnyCollection: Array<string>;
+    PropertiesMatch: Array<{ Key: string; Value; string}>;
+    PropertiesNotMatch: Array<{ Key: string; Value; string }>;
+}
+
+interface subscriptionConnectionOptionsDto {
+    ConnectionId: string;
+    BatchOptions: subscriptionBatchOptionsDto;
+    ClientAliveNotificationInterval: string;
+    IgnoreSubscribersErrors: boolean;
+}
+
+interface subscriptionBatchOptionsDto {
+    MaxSize: number;
+    MaxDocCount: number;
+    AcknowledgmentTimeout: string;
+}
+
 interface statusDebugMetricsDto {
     DocsWritesPerSecond: number;
     IndexedPerSecond: number;
@@ -841,6 +883,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
+	RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;
@@ -1216,7 +1259,8 @@ enum ResponseCodes {
     Forbidden = 403,
     NotFound = 404,
     PreconditionFailed = 412,
-    InternalServerError = 500
+    InternalServerError = 500,
+    ServiceUnavailable = 503
 }
 
 interface synchronizationConfigDto {

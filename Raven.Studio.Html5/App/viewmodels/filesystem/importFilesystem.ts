@@ -7,19 +7,26 @@ import getOperationStatusCommand = require("commands/getOperationStatusCommand")
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
     hasFileSelected = ko.observable(false);
+    importedFileName = ko.observable<string>();
     isUploading = false;
-    private importedFileName: string;
     private filePickerTag = "#importFilesystemFilePicker";
 
     attached() {
+		super.attached();
         this.updateHelpLink("YD9M1R");
+
+        var fs: filesystem = this.activeFilesystem();
+        var importStatus = fs.importStatus();
+        if (importStatus === "Uploading 100%") {
+            fs.importStatus("");
+        }
     }
 
     canDeactivate(isClose) {
         super.canDeactivate(isClose);
         
         if (this.isUploading) {
-            this.confirmationMessage("Upload is in progress", "Please wait until uplodaing is complete.", ['OK']);
+            this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", ['OK']);
             return false;
         }
         return true;
@@ -39,7 +46,10 @@ class importDatabase extends viewModelBase {
     fileSelected(fileName: string) {
         var isFileSelected = !!$.trim(fileName);
         this.hasFileSelected(isFileSelected);
-        this.importFs();
+        this.importedFileName($(this.filePickerTag).val().split(/(\\|\/)/g).pop());
+
+        var fs: filesystem = this.activeFilesystem();
+        fs.importStatus("");
     }
 
     importFs() {
@@ -49,7 +59,6 @@ class importDatabase extends viewModelBase {
         fs.importStatus("Uploading 0%");
 
         var formData = new FormData();
-        this.importedFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
                 
@@ -72,10 +81,10 @@ class importDatabase extends viewModelBase {
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: importOperationStatusDto) {
         if (result.Completed) {
-            if (result.ExceptionDetails == null) {
+            if (result.ExceptionDetails == null && result.LastProgress != null) {
                 this.hasFileSelected(false);
                 $(this.filePickerTag).val('');
-                fs.importStatus("Last import was from '" + this.importedFileName + "', " + result.LastProgress.toLocaleLowerCase());
+                fs.importStatus("Last import was from '" + this.importedFileName() + "', " + result.LastProgress.toLocaleLowerCase());
                 messagePublisher.reportSuccess("Successfully imported data to " + fs.name);
             } else {
                 fs.importStatus("");

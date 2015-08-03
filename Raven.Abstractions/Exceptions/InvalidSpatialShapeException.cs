@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.Serialization;
-using Spatial4n.Core.Exceptions;
 
 namespace Raven.Abstractions.Exceptions
 {
@@ -26,7 +25,7 @@ namespace Raven.Abstractions.Exceptions
 
 		private readonly string invalidDocumentId;
 
-		public InvalidSpatialShapException(InvalidShapeException invalidShapeException, string invalidDocumentId)
+		public InvalidSpatialShapException(Exception invalidShapeException, string invalidDocumentId)
 			: base(invalidShapeException.Message, invalidShapeException)
 		{
 			this.invalidDocumentId = invalidDocumentId;

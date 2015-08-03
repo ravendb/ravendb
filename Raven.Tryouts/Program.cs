@@ -1,26 +1,32 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.FileSystem;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+using Raven.Tests.Core.ChangesApi;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
+	public class Customer
+	{
+		public string Region;
+		public string Id;
+	}
+
+	public class Invoice
+	{
+		public string Customer;
+	}
+
 	public class Program
 	{
 		private static void Main()
 		{
-           new FragmentFail().Fragment_Length_Should_Not_Be_More_Then_128();
+			for (int i = 0; i < 1000; i++)
+			{
+				using (var test = new RavenDB_3570())
+				{
+					test.RavenFSWithWindowsCredentialsInConnectionStringShouldWork();
+				}			
+				Console.WriteLine(i);
+			}
 		}
 
 	}

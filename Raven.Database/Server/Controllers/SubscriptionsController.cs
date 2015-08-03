@@ -14,7 +14,9 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Json;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -26,6 +28,8 @@ namespace Raven.Database.Server.Controllers
 {
 	public class SubscriptionsController : RavenDbApiController
 	{
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		[HttpPost]
 		[RavenRoute("subscriptions/create")]
 		[RavenRoute("databases/{databaseName}/subscriptions/create")]
@@ -59,23 +63,22 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/subscriptions/open")]
 		public async Task<HttpResponseMessage> Open(long id)
 		{
-			try
+			Database.Subscriptions.GetSubscriptionConfig(id);
+
+			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+
+			if (options == null)
+				throw new InvalidOperationException("Options cannot be null");
+
+			Database.Subscriptions.OpenSubscription(id, options);
+
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
 			{
-				Database.Subscriptions.GetSubscriptionConfig(id);
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionOpened
+			});
 
-				var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
-
-				if (options == null)
-					throw new InvalidOperationException("Options cannot be null");
-
-				Database.Subscriptions.OpenSubscription(id, options);
-
-				return GetEmptyMessage();
-			}
-			catch (SubscriptionException e)
-			{
-				return GetMessageWithString(e.Message, e.ResponseStatusCode);
-			}
+			return GetEmptyMessage();
 		}
 
 		[HttpGet]
@@ -141,6 +144,12 @@ namespace Raven.Database.Server.Controllers
 
 			Database.Subscriptions.ReleaseSubscription(id);
 
+			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+			{
+				Id = id,
+				Type = DataSubscriptionChangeTypes.SubscriptionReleased
+			});
+
 			return GetEmptyMessage();
 		}
 
@@ -183,65 +192,108 @@ namespace Raven.Database.Server.Controllers
 				using (var cts = new CancellationTokenSource())
 				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 				{
-					Etag lastProcessedDocEtag = null;
+                    Etag lastProcessedDocEtag = null;
+
 					var batchSize = 0;
 					var batchDocCount = 0;
+					var processedDocuments = 0;
 					var hasMoreDocs = false;
-
 					var config = subscriptions.GetSubscriptionConfig(id);
-					var startEtag = config.AckEtag;
+					var startEtag =  config.AckEtag;
 					var criteria = config.Criteria;
 
+                    bool isPrefixCriteria = !string.IsNullOrWhiteSpace(criteria.KeyStartsWith);
+
+                    Func<JsonDocument, bool> addDocument = doc =>
+                    {
+	                    processedDocuments++;
+                        timeout.Delay();
+
+                        // We cant continue because we have already maxed out the batch bytes size.
+                        if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
+                            return false;
+
+                        // We cant continue because we have already maxed out the amount of documents to send.
+                        if (batchDocCount >= options.MaxDocCount)
+                            return false;
+
+                        // We can continue because we are ignoring system documents.
+                        if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+                            return true;
+
+                        // We can continue because we are ignoring the document as it doesn't fit the criteria.
+                        if (MatchCriteria(criteria, doc) == false)
+                            return true;
+
+                        doc.ToJson().WriteTo(writer);
+                        writer.WriteRaw(Environment.NewLine);
+
+                        batchSize += doc.SerializedSizeOnDisk;
+                        batchDocCount++;
+
+                        return true; // We get the next document
+                    };
+
+					int retries = 0;
 					do
 					{
+						int lastIndex = processedDocuments;
+
 						Database.TransactionalStorage.Batch(accessor =>
 						{
 							// we may be sending a LOT of documents to the user, and most 
 							// of them aren't going to be relevant for other ops, so we are going to skip
 							// the cache for that, to avoid filling it up very quickly
 							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+							{    
+                                if (isPrefixCriteria)
+                                {
+                                    // If we don't get any document from GetDocumentsWithIdStartingWith it could be that we are in presence of a lagoon of uninteresting documents, so we are hitting a timeout.
+                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+
+                                    hasMoreDocs = false;
+                                }
+                                else
+                                {
+                                    // It doesn't matter if we match the criteria or not, the document has been already processed.
+                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+
+                                    // If we don't get any document from GetDocuments it may be a signal that something is wrong.
+                                    if (lastProcessedDocEtag == null)
+                                    {
+                                        hasMoreDocs = false;
+                                    }
+                                    else
+                                    {
+                                        var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+                                        hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
+
+                                        startEtag = lastProcessedDocEtag;
+                                    }
+
+                                    retries = lastIndex == batchDocCount ? retries : 0;
+                                }
+							}							
+						});
+
+						if (lastIndex == processedDocuments)
+						{
+							if (retries == 3)
 							{
-								Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, doc =>
-								{
-									timeout.Delay();
-
-									if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
-										return;
-
-									if (batchDocCount >= options.MaxDocCount)
-										return;
-
-									lastProcessedDocEtag = doc.Etag;
-
-									if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-										return;
-
-									if (MatchCriteria(criteria, doc) == false) 
-										return;
-
-									doc.ToJson().WriteTo(writer);
-									writer.WriteRaw(Environment.NewLine);
-
-									batchSize += doc.SerializedSizeOnDisk;
-									batchDocCount++;
-								});
+								log.Warn("Subscription processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
 							}
-
-							if (lastProcessedDocEtag == null)
-								hasMoreDocs = false;
 							else
 							{
-								var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-								hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
-
-								startEtag = lastProcessedDocEtag;
+								log.Warn("Subscription processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
 							}
-						});
-					} while (hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+							retries++;
+						}
+					} 
+                    while (retries < 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
 					writer.WriteEndArray();
 
-					if (batchDocCount > 0)
+                    if (batchDocCount > 0 || isPrefixCriteria)
 					{
 						writer.WritePropertyName("LastProcessedEtag");
 						writer.WriteValue(lastProcessedDocEtag.ToString());
@@ -271,28 +323,31 @@ namespace Raven.Database.Server.Controllers
 			{
 				foreach (var match in criteria.PropertiesMatch)
 				{
-					var value = doc.DataAsJson.SelectToken(match.Key);
+					var tokens = doc.DataAsJson.SelectTokenWithRavenSyntaxReturningFlatStructure(match.Key).Select(x => x.Item1).ToArray();
+									
+					foreach (var curVal in tokens)
+					{
+						if (RavenJToken.DeepEquals(curVal, match.Value) == false)
+							return false;
+					}
 
-					if (value == null)
-						return false;
-
-					if (RavenJToken.DeepEquals(value, match.Value) == false)
-						return false;
+					if (tokens.Length == 0)
+						return false;					
 				}
 			}
 
 			if (criteria.PropertiesNotMatch != null)
 			{
-				foreach (var notMatch in criteria.PropertiesNotMatch)
+				foreach (var match in criteria.PropertiesNotMatch)
 				{
-					var value = doc.DataAsJson.SelectToken(notMatch.Key);
-
-					if (value != null)
+					var tokens = doc.DataAsJson.SelectTokenWithRavenSyntaxReturningFlatStructure(match.Key).Select(x => x.Item1).ToArray();
+										
+					foreach (var curVal in tokens)
 					{
-						if (RavenJToken.DeepEquals(value, notMatch.Value))
+						if (RavenJToken.DeepEquals(curVal, match.Value) == true)
 							return false;
-					}
-				}
+					}					
+				}				
 			}
 
 			return true;

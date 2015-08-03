@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Can_project_nested_objects()
 		{
-			using(var store = NewDocumentStore())
+			using(var store = NewRemoteDocumentStore(fiddler:true))
 			{
 				using(var session = store.OpenSession())
 				{

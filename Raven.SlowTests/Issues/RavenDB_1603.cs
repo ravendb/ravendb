@@ -458,7 +458,7 @@ namespace Raven.SlowTests.Issues
                     }
                 }
 
-                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocumentsAsJson(0, int.MaxValue, null, CancellationToken.None).Count()));
             }
             finally 
             {
@@ -490,7 +490,7 @@ namespace Raven.SlowTests.Issues
                         });
                 }
 
-                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocumentsAsJson(0,int.MaxValue, null, CancellationToken.None).Count()));
             }
             finally
             {
@@ -860,7 +860,7 @@ namespace Raven.SlowTests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var allowDownload = false;
+	        int allowDownload = 0;
 
 	        var port = 8070;
 	        var forwarder = new ProxyServer(ref port, 8079)
@@ -868,7 +868,7 @@ namespace Raven.SlowTests.Issues
                 VetoTransfer = (totalRead, buffer) =>
                 {
                     var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-                    return payload.Contains("GET /static/users/678 ") && allowDownload == false;
+	                return payload.Contains("GET /static/users/678 ") && Thread.VolatileRead(ref allowDownload) == 0;
                 }
             };
             try
@@ -904,13 +904,16 @@ namespace Raven.SlowTests.Issues
                 }
                 catch (AggregateException e)
                 {
-                    var inner = (SmugglerExportException)e.ExtractSingleInnerException();
+	                var extractSingleInnerException = e.ExtractSingleInnerException() as SmugglerExportException;
+	                if (extractSingleInnerException == null)
+		                throw;
+	                var inner = extractSingleInnerException;
                     exportResult = new OperationState
                     {
                         FilePath = inner.File
                     };
                 }
-                allowDownload = true;
+	            Interlocked.Increment(ref allowDownload);
 
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))

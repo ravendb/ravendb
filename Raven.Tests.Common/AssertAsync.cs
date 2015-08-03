@@ -31,7 +31,7 @@ namespace Raven.Tests.Common
             {
                 await func();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }

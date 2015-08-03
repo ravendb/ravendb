@@ -44,8 +44,11 @@ namespace Raven.Tests.Spatial
             new Shop(44.419712, 34.042232),
             new Shop(44.418686, 34.043219),
         };
+        //shop/1:0.36KM, shop/2:0.26KM, shop/3 0.15KM from (34.042575,  44.417398)
+        private string[] sortedExpectedOrder = {"Shops/3", "Shops/2", "Shops/1"};
 
-        string[] expectedOrder = { "Shops/3", "Shops/2", "Shops/1" };
+        //shop/1:0.12KM, shop/2:0.03KM, shop/3 0.11KM from (34.042618,  44.419575)
+        private string[] filteredExpectedOrder = { "Shops/2", "Shops/3", "Shops/1" };
 
         public SpatialSorting()
         {
@@ -84,7 +87,7 @@ namespace Raven.Tests.Spatial
 
         }
 
-        private void AssertResultsOrder(string[] resultIDs)
+        private void AssertResultsOrder(string[] resultIDs, string[] expectedOrder)
         {
             Assert.Equal(expectedOrder.Length, resultIDs.Length);
             for (int i = 0; i < resultIDs.Length; i++)
@@ -107,7 +110,7 @@ namespace Raven.Tests.Spatial
                 }
             });
 
-            AssertResultsOrder(queryResult.Results.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id")).ToArray());
+            AssertResultsOrder(queryResult.Results.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id")).ToArray(), sortedExpectedOrder);
         }
     
 
@@ -119,7 +122,7 @@ namespace Raven.Tests.Spatial
                 var queryResults= session.Advanced.DocumentQuery<Shop>("eventsByLatLng").SortByDistance(
                     sortedLat, sortedLng).ToList();
 
-                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray());
+                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray(), sortedExpectedOrder);
             }
         }
 
@@ -131,7 +134,7 @@ namespace Raven.Tests.Spatial
                 var queryResults = session.Advanced.DocumentQuery<Shop>("eventsByLatLngWSpecialField").SortByDistance(
                     sortedLat, sortedLng, "MySpacialField").ToList();
 
-                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray());
+                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray(), sortedExpectedOrder);
             }
         }
 
@@ -149,7 +152,7 @@ namespace Raven.Tests.Spatial
                     }).ToList();
 
 
-                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray());
+                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray(), filteredExpectedOrder);
             }
         }
 
@@ -167,7 +170,7 @@ namespace Raven.Tests.Spatial
                     }).ToList();
 
 
-                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray());
+                AssertResultsOrder(queryResults.Select(x => x.Id).ToArray(), filteredExpectedOrder);
             }
         }
     }

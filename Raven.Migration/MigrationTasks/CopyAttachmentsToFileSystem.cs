@@ -46,6 +46,9 @@ namespace Raven.Migration.MigrationTasks
 
 					foreach (var attachmentInfo in batchInfo)
 					{
+						if (attachmentInfo == null)
+							continue;
+
 						var attachment = commands.GetAttachment(attachmentInfo.Key);
 
                         fsclient.UploadAsync(attachment.Key, attachment.Data(), attachment.Metadata).Wait();
@@ -55,6 +58,7 @@ namespace Raven.Migration.MigrationTasks
 						if(deleteCopiedAttachments)
 							commands.DeleteAttachment(attachment.Key, null);
 					}
+
 					copiedAttachments += batchInfo.Length;
 
 					Console.WriteLine("Copied {0} attachments ({1:####} %)", copiedAttachments, copiedAttachments * 100f / totalAttachmentCount);

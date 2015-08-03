@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Bundles.Encryption.Streams
 {	/// <summary>
@@ -11,12 +7,12 @@ namespace Raven.Bundles.Encryption.Streams
 	/// </summary>
 	public static class StructConverter
 	{
-		public static T ConvertBitsToStruct<T>(byte[] bytes) where T : struct
+		public static T ConvertBitsToStruct<T>(byte[] bytes, int? overrideHeaderSize = null) where T : struct
 		{
 			if (bytes == null)
 				throw new ArgumentNullException("bytes");
 
-			int size = Marshal.SizeOf(typeof(T));
+			int size = overrideHeaderSize.HasValue ? overrideHeaderSize.Value : Marshal.SizeOf(typeof(T));
 			if (size != bytes.Length)
 				throw new ArgumentException("To convert a byte array to a " + typeof(T).FullName + ", the array must be of length " + size, "bytes");
 
@@ -36,10 +32,10 @@ namespace Raven.Bundles.Encryption.Streams
 
 		}
 
-		public static byte[] ConvertStructToBits<T>(T data) where T : struct
+		public static byte[] ConvertStructToBits<T>(T data, int? overrideHeaderSize = null) where T : struct
 		{
-			int size = Marshal.SizeOf(data);
-			byte[] arr = new byte[size];
+			int size = overrideHeaderSize.HasValue ? overrideHeaderSize.Value : Marshal.SizeOf(data);
+			var arr = new byte[size];
 
 			IntPtr ptr = Marshal.AllocHGlobal(size);
 			try

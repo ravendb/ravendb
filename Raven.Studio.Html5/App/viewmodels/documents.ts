@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/deleteCollection");
 
@@ -26,6 +27,10 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+
+import generateClassCommand = require("commands/generateClassCommand");
+import showDataDialog = require("viewmodels/showDataDialog");
+
 
 class documents extends viewModelBase {
 
@@ -106,7 +111,7 @@ class documents extends viewModelBase {
             }
             return null;
         });
-        
+
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
@@ -137,6 +142,7 @@ class documents extends viewModelBase {
 
 
     attached() {
+	    super.attached();
         super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
 
         // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?
@@ -178,9 +184,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            shell.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            shell.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
@@ -359,6 +365,7 @@ class documents extends viewModelBase {
 
             // Fetch column widths from virtual table
             var virtualTable = this.getDocumentsGrid();
+            var columnsNames = virtualTable.getColumnsNames();
             var vtColumns = virtualTable.columns();
             this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
                 for (var i = 0; i < vtColumns.length; i++) {
@@ -369,11 +376,10 @@ class documents extends viewModelBase {
                 }
             });
 
-            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase());
+            var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
             app.showDialog(selectColumnsViewModel);
             selectColumnsViewModel.onExit().done((cols) => {
                 this.currentColumnsParams(cols);
-
                 var pagedList = this.currentCollection().getDocuments();
                 this.currentCollectionPagedItems(pagedList);
             });
@@ -425,8 +431,7 @@ class documents extends viewModelBase {
     deleteSelectedDocs() {
         if (!this.selectedCollection().isSystemDocuments && this.hasAllDocumentsSelected()) {
             this.deleteCollection(this.selectedCollection());
-        }
-        else {
+        } else {
             var grid = this.getDocumentsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
@@ -448,12 +453,27 @@ class documents extends viewModelBase {
         }
     }
 
+    generateDocCode() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            var selectedItem = <Document>grid.getSelectedItems(1).first();
+
+            var metadata = selectedItem["__metadata"];
+            var id = metadata["id"];
+            var generate = new generateClassCommand(this.activeDatabase(),id, "csharp");
+            var deffered = generate.execute();
+            deffered.done((code: JSON) => {
+                app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+            });
+        }
+    }
+
     private getDocumentsGrid(): virtualTable {
         var gridContents = $(documents.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
-
+        
         return null;
     }
 

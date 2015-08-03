@@ -19,7 +19,7 @@ using Jint;
 using Jint.Parser;
 
 using Microsoft.VisualBasic.FileIO;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -210,7 +210,7 @@ for(var customFunction in customFunctions) {{
 	    {
             public string SmugglerOptions { get; set; }
 	    }
-        
+
 		[HttpPost]
 		[RavenRoute("studio-tasks/exportDatabase")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
@@ -295,7 +295,7 @@ for(var customFunction in customFunctions) {{
                     JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
 
                 // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
-                var results = task.SimulateSqlReplicationSQLQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
+                var results = task.SimulateSqlReplicationSqlQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
 
                 return GetMessageWithObjectAsTask(new {
                     Results = results,

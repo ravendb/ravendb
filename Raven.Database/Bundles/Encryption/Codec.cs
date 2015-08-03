@@ -19,8 +19,14 @@ namespace Raven.Database.Bundles.Encryption
 		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;
 		private int? encryptionKeySize;
 		private int? encryptionIVSize;
+		
+		private int usingSha1; //1 -> true, 0 -> false
 
-		public bool UsingSha1 { get; private set; }
+		public bool UsingSha1
+		{
+			get { return usingSha1 == 1; }
+			private set { usingSha1 = value ? 1 : 0; }
+		}
 
 		public Codec(EncryptionSettings settings)
 		{
@@ -181,8 +187,8 @@ namespace Raven.Database.Bundles.Encryption
 
 		public void UseSha1()
 		{
-			UsingSha1 = true;
 			encryptionStartingKeyAndIV = null;
+			Interlocked.Exchange(ref usingSha1, 1); //atomically set to true
 		}
 	}
 

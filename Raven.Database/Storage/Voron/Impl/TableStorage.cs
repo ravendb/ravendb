@@ -71,7 +71,7 @@ namespace Raven.Database.Storage.Voron.Impl
 	        {
 	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
                 {"UsedPages", env.State.NextPageNumber-1},
-	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
+	            {"MaxNodeSize", AbstractPager.NodeMaxSize},
 	            {"PageMinSpace", _options.DataPager.PageMinSpace},
 	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
 	            {"PageSize", AbstractPager.PageSize},

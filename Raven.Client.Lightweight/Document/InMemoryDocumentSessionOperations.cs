@@ -23,6 +23,7 @@ using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -50,7 +51,11 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// The database name for this session
 		/// </summary>
-		public string DatabaseName { get; internal set; }
+		public virtual string DatabaseName
+		{
+			get { return _databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
+			internal set { _databaseName = value; }
+		}
 
 		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -153,7 +158,7 @@ namespace Raven.Client.Document
 			AllowNonAuthoritativeInformation = true;
 			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
-			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, GenerateKey);
+			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
 
@@ -237,22 +242,14 @@ namespace Raven.Client.Document
 			{
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
-					|| (instance is IDynamicMetaObjectProvider &&
-					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id))
-)
+				    || (instance is IDynamicMetaObjectProvider &&
+				        GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id))
+					)
 				{
 					AssertNoNonUniqueInstance(instance, id);
 
 					var jsonDocument = GetJsonDocument(id);
-					entitiesByKey[id] = instance;
-					entitiesAndMetadata[instance] = value = new DocumentMetadata
-					{
-						ETag = UseOptimisticConcurrency ? Etag.Empty : null,
-						Key = id,
-						OriginalMetadata = jsonDocument.Metadata,
-						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
-						OriginalValue = new RavenJObject()
-					};
+					value = GetDocumentMetadataValue(instance, id, jsonDocument);
 				}
 				else
 				{
@@ -266,6 +263,20 @@ namespace Raven.Client.Document
 		/// Get the json document by key from the store
 		/// </summary>
 		protected abstract JsonDocument GetJsonDocument(string documentKey);
+
+	    protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
+		{
+			entitiesByKey[id] = instance;
+			return entitiesAndMetadata[instance] = new DocumentMetadata
+			{
+				ETag = UseOptimisticConcurrency ? Etag.Empty : null,
+				Key = id,
+				OriginalMetadata = jsonDocument.Metadata,
+				Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
+				OriginalValue = new RavenJObject()
+			};
+		}
+
 
 		/// <summary>
 		/// Returns whatever a document with the specified id is loaded in the 
@@ -422,6 +433,7 @@ more responsive application.
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
+        /// <param name="noTracking">Entity tracking is enabled if true, disabled otherwise.</param>
 		/// <returns></returns>
 		object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
@@ -537,7 +549,7 @@ more responsive application.
 			}
 		}
 
-		private void RegisterMissingProperties(object o, string key, JToken value)
+		private void RegisterMissingProperties(object o, string key, object value)
 		{
 			Dictionary<string, JToken> dictionary;
 			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
@@ -545,7 +557,26 @@ more responsive application.
 				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
 			}
 
-			dictionary[key] = value;
+			dictionary[key] = ConvertValueToJToken(value);
+		}
+
+		private JToken ConvertValueToJToken(object value)
+		{
+			var jToken = value as JToken;
+			if (jToken != null)
+				return jToken;
+
+			try
+			{
+				// convert object value to JToken so it is compatible with dictionary
+				// could happen because of primitive types, type name handling and references
+				jToken = (value != null) ? JToken.FromObject(value) : JValue.CreateNull();
+				return jToken;
+			}
+			catch (Exception ex)
+			{
+				throw new InvalidOperationException("This is a bug. Value should be JToken.", ex);
+			}
 		}
 
 		/// <summary>
@@ -1111,8 +1142,7 @@ more responsive application.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <param name="documentMetadata">The document metadata.</param>
-		/// <returns></returns>
-		// protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, List< DocumentsChanges> changes)
+        /// <param name="changes">The dictionary of changes.</param>
 		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, IDictionary<string, DocumentsChanges[]> changes = null)
 		{
 			if (documentMetadata == null)
@@ -1134,26 +1164,14 @@ more responsive application.
 				return false;
 
 			var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-			if (changes != null)
-			{
-				var changedData = new List<DocumentsChanges>();
-				if ((RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) ||
-					(RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false))
-				{
-					changes[documentMetadata.Key] = changedData.ToArray();
-					return false;
-				}
-				else
-				{
-					return true;
-				}
-			}
-			else
-			{
-				return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, null) == false ||
-					RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, null) == false;
+			var changedData = changes != null ? new List<DocumentsChanges>() : null;
+			var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
+				|| (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
-			}
+			if (changes != null && changedData.Count > 0)
+				changes[documentMetadata.Key] = changedData.ToArray();
+
+			return changed;
 		}
 
 		/// <summary>
@@ -1186,6 +1204,7 @@ more responsive application.
 		}
 
 		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+		protected string _databaseName;
 		public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
 		public EntityToJson EntityToJson { get; private set; }
 

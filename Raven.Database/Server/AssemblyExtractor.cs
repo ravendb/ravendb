@@ -17,6 +17,8 @@ namespace Raven.Database.Server
 {
     public static class AssemblyExtractor
     {
+		private static object locker = new object();
+
         private const string AssemblySuffix = ".dll";
 
         private const string CompressedAssemblySuffix = AssemblySuffix + ".zip";
@@ -33,25 +35,27 @@ namespace Raven.Database.Server
 
         public static void ExtractEmbeddedAssemblies(InMemoryRavenConfiguration configuration)
         {
-            var assemblies = new HashSet<string> { 
-                typeof(Field).Assembly.GetName().Name 
-            };
+			lock (locker)
+			{
+				var assemblies = new HashSet<string> { 
+					typeof(Field).Assembly.GetName().Name 
+				};
 
-            var assemblyLocation = configuration.AssembliesDirectory;
+				var assemblyLocation = configuration.AssembliesDirectory;
 
-            var assembly = Assembly.GetExecutingAssembly();
-            var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
+				var assembly = Assembly.GetExecutingAssembly();
+				var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
 
-          
-            Extract(assembly, assembliesToExtract, assemblyLocation);
+				Extract(assembly, assembliesToExtract, assemblyLocation);
 
-            foreach (var assemblyToExtract in assembliesToExtract)
-                assemblies.Remove(assemblyToExtract.Value.Name);
+				foreach (var assemblyToExtract in assembliesToExtract)
+					assemblies.Remove(assemblyToExtract.Value.Name);
 
-#if !DEBUG
-            if (assemblies.Count != 0)
-                throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
+#if !DEBUG && !PROFILING
+				if (assemblies.Count != 0)
+					throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
 #endif
+			}
         }
 
         private static Dictionary<string, AssemblyToExtract> FindAssembliesToExtract(Assembly currentAssembly, HashSet<string> assembliesToFind)

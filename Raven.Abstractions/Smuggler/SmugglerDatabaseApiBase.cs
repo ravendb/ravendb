@@ -1,26 +1,23 @@
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-
 using System.IO.Compression;
-
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler.Data;
-using Raven.Abstractions.Util;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Smuggler
 {
@@ -492,7 +489,7 @@ namespace Raven.Abstractions.Smuggler
 				// Load HiLo documents for selected collections
                 Options.Filters.ForEach(filter =>
 				{
-					if (filter.Path == "@metadata.Raven-Entity-Name")
+					if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
 					{
 						filter.Values.ForEach(collectionName =>
 						{
@@ -918,25 +915,25 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				if (Options.UseContinuationFile)
-				{
-					lastEtagsDocument = Operations.GetDocument(continuationDocId);
+            if (Options.UseContinuationFile)
+            {
+                lastEtagsDocument = Operations.GetDocument(continuationDocId);
 					if (lastEtagsDocument == null)
-					{
-						lastEtagsDocument = new JsonDocument()
-						{
-							Key = continuationDocId,
-							Etag = Etag.Empty,
-							DataAsJson = RavenJObject.FromObject(state)
-						};
-					}
-					else
-					{
-						state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
-					}
+                {
+                    lastEtagsDocument = new JsonDocument()
+                    {
+                        Key = continuationDocId,                        
+                        Etag = Etag.Empty,
+                        DataAsJson = RavenJObject.FromObject(state)
+                    };
+                }
+                else
+                {                    
+                    state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
+                }
 
-					JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
-				}
+                JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
+            }
 			}
 			catch (Exception e)
 			{
@@ -949,10 +946,22 @@ namespace Raven.Abstractions.Smuggler
 				else throw;
 			}
 
-			int skippedDocuments = 0;
+            int skippedDocuments = 0;
             long skippedDocumentsSize = 0;
 
             Etag tempLastEtag = Etag.Empty;
+
+			var affectedCollections = new List<string>();
+			Options.Filters.ForEach(filter =>
+			{
+				if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+				{
+					filter.Values.ForEach(collectionName =>
+					{
+						affectedCollections.Add(collectionName);
+                    });
+				}
+			});
 
             while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
@@ -962,51 +971,64 @@ namespace Raven.Abstractions.Smuggler
 				try
 				{
 					document = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
-					var size = DocumentHelpers.GetRoughSize(document);
+                var size = DocumentHelpers.GetRoughSize(document);
 					if (size > 1024*1024)
-					{
-						Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
+				{
+					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
 							(double) size/1024,
-							document["@metadata"].Value<string>("@id"));
-					}
-					if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
-						continue;
-					if (Options.MatchFilters(document) == false)
-						continue;
+									    document["@metadata"].Value<string>("@id"));
+				}
+                if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
+					continue;
 
-					if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
-						continue;
+                if (Options.MatchFilters(document) == false)
+				{
+					if (affectedCollections.Count <= 0)
+					continue;
 
-					if (!string.IsNullOrEmpty(Options.TransformScript))
-						document = await Operations.TransformDocument(document, Options.TransformScript);
-
-					// If document is null after a transform we skip it. 
-					if (document == null)
+					if (document.ContainsKey("@metadata") == false)
 						continue;
 
-					var metadata = document["@metadata"] as RavenJObject;
-					if (metadata != null)
-					{
-						if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
-							continue;
+                    var key = document["@metadata"].Value<string>("@id");
+					if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+						continue;
+				}
 
-						if (Options.StripReplicationInformation)
-							document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+                if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+					continue;
+
+                if (!string.IsNullOrEmpty(Options.TransformScript))
+                    document = await Operations.TransformDocument(document, Options.TransformScript);
+
+                // If document is null after a transform we skip it. 
+                if (document == null)
+                    continue;
+
+                var metadata = document["@metadata"] as RavenJObject;
+                if (metadata != null)
+                {
+                    if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+                        continue;
+
+                    if (Options.StripReplicationInformation)
+                        document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
 
 						if (Options.ShouldDisableVersioningBundle)
-							document["@metadata"] = Operations.DisableVersioning(metadata);
-					}
+						document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
 
-					if (Options.UseContinuationFile)
-					{
-						tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-						if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
-						{
-							skippedDocuments++;
-							skippedDocumentsSize += size;
-							continue;
-						}
-					}
+					document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+                }
+
+                if (Options.UseContinuationFile)
+                {
+                    tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
+                    {
+                        skippedDocuments++;
+                        skippedDocumentsSize += size;
+                        continue;
+                    }     
+                }
 
 					await Operations.PutDocument(document, (int) size);
 				}
@@ -1097,7 +1119,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-					await Operations.PutIndex(indexName, index);
+				await Operations.PutIndex(indexName, index);
 				}
 				catch (Exception e)
 				{
@@ -1136,8 +1158,8 @@ namespace Raven.Abstractions.Smuggler
 				{
 					try
 					{
-						index.WriteTo(jsonWriter);
-					}
+					index.WriteTo(jsonWriter);
+				}
 					catch (Exception e)
 					{
 						if (ShouldLogErrorsAndContinue)
@@ -1145,10 +1167,10 @@ namespace Raven.Abstractions.Smuggler
 							var message = string.Format("Failed to export index {0}", index);
 							_log.ErrorException(message, e);
 							Operations.ShowProgress(message);
-						}
+			}
 						else
 							throw;
-					}
+		}
 				}
 			}
 		}

@@ -31,6 +31,7 @@
                 <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: $root.isEditingMetadata() === false, click: toggleAutoCollapse">
                     <span class="fa fa-plus-square-o"></span>
                 </button>
+                <button type="button" class="btn btn-default" data-bind="click: generateCode, visible: lodaedDocumentName" title="Generate Class"><i class="fa">C#</i></button>
                 <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
 
             </div>
@@ -92,7 +93,7 @@
                     <div class="documents-links-container" data-bind="foreach: topRecentDocuments">
                         <a class="document-link" data-bind="attr: { href: docUrl }">
                             <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.docId)">&nbsp;</span>
-                            <span data-bind="text: docId"></span>
+                            <span data-bind="text: docId, attr : {title : fullDocId }"></span>
                         </a>
                     </div>
                 </div>

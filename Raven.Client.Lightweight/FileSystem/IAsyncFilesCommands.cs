@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Client.FileSystem
@@ -52,11 +53,11 @@ namespace Raven.Client.FileSystem
 
         FilesConvention Conventions { get; }
 
-        string FileSystem { get; }
+        string FileSystemName { get; }
 
         string UrlFor(string fileSystem = null);
 
-        IAsyncFilesCommands ForFileSystem(string fileSystem);
+        IAsyncFilesCommands ForFileSystem(string fileSystemName);
         IAsyncFilesCommands With(ICredentials credentials);
         IAsyncFilesCommands With(OperationCredentials credentials);
 
@@ -121,45 +122,47 @@ namespace Raven.Client.FileSystem
         Task<ConfigurationSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25);
     }
 
-    public interface IAsyncFilesSynchronizationCommands : IDisposable, IHoldProfilingInformation
+	public interface IAsyncFilesSynchronizationCommands : ISynchronizationServerClient, IDisposable, IHoldProfilingInformation
     {
         IAsyncFilesCommands Commands { get; }
 
         Task<SynchronizationDestination[]> GetDestinationsAsync();
         Task SetDestinationsAsync(params SynchronizationDestination[] destinations);
 
-        Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
-        Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
-        
         Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25);
-        Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
-        Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
-		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
 
-        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
-
+		Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
         Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25);
         Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25);
         Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25);
 
-
-        Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
-
-        
-        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
-
-        Task<SignatureManifest> GetRdcManifestAsync(string path);
-        Task<RdcStats> GetRdcStatsAsync();
-
-
         Task<DestinationSyncResult[]> StartAsync(bool forceSyncingAll = false);
         Task<SynchronizationReport> StartAsync(string filename, IAsyncFilesCommands destination);
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
-
-        Task<SynchronizationReport> DeleteAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
-        Task<SynchronizationReport> RenameAsync(string filename, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
-        Task<SynchronizationReport> UpdateMetadataAsync(string filename, RavenJObject metadata, FileSystemInfo sourceFileSystem);
     }
+
+	public interface ISynchronizationServerClient : IHoldProfilingInformation
+	{
+		string BaseUrl { get; }
+		FilesConvention Conventions { get; }
+		OperationCredentials Credentials { get; }
+		HttpJsonRequestFactory RequestFactory { get; }
+
+		Task<RavenJObject> GetMetadataForAsync(string fileName);
+		Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
+
+		Task<RdcStats> GetRdcStatsAsync();
+		Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+		Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+		Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+		Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
+		Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
+		Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
+		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
+		Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
+		Task<SignatureManifest> GetRdcManifestAsync(string path);
+		Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
+	}
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation
     {

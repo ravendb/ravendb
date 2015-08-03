@@ -4,23 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests.Helpers;
 using Raven.Tests.FileSystem.Synchronization;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
-using Raven.Abstractions.FileSystem;
 
 namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithOAuth : RavenFilesTestWithLogs
     {
-        private const string apiKey = "test/ThisIsMySecret";
+		private const string Name = "test";
+		private const string Secret = "ThisIsMySecret";
+		private const string ApiKey = Name + "/" + Secret;
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
@@ -28,8 +29,8 @@ namespace Raven.Tests.FileSystem.Auth
             {
                 server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
-                    Name = "test",
-                    Secret = "ThisIsMySecret",
+					Name = Name,
+					Secret = Secret,
                     Enabled = true,
                     Databases = new List<ResourceAccess>
                     {
@@ -43,17 +44,17 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task CanSynchronizeFileContent()
         {
-            var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
+			var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+		    var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
 
-            var ms = new MemoryStream(new byte[] {3, 2, 1});
+		    var ms = new MemoryStream(new byte[] {3, 2, 1});
 
-            await source.UploadAsync("ms.bin", ms);
+		    await sourceClient.UploadAsync("ms.bin", ms);
 
-            var result = await source.Synchronization.StartAsync("ms.bin", destination);
+		    var result = await sourceClient.Synchronization.StartAsync("ms.bin", destination);
 
-            Assert.Null(result.Exception);
-            Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
+		    Assert.Null(result.Exception);
+		    Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
         }
 
         [Fact]
@@ -62,7 +63,7 @@ namespace Raven.Tests.FileSystem.Auth
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
 
             await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
             content.Position = 0;
@@ -84,7 +85,7 @@ namespace Raven.Tests.FileSystem.Auth
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
 
             await sourceClient.UploadAsync("test.bin",  content);
             content.Position = 0;
@@ -108,21 +109,21 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task CanSynchronizeFileDelete()
         {
-            var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: apiKey);
+			var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+		    var destination = NewAsyncClient(2);
 
-            await source.UploadAsync("test.bin", new RandomStream(1));
+		    await sourceClient.UploadAsync("test.bin", new RandomStream(1));
 
-            var report = await source.Synchronization.StartAsync("test.bin", destination);
+		    var report = await sourceClient.Synchronization.StartAsync("test.bin", destination);
 
-            Assert.Null(report.Exception);
+		    Assert.Null(report.Exception);
 
-            await source.DeleteAsync("test.bin");
+		    await sourceClient.DeleteAsync("test.bin");
 
-            var synchronizationReport = await source.Synchronization.StartAsync("test.bin", destination);
+		    var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destination);
 
-            Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
-            Assert.Null(synchronizationReport.Exception);
+		    Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
+		    Assert.Null(synchronizationReport.Exception);
         }
     }
 }

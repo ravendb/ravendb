@@ -233,7 +233,12 @@ namespace Raven.Client.Shard
 			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
 		}
 
-		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            return LoadInternal<T>(ids.ToArray(), null, transformer, transformerParameters);
+        }
+
+	    public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
@@ -287,18 +292,8 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						(dbCmd, i) =>
 						{
-							var items = (dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters))
-								.Results
-								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-								.Select(JsonExtensions.ToJObject)
-								.Select(
-										x =>
-										{
-											HandleInternalMetadata(x);
-											return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-										})
-								.Cast<T>()
-								.ToArray();
+							var multiLoadResult = dbCmd.Get(currentShardIds, includePaths, transformer, transformerParameters);
+							var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
 							if (items.Length > currentShardIds.Length)
 							{
@@ -777,7 +772,7 @@ namespace Raven.Client.Shard
 					IDatabaseCommands databaseCommands;
 					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
 						throw new InvalidOperationException(
-							string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
+							string.Format("ShardedDocumentStore can't find a DatabaseCommands for shard id '{0}'.", shardId));
 
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);

@@ -21,6 +21,7 @@ using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Actions
 {
@@ -239,11 +240,14 @@ namespace Raven.Database.Actions
 						: Constants.ReduceKeyFieldName);
 				Func<IndexQueryResult, bool> shouldIncludeInResults =
 					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
-				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, cancellationToken);
+			    var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults,
+                    fieldsToFetch, database.IndexQueryTriggers, cancellationToken, (query.ShowTimings ? (Action<double>)(time => executionTimes[QueryTimings.Parse] = time) : null));
 				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
+			    if (query.ShowTimings)
+			    {
 
-				if (query.ShowTimings)
-					indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] = timeInMilliseconds);
+			        indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
+			    }
 
 				var docs = from queryResult in indexQueryResults
 						   let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
@@ -393,13 +397,8 @@ namespace Raven.Database.Actions
 				}
 				return new DynamicLuceneOrParentDocumntObject(docRetriever, ravenJObject);
 			});
-			var robustEnumerator = new RobustEnumerator(token, 100)
-			{
-				OnError =
-					(exception, o) =>
-					transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
-														exception.Message))
-			};
+            var robustEnumerator = new RobustEnumerator(token, 100, 
+                onError: (exception, o) => transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o), exception.Message)));
 
 			var resultsWithTransformer = robustEnumerator
 				.RobustEnumeration(dynamicJsonObjects.Cast<object>().GetEnumerator(), transformFunc)

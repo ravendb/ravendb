@@ -27,6 +27,8 @@ import pagedResultSet = require("common/pagedResultSet");
 
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
+import generateClassCommand = require("commands/generateClassCommand");
+import showDataDialog = require("viewmodels/showDataDialog");
 
 class editDocument extends viewModelBase {
 
@@ -293,6 +295,7 @@ class editDocument extends viewModelBase {
 
     // Called when the view is attached to the DOM.
     attached() {
+		super.attached();
         this.setupKeyboardShortcuts();
         $("#docEditor").resize();
         this.isNewLineFriendlyMode.subscribe(val => {
@@ -823,8 +826,9 @@ class editDocument extends viewModelBase {
                 .slice(0, 5)
                 .map((docId: string) => {
                     return {
-                        docId: docId,
-                        docUrl: appUrl.forEditDoc(docId, null, null, this.activeDatabase())
+                        docId: (docId.length > 35) ? docId.substr(0,35) + '...' : docId,
+                        docUrl: appUrl.forEditDoc(docId, null, null, this.activeDatabase()),
+                        fullDocId : docId 
                     };
                 });
             return value;
@@ -904,6 +908,15 @@ class editDocument extends viewModelBase {
         }
 
         return "";
+    }
+
+    generateCode() {
+        var doc: document = this.document();
+        var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
+        var deffered = generate.execute();
+        deffered.done((code: JSON) => {
+            app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+        });
     }
 }
 

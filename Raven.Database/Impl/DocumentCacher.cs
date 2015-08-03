@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.Caching;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
@@ -51,6 +53,34 @@ namespace Raven.Database.Impl
 			oldCache.Dispose();
 		}
 
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			return new LowMemoryHandlerStatistics
+			{
+				Name = "DocumentCacher",
+				EstimatedUsedMemory = cachedSerializedDocuments.Sum(x =>
+				{
+					CachedDocument curDocument;
+					if (x.Value is CachedDocument)
+					{
+						curDocument = x.Value as CachedDocument;
+						return curDocument.Size;
+					}
+					return 0;
+				}),
+				DatabaseName = configuration.DatabaseName,
+				Metadata = new
+				{
+					CachedDocuments = cachedSerializedDocuments.GetCount()
+				}
+			};
+		}
+
 		public static IDisposable SkipSettingDocumentsInDocumentCache()
 		{
 			var old = skipSettingDocumentInCache;
@@ -61,6 +91,9 @@ namespace Raven.Database.Impl
 
 		public CachedDocument GetCachedDocument(string key, Etag etag)
 		{
+		    if (skipSettingDocumentInCache)
+		        return null;
+
 			CachedDocument cachedDocument;
 			try
 			{
@@ -70,7 +103,7 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+				// in this case, we just treat it as uncacheable
 				return null;
 			}
 			if (cachedDocument == null)
@@ -108,7 +141,7 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+                // in this case, we just treat it as uncacheable
 			}
 
 		}
@@ -123,8 +156,29 @@ namespace Raven.Database.Impl
 			{
 				// this is a bug in the framework
 				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
-				// in this case, we just threat it as uncachable
+                // in this case, we just treat it as uncacheable
 			}
+		}
+
+		public object GetStatistics()
+		{
+			long v = 0;
+			foreach (var kvp in cachedSerializedDocuments)
+			{
+				var cachedDocument = kvp.Value as CachedDocument;
+				if (cachedDocument != null)
+					v += cachedDocument.Size;
+			}
+			return new
+			{
+				cachedSerializedDocuments.CacheMemoryLimit,
+				cachedSerializedDocuments.DefaultCacheCapabilities,
+				cachedSerializedDocuments.PhysicalMemoryLimit,
+				cachedSerializedDocuments.PollingInterval,
+				CachedItems = cachedSerializedDocuments.GetCount(),
+				Size = v,
+				HumaneSize = SizeHelper.Humane(v)
+			};
 		}
 
 		public void Dispose()

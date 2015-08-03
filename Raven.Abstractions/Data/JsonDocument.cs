@@ -91,7 +91,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
-		public RavenJObject ToJson()
+		public RavenJObject ToJson(bool checkForId = false)
 		{
 			DataAsJson.EnsureCannotBeChangeAndEnableSnapshotting();
 			Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -108,8 +108,8 @@ namespace Raven.Abstractions.Data
 				metadata["@etag"] = Etag.ToString();
 			if (NonAuthoritativeInformation != null)
 				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
-			//if (metadata.ContainsKey("@id") == false)
-			//	metadata["@id"] = Key;
+            if (checkForId && metadata.ContainsKey("@id") == false)
+				metadata["@id"] = Key;
 			doc["@metadata"] = metadata;
 
 			return doc;

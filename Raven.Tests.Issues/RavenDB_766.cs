@@ -16,6 +16,7 @@ namespace Raven.Tests.Issues
 	using Raven.Json.Linq;
 	using Xunit;
 	using Xunit.Extensions;
+    using Sparrow.Collections;
 
 	public class RavenDB_766 : RavenTest
 	{
@@ -103,10 +104,10 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(a, new[] { "a" }, 1, true, new ConcurrentSet<object>()){Take = 10});
+                    var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(a, new HashSet<string> { "a" }, 1, true, new ConcurrentSet<object>()) { Take = 10 }, CancellationToken.None);
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(b, new[] { "b" }, 1, true, new ConcurrentSet<object>()) { Take = 10 });
+                    results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(b, new HashSet<string> { "b" }, 1, true, new ConcurrentSet<object>()) { Take = 10 }, CancellationToken.None);
 					Assert.Equal(2, results.Count());
 				});
 			}

@@ -2,12 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Util;
@@ -69,15 +69,6 @@ namespace Voron.Impl
 
 				mine.Wait();
 			}
-		}
-
-		private IEnumerable<WriteBatch.BatchOperation> GetBatchOperations(OutstandingWrite write)
-		{
-			var trees = write.Trees.ToList();
-
-			var operations = new List<WriteBatch.BatchOperation>();
-			trees.ForEach(tree => operations.AddRange(write.GetOperations(tree)));
-			return operations.Where(x => x != null);
 		}
 
 		private void EnsureValidBackgroundTaskState()
@@ -179,15 +170,15 @@ namespace Voron.Impl
 
 		private void HandleOperations(Transaction tx, List<OutstandingWrite> writes, CancellationToken token)
 		{
-			var trees = writes
-				.SelectMany(x => x.Trees)
-				.Distinct();
-
+            var trees = new HashSet<string>();
+            foreach( var write in writes)
+                trees.UnionWith(write.Trees);
+     
 			foreach (var treeName in trees)
 			{
 				token.ThrowIfCancellationRequested();
 
-				var tree = tx.State.GetTree(tx, treeName);
+                var tree = tx.State.GetTree(tx, treeName);
 				foreach (var write in writes)
 				{
 					foreach (var operation in write.GetOperations(treeName))
@@ -330,7 +321,7 @@ namespace Voron.Impl
 			private Exception _exception;
 			private readonly ManualResetEventSlim _completed;
 
-			private readonly Dictionary<string, List<WriteBatch.BatchOperation>> _operations = new Dictionary<string, List<WriteBatch.BatchOperation>>(); 
+			private readonly Dictionary<string, List<WriteBatch.BatchOperation>> _operations; 
 
 			public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
 			{
@@ -350,21 +341,26 @@ namespace Voron.Impl
 				return batch.Trees.ToDictionary(tree => tree, tree => batch.GetSortedOperations(tree).ToList());
 			}
 
-			public IEnumerable<string> Trees
+			public HashSet<string> Trees
 			{
 				get
 				{
 					return _batch.Trees;
 				}
-			} 
+			}
 
-			public IEnumerable<WriteBatch.BatchOperation> GetOperations(string treeName)
+
+            private readonly static List<WriteBatch.BatchOperation> Empty = new List<WriteBatch.BatchOperation>();
+
+            public List<WriteBatch.BatchOperation> GetOperations(string treeName)
 			{
-				List<WriteBatch.BatchOperation> operations;
+                Debug.Assert(Empty.Count == 0, "The empty list was modified. Either the code is wrong or the specs of this method need to change.");
+
+                List<WriteBatch.BatchOperation> operations;
 				if (_operations.TryGetValue(treeName, out operations))
 					return operations;
 
-				return Enumerable.Empty<WriteBatch.BatchOperation>();
+                return Empty;
 			}
 
 			public long Size { get; private set; }

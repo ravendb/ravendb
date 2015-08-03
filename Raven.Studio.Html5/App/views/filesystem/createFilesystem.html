@@ -22,14 +22,17 @@
                         <label for="filesystemLogs">Logs</label>
                         <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/FileSystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
                     </div>
-                    <div class="form-group">
-                        <label for="storageEngine">Storage Engine</label>
-                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
-                            <option value="">Default</option>
-                            <option value="esent">Esent</option>
-                            <option value="voron">Voron</option>
-                        </select>
-                    </div>
+	                <div class="form-group">
+		                <label for="storageEngine">Storage Engine</label>
+		                <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+			                <option value="">Default</option>
+			                <option value="esent">Esent</option>
+			                <option value="voron">Voron</option>
+		                </select>
+	                </div>
+					<div class="alert alert-danger" role="alert" data-bind="visible: voronWarningVisible">
+						Running Voron in 32-bit mode is error prone. Set Raven/Voron/AllowOn32Bits in configuration to allow Voron on 32-bit.
+					</div>
                 </div>
             </div>
         </div>

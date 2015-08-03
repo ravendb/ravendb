@@ -20,6 +20,8 @@ using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
+using System.Dynamic;
+using System.Runtime.Remoting.Messaging;
 
 namespace Raven.Client.Document.Async
 {
@@ -87,7 +89,9 @@ namespace Raven.Client.Document.Async
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="ids">The ids of the documents to load.</param>
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token)
         {
             return Lazily.LoadAsync<T>(ids, null, token);
         }
@@ -97,8 +101,9 @@ namespace Raven.Client.Document.Async
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The id.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns></returns>
-		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token)
         {
             return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
@@ -192,6 +197,12 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation<TResult[]>(lazyOp, null, token);
         }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			IncrementRequestCount();
+			return AsyncDatabaseCommands.GetMultiFacetsAsync(queries);
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -201,7 +212,7 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token)
         {
 			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
@@ -405,8 +416,7 @@ namespace Raven.Client.Document.Async
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
 			queryOperation.DisableEntitiesTracking = true;
-
-			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);
+			return new QueryYieldStream<T>(this, enumerator, queryOperation,query, token);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
@@ -462,17 +472,21 @@ namespace Raven.Client.Document.Async
 		public class QueryYieldStream<T> : YieldStream<T>
 		{
 			private readonly QueryOperation queryOperation;
+			private IAsyncDocumentQuery<T> query;
 
-			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, CancellationToken token = default (CancellationToken))
+			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
 				: base(parent, enumerator, token)
 			{
 				this.queryOperation = queryOperation;
+				this.query = query;
 			}
 
 			protected override void SetCurrent()
 			{
-				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+			    var ravenJObject = enumerator.Current;
+			    query.InvokeAfterStreamExecuted(ref ravenJObject);
 
+				var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
 				string key = null;
 				Etag etag = null;
 				if (meta != null)
@@ -485,7 +499,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = queryOperation.Deserialize<T>(enumerator.Current),
+					Document = queryOperation.Deserialize<T>(ravenJObject),
 					Etag = etag,
 					Key = key,
 					Metadata = meta
@@ -503,7 +517,6 @@ namespace Raven.Client.Document.Async
 			protected override void SetCurrent()
 			{
 				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
-
 				Current = new StreamResult<T>
 				{
 					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
@@ -685,14 +698,16 @@ namespace Raven.Client.Document.Async
 			return LoadAsync<T>(documentKeys, token);
 		}
 
-		/// <summary>
-		/// Begins the async load operation
-		/// </summary>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+        /// <summary>
+        /// Begins the async load operation
+        /// </summary>
+        /// <param name="id">The id.</param>
+        /// <param name="token">The canecllation token.</param>
+        /// <returns></returns>
+        public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
-			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
+			if (id == null)
+				throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
@@ -728,7 +743,7 @@ namespace Raven.Client.Document.Async
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0], token);
+			return LoadAsyncInternal<T>(ids.ToArray(), token);
 		}
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
@@ -845,7 +860,40 @@ namespace Raven.Client.Document.Async
 			return multiLoadOperation.Complete<T>();
 		}
 
-     
+		/// <summary>
+		/// Begins the async multi load operation
+		/// </summary>
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
+
+				multiLoadOperation.Complete<T>();
+			}
+
+			var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token)).ToArray();
+			var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
+			return loadedData;
+		}
 
 		/// <summary>
 		/// Begins the async save changes operation
@@ -973,5 +1021,45 @@ namespace Raven.Client.Document.Async
 			RefreshInternal(entity, jsonDocument, value);
 		}
 
+		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			var metadata = await GetDocumentMetadataAsync(instance);
+			return metadata.Metadata;
+		}
+
+		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+			{
+				string id;
+				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+					|| (instance is IDynamicMetaObjectProvider &&
+					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+				{
+					AssertNoNonUniqueInstance(instance, id);
+
+					var jsonDocument = await GetJsonDocumentAsync(id);
+
+					value =  GetDocumentMetadataValue(instance, id, jsonDocument);
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
+			}
+			return value;
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		{
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
+			if (jsonDocument == null)
+				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			return jsonDocument;
+		}
 	}
 }

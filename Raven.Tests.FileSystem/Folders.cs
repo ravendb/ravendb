@@ -148,7 +148,7 @@ namespace Raven.Tests.FileSystem
 			await client.UploadAsync("test/ced.txt", ms);
 			await client.UploadAsync("why/abc.txt", ms);
 
-			var results = await client.SearchOnDirectoryAsync("/test");
+			var results = await client.SearchOnDirectoryAsync("/test").ConfigureAwait(false);
 			var strings = results.Files.Select(x => x.FullPath).ToArray();
 			Assert.Equal(new[] { "/test/abc.txt", "/test/ced.txt" }, strings);
 		}

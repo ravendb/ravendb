@@ -116,6 +116,22 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchBulkInsert(name);
 			}
+			else if (Match(cmd, "watch-data-subscriptions"))
+			{
+				connectionState.WatchAllDataSubscriptions();
+			}
+			else if (Match(cmd, "unwatch-data-subscriptions"))
+			{
+				connectionState.UnwatchAllDataSubscriptions();
+			}
+			else if (Match(cmd, "watch-data-subscription"))
+			{
+				connectionState.WatchDataSubscription(long.Parse(name));
+			}
+			else if (Match(cmd, "unwatch-data-subscription"))
+			{
+				connectionState.UnwatchDataSubscription(long.Parse(name));
+			}
             else
 			{
 				return GetMessageWithObject(new

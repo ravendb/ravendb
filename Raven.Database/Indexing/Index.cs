@@ -23,6 +23,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -32,6 +33,7 @@ using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -40,6 +42,7 @@ using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
@@ -50,7 +53,7 @@ namespace Raven.Database.Indexing
 	/// <summary>
 	/// 	This is a thread safe, single instance for a particular index.
 	/// </summary>
-	public abstract class Index : IDisposable
+	public abstract class Index : IDisposable,ILowMemoryHandler
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
@@ -112,6 +115,8 @@ namespace Raven.Database.Indexing
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
+
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
 		[ImportMany]
@@ -234,7 +239,7 @@ namespace Raven.Database.Indexing
 
 				if (currentIndexSearcherHolder != null)
 				{
-					var item = currentIndexSearcherHolder.SetIndexSearcher(null, wait: true);
+					var item = currentIndexSearcherHolder.SetIndexSearcher(null, PublicName, wait: true);
 					if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
 					{
 						logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
@@ -243,11 +248,9 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					if (indexWriter == null)
-						CreateIndexWriter();
-
+					EnsureIndexWriter();
 					ForceWriteToDisk();
-					WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
 				}
 				catch (Exception e)
 				{
@@ -293,6 +296,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void EnsureIndexWriter()
+		{
+			if (indexWriter == null)
+				CreateIndexWriter();
+		}
+
 		public void Flush(Etag highestETag)
 		{
 			lock (writeLock)
@@ -325,10 +334,9 @@ namespace Raven.Database.Indexing
 				{
 					logIndexing.Info("Starting merge of {0}", indexId);
 					var sp = Stopwatch.StartNew();
-					if (indexWriter == null)
-					{
-						CreateIndexWriter();
-					}
+					
+					EnsureIndexWriter();
+
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
 
@@ -373,7 +381,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var fldName in fieldNames)
 			{
-				if(fldName.EndsWith("_IsArray") || 
+				if (fldName.EndsWith("_IsArray") ||
 					fldName.EndsWith("_Range") ||
 					fldName.EndsWith("_ConvertToJson"))
 					continue;
@@ -390,7 +398,7 @@ namespace Raven.Database.Indexing
 						if (array == null)
 						{
 							documentFromFields[field.Name] = array =
-								(tryGetValue ? new RavenJArray {arrayToken} : new RavenJArray());
+								(tryGetValue ? new RavenJArray { arrayToken } : new RavenJArray());
 						}
 						array.Add(val);
 					}
@@ -490,10 +498,7 @@ namespace Raven.Database.Indexing
 						throw;
 					}
 
-					if (indexWriter == null)
-					{
-						CreateIndexWriter();
-					}
+					EnsureIndexWriter();
 
 					var locker = directory.MakeLock("writing-to-index.lock");
 					try
@@ -776,60 +781,55 @@ namespace Raven.Database.Indexing
 			onErrorFunc = (exception, o) =>
 				{
 					string docId = null;
+
 					var invalidSpatialException = exception as InvalidSpatialShapException;
 					if (invalidSpatialException != null)
 						docId = invalidSpatialException.InvalidDocumentId;
 
-					context.AddError(indexId,
-						indexDefinition.Name,
-						docId ?? TryGetDocKey(o),
-										exception,
-										"Map"
-							);
+					context.AddError(indexId, indexDefinition.Name, docId ?? TryGetDocKey(o), exception, "Map");
 
 					logIndexing.WarnException(
-					String.Format("Failed to execute indexing function on {0} on {1}", indexId,
-										TryGetDocKey(o)),
-						exception);
+					String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name, TryGetDocKey(o)), exception);
 
 					stats.IndexingErrors++;
 				};
 
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
-				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
-				OnError = onErrorFunc,
-				MoveNextDuration = linqExecutionDuration
-			}.RobustEnumeration(input, funcs);
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+				beforeMoveNext: () => Interlocked.Increment(ref stats.IndexingAttempts),
+				cancelMoveNext: () => Interlocked.Decrement(ref stats.IndexingAttempts),
+				onError: onErrorFunc )
+                {
+                    MoveNextDuration = linqExecutionDuration
+                }
+                .RobustEnumeration(input, funcs);
 		}
 
-		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions,
-			IndexingWorkStats stats, Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => Interlocked.Increment(ref stats.ReduceAttempts),
-				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
-				OnError = (exception, o) =>
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+                beforeMoveNext: () => Interlocked.Increment(ref stats.ReduceAttempts),
+				cancelMoveNext: () => Interlocked.Decrement(ref stats.ReduceAttempts),
+				onError: (exception, o) =>
 				{
+					var key = TryGetDocKey(o);
+
 					context.AddError(indexId,
 						indexDefinition.Name,
-						TryGetDocKey(o),
+						key,
 						exception,
 						"Reduce"
 						);
 					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
-							TryGetDocKey(o)),
+						String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name,
+							key),
 						exception);
 
 					stats.ReduceErrors++;
-				},
-				MoveNextDuration = linqExecutionDuration
-			}.RobustEnumeration(input, func);
+				}) 
+                {
+				    MoveNextDuration = linqExecutionDuration
+			    }.RobustEnumeration(input, func);
 		}
 
 		// we don't care about tracking map/reduce stats here, since it is merely
@@ -837,25 +837,50 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
-			{
-				BeforeMoveNext = () => { }, // don't care
-				CancelMoveNext = () => { }, // don't care
-				OnError = (exception, o) =>
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+                onError: (exception, o) =>
 				{
+					var keys = TryGetDocKeys(input, o);
+					var concatenatedKeys = string.Join(";", keys);
+
 					context.AddError(indexId,
 									 indexDefinition.Name,
-									TryGetDocKey(o),
+									concatenatedKeys,
 									exception,
 									"Reduce"
 						);
+
 					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
-										TryGetDocKey(o)),
+						String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name,
+										concatenatedKeys),
 						exception);
-				},
-				MoveNextDuration = reduceDuringMapLinqExecution
-			}.RobustEnumeration(input, func);
+				})
+			    {
+				    MoveNextDuration = reduceDuringMapLinqExecution
+			    }.RobustEnumeration(input, func);
+		}
+
+		private static IEnumerable<string> TryGetDocKeys(IEnumerator<object> input, object current)
+		{
+			var keys = new HashSet<string>();
+			var key = TryGetDocKey(current);
+
+			if (string.IsNullOrEmpty(key) == false)
+				keys.Add(key);
+			else
+			{
+				input.Reset();
+				while (input.MoveNext())
+				{
+					key = TryGetDocKey(input.Current);
+					if (string.IsNullOrEmpty(key))
+						continue;
+
+					keys.Add(key);
+				}
+			}
+
+			return keys;
 		}
 
 		public static string TryGetDocKey(object current)
@@ -891,12 +916,12 @@ namespace Raven.Database.Indexing
 		{
 			if (indexWriter == null)
 			{
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), PublicName,wait: false);
 			}
 			else
 			{
 				var indexReader = indexWriter.GetReader();
-				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
+				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), PublicName, wait: false);
 			}
 		}
 
@@ -1093,11 +1118,12 @@ namespace Raven.Database.Indexing
 
 		#region Nested type: IndexQueryOperation
 
-		internal class IndexQueryOperation
+	    public class IndexQueryOperation
 		{
 			FastVectorHighlighter highlighter;
 			FieldQuery fieldQuery;
 
+            private readonly Stopwatch _queryParseDuration = new Stopwatch();
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -1107,7 +1133,12 @@ namespace Raven.Database.Indexing
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
-		    private int alreadyScannedForDuplicates;
+			private int alreadyScannedForDuplicates;
+
+		    public TimeSpan QueryParseDuration
+		    {
+                get { return _queryParseDuration.Elapsed; }
+		    }
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1134,7 +1165,7 @@ namespace Raven.Database.Indexing
 					}
 				}
 				parent.MarkQueried();
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
@@ -1176,7 +1207,7 @@ namespace Raven.Database.Indexing
 					throw new IndexDisabledException("The index has been disabled due to errors");
 
 				parent.MarkQueried();
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
@@ -1300,9 +1331,9 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 				{
-                    for (; alreadySeenProjections.Count < start && alreadyScannedForDuplicates < search.ScoreDocs.Length; alreadyScannedForDuplicates++)
+					for (; alreadySeenProjections.Count < start && alreadyScannedForDuplicates < search.ScoreDocs.Length; alreadyScannedForDuplicates++)
 					{
-                        var scoreDoc = search.ScoreDocs[alreadyScannedForDuplicates];
+						var scoreDoc = search.ScoreDocs[alreadyScannedForDuplicates];
 						var document = indexSearcher.Doc(scoreDoc.Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
 
@@ -1396,7 +1427,7 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
-				using (IndexStorage.EnsureInvariantCulture())
+				using (CultureHelper.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
@@ -1510,7 +1541,8 @@ namespace Raven.Database.Indexing
 
 			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query documentQuery;
+                _queryParseDuration.Start();
+                Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
@@ -1540,7 +1572,9 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(documentQuery);
+			    var afterTriggers = ApplyIndexTriggers(documentQuery);
+                _queryParseDuration.Stop();
+			    return afterTriggers;
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
@@ -1890,6 +1924,55 @@ namespace Raven.Database.Indexing
 			{
 				return obj.IndexId.GetHashCode();
 			}
+		}
+
+		public void HandleLowMemory()
+		{
+			bool tryEnter = false;
+			try
+			{
+				tryEnter = Monitor.TryEnter(writeLock);
+
+				if (tryEnter == false)
+					return;
+
+				try
+				{
+					EnsureIndexWriter();
+					ForceWriteToDisk();
+					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error while writing in memory index to disk.", e);
+				}
+				RecreateSearcher();
+			}
+			finally
+			{
+				if(tryEnter)
+				Monitor.Exit(writeLock);
+			}
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			var writerEstimator = new RamUsageEstimator(false);
+			return new LowMemoryHandlerStatistics()
+			{
+				Name = "Index",
+				DatabaseName = this.context.DatabaseName,
+				Metadata = new
+				{
+					IndexName = this.PublicName
+				},
+				EstimatedUsedMemory = writerEstimator.EstimateRamUsage(indexWriter)
+			};
 		}
 	}
 }

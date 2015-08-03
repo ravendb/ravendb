@@ -41,7 +41,7 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
-
+using Raven.Database.Commercial;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -223,12 +223,17 @@ namespace Raven.Database.Server.Controllers.Admin
 					    return;
 
 				    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+					databaseDocument.Settings.Remove(Constants.RavenIndexPath);
+					databaseDocument.Settings.Remove(Constants.RavenEsentLogsPath);
+					databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
+
 				    if (restoreRequest.IndexesLocation != null)
 					    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
-				    if (restoreRequest.JournalsLocation != null)
-					    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
 
-				    bool replicationBundleRemoved = false;
+	                if (restoreRequest.JournalsLocation != null)
+		                databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+
+	                bool replicationBundleRemoved = false;
 				    if (restoreRequest.DisableReplicationDestinations)
 					    replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
 
@@ -253,8 +258,11 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 catch (Exception e)
                 {
+	                var aggregateException = e as AggregateException;
+	                var exception = aggregateException != null ? aggregateException.ExtractSingleInnerException() : e;
+
                     restoreStatus.State = RestoreStatusState.Faulted;
-                    restoreStatus.Messages.Add("Unable to restore database " + e.Message);
+					restoreStatus.Messages.Add("Unable to restore database " + exception.Message);
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                                RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
                     throw;
@@ -393,6 +401,35 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
+		[HttpGet]
+		[RavenRoute("admin/license/connectivity")]
+		public HttpResponseMessage CheckConnectivityToLicenseServer()
+		{
+			var request = (HttpWebRequest)WebRequest.Create("http://licensing.ravendb.net/Subscriptions.svc");
+			try
+			{
+				request.Timeout = 5000;
+				using (var response = (HttpWebResponse) request.GetResponse())
+				{
+					return GetMessageWithObject(new { Success = response.StatusCode == HttpStatusCode.OK });
+				}
+			}
+			catch (Exception e)
+			{
+				return GetMessageWithObject(new { Success = false, Exception = e.Message });
+			}
+		}
+
+		[HttpGet]
+		[RavenRoute("admin/license/forceUpdate")]
+		public HttpResponseMessage ForceLicenseUpdate()
+		{
+			Database.ForceLicenseUpdate();
+			return GetEmptyMessage();
+		}
+
+
+
 		[HttpPost]
 		[RavenRoute("admin/compact")]
 		public HttpResponseMessage Compact()
@@ -413,13 +450,32 @@ namespace Raven.Database.Server.Controllers.Admin
 			    try
 			    {
 
-			        var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {
-			            compactStatus.Messages.Add(msg);
-			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			            bool skipProgressReport = false;
+                        bool isProgressReport = false;
+                        if(IsUpdateMessage(msg))
+                        {
+                            isProgressReport = true;
+			                var now = SystemTime.UtcNow;
+                            compactStatus.LastProgressMessageTime = compactStatus.LastProgressMessageTime ?? DateTime.MinValue;
+			                var timeFromLastUpdate = (now - compactStatus.LastProgressMessageTime.Value);
+                            if (timeFromLastUpdate >= ReportProgressInterval)
+                            {
+                                compactStatus.LastProgressMessageTime = now;
+                                compactStatus.LastProgressMessage = msg;
+                            }
+                            else skipProgressReport = true;
+			                
+			            }
+			            if (!skipProgressReport)
+			            {
+			                if (!isProgressReport) compactStatus.Messages.Add(msg);
+			                DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+			                    RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			            }
 
 			        }));
                     compactStatus.State = CompactStatusState.Completed;
@@ -450,6 +506,19 @@ namespace Raven.Database.Server.Controllers.Admin
 				OperationId = id
 			});
 		}
+
+        private static bool IsUpdateMessage(string msg)
+        {
+            if (String.IsNullOrEmpty(msg)) return false;
+            //Here we check if we the message is in voron update format
+            if (msg.StartsWith(VoronProgressString)) return true;
+            //Here we check if we the messafe is in esent update format
+            if (msg.Length > 42 && String.Compare(msg, 32, EsentProgressString, 0, 10) == 0) return true;
+            return false;
+        }
+        private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
+        private static string EsentProgressString = "JET_SNPROG";
+        private static string VoronProgressString = "Copied";
 
 		[HttpGet]
 		[RavenRoute("admin/indexingStatus")]
@@ -487,7 +556,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (string.IsNullOrEmpty(concurrency) == false)
 				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinBackgroundWorkers();
+			Database.SpinBackgroundWorkers(true);
 		}
 
 		[HttpPost]
@@ -495,7 +564,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/stopIndexing")]
 		public void StopIndexing()
 		{
-			Database.StopIndexingWorkers();
+			Database.StopIndexingWorkers(true);
 		}
 
 		[HttpGet]
@@ -717,11 +786,9 @@ namespace Raven.Database.Server.Controllers.Admin
 						DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, prefix + "/");
 					});
 
-					var stacktraceRequsted = GetQueryStringValue("stacktrace");
-					if (stacktraceRequsted != null)
-					{
+					bool stacktrace;
+					if (bool.TryParse(GetQueryStringValue("stacktrace"), out stacktrace) && stacktrace)
 						DumpStacktrace(package);
-					}
 				}
 
 				var response = new HttpResponseMessage();
@@ -746,61 +813,77 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		private void DumpStacktrace(ZipArchive package)
+		private static void DumpStacktrace(ZipArchive package)
 		{
-			var stacktraceRequsted = GetQueryStringValue("stacktrace");
+			var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
-			if (stacktraceRequsted != null)
+			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+			jsonSerializer.Formatting = Formatting.Indented;
+
+			using (var stacktraceStream = stacktrace.Open())
 			{
-				var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
+				string ravenDebugDir = null;
 
-				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
-				jsonSerializer.Formatting = Formatting.Indented;
-
-				using (var stacktraceStream = stacktrace.Open())
+				try
 				{
-					string ravenDebugDir = null;
+					if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-					try
+					ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+					var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+					var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
+
+					Directory.CreateDirectory(ravenDebugDir);
+
+					if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+
+					var process = new Process
 					{
-						if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
-
-						ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-						var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
-						var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
-
-						Directory.CreateDirectory(ravenDebugDir);
-
-						if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-						else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
-
-						var process = new Process { StartInfo = new ProcessStartInfo { Arguments = string.Format("-pid={0} /stacktrace -output={1}", Process.GetCurrentProcess().Id, ravenDebugOutput), FileName = ravenDebugExe, WindowStyle = ProcessWindowStyle.Hidden, } };
-
-						process.Start();
-
-						process.WaitForExit();
-
-						if (process.ExitCode != 0)
-							throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
-
-						using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+						StartInfo = new ProcessStartInfo
 						{
-							stackDumpOutputStream.CopyTo(stacktraceStream);
-						}
-					}
-					catch (Exception ex)
-					{
-						var streamWriter = new StreamWriter(stacktraceStream);
-						jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
-						streamWriter.Flush();
-					}
-					finally
-					{
-						if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
-					}
+							Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
+							FileName = ravenDebugExe,
+							WindowStyle = ProcessWindowStyle.Normal,
+							LoadUserProfile = true,
+							RedirectStandardError = true,
+							RedirectStandardOutput = true,
+							UseShellExecute = false
+						},
+						EnableRaisingEvents = true
+					};
 
-					stacktraceStream.Flush();
+					var output = string.Empty;
+
+					process.OutputDataReceived += (sender, args) => output += args.Data;
+					process.ErrorDataReceived += (sender, args) => output += args.Data;
+
+					process.Start();
+
+					process.BeginErrorReadLine();
+					process.BeginOutputReadLine();
+
+					process.WaitForExit();
+
+					if (process.ExitCode != 0)
+						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode + Environment.NewLine + "Message: " + output);
+
+					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+					{
+						stackDumpOutputStream.CopyTo(stacktraceStream);
+					}
 				}
+				catch (Exception ex)
+				{
+					var streamWriter = new StreamWriter(stacktraceStream);
+					jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+					streamWriter.Flush();
+				}
+				finally
+				{
+					if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
+				}
+
+				stacktraceStream.Flush();
 			}
 		}
 
@@ -936,20 +1019,21 @@ namespace Raven.Database.Server.Controllers.Admin
                 }, HttpStatusCode.BadRequest);
             }
 
-			if (Directory.Exists(ioTestRequest.Path) == false)
-			{
-				return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
-			}
-
             Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
 
 			var killTaskCts = new CancellationTokenSource();
+
+			var operationStatus = new RavenJObject();
 
 			var task = Task.Factory.StartNew(() =>
 			{
 				var debugInfo = new List<string>();
 
-				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, debugInfo.Add, killTaskCts.Token))
+				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
+				{
+					debugInfo.Add(msg);
+					operationStatus["currentStatus"] = msg;
+				}, killTaskCts.Token))
 				{
 					diskIo.TestDiskIO();
 
@@ -962,10 +1046,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
 				}
-			});
+			}, killTaskCts.Token);
 
 			long id;
-			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.IoTest,
@@ -988,6 +1072,29 @@ namespace Raven.Database.Server.Controllers.Admin
 			MemoryStatistics.SimulateLowMemoryNotification();
 
 			return GetEmptyMessage();
+		}
+
+		[HttpGet]
+		[RavenRoute("admin/low-memory-handlers-statistics")]
+		public HttpResponseMessage GetLowMemoryStatistics()
+		{
+			if (EnsureSystemDatabase() == false)
+				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
+
+			return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+			{
+				DatabaseName = x.Key,
+				Types = x.GroupBy(y=>y.Name).Select(y=> new
+				{
+					MemoryHandlerName = y.Key,
+					MemoryHandlers = y.Select(z=> new {
+					z.EstimatedUsedMemory,
+					z.Metadata
+					})
+				})
+			}));
+
+			
 		}
 	}
 }

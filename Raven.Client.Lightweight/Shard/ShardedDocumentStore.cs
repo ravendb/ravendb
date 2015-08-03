@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -16,6 +18,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
@@ -128,6 +131,14 @@ namespace Raven.Client.Shard
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
 			return OpenAsyncSessionInternal(databaseName, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
+		}
+
+		/// <summary>
+		/// Opens the async session with the specified options.
+		/// </summary>
+		public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+		{
+			return OpenAsyncSessionInternal(sessionOptions.Database, ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(sessionOptions.Database).With(sessionOptions.Credentials)));
 		}
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName,Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
@@ -279,9 +290,15 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
+		[Obsolete("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead",error: true)]
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
+			throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");
+		}
+
+		public  ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+		{
+			return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
 		}
 
 		public override void InitializeProfiling()
@@ -303,7 +320,26 @@ namespace Raven.Client.Shard
 			try
 			{
 				ShardStrategy.Shards.ForEach(shard => shard.Value.Initialize());
-				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+
+                var shardsPointingToSameDb = ShardStrategy.Shards
+                    .GroupBy(x =>
+                    {
+                        try
+                        {
+                            return x.Value.DatabaseCommands.GetStatistics().DatabaseId;
+                        }
+                        catch (Exception)
+                        {
+                            return Guid.NewGuid();// we'll just ignore any connection erros here
+                        }
+                    }).FirstOrDefault(x => x.Count() > 1);
+
+
+			    if (shardsPointingToSameDb != null)
+			        throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+			            string.Join(", ", shardsPointingToSameDb.Select(x => x.Key))));
+
+                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);
@@ -371,7 +407,14 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
-        /// <summary>
+
+		public override void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				store.ExecuteIndexes(indexCreationTasks);
+		}
+
+		/// <summary>
         /// Executes the index creation against each of the shards Async.
         /// </summary>
         public override Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
@@ -394,6 +437,12 @@ namespace Raven.Client.Shard
                 return tcs.Task;
             });
         }
+
+		public override async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				await store.ExecuteIndexesAsync(indexCreationTasks).ConfigureAwait(false);
+		}
 
 		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{

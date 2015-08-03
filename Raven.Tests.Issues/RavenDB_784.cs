@@ -136,7 +136,7 @@ namespace Raven.Tests.Issues
 					Assert.Equal(2, results.First(x => x.Key == "b").Count);
 				});
 
-				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(a));
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView(a, CancellationToken.None));
 
 				storage.Batch(accessor =>
 				{

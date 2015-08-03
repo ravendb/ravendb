@@ -11,8 +11,6 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Smuggler.Client;
-
 using System;
 using System.IO;
 using System.Net;
@@ -29,9 +27,9 @@ namespace Raven.Smuggler
 			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);			
 		}
 
-		private BulkInsertOperation operation;
+		protected BulkInsertOperation operation;
 
-		private DocumentStore store;
+		protected DocumentStore store;
 
         public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
@@ -89,11 +87,16 @@ namespace Raven.Smuggler
 			if (operation != null)
 				await operation.DisposeAsync();
 
-			operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
+			operation = new BulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 			{
                 BatchSize = Options.BatchSize,
-				OverwriteExisting = true
-            }, store.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
+				OverwriteExisting = true,
+				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
+				{
+					MaxDocumentsPerChunk = Options.ChunkSize,
+					MaxChunkVolumeInBytes = Options.TotalDocumentSizeInChunkLimitInBytes.HasValue?Options.TotalDocumentSizeInChunkLimitInBytes.Value:0
+				}
+            }, store.Changes());
 
 			operation.Report += text => Operations.ShowProgress(text);
 		}

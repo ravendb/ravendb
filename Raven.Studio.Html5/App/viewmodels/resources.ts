@@ -131,6 +131,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.updateHelpLink('Z8DC3Q');
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();
@@ -259,7 +260,7 @@ class resources extends viewModelBase {
 
                 disableDatabaseToggleViewModel.disableToggleTask
                     .done((toggledResources: resource[]) => {
-                        if (resources.length == 1) {
+                        if (resources.length === 1) {
                             this.onResourceDisabledToggle(resources[0], action);
                         } else {
                             toggledResources.forEach(rs => {
@@ -277,6 +278,10 @@ class resources extends viewModelBase {
         if (!!rs) {
             rs.disabled(action);
             rs.isChecked(false);
+
+            if (rs.isSelected() && rs.disabled() === false) {
+                rs.activate();  
+            }
         }
     }
 

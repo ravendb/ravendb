@@ -9,15 +9,15 @@ using Voron.Impl.Journal;
 
 namespace Voron.Util
 {
-	using System.Diagnostics;
+    using Sparrow;
+    using System.Diagnostics;
 
 	/// <summary>
 	/// This class assumes a single writer and many readers
 	/// </summary>
 	public class PageTable
 	{
-		private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>> _values =
-			new ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>>();
+        private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>> _values = new ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>>(NumericEqualityComparer.Instance);
 
 		private long _maxSeenTransaction;
 

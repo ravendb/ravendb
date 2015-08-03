@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -61,7 +62,7 @@ namespace Voron.Impl.FileHeaders
 					_env.Options.WriteHeader(HeaderFileNames[0], f1);
 					_env.Options.WriteHeader(HeaderFileNames[1], f2);
 
-					MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
+					Memory.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
 					return true; // new
 				}
 
@@ -88,11 +89,11 @@ namespace Voron.Impl.FileHeaders
 
 				if (f1->HeaderRevision > f2->HeaderRevision)
 				{
-					MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
+					Memory.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
 				}
 				else
 				{
-					MemoryUtils.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
+					Memory.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
 				}
 				_revision = _theHeader->HeaderRevision;
 				return false;

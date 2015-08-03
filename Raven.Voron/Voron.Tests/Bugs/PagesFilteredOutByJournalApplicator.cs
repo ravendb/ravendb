@@ -12,7 +12,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_1()
 		{
 			var bytes = new byte[1000];
@@ -61,7 +61,7 @@ namespace Voron.Tests.Bugs
 			}
 		} 
 
-		[Fact]
+		[PrefixesFact]
 		public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_2()
 		{
 			var bytes = new byte[1000];

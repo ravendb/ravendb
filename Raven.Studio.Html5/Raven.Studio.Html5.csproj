@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.4</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
@@ -31,6 +31,8 @@
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\forceLicenseUpdate.ts" />
+    <TypeScriptCompile Include="App\commands\licenseCheckConnectivityCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
@@ -61,6 +63,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
@@ -82,6 +85,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\formatIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugDataSubscriptionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\replicateAllIndexesCommand.ts" />
@@ -92,10 +96,13 @@
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\saveIndexPriorityCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\simulateSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
@@ -143,8 +150,11 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\common\queryUtil.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
+    <TypeScriptCompile Include="App\models\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
@@ -202,6 +212,8 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldRangeFilter.ts" />
+    <TypeScriptCompile Include="App\viewmodels\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\exportFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\fileRenameDialog.ts" />
@@ -244,6 +256,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
+    <TypeScriptCompile Include="App\viewmodels\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -284,7 +297,9 @@
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationConnectionStringsManagement.ts" />
     <TypeScriptCompile Include="App\viewmodels\studioConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugDataSubscriptions.ts" />
     <TypeScriptCompile Include="App\viewmodels\toggleIndexing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\licenseInformation.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\transformersShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
@@ -471,6 +486,8 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\fieldRangeFilter.html" />
+    <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
     <Content Include="App\views\filesystem\exportFilesystem.html" />
     <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
@@ -480,6 +497,9 @@
     <Content Include="App\views\filesystem\tasks.html" />
     <Content Include="App\views\filesystem\synchronizationConfiguration.html" />
     <Content Include="App\views\filesystem\versioning.html" />
+    <Content Include="App\views\inMethodFilter.html" />
+    <Content Include="App\views\showDataDialog.html" />
+    <Content Include="App\views\statusDebugDataSubscriptions.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
@@ -499,6 +519,7 @@
     <Content Include="App\views\copyTransformerDialog.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\adminLogs.html" />
+    <Content Include="App\views\licenseInformation.html" />
     <Content Include="App\views\upgrade.html" />
     <Content Include="App\views\adminLogsConfigureDialog.html" />
     <Content Include="App\views\infoPackageImport.html" />
@@ -651,6 +672,10 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
+    <Content Include="Content\bootstrap-multiselect.css" />
+    <Content Include="Content\bootstrap-select.css" />
+    <Content Include="Content\animate.min.css" />
+    <Content Include="Content\bootstrap-select.min.css" />
     <Content Include="Content\bootstrap.css">
       <DependentUpon>bootstrap.less</DependentUpon>
     </Content>
@@ -894,7 +919,10 @@
     <Content Include="Scripts\almond-custom.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
+    <Content Include="Scripts\spin.min.js" />
     <Content Include="Scripts\bootstrap-multiselect.js" />
+    <Content Include="Scripts\bootstrap-select.js" />
+    <Content Include="Scripts\bootstrap-select.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\d3\dagre.js" />
@@ -911,6 +939,10 @@
     <Content Include="Scripts\durandal\plugins\serializer.js" />
     <Content Include="Scripts\durandal\plugins\widget.js" />
     <Content Include="Scripts\durandal\system.js" />
+    <Content Include="Scripts\durandal\transitions\fadeIn.js" />
+    <Content Include="Scripts\durandal\transitions\fadeInVerticalDown.js" />
+    <Content Include="Scripts\durandal\transitions\transitionHelper.js" />
+    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Scripts\jquery.blockUI.js" />
@@ -942,6 +974,7 @@
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.selectpicker\bootstrap.selectpicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\dagre.d.ts" />
@@ -982,6 +1015,11 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
+    <Content Include="Content\bootstrap-select.css.map" />
+    <Content Include="Scripts\bootstrap-select.js.map" />
+    <Content Include="Content\bootstrap.css.map">
+      <DependentUpon>bootstrap.css</DependentUpon>
+    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>

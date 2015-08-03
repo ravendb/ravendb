@@ -65,7 +65,7 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Validates loaded license
 		/// </summary>
-		public override void AssertValidLicense()
+        public override void AssertValidLicense(bool turnOffDiscoveryClient = false)
 		{
 			if (File.Exists(licensePath) == false)
 			{
@@ -73,7 +73,7 @@ namespace Rhino.Licensing
 				throw new LicenseFileNotFoundException();
 			}
 
-			base.AssertValidLicense();
+            base.AssertValidLicense(turnOffDiscoveryClient);
 		}
 
 		/// <summary>

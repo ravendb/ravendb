@@ -18,6 +18,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Tenancy
 {

@@ -7,7 +7,7 @@ class ioTestCommand extends commandBase {
 
     operationIdTask = $.Deferred();
 
-    constructor(private db: database, private testParameters: performanceTestRequestDto) {
+    constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (string) => void) {
         super();
     }
 
@@ -39,6 +39,7 @@ class ioTestCommand extends commandBase {
                         parentPromise.resolve();
                     }
                 } else {
+	                this.onStatus(result.State);
                     setTimeout(() => this.monitorIoTest(parentPromise, operationId), 500);
                 }
             });

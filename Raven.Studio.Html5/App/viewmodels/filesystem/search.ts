@@ -45,9 +45,6 @@ class search extends viewModelBase {
         this.loadFiles();
     }
 
-    attached() {
-    }
-
     clear() {
         this.searchText("");
     }

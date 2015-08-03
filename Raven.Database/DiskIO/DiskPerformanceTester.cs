@@ -19,6 +19,8 @@ using Raven.Abstractions.Extensions;
 using Voron.Platform.Win32;
 using metrics.Core;
 using Raven.Database.Extensions;
+using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.DiskIO
 {
@@ -66,6 +68,8 @@ namespace Raven.Database.DiskIO
         protected readonly CancellationToken taskKillToken;
 
         protected readonly DiskPerformanceStorage dataStorage;
+
+		protected string filePath;
         
         protected Timer secondTimer;
 
@@ -106,7 +110,9 @@ namespace Raven.Database.DiskIO
         {
             var sw = new Stopwatch();
             sw.Start();
-           
+
+			AssertDiskSpace(path, testRequest.FileSize);
+
             if (File.Exists(path))
             {
                 var fInfo = new FileInfo(path);
@@ -135,7 +141,7 @@ namespace Raven.Database.DiskIO
             }
             else
             {
-                onInfo(string.Format("Creating test file with size = {0}", testRequest.FileSize));
+                onInfo(string.Format("Creating test file with size = {0}", SizeHelper.Humane(testRequest.FileSize)));
                 using (var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
                 {
                     const int bufferSize = 4 * 1024;
@@ -144,6 +150,7 @@ namespace Raven.Database.DiskIO
 
                     for (long i = 0; i < testRequest.FileSize; i += bufferSize)
                     {
+						taskKillToken.ThrowIfCancellationRequested();
                         random.NextBytes(buffer);
                         fs.Write(buffer, 0, bufferSize);
                     }
@@ -153,7 +160,17 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        protected long LongRandom(long min, long max, int mutlipleOf, Random rand)
+	    private static void AssertDiskSpace(string path, long fileSize)
+	    {
+			var pathRoot = new DirectoryInfo(path).Root;
+		    var drive = new DriveInfo(pathRoot.FullName);
+		    if (drive != null && drive.AvailableFreeSpace / 2  < fileSize)
+		    {
+				throw new Exception("Temporary test file size cannot exceed more than 50% of current free disk space.");
+		    }
+	    }
+
+	    protected long LongRandom(long min, long max, int mutlipleOf, Random rand)
         {
             var buf = new byte[8];
             rand.NextBytes(buf);
@@ -175,6 +192,7 @@ namespace Raven.Database.DiskIO
 	    public override void Dispose()
 	    {
 		    DisposeTimer();
+			IOExtensions.DeleteFile(filePath);
 	    }
 
 	    protected void DisposeTimer()
@@ -191,13 +209,12 @@ namespace Raven.Database.DiskIO
     public class GenericDiskPerformanceTester : AbstractDiskPerformanceTester<GenericPerformanceTestRequest>
     {
 
-        private readonly string filePath;
-
         private readonly List<Thread> threads;
         private readonly List<Random> perThreadRandom;
 
         public GenericDiskPerformanceTester(GenericPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = new CancellationToken()) : base(testRequest, onInfo, taskKillToken)
         {
+			IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
             filePath = Path.Combine(testRequest.Path, TemporaryFileName);
             threads = new List<Thread>(testRequest.ThreadCount);
             perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
@@ -217,7 +234,7 @@ namespace Raven.Database.DiskIO
             using (TestTimeMeasure())
             {
                 StartWorkers();
-                onInfo("Waiting for all workers to complete");
+                onInfo("Waiting for test to complete");
                 threads.ForEach(t => t.Join());
                 taskKillToken.ThrowIfCancellationRequested();
             }
@@ -503,8 +520,7 @@ namespace Raven.Database.DiskIO
 
     public class BatchDiskPerformanceTester : AbstractDiskPerformanceTester<BatchPerformanceTestRequest>
     {
-        private readonly String dataPath;
-        private readonly String journalPath;
+        private readonly string journalPath;
 
         private SafeFileHandle dataHandle;
         private SafeFileHandle journalHandle;
@@ -514,13 +530,14 @@ namespace Raven.Database.DiskIO
 
         public BatchDiskPerformanceTester(BatchPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken token = new CancellationToken()) : base(testRequest, onInfo, token)
         {
-            dataPath = Path.Combine(testRequest.Path, TemporaryFileName);
+			IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
+            filePath = Path.Combine(testRequest.Path, TemporaryFileName);
             journalPath = Path.Combine(testRequest.Path, TemporaryJournalFileName);
         }
 
         public override void TestDiskIO()
         {
-            PrepareTestFile(dataPath);
+			PrepareTestFile(filePath);
             if (File.Exists(journalPath))
             {
                 File.Delete(journalPath);
@@ -535,7 +552,7 @@ namespace Raven.Database.DiskIO
                 {
                     secondTimer = new Timer(SecondTicked, null, 1000, 1000);
 
-                    using (dataHandle = Win32NativeFileMethods.CreateFile(dataPath,
+					using (dataHandle = Win32NativeFileMethods.CreateFile(filePath,
                                                                           Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
                                                                           Win32NativeFileCreationDisposition.OpenExisting,
                                                                           Win32NativeFileAttributes.Write_Through,
@@ -561,13 +578,13 @@ namespace Raven.Database.DiskIO
                 {
                     if (File.Exists(journalPath))
                     {
-                        File.Delete(journalPath);
+                        IOExtensions.DeleteFile(journalPath);
                     }
                 }
             }
         }
 
-        private int RoundToMultipleOf(int number, int multiple)
+	    private int RoundToMultipleOf(int number, int multiple)
         {
             var rounded = (int) Math.Round(number*1.0/multiple);
             return rounded*multiple;

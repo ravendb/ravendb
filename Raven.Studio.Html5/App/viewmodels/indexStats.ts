@@ -8,6 +8,7 @@ import getIndexingPerfStatsCommand = require("commands/getIndexingPerfStatsComma
 import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import changeSubscription = require('models/changeSubscription');
 
 class indexStats extends viewModelBase {
@@ -40,6 +41,7 @@ class indexStats extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         $("#indexStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#indexStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();
@@ -47,7 +49,7 @@ class indexStats extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)) ];
+        return [changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)) ];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {

@@ -770,5 +770,27 @@ namespace Raven.Tests.FileSystem.Synchronization
 			Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
 			Assert.Null(synchronizationReport.Exception);
 		}
+
+		[Fact]
+		public async Task Can_get_synchronization_status()
+		{
+			var source = NewAsyncClient(0);
+			var destination = NewAsyncClient(1);
+
+			await source.UploadAsync("test.bin", new RandomStream(1024));
+			await destination.UploadAsync("test.bin", new RandomStream(1024));
+
+			var expected = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test.bin");
+
+			var result = await destination.Synchronization.GetSynchronizationStatusForAsync("test.bin");
+
+			Assert.Equal(expected.BytesCopied, result.BytesCopied);
+			Assert.Equal(expected.BytesTransfered, result.BytesTransfered);
+			Assert.Equal(expected.Exception, result.Exception);
+			Assert.Equal(expected.FileETag, result.FileETag);
+			Assert.Equal(expected.FileName, result.FileName);
+			Assert.Equal(expected.NeedListLength, result.NeedListLength);
+			Assert.Equal(expected.Type, result.Type);
+		}
 	}
 }

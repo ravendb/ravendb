@@ -44,9 +44,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
-    <NoWarn>618, 612, 3016, 3005</NoWarn>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -58,12 +58,23 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
@@ -72,6 +83,12 @@
     </Reference>
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
     </Reference>
     <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -155,6 +172,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
@@ -244,10 +262,14 @@
     <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Bugs\Indexing\SetIndexPriority.cs" />
+    <Compile Include="Bugs\MapRedue\LargeKeysInVoron.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
     <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
     <Compile Include="DistinctFacets\FromUser.cs" />
+    <Compile Include="Faceted\LargeFacets.cs" />
+    <Compile Include="Indexes\IndexReplacement.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
@@ -619,6 +641,8 @@
     <Compile Include="Queries\CommentsInQueries.cs" />
     <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
+    <Compile Include="Replication\IndexReplication.cs" />
+    <Compile Include="Replication\TransformerReplication.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\NestingTransformers.cs" />
@@ -789,7 +813,9 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
+    <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
+    <Compile Include="Storage\DocRefsDump.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
@@ -802,6 +828,8 @@
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
+    <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
+    <Compile Include="Subscriptions\SubscriptionsPaths.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />
@@ -902,6 +930,11 @@
     <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="TestBase\Animals_Count.cs" />
+    <Compile Include="TestBase\Animals_Search.cs" />
+    <Compile Include="TestBase\FakeModelHelpers.cs" />
+    <Compile Include="TestBase\FakeModels.cs" />
+    <Compile Include="TestBase\RavenTestBaseTests.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
@@ -923,6 +956,7 @@
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Utils\DictionaryComparer.cs" />
+    <Compile Include="Utils\DynamicListTests.cs" />
     <Compile Include="Utils\RavenInternalTestUtil.cs" />
     <Compile Include="Utils\SettingsDat.cs" />
     <Compile Include="Utils\SortedEtagsListTests.cs" />
@@ -973,8 +1007,12 @@
       <Name>Raven.Server</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
-      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>

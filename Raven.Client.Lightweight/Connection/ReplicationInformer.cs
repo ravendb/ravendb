@@ -14,7 +14,6 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -34,20 +33,20 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials))));
 		}
 
         private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
 		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
-			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+			if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return new CompletedTask();
 
-			lock (replicationLock)
+			lock (ReplicationLock)
 			{
-				if (firstTime)
+				if (FirstTime)
 				{
 					var serverHash = ServerHash.GetServerHash(url);
 
@@ -58,23 +57,23 @@ namespace Raven.Client.Connection
 					}
 				}
 
-				firstTime = false;
+				FirstTime = false;
 
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return new CompletedTask();
 
-				var taskCopy = refreshReplicationInformationTask;
+				var taskCopy = RefreshReplicationInformationTask;
 				if (taskCopy != null)
 					return taskCopy;
 
-                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
+                return RefreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
 					.ContinueWith(task =>
 					{
 						if (task.Exception != null)
 						{
 							log.ErrorException("Failed to refresh replication information", task.Exception);
 						}
-						refreshReplicationInformationTask = null;
+						RefreshReplicationInformationTask = null;
 					});
 			}
 		}
@@ -116,7 +115,7 @@ namespace Raven.Client.Connection
             }
 
 			if (replicationDocument.ClientConfiguration != null)
-				conventions.UpdateFrom(replicationDocument.ClientConfiguration);
+				Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
         }
 
 	    protected override string GetServerCheckUrl(string baseUrl)
@@ -126,7 +125,7 @@ namespace Raven.Client.Connection
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
+			RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials))));
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
@@ -178,7 +177,7 @@ namespace Raven.Client.Connection
 
 				if (document == null)
 				{
-					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+					LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
 				}
 
@@ -187,7 +186,7 @@ namespace Raven.Client.Connection
 
 				UpdateReplicationInformationFromDocument(document);
 
-				lastReplicationUpdate = SystemTime.UtcNow;
+				LastReplicationUpdate = SystemTime.UtcNow;
 			}
 		}
     }

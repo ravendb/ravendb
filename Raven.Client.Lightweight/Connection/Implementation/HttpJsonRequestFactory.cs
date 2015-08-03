@@ -3,8 +3,9 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -39,19 +40,19 @@ namespace Raven.Client.Connection
 		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
 		{
 			var handler = LogRequest;
-			if (handler != null) 
+			if (handler != null)
 				handler(sender, generateRequestResult());
 		}
 
 		private int maxNumberOfCachedRequests;
 
 		internal readonly HttpClientCache httpClientCache;
-	    public HttpClientCache HttpClientCache
-	    {
-	        get { return httpClientCache; }
-	    }
+		public HttpClientCache HttpClientCache
+		{
+			get { return httpClientCache; }
+		}
 
-	    internal readonly HttpMessageHandler httpMessageHandler;
+		internal readonly Func<HttpMessageHandler> httpMessageHandler;
 
 		internal readonly bool acceptGzipContent;
 
@@ -70,10 +71,10 @@ namespace Raven.Client.Connection
 			if (RequestTimeout != null)
 				createHttpJsonRequestParams.Timeout = RequestTimeout.Value;
 
-            var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
+			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
 				ShouldCacheRequest =
-					createHttpJsonRequestParams.AvoidCachingRequest == false && 
+					createHttpJsonRequestParams.AvoidCachingRequest == false &&
 					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
@@ -89,7 +90,7 @@ namespace Raven.Client.Connection
 		}
 
 		internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
-		 {
+		{
 			var cachedRequest = cache.Get(url);
 			if (cachedRequest == null)
 				return new CachedRequestOp { SkipServerCheck = false };
@@ -97,16 +98,16 @@ namespace Raven.Client.Connection
 			if (AggressiveCacheDuration != null)
 			{
 				var duration = AggressiveCacheDuration.Value;
-				if(duration.TotalSeconds > 0)
+				if (duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow - cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
 
 				cachedRequest.ForceServerCheck = false;
 			}
 
-            setHeader("If-None-Match", cachedRequest.Headers[Constants.MetadataEtagField]);
+			setHeader("If-None-Match", cachedRequest.Headers[Constants.MetadataEtagField]);
 			return new CachedRequestOp { SkipServerCheck = skipServerCheck, CachedRequest = cachedRequest };
 		}
 
@@ -118,16 +119,16 @@ namespace Raven.Client.Connection
 		public void ResetCache(int? newMaxNumberOfCachedRequests = null)
 		{
 
-		    if (newMaxNumberOfCachedRequests != null && newMaxNumberOfCachedRequests.Value == maxNumberOfCachedRequests)
-		        return;
+			if (newMaxNumberOfCachedRequests != null && newMaxNumberOfCachedRequests.Value == maxNumberOfCachedRequests)
+				return;
 
 			if (cache != null)
 				cache.Dispose();
 
-		    if (newMaxNumberOfCachedRequests != null)
-		    {
-		        maxNumberOfCachedRequests = newMaxNumberOfCachedRequests.Value;
-            }
+			if (newMaxNumberOfCachedRequests != null)
+			{
+				maxNumberOfCachedRequests = newMaxNumberOfCachedRequests.Value;
+			}
 			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
@@ -135,7 +136,7 @@ namespace Raven.Client.Connection
 		public void ExpireItemsFromCache(string db)
 		{
 			cache.ForceServerCheckOfCachedItemsForDatabase(db);
-		    Interlocked.Increment(ref numberOfCacheResets);
+			Interlocked.Increment(ref numberOfCacheResets);
 		}
 
 		/// <summary>
@@ -173,14 +174,14 @@ namespace Raven.Client.Connection
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
-		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null, bool acceptGzipContent = true)
+		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
 			this.httpMessageHandler = httpMessageHandler;
 			this.acceptGzipContent = acceptGzipContent;
-			httpClientCache = new HttpClientCache();
+			httpClientCache = new HttpClientCache(ServicePointManager.MaxServicePointIdleTime);
 
-		    ResetCache();
+			ResetCache();
 		}
 
 		///<summary>
@@ -188,16 +189,17 @@ namespace Raven.Client.Connection
 		///</summary>
 		public TimeSpan? AggressiveCacheDuration
 		{
-			get { return aggressiveCacheDuration.Value; }
-			set { aggressiveCacheDuration.Value = value; }
+			get { return CallContext.LogicalGetData("Raven/Client/AggressiveCacheDuration") as TimeSpan?; }
+			set { CallContext.LogicalSetData("Raven/Client/AggressiveCacheDuration", value); }
 		}
 
 		///<summary>
 		/// Session timeout - Thread Local
 		///</summary>
-		public TimeSpan? RequestTimeout {
-			get { return requestTimeout.Value; }
-			set { requestTimeout.Value = value; }
+		public TimeSpan? RequestTimeout
+		{
+			get { return CallContext.LogicalGetData("Raven/Client/RequestTimeout") as TimeSpan?; }
+			set { CallContext.LogicalSetData("Raven/Client/RequestTimeout", value); }
 		}
 
 		/// <summary>
@@ -205,8 +207,15 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public bool DisableHttpCaching
 		{
-			get { return disableHttpCaching.Value; }
-			set { disableHttpCaching.Value = value; }
+			get
+			{
+				var value = CallContext.LogicalGetData("Raven/Client/DisableHttpCaching");
+				if (value == null) 
+					return false;
+
+				return (bool)value;
+			}
+			set { CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value); }
 		}
 
 		/// <summary>
@@ -219,10 +228,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
-		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
-		private readonly ThreadLocal<TimeSpan?> requestTimeout = new ThreadLocal<TimeSpan?>(() => null);
-		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
-
 		private volatile bool disposed;
 		private int numberOfCacheResets;
 
@@ -233,7 +238,7 @@ namespace Raven.Client.Connection
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
 
-            httpJsonRequest.ResponseHeaders.Remove(Constants.RavenForcePrimaryServerCheck);
+			httpJsonRequest.ResponseHeaders.Remove(Constants.RavenForcePrimaryServerCheck);
 			if (additionalHeaders != null && additionalHeaders[Constants.RavenForcePrimaryServerCheck] != null)
 			{
 				httpJsonRequest.ResponseHeaders.Set(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
@@ -274,24 +279,24 @@ namespace Raven.Client.Connection
 
 		internal void IncrementCachedRequests()
 		{
-			 Interlocked.Increment(ref NumOfCachedRequests);
+			Interlocked.Increment(ref NumOfCachedRequests);
 		}
 
 		internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)
 		{
-            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField])) 
+			if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField]))
 				return;
 
 			RavenJToken clone;
-		    if (data == null)
-		    {
-		        clone = null;
-		    }
-		    else
-		    {
-		        clone = data.CloneToken();
-                clone.EnsureCannotBeChangeAndEnableSnapshotting();
-		    }
+			if (data == null)
+			{
+				clone = null;
+			}
+			else
+			{
+				clone = data.CloneToken();
+				clone.EnsureCannotBeChangeAndEnableSnapshotting();
+			}
 
 			cache.Set(url, new CachedRequest
 			{
@@ -329,9 +334,6 @@ namespace Raven.Client.Connection
 				return;
 			disposed = true;
 			cache.Dispose();
-			aggressiveCacheDuration.Dispose();
-			disableHttpCaching.Dispose();
-			requestTimeout.Dispose();
 			httpClientCache.Dispose();
 		}
 

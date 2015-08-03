@@ -9,6 +9,7 @@ class recentErrors extends dialogViewModelBase {
     }
 
     attached() {
+		super.attached();
         // Expand the first error.
         if (this.errors().length > 0) {
             $("#errorDetailsCollapse0").collapse("show");
@@ -23,6 +24,7 @@ class recentErrors extends dialogViewModelBase {
 
     clear() {
         this.errors.removeAll();
+        dialog.close(this);
     }
 
     close() {

@@ -7,6 +7,8 @@ namespace Raven.Database.Plugins.Catalogs
 {
 	public abstract class FilteredCatalog : ComposablePartCatalog
 	{
+		private static object locker = new object();
+
 		private readonly ComposablePartCatalog catalogToFilter;
 
 		protected FilteredCatalog(ComposablePartCatalog catalogToFilter)
@@ -38,9 +40,13 @@ namespace Raven.Database.Plugins.Catalogs
 
 		public override IEnumerable<Tuple<ComposablePartDefinition, ExportDefinition>> GetExports(ImportDefinition definition)
 		{
-			return from export in catalogToFilter.GetExports(definition)
-				   where IsMatch(export.Item1) && IsMatch(export.Item2)
-				   select export;
+			lock (locker)
+			{
+				return catalogToFilter
+					.GetExports(definition)
+					.Where(x => IsMatch(x.Item1) && IsMatch(x.Item2))
+					.ToList();
+			}
 		}
 
 		protected virtual bool IsMatch(ComposablePartDefinition composablePartDefinition)

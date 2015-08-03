@@ -60,7 +60,7 @@ namespace Raven.Tests.Core
 
 			var documentStore = new DocumentStore
 			{
-				HttpMessageHandler = Server.DocumentStore.HttpMessageHandler,
+				HttpMessageHandlerFactory = Server.DocumentStore.HttpMessageHandlerFactory,
 				Url = Server.SystemDatabase.ServerUrl,
 				DefaultDatabase = databaseName
 			};

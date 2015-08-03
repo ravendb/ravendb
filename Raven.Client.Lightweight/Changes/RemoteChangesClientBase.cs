@@ -197,11 +197,15 @@ namespace Raven.Client.Changes
                     {
                         AvoidCachingRequest = true
                     };
-                    var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+                    var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
                     return lastSendTask =
-                        httpJsonRequest.ExecuteRequestAsync()
+                        request.ExecuteRequestAsync()
                             .ObserveException()
-                            .ContinueWith(task => lastSendTask = null);
+                            .ContinueWith(task =>
+                            {
+	                            lastSendTask = null;
+	                            request.Dispose();
+                            });
                 }
                 catch (Exception e)
                 {

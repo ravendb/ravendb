@@ -1,9 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using RTools_NTS.Util;
+
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
+	internal class SqlReplicationConfigWithLastReplicatedEtag : SqlReplicationConfig
+	{
+		public SqlReplicationConfigWithLastReplicatedEtag(SqlReplicationConfig config, Etag lastReplicatedEtag)
+		{
+			LastReplicatedEtag = lastReplicatedEtag;
+
+			ConnectionString = config.ConnectionString;
+			ConnectionStringName = config.ConnectionStringName;
+			ConnectionStringSettingName = config.ConnectionStringSettingName;
+			Disabled = config.Disabled;
+			FactoryName = config.FactoryName;
+			ForceSqlServerQueryRecompile = config.ForceSqlServerQueryRecompile;
+			Id = config.Id;
+			Name = config.Name;
+			ParameterizeDeletesDisabled = config.ParameterizeDeletesDisabled;
+			PredefinedConnectionStringSettingName = config.PredefinedConnectionStringSettingName;
+			QuoteTables = config.QuoteTables;
+			RavenEntityName = config.RavenEntityName;
+			Script = config.Script;
+			SqlReplicationTables = config.SqlReplicationTables;
+		}
+
+		public Etag LastReplicatedEtag { get; private set; }
+	}
+
 	public class SqlReplicationConfig
 	{
 		public SqlReplicationConfig()

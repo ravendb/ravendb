@@ -234,7 +234,8 @@ namespace Raven.Database.Server.Controllers
 				msg = new HttpRequestMessage(HttpMethod.Post, new UriBuilder
 				{
 					Host = "multi.get",
-					Path = request.Url
+                    Query = query,
+                    Path = request.Url
 				}.Uri);
 				msg.Content = new StringContent(request.Content);
 				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };

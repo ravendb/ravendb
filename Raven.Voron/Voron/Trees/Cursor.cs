@@ -1,14 +1,16 @@
 ﻿namespace Voron.Trees
 {
+    using Sparrow;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using Voron.Util;
 
     public class Cursor 
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>();
+        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(NumericEqualityComparer.Instance);
 
         private bool _anyOverrides;
 

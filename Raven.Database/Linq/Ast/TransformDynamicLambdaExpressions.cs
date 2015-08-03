@@ -43,7 +43,7 @@ namespace Raven.Database.Linq.Ast
 					node = ModifyLambdaForSelectMany(lambdaExpression, parenthesizedlambdaExpression, invocationExpression);
 					break;
 				case "Any":
-				case "all":
+				case "All":
 				case "First":
 				case "FirstOrDefault":
 				case "Last":

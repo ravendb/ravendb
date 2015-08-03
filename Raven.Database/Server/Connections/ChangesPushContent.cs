@@ -4,7 +4,9 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -21,7 +23,14 @@ namespace Raven.Database.Server.Connections
 
 		public string Id { get; private set; }
 
-		public bool Connected { get; set; }
+	    public bool Connected
+	    {
+            get { return connected && cancellationTokenSource.IsCancellationRequested == false; }
+	        set { connected = value; }
+	    }
+
+	    private readonly DateTime _started = SystemTime.UtcNow;
+		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
 		public event Action Disconnected = delegate { };
         public long CoolDownWithDataLossInMiliseconds { get; set; }
@@ -31,7 +40,9 @@ namespace Raven.Database.Server.Connections
 
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
-        public string ResourceName { get; set; }
+	    private readonly CancellationTokenSource cancellationTokenSource;
+	    private bool connected;
+	    public string ResourceName { get; set; }
 
         public ChangesPushContent(RavenBaseApiController controller)
 		{
@@ -41,7 +52,7 @@ namespace Raven.Database.Server.Connections
             
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
-
+            cancellationTokenSource = WebSocketTransportFactory.RavenGcCancellation;
             long coolDownWithDataLossInMiliseconds = 0;
 			long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMiliseconds);
             CoolDownWithDataLossInMiliseconds = coolDownWithDataLossInMiliseconds;
@@ -49,63 +60,69 @@ namespace Raven.Database.Server.Connections
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			using (var writer = new StreamWriter(stream))
-			{
-                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-				await writer.FlushAsync();
-							
-				while (Connected)
-				{
-					try
-					{
-						var result = await manualResetEvent.WaitAsync(5000);
-						if (Connected == false)
-							return;
+		    try
+		    {
+                using (var writer = new StreamWriter(stream))
+                {
+                    await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
+                    await writer.FlushAsync();
 
-						if (result == false)
-						{
-                            await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-							await writer.FlushAsync();
+                    while (Connected)
+                    {
+                        try
+                        {
+                            var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
+                            if (Connected == false)
+                                return;
 
-                            if (lastMessageEnqueuedAndNotSent != null)
+                            if (result == false)
                             {
-								await SendMessage(lastMessageEnqueuedAndNotSent, writer);
-                            }
-							continue;
-						}
+                                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
+                                await writer.FlushAsync();
 
-						manualResetEvent.Reset();
-
-						object message;
-						while (msgs.TryDequeue(out message))
-						{
-							if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-                            {
-                                lastMessageEnqueuedAndNotSent = message;
+                                if (lastMessageEnqueuedAndNotSent != null)
+                                {
+                                    await SendMessage(lastMessageEnqueuedAndNotSent, writer);
+                                }
                                 continue;
                             }
 
-							await SendMessage(message, writer);
-						}
-					}
-					catch (Exception e)
-					{
-						Connected = false;
-						log.DebugException("Error when using events transport", e);
-						Disconnected();
-						try
-						{
-							writer.WriteLine(e.ToString());
-						}
-						catch (Exception)
-						{
-							// try to send the information to the client, okay if they don't get it
-							// because they might have already disconnected
-						}
+                            manualResetEvent.Reset();
 
-					}
-				}
-			}
+                            object message;
+                            while (msgs.TryDequeue(out message))
+                            {
+                                if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+                                {
+                                    lastMessageEnqueuedAndNotSent = message;
+                                    continue;
+                                }
+
+                                await SendMessage(message, writer);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Connected = false;
+                            log.DebugException("Error when using events transport", e);
+                            try
+                            {
+                                writer.WriteLine(e.ToString());
+                            }
+                            catch (Exception)
+                            {
+                                // try to send the information to the client, okay if they don't get it
+                                // because they might have already disconnected
+                            }
+
+                        }
+                    }
+                }
+		    }
+		    finally
+		    {
+                Disconnected();
+		    }
 		}
 
 		private async Task SendMessage(object message, StreamWriter writer)

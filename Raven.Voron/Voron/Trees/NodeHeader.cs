@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Util;
@@ -24,10 +26,10 @@ namespace Voron.Trees
 		[FieldOffset(11)]
 		public ushort Version;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public int GetNodeSize()
 		{
-			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + 
-				  (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
+			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
 		}
 
 		public static byte* DirectAccess(Transaction tx, NodeHeader* node)
@@ -72,9 +74,9 @@ namespace Voron.Trees
             if (node->Flags == (NodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                MemoryUtils.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                Memory.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
             }
-            MemoryUtils.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
 		public static int GetDataSize(Transaction tx, NodeHeader* node)

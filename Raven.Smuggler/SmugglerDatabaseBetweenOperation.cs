@@ -16,7 +16,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Database.Data;
+using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
@@ -173,7 +173,7 @@ namespace Raven.Smuggler
 			{
 				try
 				{
-					importStore.DatabaseCommands.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
+				importStore.DatabaseCommands.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
 				}
 				catch (Exception e)
 				{
@@ -270,9 +270,9 @@ namespace Raven.Smuggler
 				{
 					try
 					{
-						var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
-						ShowProgress("Successfully PUT index '{0}'", indexName);
-					}
+					var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
+					ShowProgress("Successfully PUT index '{0}'", indexName);
+				}
 					catch (Exception e)
 					{
 						if (databaseOptions.ShouldLogErrorsAndContinue)
@@ -280,9 +280,9 @@ namespace Raven.Smuggler
 							var error = "Failed PUT of an index " + index.Name;
 							log.ErrorException(error,e);
 							ShowProgress(error);
-						}
+			}
 						else throw;
-					}
+		}
 				}
 			}
 		}
@@ -304,7 +304,8 @@ namespace Raven.Smuggler
 				                                                       OverwriteExisting = true,
 			                                                       });
 			bulkInsertOperation.Report += text => ShowProgress(text);
-
+			var jintHelper = new SmugglerJintHelper();
+			jintHelper.Initialize(databaseOptions);
 			try
 			{
 				while (true)
@@ -315,37 +316,47 @@ namespace Raven.Smuggler
 						using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(lastEtag))
 						{
 							while (await documentsEnumerator.MoveNextAsync())
-							{							
+							{
 								var document = documentsEnumerator.Current;
+								var metadata = document.Value<RavenJObject>("@metadata");
+								var id = metadata.Value<string>("@id");
+								var etag = Etag.Parse(metadata.Value<string>("@etag"));
+
+								lastEtag = etag;
 
 								try
 								{
-									if (!databaseOptions.MatchFilters(document))
-										continue;
-									if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
-										continue;
+								if (!databaseOptions.MatchFilters(document))
+									continue;
+								if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
+									continue;
 
-									if (databaseOptions.StripReplicationInformation)
-										document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+								if (databaseOptions.StripReplicationInformation) 
+									document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 									if (databaseOptions.ShouldDisableVersioningBundle)
-										document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+									document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
 
-									var metadata = document.Value<RavenJObject>("@metadata");
-									var id = metadata.Value<string>("@id");
-									var etag = Etag.Parse(metadata.Value<string>("@etag"));
-									document.Remove("@metadata");
-									bulkInsertOperation.Store(document, metadata, id);
-									totalCount++;
+								document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
 
-									if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-									{
-										ShowProgress("Exported {0} documents", totalCount);
-										lastReport = SystemTime.UtcNow;
-									}
-
-									lastEtag = etag;
+								if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
+								{
+									document = jintHelper.Transform(databaseOptions.TransformScript, document);
+									if(document == null)
+										continue;
+									metadata = document.Value<RavenJObject>("@metadata");
 								}
+
+								document.Remove("@metadata");
+								bulkInsertOperation.Store(document, metadata, id);
+								totalCount++;
+
+								if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+								{
+									ShowProgress("Exported {0} documents", totalCount);
+									lastReport = SystemTime.UtcNow;
+								}
+							}
 								catch (Exception e)
 								{
 									if (databaseOptions.ShouldLogErrorsAndContinue)
@@ -353,10 +364,10 @@ namespace Raven.Smuggler
 										var message = "Failed to smuggle a document " + document;
 										log.ErrorException(message, e);
 										ShowProgress(message);
-									}
+						}
 									else 
 										throw;
-								}
+					}
 							}
 						}
 					}
@@ -383,9 +394,7 @@ namespace Raven.Smuggler
 										var metadata = document.Value<RavenJObject>("@metadata");
 										var id = metadata.Value<string>("@id");
 										var etag = Etag.Parse(metadata.Value<string>("@etag"));
-										document.Remove("@metadata");
-										metadata.Remove("@id");
-										metadata.Remove("@etag");
+										lastEtag = etag;
 
 										if (!databaseOptions.MatchFilters(document))
 											continue;
@@ -396,11 +405,17 @@ namespace Raven.Smuggler
 											document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 										if (databaseOptions.ShouldDisableVersioningBundle)
-											document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
+											document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+
+										document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+
+										document.Remove("@metadata");
+										metadata.Remove("@id");
+										metadata.Remove("@etag");
 
 										try
 										{
-											bulkInsertOperation.Store(document, metadata, id);
+										bulkInsertOperation.Store(document, metadata, id);
 										}
 										catch (Exception e)
 										{
@@ -420,7 +435,6 @@ namespace Raven.Smuggler
 											ShowProgress("Exported {0} documents", totalCount);
 											lastReport = SystemTime.UtcNow;
 										}
-										lastEtag = etag;
 									}
 									break;
 								}
@@ -443,6 +457,24 @@ namespace Raven.Smuggler
 							exportStore.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
 						}
 					}
+
+					// Load HiLo documents for selected collections
+					databaseOptions.Filters.ForEach(filter =>
+					{
+						if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+						{
+							filter.Values.ForEach(async collectionName =>
+							{
+								var doc = await exportStore.AsyncDatabaseCommands.GetAsync("Raven/Hilo/" + collectionName).ConfigureAwait(false);
+								if (doc == null)
+									return;
+
+								doc.Metadata["@id"] = doc.Key;
+								bulkInsertOperation.Store(doc.DataAsJson, doc.Metadata, doc.Key);
+								totalCount++;
+							});
+						}
+					});
 
 					// In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
 					// but we still need to continue until we finish all the docs.
@@ -539,9 +571,9 @@ namespace Raven.Smuggler
 
 					try
 					{
-						var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-						await importStore.AsyncDatabaseCommands.PutAttachmentAsync(attachment.Key, null, attachment.Data(), attachment.Metadata);
-					}
+					var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+					await importStore.AsyncDatabaseCommands.PutAttachmentAsync(attachment.Key, null, attachment.Data(), attachment.Metadata);
+				}
 					catch (Exception e)
 					{
 						if (databaseOptions.ShouldLogErrorsAndContinue)
@@ -600,9 +632,9 @@ namespace Raven.Smuggler
 				{
 					try
 					{
-						var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
-						ShowProgress("Successfully PUT transformer '{0}'", transformerName);
-					}
+					var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
+					ShowProgress("Successfully PUT transformer '{0}'", transformerName);
+				}
 					catch (Exception e)
 					{
 						if (databaseOptions.ShouldLogErrorsAndContinue)
@@ -610,9 +642,9 @@ namespace Raven.Smuggler
 							var message = "Failed PUT of an transformer " + transformer.Name;
 							log.ErrorException(message, e);
 							ShowProgress(message);
-						}
+			}
 						else throw;
-					}
+		}
 
 				}
 			}
@@ -706,12 +738,5 @@ namespace Raven.Smuggler
 
 			return metadata;
 		}
-
-		public static RavenJToken DisableVersioning(RavenJObject metadata)
-		{
-			metadata.Add(Constants.RavenIgnoreVersioning, true);
-
-			return metadata;
 		}
 	}
-}

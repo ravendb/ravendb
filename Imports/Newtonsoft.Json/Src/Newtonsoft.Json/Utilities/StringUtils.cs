@@ -37,165 +37,175 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
-  internal static class StringUtils
-  {
-    public const string CarriageReturnLineFeed = "\r\n";
-    public const string Empty = "";
-    public const char CarriageReturn = '\r';
-    public const char LineFeed = '\n';
-    public const char Tab = '\t';
-
-    public static string FormatWith(this string format, IFormatProvider provider, object arg0)
+    internal static class StringUtils
     {
-      return format.FormatWith(provider, new[] { arg0 });
-    }
+        public const string CarriageReturnLineFeed = "\r\n";
+        public const string Empty = "";
+        public const char CarriageReturn = '\r';
+        public const char LineFeed = '\n';
+        public const char Tab = '\t';
 
-    public static string FormatWith(this string format, IFormatProvider provider, object arg0, object arg1)
-    {
-      return format.FormatWith(provider, new[] { arg0, arg1 });
-    }
-
-    public static string FormatWith(this string format, IFormatProvider provider, object arg0, object arg1, object arg2)
-    {
-      return format.FormatWith(provider, new[] { arg0, arg1, arg2 });
-    }
-
-    public static string FormatWith(this string format, IFormatProvider provider, params object[] args)
-    {
-      ValidationUtils.ArgumentNotNull(format, "format");
-
-      return string.Format(provider, format, args);
-    }
-
-    /// <summary>
-    /// Determines whether the string is all white space. Empty string will return false.
-    /// </summary>
-    /// <param name="s">The string to test whether it is all white space.</param>
-    /// <returns>
-    /// 	<c>true</c> if the string is all white space; otherwise, <c>false</c>.
-    /// </returns>
-    public static bool IsWhiteSpace(string s)
-    {
-      if (s == null)
-        throw new ArgumentNullException("s");
-
-      if (s.Length == 0)
-        return false;
-
-      for (int i = 0; i < s.Length; i++)
-      {
-        if (!char.IsWhiteSpace(s[i]))
-          return false;
-      }
-
-      return true;
-    }
-
-    /// <summary>
-    /// Nulls an empty string.
-    /// </summary>
-    /// <param name="s">The string.</param>
-    /// <returns>Null if the string was null, otherwise the string unchanged.</returns>
-    public static string NullEmptyString(string s)
-    {
-      return (string.IsNullOrEmpty(s)) ? null : s;
-    }
-
-    public static StringWriter CreateStringWriter(int capacity)
-    {
-      StringBuilder sb = new StringBuilder(capacity);
-      StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
-
-      return sw;
-    }
-
-    public static int? GetLength(string value)
-    {
-      if (value == null)
-        return null;
-      else
-        return value.Length;
-    }
-
-    public static void ToCharAsUnicode(char c, char[] buffer)
-    {
-      buffer[0] = '\\';
-      buffer[1] = 'u';
-      buffer[2] = MathUtils.IntToHex((c >> 12) & '\x000f');
-      buffer[3] = MathUtils.IntToHex((c >> 8) & '\x000f');
-      buffer[4] = MathUtils.IntToHex((c >> 4) & '\x000f');
-      buffer[5] = MathUtils.IntToHex(c & '\x000f');
-    }
-
-    public static TSource ForgivingCaseSensitiveFind<TSource>(this IEnumerable<TSource> source, Func<TSource, string> valueSelector, string testValue)
-    {
-      if (source == null)
-        throw new ArgumentNullException("source");
-      if (valueSelector == null)
-        throw new ArgumentNullException("valueSelector");
-
-      var caseInsensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.OrdinalIgnoreCase));
-      if (caseInsensitiveResults.Count() <= 1)
-      {
-        return caseInsensitiveResults.SingleOrDefault();
-      }
-      else
-      {
-        // multiple results returned. now filter using case sensitivity
-        var caseSensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.Ordinal));
-        return caseSensitiveResults.SingleOrDefault();
-      }
-    }
-
-    public static string ToCamelCase(string s)
-    {
-      if (string.IsNullOrEmpty(s))
-        return s;
-
-      if (!char.IsUpper(s[0]))
-        return s;
-
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < s.Length; i++)
-      {
-        bool hasNext = (i + 1 < s.Length);
-        if ((i == 0 || !hasNext) || char.IsUpper(s[i + 1]))
+        public static string FormatWith(this string format, IFormatProvider provider, object arg0)
         {
-          char lowerCase;
+            return format.FormatWith(provider, new[] { arg0 });
+        }
+
+        public static string FormatWith(this string format, IFormatProvider provider, object arg0, object arg1)
+        {
+            return format.FormatWith(provider, new[] { arg0, arg1 });
+        }
+
+        public static string FormatWith(this string format, IFormatProvider provider, object arg0, object arg1, object arg2)
+        {
+            return format.FormatWith(provider, new[] { arg0, arg1, arg2 });
+        }
+
+        public static string FormatWith(this string format, IFormatProvider provider, object arg0, object arg1, object arg2, object arg3)
+        {
+            return format.FormatWith(provider, new[] { arg0, arg1, arg2, arg3 });
+        }
+
+        private static string FormatWith(this string format, IFormatProvider provider, params object[] args)
+        {
+            // leave this a private to force code to use an explicit overload
+            // avoids stack memory being reserved for the object array
+            ValidationUtils.ArgumentNotNull(format, "format");
+
+            return string.Format(provider, format, args);
+        }
+
+        /// <summary>
+        /// Determines whether the string is all white space. Empty string will return false.
+        /// </summary>
+        /// <param name="s">The string to test whether it is all white space.</param>
+        /// <returns>
+        /// 	<c>true</c> if the string is all white space; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsWhiteSpace(string s)
+        {
+            if (s == null)
+                throw new ArgumentNullException("s");
+
+            if (s.Length == 0)
+                return false;
+
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (!char.IsWhiteSpace(s[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Nulls an empty string.
+        /// </summary>
+        /// <param name="s">The string.</param>
+        /// <returns>Null if the string was null, otherwise the string unchanged.</returns>
+        public static string NullEmptyString(string s)
+        {
+            return (string.IsNullOrEmpty(s)) ? null : s;
+        }
+
+        public static StringWriter CreateStringWriter(int capacity)
+        {
+            StringBuilder sb = new StringBuilder(capacity);
+            StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
+
+            return sw;
+        }
+
+        public static int? GetLength(string value)
+        {
+            if (value == null)
+                return null;
+            else
+                return value.Length;
+        }
+
+        public static void ToCharAsUnicode(char c, char[] buffer)
+        {
+            buffer[0] = '\\';
+            buffer[1] = 'u';
+            buffer[2] = MathUtils.IntToHex((c >> 12) & '\x000f');
+            buffer[3] = MathUtils.IntToHex((c >> 8) & '\x000f');
+            buffer[4] = MathUtils.IntToHex((c >> 4) & '\x000f');
+            buffer[5] = MathUtils.IntToHex(c & '\x000f');
+        }
+
+        public static TSource ForgivingCaseSensitiveFind<TSource>(this IEnumerable<TSource> source, Func<TSource, string> valueSelector, string testValue)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+            if (valueSelector == null)
+                throw new ArgumentNullException("valueSelector");
+
+            var caseInsensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.OrdinalIgnoreCase));
+            if (caseInsensitiveResults.Count() <= 1)
+            {
+                return caseInsensitiveResults.SingleOrDefault();
+            }
+            else
+            {
+                // multiple results returned. now filter using case sensitivity
+                var caseSensitiveResults = source.Where(s => string.Equals(valueSelector(s), testValue, StringComparison.Ordinal));
+                return caseSensitiveResults.SingleOrDefault();
+            }
+        }
+
+        public static string ToCamelCase(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return s;
+
+            if (!char.IsUpper(s[0]))
+                return s;
+
+            char[] chars = s.ToCharArray();
+
+            for (int i = 0; i < chars.Length; i++)
+            {
+                bool hasNext = (i + 1 < chars.Length);
+                if (i > 0 && hasNext && !char.IsUpper(chars[i + 1]))
+                    break;
+
 #if !(NETFX_CORE || PORTABLE)
-          lowerCase = char.ToLower(s[i], CultureInfo.InvariantCulture);
+                chars[i] = char.ToLower(chars[i], CultureInfo.InvariantCulture);
 #else
-          lowerCase = char.ToLower(s[i]);
+                chars[i] = char.ToLowerInvariant(chars[i]);
 #endif
+            }
 
-          sb.Append(lowerCase);
+            return new string(chars);
         }
-        else
+
+        public static bool IsHighSurrogate(char c)
         {
-          sb.Append(s.Substring(i));
-          break;
+#if !(PORTABLE40 || PORTABLE)
+            return char.IsHighSurrogate(c);
+#else
+            return (c >= 55296 && c <= 56319);
+#endif
         }
-      }
 
-      return sb.ToString();
-    }
-
-    public static bool IsHighSurrogate(char c)
-    {
-#if !(SILVERLIGHT || PORTABLE40 || PORTABLE)
-      return char.IsHighSurrogate(c);
+        public static bool IsLowSurrogate(char c)
+        {
+#if !(PORTABLE40 || PORTABLE)
+            return char.IsLowSurrogate(c);
 #else
-      return (c >= 55296 && c <= 56319);
+            return (c >= 56320 && c <= 57343);
 #endif
-    }
+        }
 
-    public static bool IsLowSurrogate(char c)
-    {
-#if !(SILVERLIGHT || PORTABLE40 || PORTABLE)
-      return char.IsLowSurrogate(c);
-#else
-      return (c >= 56320 && c <= 57343);
-#endif
+        public static bool StartsWith(this string source, char value)
+        {
+            return (source.Length > 0 && source[0] == value);
+        }
+
+        public static bool EndsWith(this string source, char value)
+        {
+            return (source.Length > 0 && source[source.Length - 1] == value);
+        }
     }
-  }
 }

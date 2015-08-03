@@ -87,3 +87,5 @@ Tools/Raven.Filesystem.CreateSample/packages/
 RavenDB.sln.ide/
 /Raven.Web/Raven/CompiledIndexCache
 _NCrunch_RavenDB/
+/Raven.Tests.Web/CompiledIndexCache
+.vs/

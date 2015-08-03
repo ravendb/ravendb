@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldNotThrowAccessViolation()
 		{
 			var trees = CreateTrees(Env, 1, "tree");

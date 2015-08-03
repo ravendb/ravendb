@@ -19,22 +19,19 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     watchedResourceMode = ko.observable("SingleResourceView");
     resourceName = ko.observable<string>('');
     lastSearchedwatchedResourceName = ko.observable<string>();
-    isAutoCompleteVisible: KnockoutComputed<boolean>;
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
     allResources = ko.observableArray<resource>([]);
     nameCustomValidityError: KnockoutComputed<string>;
+    searchResults: KnockoutComputed<Array<string>>;
+    resourcesNames = ko.observableArray<string>([]);
 
     constructor() {
         super();
-        this.resourceName.throttle(250).subscribe(search => this.fetchResourcesAutocompletes(search));
-        this.isAutoCompleteVisible = ko.computed(() => {
-            return this.lastSearchedwatchedResourceName() !== this.resourceName() &&
-                (this.resourceAutocompletes().length > 1 || this.resourceAutocompletes().length == 1 && this.resourceName() !== this.resourceAutocompletes()[0]);
-        });
-
-        $(window).resize(() => {
-            this.alignBoxVertically();
+        this.resourcesNames(shell.getResoucresNames());
+        this.searchResults = ko.computed(() => {
+            var newResourceName = this.resourceName();
+            return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {

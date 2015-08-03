@@ -1,34 +1,27 @@
 using System;
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+
+using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {
 	public class ConnectionState
 	{
-		private readonly ConcurrentSet<string> matchingIndexes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingIndexes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocuments = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentsInCollection = 	new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentsOfType = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingBulkInserts = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingDocumentsInCollection =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingDocumentsOfType =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingBulkInserts =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private readonly ConcurrentSet<string> matchingFolders =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<long> matchingDataSubscriptions =
+			new ConcurrentSet<long>();
 
 		private IEventsTransport eventsTransport;
 
@@ -36,10 +29,10 @@ namespace Raven.Database.Server.Connections
 		private int watchAllIndexes;
 	    private int watchAllTransformers;
 		private int watchAllReplicationConflicts;
-		private int watchCancellations;
 		private int watchConfig;
 		private int watchConflicts;
 		private int watchSync;
+		private int watchAllDataSubscriptions;
 
 		public ConnectionState(IEventsTransport eventsTransport)
 		{
@@ -54,13 +47,13 @@ namespace Raven.Database.Server.Connections
 				{
 					eventsTransport.Id,
 					eventsTransport.Connected,
+					eventsTransport.Age,
 					WatchAllDocuments = watchAllDocuments > 0,
 					WatchAllIndexes = watchAllIndexes > 0,
                     WatchAllTransformers = watchAllTransformers > 0,
 					WatchConfig = watchConfig > 0,
 					WatchConflicts = watchConflicts > 0,
 					WatchSync = watchSync > 0,
-					WatchCancellations = watchCancellations > 0,
 					WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
 					WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
 					WatchIndexes = matchingIndexes.ToArray(),
@@ -138,16 +131,6 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchFolder(string folder)
 		{
 			matchingFolders.TryRemove(folder);
-		}
-
-		public void WatchCancellations()
-		{
-			Interlocked.Increment(ref watchCancellations);
-		}
-
-		public void UnwatchCancellations()
-		{
-			Interlocked.Decrement(ref watchCancellations);
 		}
 
 		public void WatchConfig()
@@ -248,6 +231,20 @@ namespace Raven.Database.Server.Connections
 			}
 
 			Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
+		}
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			if (watchAllDataSubscriptions > 0)
+			{
+				Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
+				return;
+			}
+
+			if (matchingDataSubscriptions.Contains(dataSubscriptionChangeNotification.Id) == false)
+				return;
+
+			Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
 		}
 
 		public void Send(Notification notification)
@@ -355,6 +352,26 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchAllReplicationConflicts()
 		{
 			Interlocked.Decrement(ref watchAllReplicationConflicts);
+		}
+
+		public void WatchAllDataSubscriptions()
+		{
+			Interlocked.Increment(ref watchAllDataSubscriptions);
+		}
+
+		public void UnwatchAllDataSubscriptions()
+		{
+			Interlocked.Decrement(ref watchAllDataSubscriptions);
+		}
+
+		public void WatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryAdd(id);
+		}
+
+		public void UnwatchDataSubscription(long id)
+		{
+			matchingDataSubscriptions.TryRemove(id);
 		}
 
 		public void Reconnect(IEventsTransport transport)

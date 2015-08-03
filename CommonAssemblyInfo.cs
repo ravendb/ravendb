@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2.13. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
+[assembly: CLSCompliant(false)]
 
 [assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("3.0.0")]
@@ -16,7 +17,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
-[assembly: CLSCompliant(true)]
 [assembly: SuppressIldasm()]
 
 #if DEBUG

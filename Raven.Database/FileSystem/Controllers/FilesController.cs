@@ -21,6 +21,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -176,7 +177,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}
 			});
 
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -222,7 +223,7 @@ namespace Raven.Database.FileSystem.Controllers
 				Historian.Update(name, metadata);
 				Files.UpdateMetadata(name, metadata, etag);
 
-				Synchronizations.StartSynchronizeDestinationsInBackground();
+				SynchronizationTask.Context.NotifyAboutWork();
 			});
 
 			//Hack needed by jquery on the client side. We need to find a better solution for this
@@ -236,6 +237,12 @@ namespace Raven.Database.FileSystem.Controllers
             name = FileHeader.Canonize(name);
             rename = FileHeader.Canonize(rename);
 		    var etag = GetEtag();
+
+		    if (rename.Length > SystemParameters.KeyMost)
+		    {
+				Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
+				return GetMessageWithString(string.Format("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename),HttpStatusCode.BadRequest);
+		    }
 
 			Storage.Batch(accessor =>
 			{
@@ -276,7 +283,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
-			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -287,6 +294,12 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			var etag = GetEtag();
+
+			if (name.Length > SystemParameters.KeyMost)
+			{
+				Log.Debug("File '{0}' was not created due to illegal name length", name);
+				return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
+			}
 
 			var options = new FileActions.PutOperationOptions();
 
@@ -304,7 +317,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
 
-			Synchronizations.StartSynchronizeDestinationsInBackground();
+			SynchronizationTask.Context.NotifyAboutWork();
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}

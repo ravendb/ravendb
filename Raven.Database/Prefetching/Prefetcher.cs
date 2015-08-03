@@ -6,13 +6,14 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Config;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
 	using System.Linq;
 
-	public class Prefetcher
+	public class Prefetcher : ILowMemoryHandler
 	{
 		private readonly WorkContext workContext;
 		private List<PrefetchingBehavior> prefetchingBehaviors = new List<PrefetchingBehavior>();
@@ -20,14 +21,14 @@ namespace Raven.Database.Prefetching
 		public Prefetcher(WorkContext workContext)
 		{
 			this.workContext = workContext;
-			RavenGC.Register(ClearPrefetchingBehaviors);
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
-		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
+		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
 		{
 			lock (this)
 			{
-				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
+				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription);
 
 				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
 				{
@@ -59,14 +60,6 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public void AfterUpdate(string key, Etag etagBeforeUpdate)
-		{
-			foreach (var behavior in prefetchingBehaviors)
-			{
-				behavior.AfterUpdate(key, etagBeforeUpdate);
-			}
-		}
-
 		public int[] GetInMemoryIndexingQueueSizes(PrefetchingUser user)
 		{
 			return prefetchingBehaviors.Where(x => x.PrefetchingUser == user).Select(value => value.InMemoryIndexingQueueSize).ToArray();
@@ -82,20 +75,34 @@ namespace Raven.Database.Prefetching
 
 		public void Dispose()
 		{
-			RavenGC.Unregister(ClearPrefetchingBehaviors);
-
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.Dispose();
 			}
 		}
 
-		public void ClearPrefetchingBehaviors()
+		public void HandleLowMemory()
 		{
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.ClearQueueAndFutureBatches();
 			}
+		}
+
+		public void SoftMemoryRelease()
+		{
+			
+		}
+
+		// todo: consider removing ILowMemoryHandler implementation, because the prefetching behaviors already implement it
+		public LowMemoryHandlerStatistics GetStats()
+		{
+			return new LowMemoryHandlerStatistics()
+			{
+				Name = "Prefetcher",
+				DatabaseName = workContext.DatabaseName,
+				EstimatedUsedMemory = 0
+			};
 		}
 	}
 }

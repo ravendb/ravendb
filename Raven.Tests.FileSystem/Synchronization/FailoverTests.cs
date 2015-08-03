@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Raven.Tests.Helpers;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.FileSystem.Extensions;
-using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {

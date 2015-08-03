@@ -6,10 +6,11 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
-	/// <summary>
+    /// <summary>
 	///     A query against a Raven index
 	/// </summary>
 	public interface IDocumentQueryBase<T, out TSelf>
@@ -51,6 +52,12 @@ namespace Raven.Client
 		///     Callback to get the results of the query
 		/// </summary>
 		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+
+
+		/// <summary>
+		///     Callback to get the results of the stream
+		/// </summary>
+        void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
 
 		/// <summary>
 		///     Add an AND to the query
@@ -259,6 +266,11 @@ If you really want to do in memory filtering on the data returned from the query
 		///     Called externally to raise the after query executed callback
 		/// </summary>
 		void InvokeAfterQueryExecuted(QueryResult result);
+
+		/// <summary>
+		///     Called externally to raise the after query executed callback
+		/// </summary>
+		void InvokeAfterStreamExecuted(ref RavenJObject result);
 
 		/// <summary>
 		///     Negate the next operation
@@ -508,7 +520,7 @@ If you really want to do in memory filtering on the data returned from the query
 		///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
 		///     <para>etag belong to is actually considered for the results. </para>
 		///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-		///     <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+		///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
 		///     <para>considered to be an acceptable tradeoff.</para>
 		///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
 		///     <para>use the Cutoff date option, instead.</para>
