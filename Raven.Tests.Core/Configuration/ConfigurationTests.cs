@@ -149,11 +149,11 @@ namespace Raven.Tests.Core.Configuration
             }
             else
             {
-                Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
-                Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
+			Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
 				Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
 				Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
-            }
+		}
 		}
 
 		[Fact]
@@ -214,6 +214,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
 
             configurationComparer.Assert(expected => expected.Indexing.DisableIndexingFreeSpaceThreshold.Value, actual => actual.Indexing.DisableIndexingFreeSpaceThreshold);
+			configurationComparer.Assert(expected => expected.Indexing.DisableMapReduceInMemoryTracking.Value, actual => actual.Indexing.DisableMapReduceInMemoryTracking);
 			
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Port.Value, actual => actual.Monitoring.Snmp.Port);
 			configurationComparer.Assert(expected => expected.Monitoring.Snmp.Community.Value, actual => actual.Monitoring.Snmp.Community);

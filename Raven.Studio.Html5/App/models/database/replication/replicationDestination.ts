@@ -106,6 +106,8 @@ class replicationDestination {
             this.isApiKeyCredentials(true);
         }
 
+        this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
+
         this.hasGlobal(dto.HasGlobal);
         this.hasLocal(dto.HasLocal);
         for (var collection in dto.TransformScripts) {

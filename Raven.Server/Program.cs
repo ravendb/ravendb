@@ -161,6 +161,7 @@ namespace Raven.Server
 			int? restoreStartTimeout = 15;
 
 			var optionSet = new OptionSet();
+			optionSet.OnWarning += s => ConsoleWriteLineWithColor(ConsoleColor.Yellow, s);
 			optionSet.Add("set={==}", OptionCategory.None, "The configuration {0:option} to set to the specified {1:value}", (key, value) =>
 			{
 				ravenConfiguration.Settings[key] = value;

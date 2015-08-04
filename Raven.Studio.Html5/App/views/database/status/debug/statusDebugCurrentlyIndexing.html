@@ -1,5 +1,5 @@
 ﻿<section>
-    <button id="refresh-btn" class="btn" data-bind="css: { active: autoRefresh }, click: toggleAutoRefresh"><i class="fa fa-refresh"></i> Autorefresh</button>
+	<button id="refresh-btn" class="btn" data-bind="css: { active: autoRefresh }, click: toggleAutoRefresh"><i class="fa fa-refresh"></i> Autorefresh</button>
 
     <form class="form-horizontal" role="form" data-bind="with: data">
         <div class="form-group">
@@ -18,8 +18,8 @@
         <div class="form-group">
             <label class="col-md-4 control-label">Is map/reduce?</label>
             <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: IsMapReduce"></p>
-            </div>
+		        <p class="form-control-static" data-bind="text: IsMapReduce"></p>
+	        </div>
         </div>
         <!-- ko foreach:CurrentOperations-->
         <div class="form-group">

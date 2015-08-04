@@ -7,6 +7,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Migration.MigrationTasks;
+using Raven.Smuggler.Helpers;
 
 namespace Raven.Migration
 {
@@ -23,39 +24,40 @@ namespace Raven.Migration
 		public Program()
 		{
 			optionSet = new OptionSet();
-			optionSet.Add("fs-server:", OptionCategory.RestoreFileSystem, "The url of the RavenDB instance where attachments will be copied to the specified file system", value =>
+			optionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+			optionSet.Add("fs-server:", OptionCategory.None, "The url of the RavenDB instance where attachments will be copied to the specified file system", value =>
 			{
 				use2NdConnection = true;
 				fsConnectionStringOptions.Url = value;
 			});
-			optionSet.Add("d|database:", OptionCategory.RestoreDatabase, "The database to operate on. If no specified, the operations will be on the default database.", value => dbConnectionStringOptions.DefaultDatabase = value);
-			optionSet.Add("fs|filesystem:", OptionCategory.RestoreFileSystem, "The file system to export to.", value => fileSystemName = value);
+			optionSet.Add("d|database:", OptionCategory.None, "The database to operate on. If no specified, the operations will be on the default database.", value => dbConnectionStringOptions.DefaultDatabase = value);
+			optionSet.Add("fs|filesystem:", OptionCategory.None, "The file system to export to.", value => fileSystemName = value);
 			optionSet.Add("u|user|username:", OptionCategory.None, "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).UserName = value);
 			optionSet.Add("u2|user2|username2:", OptionCategory.None, "The username to use when the file system requires the client to authenticate.", value =>
 			{
 				use2NdConnection = true;
 				((NetworkCredential)fsConnectionStringOptions.Credentials).UserName = value;
 			});
-			optionSet.Add("db-pass|db-password:", OptionCategory.RestoreDatabase, "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).Password = value);
-			optionSet.Add("fs-pass|fs-password:", OptionCategory.RestoreFileSystem, "The password to use when the file system requires the client to authenticate.", value =>
+			optionSet.Add("db-pass|db-password:", OptionCategory.None, "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).Password = value);
+			optionSet.Add("fs-pass|fs-password:", OptionCategory.None, "The password to use when the file system requires the client to authenticate.", value =>
 			{
 				use2NdConnection = true;
 				((NetworkCredential)fsConnectionStringOptions.Credentials).Password = value;
 			});
-			optionSet.Add("db-domain:", OptionCategory.RestoreDatabase, "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).Domain = value);
-			optionSet.Add("fs-domain:", OptionCategory.RestoreFileSystem, "The domain to use when the file system requires the client to authenticate.", value =>
+			optionSet.Add("db-domain:", OptionCategory.None, "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).Domain = value);
+			optionSet.Add("fs-domain:", OptionCategory.None, "The domain to use when the file system requires the client to authenticate.", value =>
 			{
 				use2NdConnection = true;
 				((NetworkCredential)fsConnectionStringOptions.Credentials).Domain = value;
 			});
-			optionSet.Add("db-key|db-api-key|db-apikey:", OptionCategory.RestoreDatabase, "The API-key to use if the database requires OAuth authentication.", value => dbConnectionStringOptions.ApiKey = value);
-			optionSet.Add("fs-key|fs-api-key|fs-apikey:", OptionCategory.RestoreFileSystem, "The API-key to use if the file system requires OAuth authentication.", value =>
+			optionSet.Add("db-key|db-api-key|db-apikey:", OptionCategory.None, "The API-key to use if the database requires OAuth authentication.", value => dbConnectionStringOptions.ApiKey = value);
+			optionSet.Add("fs-key|fs-api-key|fs-apikey:", OptionCategory.None, "The API-key to use if the file system requires OAuth authentication.", value =>
 			{
 				use2NdConnection = true;
 				fsConnectionStringOptions.ApiKey = value;
 			});
 			optionSet.Add("bs|batch-size:", OptionCategory.None, "Batch size for downloading attachments at once and uploading one-by-one to the file system. Default: 128.", value => batchSize = int.Parse(value));
-			optionSet.Add("delete-copied-attachments", OptionCategory.RestoreDatabase, "Delete an attachment after uploading it to the file system.", v => deleteCopiedAttachments = true);
+			optionSet.Add("delete-copied-attachments", OptionCategory.None, "Delete an attachment after uploading it to the file system.", v => deleteCopiedAttachments = true);
 			optionSet.Add("h|?|help", OptionCategory.Help, string.Empty, v => PrintUsageAndExit(0));
 		}
 

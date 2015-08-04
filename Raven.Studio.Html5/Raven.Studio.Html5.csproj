@@ -213,6 +213,7 @@
     <Content Include="Content\bootstrap-datetimepicker.min.css" />
     <Content Include="Content\bootstrap-multiselect.css" />
     <Content Include="Content\bootstrap-select.css" />
+    <Content Include="Content\animate.min.css" />
     <Content Include="Content\bootstrap-select.min.css" />
     <Content Include="Content\bootstrap.css">
       <DependentUpon>bootstrap.less</DependentUpon>
@@ -457,6 +458,7 @@
     <Content Include="Scripts\almond-custom.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
+    <Content Include="Scripts\spin.min.js" />
     <Content Include="Scripts\bootstrap-multiselect.js" />
     <Content Include="Scripts\bootstrap-select.js" />
     <Content Include="Scripts\bootstrap-select.min.js" />
@@ -476,6 +478,10 @@
     <Content Include="Scripts\durandal\plugins\serializer.js" />
     <Content Include="Scripts\durandal\plugins\widget.js" />
     <Content Include="Scripts\durandal\system.js" />
+    <Content Include="Scripts\durandal\transitions\fadeIn.js" />
+    <Content Include="Scripts\durandal\transitions\fadeInVerticalDown.js" />
+    <Content Include="Scripts\durandal\transitions\transitionHelper.js" />
+    <Content Include="Scripts\durandal\transitions\entrance.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Content\less\bootstrap-datetimepicker-build.less" />

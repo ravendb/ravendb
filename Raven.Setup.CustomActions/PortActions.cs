@@ -10,8 +10,27 @@ using Microsoft.Deployment.WindowsInstaller;
 
 namespace Raven.Setup.CustomActions
 {
-	public class ServiceActions
+	using Database.Server;
+
+	public class PortActions
 	{
+		[CustomAction]
+		public static ActionResult TryRevokePortReservation(Session session)
+		{
+			try
+			{
+				var portPropertyName = session["RAVEN_INSTALLATION_TYPE"].Equals("SERVICE") ? "SERVICE_PORT" : "WEBSITE_PORT";
+
+				NonAdminHttp.TryUnregisterHttpPort(int.Parse(session[portPropertyName]), useSsl: false, hideWindow: true);
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during TryRevokePortReservation. Exception: " + ex);
+				return ActionResult.Success;
+			}
+			return ActionResult.Success;
+		}
+
 		[CustomAction]
 		public static ActionResult CheckPortAvailability(Session session)
 		{
@@ -19,7 +38,9 @@ namespace Raven.Setup.CustomActions
 			{
 				int port;
 
-				if (int.TryParse(session["SERVICE_PORT"], out port))
+				var portPropertyName = session["RAVEN_INSTALLATION_TYPE"].Equals("SERVICE") ? "SERVICE_PORT" : "WEBSITE_PORT";
+
+				if (int.TryParse(session[portPropertyName], out port))
 				{
 					var activeTcpListeners = IPGlobalProperties
 					.GetIPGlobalProperties()

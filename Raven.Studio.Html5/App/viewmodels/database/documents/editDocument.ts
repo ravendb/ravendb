@@ -290,6 +290,7 @@ class editDocument extends viewModelBase {
 
     // Called when the view is attached to the DOM.
     attached() {
+		super.attached();
         this.setupKeyboardShortcuts();
         $("#docEditor").resize();
         this.isNewLineFriendlyMode.subscribe(val => {

@@ -152,6 +152,7 @@
     <Compile Include="Issues\RavenDB_3268_ConcurrencyChecks.cs" />
     <Compile Include="Issues\RavenDB_3499.cs" />
     <Compile Include="Issues\RavenDB_3692.cs" />
+    <Compile Include="Issues\RavenDB_3742.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
     <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />
@@ -227,6 +228,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
+      <Project>{DBB6561C-6264-430D-8F3C-E11C6268981E}</Project>
+      <Name>Raven.Backup</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
