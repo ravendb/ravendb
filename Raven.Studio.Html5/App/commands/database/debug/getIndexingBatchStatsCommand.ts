@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 
 class getIndexingBatchStatsCommand extends commandBase {
 
-    constructor(private db: database, private lastId: number) {
+    constructor(private db: database, private lastId: number = 0) {
         super();
     }
 
