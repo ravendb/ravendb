@@ -16,7 +16,7 @@ namespace Raven.Monitor
 
 		public int ProcessId { get; set; }
 
-		public string OutputPath { get; set; }
+		public string ServerUrl { get; set; }
 
 		public IoOptions IoOptions { get; private set; }
 	}
