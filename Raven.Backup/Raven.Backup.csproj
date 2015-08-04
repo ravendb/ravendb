@@ -87,6 +87,9 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>Options.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Smuggler\Helpers\ConsoleHelper.cs">
+      <Link>Imports\ConsoleHelper.cs</Link>
+    </Compile>
     <Compile Include="AbstractBackupOperation.cs" />
     <Compile Include="FilesystemBackupOperation.cs" />
     <Compile Include="DatabaseBackupOperation.cs" />

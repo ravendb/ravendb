@@ -540,7 +540,7 @@ If you really want to do in memory filtering on the data returned from the query
 		///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
 		///     <para>etag belong to is actually considered for the results. </para>
 		///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-		///     <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+		///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
 		///     <para>considered to be an acceptable tradeoff.</para>
 		///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
 		///     <para>use the Cutoff date option, instead.</para>

@@ -85,10 +85,10 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(storeA);
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
+                WaitForReplication(storeB, session => session.Load<Foo>("foo/1").Data == "ChangedFooData");
+                WaitForReplication(storeB, session => session.Load<Bar>("bar/1").Data == "ChangedBarData");
 
-				using (var session = storeB.OpenSession())
+                using (var session = storeB.OpenSession())
 				{
 					var foo = session.Load<Foo>("foo/1");
 					Assert.Equal("ChangedFooData", foo.Data);
@@ -145,10 +145,9 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(storeA);
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
-
-				using (var session = storeB.OpenSession())
+                WaitForReplication(storeB, session => session.Load<Foo>("foo/1").Data == "ChangedFooData");
+                WaitForReplication(storeB, session => session.Load<Bar>("bar/1").Data == "ChangedBarData");
+                using (var session = storeB.OpenSession())
 				{
 					var foo = session.Load<Foo>("foo/1");
 					Assert.Equal("ChangedFooData", foo.Data);

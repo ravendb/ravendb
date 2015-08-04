@@ -6,6 +6,7 @@ using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
+using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Json.Linq;
@@ -114,11 +115,18 @@ namespace Raven.Tests.Bundles.Expiration
 				session.Store(child1, "childId1");
 				session.Store(child2, "childId2");
 				session.Advanced.GetMetadataFor(parent)["Raven-Cascade-Delete-Documents"] = RavenJToken.FromObject(new[] { "childId1", "childId2" });
-				session.Advanced.GetMetadataFor(parent)["Raven-Expiration-Date"] = new RavenJValue(DateTime.UtcNow.AddSeconds(4));
+				session.Advanced.GetMetadataFor(parent)["Raven-Expiration-Date"] = new RavenJValue(DateTime.UtcNow.AddSeconds(-4));
 				session.SaveChanges();
 			}
 
-			Thread.Sleep(5000);
+            WaitForIndexing(database);
+
+			var expiredDocumentsCleaner = ravenDbServer.SystemDatabase.StartupTasks.OfType<ExpiredDocumentsCleaner>().First();
+			while (expiredDocumentsCleaner.TimerCallback() == false)
+			{
+				Thread.Sleep(100);
+			}
+
             using (var session = documentStore.OpenSession())
 			{
 				var list = session.Query<Foo>().ToList();

@@ -8,6 +8,7 @@ using System.Net;
 using System.Security.Policy;
 using NDesk.Options;
 using Raven.Abstractions.Data;
+using Raven.Smuggler.Helpers;
 
 namespace TrafficRecorder
 {
@@ -73,7 +74,7 @@ namespace TrafficRecorder
 		public static OptionSet InitOptionsSetObject(TrafficToolConfiguration config = null)
 		{
 			var options = new OptionSet();
-
+			options.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			options.Add("traceSeconds:", OptionCategory.TrafficRecordReplay, "Time to perform the traffic watch(seconds)", x =>
 			{
 				var durationConstraint = Int32.Parse(x);

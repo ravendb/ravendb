@@ -83,7 +83,7 @@ namespace Raven.Database.Config
 
 			MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
+				Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
 
 			LowMemoryLimitForLinuxDetectionInMB = 
 				new IntegerSetting(settings[Constants.LowMemoryLimitForLinuxDetectionInMB],
@@ -264,6 +264,7 @@ namespace Raven.Database.Config
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
 			Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
+			Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
 			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 512);
 			Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
@@ -491,6 +492,7 @@ namespace Raven.Database.Config
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 
 			public IntegerSetting DisableIndexingFreeSpaceThreshold { get; set; }
+			public BooleanSetting DisableMapReduceInMemoryTracking { get; set; }
 			public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
 			public BooleanSetting UseLuceneASTParser { get; set; }
 		}

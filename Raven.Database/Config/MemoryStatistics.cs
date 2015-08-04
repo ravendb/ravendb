@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Unix.Native;
 
 using Sparrow.Collections;
+using Voron;
 
 namespace Raven.Database.Config
 {
@@ -93,8 +94,13 @@ namespace Raven.Database.Config
                         case 0: // lowMemoryNotificationHandle
 						log.Warn ("Low memory detected, will try to reduce memory usage...");
 
-						RunLowMemoryHandlers ();
-						break;
+                            RunLowMemoryHandlers();
+							// prevent triggering the event too frequent when the low memory notification object 
+							// is in the signaled state
+							waitForResult = WaitForMultipleObjects(2,
+                                new[] { appDomainUnloadEvent, LowMemorySimulationEvent }, false,
+                                60 * 1000);
+		                    goto handleWaitResults;
                         case 1:
                             // app domain unload
                             return;
@@ -142,7 +148,7 @@ namespace Raven.Database.Config
 						
 						lowPosixMemorySimulationEvent.Reset();
 						if ( ++clearInactiveHandlersCounter > 60 ) // 5 minutes == WaitAny 5 Secs * 60
-						{
+            {
 							clearInactiveHandlersCounter = 0;
 							ClearInactiveHandlers ();
 							break;
@@ -307,8 +313,9 @@ namespace Raven.Database.Config
             get
             {
                 if (failedToGetTotalPhysicalMemory)
-                    return -1;
-
+                    return 1024;
+                try
+                {
                 if (Type.GetType("Mono.Runtime") != null)
                 {
                     var pc = new PerformanceCounter("Mono Memory", "Total Physical Memory");
@@ -317,19 +324,15 @@ namespace Raven.Database.Config
                         totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
                     return totalPhysicalMemoryMegabytes;
                 }
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
-                try
-                {
+
                     return (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / 1024 / 1024);
                 }
-                catch
+                catch(Exception e)
                 {
+                    Logger.ErrorException("Could not get the total amount of memory, will lie and say we have only 1GB", e);
                     failedToGetTotalPhysicalMemory = true;
-                    return -1;
+                    return 1024;
                 }
-#endif
             }
         }
 
@@ -370,17 +373,21 @@ namespace Raven.Database.Config
             }
         }
 
-        public static int AvailableMemory
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+
+        public static int AvailableMemoryInMb
         {
             get
             {
                 if (failedToGetAvailablePhysicalMemory)
-                    return -1;
-
-                if (RunningOnPosix)
                 {
-                    // Try /proc/meminfo, which will work on Linux only!
-                    if (File.Exists("/proc/meminfo"))
+                    Logger.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
+                    return 256;
+                }
+
+                try
+                {
+                    if (StorageEnvironmentOptions.RunningOnPosix)
                     {
                         using (TextReader reader = File.OpenText("/proc/meminfo"))
                         {
@@ -393,29 +400,27 @@ namespace Raven.Database.Config
                             }
                         }
                     }
-                    failedToGetAvailablePhysicalMemory = true;
-                    return -1;
-                }
-                try
-                {
+
                     // The CLR Memory (CLR) = Live Object (LO) + Dead Objects (DO)
                     // The Working Set (WS) = CLR + Live Unmanaged (LU) = LO + DO + LU
                        
                     // Used Memory (UM) = WS - DO = CLR + LU - DO = (LO + DO) + LU - DO = LO + LU
                     // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
                                         
-                    long totalMemory = (long) new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+                    long alreadyAvailableMemory = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
+
+                    long workingSet = Process.GetCurrentProcess().WorkingSet64;
                     long liveObjectMemory = GC.GetTotalMemory(false);                                                            
                     
                     // There is still no way for us to query the amount of unmanaged memory in the working set
                     // so we will have to live with the over-estimation of the total available memory. 
 					// to compensate for that, we will already remove 20% of the live object used as the size
 					// of unmanaged memory we use
-	                long availableMemory = totalMemory - liveObjectMemory - ((int)(liveObjectMemory * 0.2));
+                    long availableMemory = alreadyAvailableMemory + (workingSet - liveObjectMemory - ((int)(liveObjectMemory * 0.2)));
                     int availablePhysicalMemoryInMb = (int)(availableMemory / 1024 / 1024);       
 
                     if (Environment.Is64BitProcess)
-                    {
+                    {                    
                         return memoryLimitSet ? Math.Min(MemoryLimit, availablePhysicalMemoryInMb) : availablePhysicalMemoryInMb;
                     }
 
@@ -425,17 +430,14 @@ namespace Raven.Database.Config
                     int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
-                catch
+                catch (Exception e)
                 {
+                    Logger.ErrorException("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                     failedToGetAvailablePhysicalMemory = true;
-                    return -1;
+                    return 256;
                 }
             }
         }
 
-        private static bool RunningOnPosix
-        {
-			get { return EnvironmentUtils.RunningOnPosix; }
         }
     }
-}

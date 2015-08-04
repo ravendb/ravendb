@@ -11,6 +11,7 @@ class upgrade extends viewModelBase {
     timeoutHandle: number ;
 
     attached() {
+		super.attached();
         this.poolStats();
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.dbChanged(db));
     }

@@ -63,6 +63,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     // overrid dialogViewModelBase shortcuts behavior
    attached() {
+	   super.attached();
        $("#docIdInput").focus();
        var that = this;
        jwerty.key("esc", e => {

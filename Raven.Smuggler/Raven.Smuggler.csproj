@@ -88,6 +88,10 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Helpers\ConsoleHelper.cs" />
+    <Compile Include="SmugglerAbstractOperation.cs" />
+    <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
+    <Compile Include="SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>

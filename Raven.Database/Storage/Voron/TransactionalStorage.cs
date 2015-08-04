@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -65,6 +66,9 @@ namespace Raven.Storage.Voron
 		private Action onNestedTransactionExit;
 		private Action onNestedTransactionEnter;
 
+		private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
+			= new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
 		{
 			this.configuration = configuration;
@@ -110,6 +114,16 @@ namespace Raven.Storage.Voron
 			}
 		}
 
+		public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
+		{
+			return configuration.Indexing.DisableMapReduceInMemoryTracking?null: scheduledReductionsPerViewAndLevel.Value;
+		}
+
+		public void ResetScheduledReductionsTracking()
+		{
+			if (configuration.Indexing.DisableMapReduceInMemoryTracking) return;
+			scheduledReductionsPerViewAndLevel = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
+		}
 		public Guid Id { get; private set; }
 		public IDocumentCacher DocumentCacher { get { return documentCacher; }}
 
