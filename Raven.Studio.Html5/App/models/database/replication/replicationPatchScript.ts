@@ -5,6 +5,10 @@ class replicationPatchScript {
         this.script(script);
     }
 
+    static empty() {
+        return new replicationPatchScript(undefined, undefined);
+    }
+
     collection = ko.observable<string>();
     script = ko.observable<string>();
 
