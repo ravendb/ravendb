@@ -832,12 +832,16 @@ namespace Voron.Trees
 		{
 			if (_fixedSizeTrees == null)
 				_fixedSizeTrees= new Dictionary<string, FixedSizeTree>();
-			var fixedSizeTree = new FixedSizeTree(_tx, this, key, valSize);
-			_fixedSizeTrees[key] = fixedSizeTree;
+
+			FixedSizeTree fixedTree;
+			if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
+			{
+				_fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_tx, this, key, valSize);
+			}
 
 			State.Flags |= TreeFlags.FixedSizeTrees;
 
-			return fixedSizeTree;
+			return fixedTree;
 		}
 
 	    public long DeleteFixedTreeFor(string key, byte valSize = 0)
