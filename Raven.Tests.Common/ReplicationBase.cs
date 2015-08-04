@@ -93,6 +93,7 @@ namespace Raven.Tests.Common
             return documentStore;
         }
 
+
 		protected bool CheckIfConflictDocumentsIsThere(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
 		{
 			var beginningTime = DateTime.UtcNow;
@@ -584,6 +585,29 @@ namespace Raven.Tests.Common
 				{
 					var stats = commands.GetStatistics();
 					if (stats.Indexes.Any(x => x.Name == indexName))
+					{
+						mre.Set();
+						break;
+					}
+					Thread.Sleep(25);
+				}
+			});
+
+			var success = mre.Wait(timeoutInMilliseconds);
+			hasWaitEnded = true;
+			return success;
+		}
+
+		protected bool WaitForIndexDeletionToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+		{
+			var mre = new ManualResetEventSlim();
+			hasWaitEnded = false;
+			Task.Run(() =>
+			{
+				while (hasWaitEnded == false)
+				{
+					var stats = commands.GetStatistics();
+					if (stats.Indexes.Any(x => x.Name == indexName) == false)
 					{
 						mre.Set();
 						break;

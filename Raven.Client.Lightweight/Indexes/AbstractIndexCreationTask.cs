@@ -317,19 +317,14 @@ namespace Raven.Client.Indexes
             var serverClient = databaseCommands as ServerClient;
             if (serverClient == null)
                 return;
-            var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethods.Post))
-            {
-                try
-                {
-                    replicateIndexRequest.ExecuteRawResponseAsync().Wait();
-                }
-                catch (Exception)
-                {
-                    //ignore errors
-                }
-            }
 
+	        try
+	        {
+		        serverClient.ReplicateIndex(IndexName);
+	        }
+	        catch 
+	        {
+	        }
         }
 
         private async Task ReplicateIndexesIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
@@ -337,18 +332,13 @@ namespace Raven.Client.Indexes
             var serverClient = databaseCommands as AsyncServerClient;
             if (serverClient == null)
                 return;
-            var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
-			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, HttpMethods.Post))
-            {
-                try
-                {
-                    await replicateIndexRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // ignore errors
-                }
-            }
+			try
+			{
+				await serverClient.ReplicateIndexAsync(IndexName);
+			}
+			catch
+			{
+			}
 
         }
 

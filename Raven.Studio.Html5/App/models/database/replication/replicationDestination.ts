@@ -1,3 +1,5 @@
+import replicationPatchScript = require("models/database/replication/replicationPatchScript");
+
 class replicationDestination {
 
     url = ko.observable<string>().extend({ required: true });
@@ -13,6 +15,7 @@ class replicationDestination {
     skipIndexReplication = ko.observable<boolean>().extend({ required: true });
     hasGlobal = ko.observable<boolean>(false);
     hasLocal = ko.observable<boolean>(true);
+    transformScripts = ko.observableArray<replicationPatchScript>([]);
 
     globalConfiguration = ko.observable<replicationDestination>();
 
@@ -103,8 +106,15 @@ class replicationDestination {
             this.isApiKeyCredentials(true);
         }
 
+        this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
+
         this.hasGlobal(dto.HasGlobal);
         this.hasLocal(dto.HasLocal);
+        for (var collection in dto.TransformScripts) {
+            if (dto.TransformScripts.hasOwnProperty(collection)) {
+                this.transformScripts.push(new replicationPatchScript(collection, dto.TransformScripts[collection]));
+            }
+        }
     }
 
     static empty(databaseName: string): replicationDestination {
@@ -122,7 +132,8 @@ class replicationDestination {
             SkipIndexReplication: false,
             SourceCollections: [],
             HasGlobal: false,
-            HasLocal: true
+            HasLocal: true,
+            TransformScripts: {}
         });
     }
 
@@ -155,8 +166,17 @@ class replicationDestination {
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
-			SourceCollections: this.enableReplicateOnlyFromCollections()? this.sourceCollections(): []
+            SourceCollections: this.enableReplicateOnlyFromCollections() ? this.sourceCollections() : [],
+            TransformScripts: this.transformScriptsAsDict()
         };
+    }
+
+    private transformScriptsAsDict():dictionary<string> {
+        var result: dictionary<string> = {};
+        this.transformScripts().forEach(x => {
+            result[x.collection()] = x.script();
+        });
+        return result;
     }
 
     private prepareUrl() {
@@ -186,6 +206,10 @@ class replicationDestination {
             this.isUserCredentials(gConfig.isUserCredentials());
             this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
         }
+    }
+
+    removeTransformScript(script: replicationPatchScript) {
+        this.transformScripts.remove(script);
     }
 }
 

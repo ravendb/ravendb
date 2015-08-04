@@ -21,6 +21,7 @@ class statistics extends viewModelBase {
     private statsSubscription: KnockoutSubscription;
 
     attached() {
+		super.attached();
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
         this.fetchStats();
         this.updateHelpLink('H6GYYL');

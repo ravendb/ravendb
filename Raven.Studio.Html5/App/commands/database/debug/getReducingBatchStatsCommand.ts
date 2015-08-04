@@ -4,12 +4,13 @@ import d3 = require("d3/d3");
 
 class getReducingBatchStatsCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private lastId: number) {
         super();
     }
 
     execute(): JQueryPromise<reducingBatchInfoDto[]> {
         var url = "/debug/reducing-batch-stats";
+        var args = { lastId: this.lastId };
         var inlinePerfStats = (entry) => {
             var result = [];
             d3.map(entry).entries().forEach(e => {
@@ -25,8 +26,10 @@ class getReducingBatchStatsCommand extends commandBase {
 
         var parser = d3.time.format.iso;
 
-        return this.query<reducingBatchInfoDto[]>(url, null, this.db, result => {
-            var mappedResult: any = result.map(item => { return {
+        return this.query<reducingBatchInfoDto[]>(url, args, this.db, result => {
+            var mappedResult: any = result.map(item => {
+                return {
+                Id: item.Id,
                 IndexesToWorkOn: item.IndexesToWorkOn,
                 TotalDurationMs: item.TotalDurationMs,
                 StartedAt: item.StartedAt,

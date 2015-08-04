@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Util;
 using Xunit;
 using Xunit.Extensions;
 using Xunit.Sdk;
@@ -44,7 +45,7 @@ namespace Raven.Tests.Counters
 		[Theory]
 		[InlineData(2)]
 		[InlineData(-2)]
-		public async Task CountrsDelete_should_work(int delta)
+		public async Task CountersDelete_should_work(int delta)
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
@@ -61,7 +62,9 @@ namespace Raven.Tests.Counters
 
 				var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
 				total.Should().Be(delta);
-				Assert.Throws<InvalidOperationException>(async() => await store.DeleteAsync(counterGroupName, CounterName));
+
+				store.Invoking(x => AsyncHelpers.RunSync(() => x.DeleteAsync(counterGroupName, CounterName)))
+					 .ShouldNotThrow<InvalidOperationException>();
 			}
 		}
 

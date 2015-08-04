@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -263,7 +264,7 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset")]
+		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
@@ -293,7 +294,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete")]
+		[RavenRoute("cs/{counterStorageName}/delete/{groupName}/{counterName}")]
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
@@ -320,7 +321,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete-by-group")]
+		[RavenRoute("cs/{counterStorageName}/delete-by-group/{groupName}")]
 		[HttpDelete]
 		public HttpResponseMessage DeleteByGroup(string groupName)
 		{
@@ -381,7 +382,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal")]
+		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
@@ -396,7 +397,7 @@ namespace Raven.Database.Counters.Controllers
 			}
         }
 
-		[RavenRoute("cs/{counterStorageName}/getCounter")]
+		[RavenRoute("cs/{counterStorageName}/getCounter/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
@@ -411,6 +412,8 @@ namespace Raven.Database.Counters.Controllers
             }
 		}
 
+// ReSharper disable once UnusedParameter.Local
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void AssertName(string name)
 		{
 			if (string.IsNullOrEmpty(name))

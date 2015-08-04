@@ -87,7 +87,7 @@ namespace Raven.Tests.Counters
 			return hasReplicated;
 		}
 
-		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
+		protected static async Task<object> SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
 			var replicationDocument = new CountersReplicationDocument();
 			foreach (var destStore in destinations)
@@ -100,6 +100,7 @@ namespace Raven.Tests.Counters
 			}
 
 			await source.SaveReplicationsAsync(replicationDocument);
+			return null;
 		}
 	}
 }

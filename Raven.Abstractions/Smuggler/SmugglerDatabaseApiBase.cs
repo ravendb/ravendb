@@ -467,7 +467,7 @@ namespace Raven.Abstractions.Smuggler
 				// Load HiLo documents for selected collections
                 Options.Filters.ForEach(filter =>
 				{
-					if (filter.Path == "@metadata.Raven-Entity-Name")
+					if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
 					{
 						filter.Values.ForEach(collectionName =>
 						{
@@ -915,7 +915,19 @@ namespace Raven.Abstractions.Smuggler
 
             Etag tempLastEtag = Etag.Empty;
 
-            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			var affectedCollections = new List<string>();
+			Options.Filters.ForEach(filter =>
+			{
+				if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+				{
+					filter.Values.ForEach(collectionName =>
+					{
+						affectedCollections.Add(collectionName);
+                    });
+				}
+			});
+
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
@@ -929,8 +941,19 @@ namespace Raven.Abstractions.Smuggler
 				}
                 if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
 					continue;
-                if (Options.MatchFilters(document) == false)
-					continue;
+
+				if (Options.MatchFilters(document) == false)
+				{
+					if (affectedCollections.Count <= 0)
+						continue;
+
+					if (document.ContainsKey("@metadata") == false)
+						continue;
+
+                    var key = document["@metadata"].Value<string>("@id");
+					if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+						continue;
+				}
 
                 if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
 					continue;

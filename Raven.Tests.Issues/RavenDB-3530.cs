@@ -31,6 +31,7 @@ namespace Raven.Tests.Issues
 				DataDirectory = dataDirectory,
 				Configuration =
 				{
+					Port = 8079,
 					Settings = new NameValueCollection
 					{
 						{"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} 
@@ -66,7 +67,11 @@ namespace Raven.Tests.Issues
 				DefaultDatabase = "testApp",
 				UseEmbeddedHttpServer = true,
 				RunInMemory = false,
-				DataDirectory = dataDirectory
+				DataDirectory = dataDirectory,
+				Configuration =
+				{
+					Port = 8079
+				}
 			})
 			{
 				embeddedStore.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
@@ -99,7 +104,8 @@ namespace Raven.Tests.Issues
 				DataDirectory = dataDirectory,
 				Configuration =
 				{
-					CompiledIndexCacheDirectory = compiledIndexCacheDirectory
+					CompiledIndexCacheDirectory = compiledIndexCacheDirectory,
+					Port = 8079
 				}
 
 			})

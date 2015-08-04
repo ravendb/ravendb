@@ -1,8 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
+using ICSharpCode.NRefactory.CSharp.Refactoring;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -44,7 +45,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor)
+		private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;		
+
+        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, 
+			Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor, ConcurrentDictionary<int, RemainingReductionPerLevel> ScheduledReductionsPerViewAndLevel)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
@@ -52,6 +56,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			this.documentCodecs = documentCodecs;
 			this.writeBatch = writeBatch;
 	        this.storageActionsAccessor = storageActionsAccessor;
+	        this.scheduledReductionsPerViewAndLevel = ScheduledReductionsPerViewAndLevel;
 		}
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize)
@@ -208,6 +213,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
 
@@ -262,6 +269,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					var bucket = value.ReadInt(MappedResultFields.Bucket);
 					var documentId = value.ReadString(MappedResultFields.DocId);
@@ -306,7 +315,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					if (string.IsNullOrEmpty(sourceId) == false)
 					{
 						var docId = value.ReadString(MappedResultFields.DocId);
@@ -347,6 +357,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     ushort version;
                     var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
                     var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
                     yield return new MappedResultInfo
                     {
@@ -379,7 +391,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     ushort version;
                     var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
                     var docId = value.ReadString(MappedResultFields.DocId);
 
 					if (StringHelper.Compare(startsWith, docId, needExactMatch) == false)
@@ -411,6 +424,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
@@ -446,6 +461,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 
 					yield return new ScheduledReductionDebugInfo
 					{
@@ -488,6 +505,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             scheduledReductionsByView.MultiAdd(writeBatch.Value, viewKeySlice, idSlice);
             scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, (Slice)AppendToKey(viewKey, level, ReduceKeySizeLimited(reduceKeysAndBuckets.ReduceKey), reduceHashKey), idSlice);
+			if (scheduledReductionsPerViewAndLevel != null)
+				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
@@ -502,8 +521,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return (Slice)etag.ToString();
             });
 
-			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
+            var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
+
+            var keysToRemove = new List<string>();
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
@@ -522,14 +543,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 							break;
 
 						ushort version;
-						var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+					    var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+                        if (value == null) // TODO: Check if this is correct. 
+                            continue;
 
-						var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);
+						var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);                        
 
 						var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
-						var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
+                        var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb);
+
 					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
 						var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
+
 						if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 						{
 							if (seenLocally.Add(rowKey))
@@ -548,11 +573,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					while (iterator.MoveNext());
 				}
 
-				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+                keysToRemove.Add(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
                     yield break;
 			}
+
+            foreach (var keyToRemove in keysToRemove)
+                getItemsToReduceParams.ReduceKeys.Remove(keyToRemove);
 		}
 
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
@@ -595,6 +623,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
@@ -641,6 +671,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					if (value == null)
+						continue;
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
@@ -688,6 +720,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
 
 				DeleteScheduledReduction(etagAsString, view, CreateKey(view), level, reduceKey);
+				if (scheduledReductionsPerViewAndLevel != null)
+					scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 			}
 
 			return hasResult ? result : null;
@@ -708,9 +742,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var id = iterator.CurrentKey;
 					DeleteScheduledReduction(id, view, viewKey, level, reduceKey);
+					if (scheduledReductionsPerViewAndLevel != null)
+						scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 				}
 				while (iterator.MoveNext());
 			}
+		}
+
+		public Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex()
+		{
+			var res = new Dictionary<int, RemainingReductionPerLevel>();
+			if (scheduledReductionsPerViewAndLevel == null) return null;
+			var iterator = scheduledReductionsPerViewAndLevel.GetEnumerator();
+			do
+			{
+				res.Add(iterator.Current.Key, iterator.Current.Value);
+			} while (iterator.MoveNext());
+			return res;
 		}
 
 		public void PutReducedResult(int view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
@@ -800,6 +848,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+                    if (value == null) // TODO: Check if this is correct. 
+                        continue; 
 
 					allKeysToReduce.Add(value.ReadString(ScheduledReductionFields.ReduceKey));
                     processedItems++;
@@ -915,7 +965,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					yield return value.ReadInt(MappedResultFields.Bucket);
 				}
 				while (iterator.MoveNext());
@@ -948,6 +999,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 						ushort version;
 						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+						if (value == null)
+							continue;
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 						var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
@@ -1079,7 +1132,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 ushort version;
                 var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
-
+				if (value == null)
+					continue;
                 var view = value.ReadInt(ReduceResultFields.IndexId);
                 var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
                 var level = value.ReadInt(ReduceResultFields.Level);

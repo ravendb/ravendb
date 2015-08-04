@@ -33,6 +33,7 @@ class reporting extends viewModelBase {
 	}
 
 	attached() {
+		super.attached();
 		$("#filterQueryLabel").popover({
 			html: true,
 			trigger: "hover",

@@ -114,7 +114,7 @@
                                 <i class="fa fa-warning text-warning"></i> <span class="text-muted">You haven't created any replication destinations.</span>
                             </p>
                             <div data-bind="foreach: destinations">
-                                <div class="panel replication-destination-card" data-bind="css: { 'panel-warning': disabled(), 'panel-default': !disabled(), 'panel-info': hasLocal() == false && hasGlobal() }">
+                                <div class="panel" data-bind="css: { 'panel-warning': disabled(), 'panel-default': !disabled(), 'panel-info': hasLocal() == false && hasGlobal() }">
                                     <div class="panel-heading">
                                         <h3 class="panel-title">
                                             <span title="Overridden from global configuration" data-bind="visible: hasLocal() == false && hasGlobal()"><i class="fa fa-arrow-down"></i></span>
@@ -124,8 +124,8 @@
                                     </div>
                                     <div class="panel-body">
                                         <div class="form-group" data-bind="visible: hasGlobal()">
-                                            <label class="col-sm-4 control-label">Override:</label>
-                                            <div class="col-sm-7">
+                                            <label class="col-sm-2 control-label">Override:</label>
+                                            <div class="col-sm-9">
                                                 <div class="btn-group">
                                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
                                                         <span data-bind="visible: canEdit()">Yes</span>
@@ -140,7 +140,7 @@
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <div class="col-sm-offset-4 col-sm-7">
+                                            <div class="col-sm-offset-2 col-sm-9">
                                                 <div class="btn-group">
                                                     <button type="button" data-bind="enable: canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                                         <span data-bind="visible: !disabled()">Enabled</span>
@@ -155,20 +155,20 @@
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="col-sm-4 control-label">Url</label>
-                                            <div class="col-sm-7">
+                                            <label class="col-sm-2 control-label">Url</label>
+                                            <div class="col-sm-9">
                                                 <input required type="url" class="form-control" title="The address of the server to replicate to" data-bind="value: url, enable: hasGlobal() == false, valueUpdate: 'afterkeydown'" />
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="col-sm-4 control-label">Database</label>
-                                            <div class="col-sm-7">
+                                            <label class="col-sm-2 control-label">Database</label>
+                                            <div class="col-sm-9">
                                                 <input required type="text" class="form-control" title="The name of the database on the destination server to replicate to" data-bind="value: database, enable: hasGlobal() == false, valueUpdate: 'afterkeydown'" />
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="col-sm-4 control-label">Credentials</label>
-                                            <div class="col-sm-7">
+                                            <label class="col-sm-2 control-label">Credentials</label>
+                                            <div class="col-sm-9">
                                                 <div class="btn-group">
                                                     <button type="button" data-bind="enable: canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                                         <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
@@ -187,28 +187,28 @@
                                         </div>
                                         <div data-bind="if: isUserCredentials, visible: isUserCredentials">
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">User Name</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">User Name</label>
+                                                <div class="col-sm-9">
                                                     <input required type="text" class="form-control" data-bind="value: username, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Password</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Password</label>
+                                                <div class="col-sm-9">
                                                     <input required type="text" class="form-control" data-bind="value: password, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Domain</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Domain</label>
+                                                <div class="col-sm-9">
                                                     <input required type="text" class="form-control" data-bind="value: domain, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
                                         </div>
                                         <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">API Key</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">API Key</label>
+                                                <div class="col-sm-9">
                                                     <input required type="text" class="form-control" data-bind="value: apiKey, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
@@ -218,22 +218,22 @@
                                         </a>
                                         <div data-bind="visible: false">
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Client Visible Url</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Client Visible Url</label>
+                                                <div class="col-sm-9">
                                                     <input type="text" class="form-control" data-bind="value: clientVisibleUrl, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Skip Index Replication</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Skip Index Replication</label>
+                                                <div class="col-sm-9">
                                                     <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: skipIndexReplication" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Replicate only specific collections</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Replicate only specific collections</label>
+                                                <div class="col-sm-9">
                                                     <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: enableReplicateOnlyFromCollections" />
-                                                    <span style="float:right; text-align: left" class="btn-group-vertical"
+                                                    <span style="text-align: left; vertical-align: top" class="btn-group-vertical"
                                                           data-toggle="buttons-checkbox"
                                                           data-bind="visible: enableReplicateOnlyFromCollections, foreach: $parents[1].collections">
                                                         <!-- ko if: $parents[0].sourceCollections.indexOf($data.name) >= 0 -->
@@ -261,8 +261,8 @@
                                             </div>
 
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Failover</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Failover</label>
+                                                <div class="col-sm-9">
                                                     <div class="btn-group">
                                                         <button type="button" data-bind="enable: canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                                             <span data-bind="visible: !ignoredClient()">Include</span>
@@ -277,8 +277,8 @@
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Transitive Replication</label>
-                                                <div class="col-sm-7">
+                                                <label class="col-sm-2 control-label">Transitive Replication</label>
+                                                <div class="col-sm-9">
                                                     <div class="btn-group">
                                                         <button type="button" data-bind="enable: canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                                             <span data-bind="visible: transitiveReplicationBehavior() === 'None'">Changed only</span>
@@ -289,6 +289,47 @@
                                                             <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'None')">Changed only</a></li>
                                                             <li><a href="#" data-bind="click: transitiveReplicationBehavior.bind(transitiveReplicationBehavior, 'Replicate')">Changed and replicated</a></li>
                                                         </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-2 control-label">Transformative replication</label>
+                                                <div class="col-sm-9">
+                                                    <button type="button" class="btn btn-default" data-bind="enable: $root.usingGlobal() == false, click: $root.createNewTransformativeReplication" title="Add new collection specific transformative replication">
+                                                        <i class="fa fa-plus"></i> Add new collection specific transformative replication
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <div class="col-sm-offset-2 col-sm-9">
+                                                    <div class="row">
+                                                        <div class="col-sm-3"><strong>Collection</strong>
+                                                        </div>
+                                                        <div class="col-sm-9"><strong>Transformation script</strong></div>
+
+                                                    </div>
+                                                    <div data-bind="foreach: transformScripts">
+                                                        <div class="row">
+                                                            <div class="col-sm-3">
+                                                                <div class="btn-group">
+                                                                    <button type="button" data-bind="enable: $parent.canEdit" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                                        <span data-bind="text: collectionWithLabel"></span>
+                                                                        <span class="caret"></span>
+                                                                    </button>
+                                                                    <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.collections">
+                                                                        <li><a href="#" data-bind="click: $parent.collection.bind($data, name), text: name"></a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-sm-9">
+                                                                <div class="col-md-11">
+                                                                    <pre id="indexEditor" class="form-control" data-bind="aceEditor: { lang: 'ace/mode/javascript', readOnly: false, code: script, allowResize: true }"></pre>
+                                                                </div>
+                                                                <button type="button" class="close pull-left" data-bind="click: $parent.removeTransformScript.bind($parent, $data)" aria-hidden="true" title="Remove this replication transformation">
+                                                                    <i class="fa fa-times"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

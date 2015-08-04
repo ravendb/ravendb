@@ -212,6 +212,8 @@ namespace Raven.Client.Smuggler
 								if (databaseOptions.ShouldDisableVersioningBundle)
 									document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
 
+								document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+
 								await importOperations.PutDocument(document, (int) DocumentHelpers.GetRoughSize(document));
 								totalCount++;
 
@@ -256,7 +258,7 @@ namespace Raven.Client.Smuggler
 				// Load HiLo documents for selected collections
 				databaseOptions.Filters.ForEach(filter =>
 				{
-					if (filter.Path == "@metadata.Raven-Entity-Name")
+					if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
 					{
 						filter.Values.ForEach(collectionName =>
 						{

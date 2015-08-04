@@ -68,6 +68,7 @@ class configuration extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.activeFilesystem.subscribe(x => {
             this.loadKeys(x);
         });

@@ -465,7 +465,8 @@ namespace Raven.Abstractions.Data
 	    public class Indexing
 	    {
 			public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
-}
+		    public const string DisableMapReduceInMemoryTracking = "Raven/Indexing/DisableMapReduceInMemoryTracking";
+	    }
 		public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
 
 		public const string TempPath = "Raven/TempPath";

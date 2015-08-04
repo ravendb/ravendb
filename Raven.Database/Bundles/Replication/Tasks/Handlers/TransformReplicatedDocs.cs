@@ -35,7 +35,10 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 			{
 				var collection = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-				string script;
+			    if (string.IsNullOrEmpty(collection))
+			        return doc;
+
+                string script;
 				if (strategy.TransformScripts.TryGetValue(collection, out script) == false)
 					return doc;
 

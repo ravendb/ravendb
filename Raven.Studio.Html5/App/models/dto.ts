@@ -123,6 +123,7 @@ interface indexStatisticsDto {
 }
 
 interface indexingBatchInfoDto {
+    Id: number;
     BatchType: string;
     IndexesToWorkOn: string[];
     TotalDocumentCount: number;
@@ -153,6 +154,7 @@ interface indexPerformanceDto {
 }
 
 interface reducingBatchInfoDto {
+    Id: number;
     IndexesToWorkOn: string[];
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
@@ -461,6 +463,7 @@ interface replicationDestinationDto {
     SourceCollections: string[];
     HasGlobal?: boolean;
     HasLocal?: boolean;
+    TransformScripts: dictionary<string>;
 }
 
 interface configurationDocumentDto<TClass> {
@@ -939,6 +942,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
+	RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;

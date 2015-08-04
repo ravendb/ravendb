@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 
 class getIndexingBatchStatsCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private lastId: number = 0) {
         super();
     }
 
@@ -17,11 +17,14 @@ class getIndexingBatchStatsCommand extends commandBase {
                 stats: entry.value
             }
         };
+        var args = { lastId: this.lastId };
 
         var parser = d3.time.format.iso;
 
-        return this.query<indexingBatchInfoDto[]>(url, null, this.db, result => {
-            var mappedResult = result.map(item => { return {
+        return this.query<indexingBatchInfoDto[]>(url, args, this.db, result => {
+            var mappedResult = result.map(item => {
+                return {
+                Id: item.Id,
                 BatchType: item.BatchType,
                 IndexesToWorkOn: item.IndexesToWorkOn,
                 TotalDocumentCount: item.TotalDocumentCount,

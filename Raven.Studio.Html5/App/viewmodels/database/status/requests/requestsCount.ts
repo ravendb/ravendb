@@ -10,7 +10,6 @@ class requestsCount extends viewModelBase {
 
     currentMetrics: KnockoutObservable<statusDebugMetricsDto> = ko.observable(null);
     requestsMetricsUrl = ko.observable("");
-
     requestCounterChart: any = null; 
     requestCounterChartData: { [index: number]: string; key: string; values: any[] }[] = [
         {
@@ -31,14 +30,23 @@ class requestsCount extends viewModelBase {
         }
     ];
 
+	activate(args) {
+		super.activate(args);
+		return this.modelPolling();
+	}
+
     modelPolling() {
-        return this.fetchMetrics().then(() => {
+	    var deferred = $.Deferred();
+        this.fetchMetrics().then(() => {
             this.appendData();
             this.updateGraph();
+	        deferred.resolve();
         });
+	    return deferred;
     }
 
     attached() {
+		super.attached();
         this.modelPolling();
     }
 

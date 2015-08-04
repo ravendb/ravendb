@@ -308,10 +308,7 @@ namespace Raven.Database.Counters.Controllers
 			var backupOperation = new BackupOperation(Storage, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
 				backupRequest.BackupLocation, Storage.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
 
-			Task.Factory.StartNew(() =>
-			{
-				backupOperation.Execute();
-			});
+			Task.Factory.StartNew(backupOperation.Execute);
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}
