@@ -1026,7 +1026,9 @@ namespace Raven.Database.Indexing
 			Index value = TryIndexByName(indexName);
 			if (value == null)
 			{
-				log.Debug("Query on non existing index '{0}'", indexName);
+                if (log.IsDebugEnabled)
+                    log.Debug("Query on non existing index '{0}'", indexName);
+				
 				throw new InvalidOperationException("Index '" + indexName + "' does not exists");
 			}
 
@@ -1039,8 +1041,10 @@ namespace Raven.Database.Indexing
 			Index value = indexes[index];
 			if (value == null)
 			{
-				log.Debug("Removing from non existing index '{0}', ignoring", index);
-				return;
+                if (log.IsDebugEnabled)
+                    log.Debug("Removing from non existing index '{0}', ignoring", index);
+
+                return;
 			}
 			value.Remove(keys, context);
 			context.RaiseIndexChangeNotification(new IndexChangeNotification

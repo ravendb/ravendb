@@ -58,6 +58,11 @@ namespace Raven.Database.Config
         private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
         private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
+        // Creating multiple types the process incurs a huge amount of allocations. Reusing the instance will ensure no allocations happens
+        // when calling WorkingSet64. 
+        private static Process CurrentProcess = Process.GetCurrentProcess();
+
+
         static MemoryStatistics()
         {
             lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
@@ -309,7 +314,7 @@ namespace Raven.Database.Config
             }
         }
 
-        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();        
 
         public static int AvailableMemoryInMb
         {
@@ -345,7 +350,7 @@ namespace Raven.Database.Config
 
                     long alreadyAvailableMemory = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
 
-                    long workingSet = Process.GetCurrentProcess().WorkingSet64;
+                    long workingSet = CurrentProcess.WorkingSet64;
                     long liveObjectMemory = GC.GetTotalMemory(false);
 
                     // There is still no way for us to query the amount of unmanaged memory in the working set
@@ -363,13 +368,14 @@ namespace Raven.Database.Config
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+                    int workingSetMb = (int)(CurrentProcess.WorkingSet64 / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch (Exception e)
                 {
                     Logger.ErrorException("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                     failedToGetAvailablePhysicalMemory = true;
+
                     return 256;
                 }
             }
