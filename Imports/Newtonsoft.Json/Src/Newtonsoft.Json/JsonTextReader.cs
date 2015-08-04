@@ -80,6 +80,12 @@ namespace Raven.Imports.Newtonsoft.Json
             _chars = new char[1025];
         }
 
+        public JsonTextReader(char[] externalBuffer)
+        {
+            _chars = externalBuffer;
+            _lineNumber = 1;
+        }
+
 #if DEBUG
         internal void SetCharBuffer(char[] chars)
         {
@@ -244,7 +250,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
             int attemptCharReadCount = _chars.Length - _charsUsed - 1;
 
-            int charsRead = _reader.Read(_chars, _charsUsed, attemptCharReadCount);
+            var charsRead = ReadChars(_chars, _charsUsed, attemptCharReadCount);
 
             _charsUsed += charsRead;
 
@@ -253,6 +259,11 @@ namespace Raven.Imports.Newtonsoft.Json
 
             _chars[_charsUsed] = '\0';
             return charsRead;
+        }
+
+        protected virtual int ReadChars(char[] buffer, int start, int count)
+        {
+            return _reader.Read(buffer, start, count);
         }
 
         private bool EnsureChars(int relativePosition, bool append)
