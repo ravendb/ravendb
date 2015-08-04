@@ -9,23 +9,24 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-    internal static class SmugglerDatabaseBetweenOperation
+	internal static class SmugglerDatabaseBetweenOperation
 	{
 		const int RetriesCount = 5;
 
-        public static async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions, SmugglerDatabaseOptions databaseOptions)
+		public static async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions, SmugglerDatabaseOptions databaseOptions)
 		{
 			SetDatabaseNameIfEmpty(betweenOptions.From);
 			SetDatabaseNameIfEmpty(betweenOptions.To);
@@ -83,7 +84,7 @@ namespace Raven.Smuggler
 				}
 				if (exportStoreSupportedFeatures.IsIdentitiesSmugglingSupported && importStoreSupportedFeatures.IsIdentitiesSmugglingSupported)
 				{
-                    await ExportIdentities(exportStore, importStore, databaseOptions.OperateOnTypes, databaseOptions);
+					await ExportIdentities(exportStore, importStore, databaseOptions.OperateOnTypes, databaseOptions);
 				}
 
 				if (databaseOptions.Incremental)
@@ -107,7 +108,6 @@ namespace Raven.Smuggler
 			long totalIdentitiesCount = 0;
 			var identities = new List<KeyValuePair<string, long>>();
 			var retries = RetriesCount;
-			var log = LogManager.GetCurrentClassLogger();
 
 			ShowProgress("Exporting Identities");
 
@@ -120,28 +120,27 @@ namespace Raven.Smuggler
 
 					try
 					{
-						identitiesInfo = (RavenJObject) await request.ReadResponseJsonAsync();
+						identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
 					}
 					catch (Exception e)
 					{
 						if (retries-- == 0 && databaseOptions.ShouldLogErrorsAndContinue)
 						{
-							log.ErrorException("Failed to fetch identities too much times. Cancelling identities export.",e);
+							ShowProgress("Failed to fetch identities too much times. Cancelling identities export. Message: {0}", e.Message);
 							return;
 						}
 
 						if (databaseOptions.ShouldLogErrorsAndContinue == false)
 							throw;
 
-						var message = string.Format("Failed to fetch identities. {0} retries remaining.", retries);
-						log.ErrorException(message,e);
+						var message = string.Format("Failed to fetch identities. {0} retries remaining. Message: {1}", retries, e.Message);
 						ShowProgress(message);
-						continue;						
+						continue;
 					}
 
 					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
 
-// ReSharper disable once LoopCanBeConvertedToQuery --> the code is more readable when NOT converted to linq
+					// ReSharper disable once LoopCanBeConvertedToQuery --> the code is more readable when NOT converted to linq
 					foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
 					{
 						identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
@@ -173,12 +172,11 @@ namespace Raven.Smuggler
 			{
 				try
 				{
-				importStore.DatabaseCommands.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
+					importStore.DatabaseCommands.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
 				}
 				catch (Exception e)
 				{
-					log.ErrorException("Failed seeding identity for " + identityInfo.Key,e);
-					ShowProgress("Failed seeding identity for {0}", identityInfo.Key);
+					ShowProgress("Failed seeding identity for {0}. Message: {1}", identityInfo.Key, e.Message);
 					continue;
 				}
 
@@ -201,7 +199,7 @@ namespace Raven.Smuggler
 					var configuration = (RavenJObject)request.ReadResponseJson();
 
 					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-					if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					if (maxNumberOfItemsToProcessInSingleBatch <= 0)
 						return databaseOptions.BatchSize;
 
 					return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
@@ -220,18 +218,17 @@ namespace Raven.Smuggler
 		{
 			if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
 				return;
-            
+
 			var index = connection.Url.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
 			if (index != -1)
 			{
-				connection.DefaultDatabase = connection.Url.Substring(index + "/databases/".Length).Trim(new[] {'/'});
+				connection.DefaultDatabase = connection.Url.Substring(index + "/databases/".Length).Trim(new[] { '/' });
 			}
 		}
 
 		private static async Task ExportIndexes(DocumentStore exportStore, DocumentStore importStore, int exportBatchSize, SmugglerDatabaseOptions databaseOptions)
 		{
 			var totalCount = 0;
-			var log = LogManager.GetCurrentClassLogger();
 			int retries = RetriesCount;
 
 			while (true)
@@ -246,17 +243,15 @@ namespace Raven.Smuggler
 				{
 					if (retries-- == 0 && databaseOptions.ShouldLogErrorsAndContinue)
 					{
-						const string message = "Failed getting indexes too much times, stopping the index export entirely";
-						log.ErrorException(message,e);
-						ShowProgress(message);
+						ShowProgress("Failed getting indexes too much times, stopping the index export entirely. Message: {0}", e.Message);
 						return;
 					}
 
 					if (databaseOptions.ShouldLogErrorsAndContinue == false)
 						throw;
 
-					log.ErrorException(string.Format("Failed fetching index information from exporting store. {0} retries remaining.", retries),e);
-					continue;					
+					ShowProgress("Failed fetching index information from exporting store. {0} retries remaining. Message: {1}", retries, e.Message);
+					continue;
 				}
 
 				if (indexes.Length == 0)
@@ -270,19 +265,16 @@ namespace Raven.Smuggler
 				{
 					try
 					{
-					var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
-					ShowProgress("Successfully PUT index '{0}'", indexName);
-				}
+						var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
+						ShowProgress("Successfully PUT index '{0}'", indexName);
+					}
 					catch (Exception e)
 					{
-						if (databaseOptions.ShouldLogErrorsAndContinue)
-						{
-							var error = "Failed PUT of an index " + index.Name;
-							log.ErrorException(error,e);
-							ShowProgress(error);
-			}
-						else throw;
-		}
+						if (databaseOptions.ShouldLogErrorsAndContinue == false)
+							throw;
+
+						ShowProgress("PUT of a index {0} failed. Message: {1}", index.Name, e.Message);
+					}
 				}
 			}
 		}
@@ -290,7 +282,6 @@ namespace Raven.Smuggler
 		private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, ServerSupportedFeatures exportStoreSupportedFeatures, int exportBatchSize, int importBatchSize)
 		{
 			var now = SystemTime.UtcNow;
-			var log = LogManager.GetCurrentClassLogger();
 
 			string lastEtag = databaseOptions.StartDocsEtag;
 			var totalCount = 0;
@@ -299,10 +290,10 @@ namespace Raven.Smuggler
 			ShowProgress("Exporting Documents");
 
 			var bulkInsertOperation = importStore.BulkInsert(null, new BulkInsertOptions
-			                                                       {
-																	   BatchSize = importBatchSize,
-				                                                       OverwriteExisting = true,
-			                                                       });
+			{
+				BatchSize = importBatchSize,
+				OverwriteExisting = true,
+			});
 			bulkInsertOperation.Report += text => ShowProgress(text);
 			var jintHelper = new SmugglerJintHelper();
 			jintHelper.Initialize(databaseOptions);
@@ -326,48 +317,44 @@ namespace Raven.Smuggler
 
 								try
 								{
-								if (!databaseOptions.MatchFilters(document))
-									continue;
-								if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
-									continue;
+									if (!databaseOptions.MatchFilters(document))
+										continue;
+									if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
+										continue;
 
-								if (databaseOptions.StripReplicationInformation) 
-									document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+									if (databaseOptions.StripReplicationInformation)
+										document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 									if (databaseOptions.ShouldDisableVersioningBundle)
-									document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+										document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
 
-								document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+									document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
 
-								if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
-								{
-									document = jintHelper.Transform(databaseOptions.TransformScript, document);
-									if(document == null)
-										continue;
-									metadata = document.Value<RavenJObject>("@metadata");
+									if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
+									{
+										document = jintHelper.Transform(databaseOptions.TransformScript, document);
+										if (document == null)
+											continue;
+										metadata = document.Value<RavenJObject>("@metadata");
+									}
+
+									document.Remove("@metadata");
+									bulkInsertOperation.Store(document, metadata, id);
+									totalCount++;
+
+									if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+									{
+										ShowProgress("Exported {0} documents", totalCount);
+										lastReport = SystemTime.UtcNow;
+									}
 								}
-
-								document.Remove("@metadata");
-								bulkInsertOperation.Store(document, metadata, id);
-								totalCount++;
-
-								if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-								{
-									ShowProgress("Exported {0} documents", totalCount);
-									lastReport = SystemTime.UtcNow;
-								}
-							}
 								catch (Exception e)
 								{
-									if (databaseOptions.ShouldLogErrorsAndContinue)
-									{
-										var message = "Failed to smuggle a document " + document;
-										log.ErrorException(message, e);
-										ShowProgress(message);
-						}
-									else 
+									if (databaseOptions.ShouldLogErrorsAndContinue == false)
 										throw;
-					}
+
+									ShowProgress("PUT of a document {0} failed. Message: {1}", document, e.Message);
+								}
 							}
 						}
 					}
@@ -390,7 +377,7 @@ namespace Raven.Smuggler
 									var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, exportBatchSize, operationMetadata);
 									foreach (var jToken in documents)
 									{
-										var document = (RavenJObject) jToken;
+										var document = (RavenJObject)jToken;
 										var metadata = document.Value<RavenJObject>("@metadata");
 										var id = metadata.Value<string>("@id");
 										var etag = Etag.Parse(metadata.Value<string>("@etag"));
@@ -415,22 +402,19 @@ namespace Raven.Smuggler
 
 										try
 										{
-										bulkInsertOperation.Store(document, metadata, id);
+											bulkInsertOperation.Store(document, metadata, id);
 										}
 										catch (Exception e)
 										{
-											if (databaseOptions.ShouldLogErrorsAndContinue)
-											{
-												var message = string.Format("Failed to store document in a bulk insert operation (id = {0})", id);
-												log.DebugException(message, e);
-												ShowProgress(message);
-											}
-											else throw;
+											if (databaseOptions.ShouldLogErrorsAndContinue == false)
+												throw;
+
+											ShowProgress("Failed to store document in a bulk insert operation (id = {0}). Message: {1}", id, e.Message);
 										}
 
 										totalCount++;
 
-										if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+										if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 										{
 											ShowProgress("Exported {0} documents", totalCount);
 											lastReport = SystemTime.UtcNow;
@@ -497,13 +481,12 @@ namespace Raven.Smuggler
 			}
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize)
 		{
 			Etag lastEtag = databaseOptions.StartAttachmentsEtag;
 			int totalCount = 0;
-	        var retries = RetriesCount;
-	        var log = LogManager.GetCurrentClassLogger();
+			var retries = RetriesCount;
 
 			while (true)
 			{
@@ -517,13 +500,11 @@ namespace Raven.Smuggler
 				{
 					if (retries-- == 0 && databaseOptions.ShouldLogErrorsAndContinue)
 						return Etag.InvalidEtag;
-					
+
 					if (databaseOptions.ShouldLogErrorsAndContinue == false)
 						throw;
 
-					var message = "Failed fetching transformer information from exporting store. " + retries + " retries remaining.";
-					log.ErrorException(message, e);
-					ShowProgress(message);
+					ShowProgress("Failed fetching transformer information from exporting store. {0} retries remaining. Message: {1}", retries, e.Message);
 					continue;
 				}
 
@@ -543,10 +524,8 @@ namespace Raven.Smuggler
 						if (databaseOptions.ShouldLogErrorsAndContinue == false)
 							throw;
 
-						const string message = "Failed fetching database statistics from exporting store";
-						log.ErrorException(message, e);
-						ShowProgress(message);
-						continue;						
+						ShowProgress("Failed fetching database statistics from exporting store. Message: {0}", e.Message);
+						continue;
 					}
 
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
@@ -571,18 +550,15 @@ namespace Raven.Smuggler
 
 					try
 					{
-					var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-					await importStore.AsyncDatabaseCommands.PutAttachmentAsync(attachment.Key, null, attachment.Data(), attachment.Metadata);
-				}
+						var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+						await importStore.AsyncDatabaseCommands.PutAttachmentAsync(attachment.Key, null, attachment.Data(), attachment.Metadata);
+					}
 					catch (Exception e)
 					{
-						if (databaseOptions.ShouldLogErrorsAndContinue)
-						{
-							log.ErrorException("Error during attachment PUT " + attachmentInformation.Key,e);
-							ShowProgress("Error during attachment PUT " + attachmentInformation.Key);
-						}
-						else
+						if (databaseOptions.ShouldLogErrorsAndContinue == false)
 							throw;
+
+						ShowProgress("PUT of an attachment {0} failed. Message: {1}", attachmentInformation.Key, e.Message);
 					}
 				}
 
@@ -594,7 +570,6 @@ namespace Raven.Smuggler
 		{
 			var totalCount = 0;
 			var retries = RetriesCount;
-			var log = LogManager.GetCurrentClassLogger();
 
 			while (true)
 			{
@@ -608,17 +583,15 @@ namespace Raven.Smuggler
 				{
 					if (retries-- == 0 & databaseOptions.ShouldLogErrorsAndContinue)
 					{
-						log.ErrorException("Failed getting transformers too much times, stopping the index export entirely",e);
+						ShowProgress("Failed getting transformers too much times, stopping the transformer export entirely. Message: {0}", e.Message);
 						return;
 					}
 
 					if (databaseOptions.ShouldLogErrorsAndContinue == false)
 						throw;
 
-					var message = string.Format("Failed fetching transformer information from exporting store. {0} retries remaining.", retries);
-					log.ErrorException(message, e);
-					ShowProgress(message);
-					continue;										
+					ShowProgress("Failed fetching transformer information from exporting store. {0} retries remaining. Message: {1}", retries, e.Message);
+					continue;
 				}
 
 				if (transformers.Length == 0)
@@ -632,20 +605,16 @@ namespace Raven.Smuggler
 				{
 					try
 					{
-					var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
-					ShowProgress("Successfully PUT transformer '{0}'", transformerName);
-				}
+						var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
+						ShowProgress("Successfully PUT transformer '{0}'", transformerName);
+					}
 					catch (Exception e)
 					{
-						if (databaseOptions.ShouldLogErrorsAndContinue)
-						{
-							var message = "Failed PUT of an transformer " + transformer.Name;
-							log.ErrorException(message, e);
-							ShowProgress(message);
-			}
-						else throw;
-		}
+						if (databaseOptions.ShouldLogErrorsAndContinue == false)
+							throw;
 
+						ShowProgress("PUT of a transformer {0} failed. Message: {1}", transformer.Name, e.Message);
+					}
 				}
 			}
 		}
@@ -653,37 +622,37 @@ namespace Raven.Smuggler
 		private static DocumentStore CreateStore(RavenConnectionStringOptions connection)
 		{
 			var store = new DocumentStore
-			            {
-				            Url = connection.Url,
-				            ApiKey = connection.ApiKey,
-				            Credentials = connection.Credentials,
-				            DefaultDatabase = connection.DefaultDatabase,
-				            Conventions =
-				            {
-					            FailoverBehavior = FailoverBehavior.FailImmediately,
-					            ShouldCacheRequest = s => false,
-					            ShouldAggressiveCacheTrackChanges = false,
-					            ShouldSaveChangesForceAggressiveCacheCheck = false,
-				            }
-			            };
+			{
+				Url = connection.Url,
+				ApiKey = connection.ApiKey,
+				Credentials = connection.Credentials,
+				DefaultDatabase = connection.DefaultDatabase,
+				Conventions =
+							{
+								FailoverBehavior = FailoverBehavior.FailImmediately,
+								ShouldCacheRequest = s => false,
+								ShouldAggressiveCacheTrackChanges = false,
+								ShouldSaveChangesForceAggressiveCacheCheck = false,
+							}
+			};
 			store.Initialize(ensureDatabaseExists: false);
 			store.JsonRequestFactory.DisableAllCaching();
 			return store;
 		}
 
-		private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(DocumentStore store)
+		private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(IDocumentStore store)
 		{
 			var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 			if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
 			{
 				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers, documents streaming and identities smuggling.");
 				return new ServerSupportedFeatures
-				       {
-					       IsTransformersSupported = false,
-					       IsDocsStreamingSupported = false,
-						   IsIdentitiesSmugglingSupported = false,
-				       };
-			}	
+				{
+					IsTransformersSupported = false,
+					IsDocsStreamingSupported = false,
+					IsIdentitiesSmugglingSupported = false,
+				};
+			}
 
 			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
@@ -695,11 +664,11 @@ namespace Raven.Smuggler
 			{
 				ShowProgress("Running in legacy mode, importing/exporting transformers and identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return new ServerSupportedFeatures
-				       {
-					       IsTransformersSupported = false,
-					       IsDocsStreamingSupported = false,
-						   IsIdentitiesSmugglingSupported = false,
-				       };
+				{
+					IsTransformersSupported = false,
+					IsDocsStreamingSupported = false,
+					IsIdentitiesSmugglingSupported = false,
+				};
 			}
 
 			if (intServerVersion == 25)
@@ -714,11 +683,11 @@ namespace Raven.Smuggler
 			}
 
 			return new ServerSupportedFeatures
-			       {
-				       IsTransformersSupported = true,
-				       IsDocsStreamingSupported = true,
-					   IsIdentitiesSmugglingSupported = true,
-			       };
+			{
+				IsTransformersSupported = true,
+				IsDocsStreamingSupported = true,
+				IsIdentitiesSmugglingSupported = true,
+			};
 		}
 
 		// [StringFormatMethod("format")]
@@ -738,5 +707,5 @@ namespace Raven.Smuggler
 
 			return metadata;
 		}
-		}
 	}
+}
