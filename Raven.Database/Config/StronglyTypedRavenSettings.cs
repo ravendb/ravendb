@@ -87,7 +87,7 @@ namespace Raven.Database.Config
 
 			LowMemoryLimitForLinuxDetectionInMB = 
 				new IntegerSetting(settings[Constants.LowMemoryLimitForLinuxDetectionInMB],
-					Math.Min(16, (int)(MemoryStatistics.AvailableMemory * 0.10))); // AvailableMemory reports in MB
+					Math.Min(16, (int)(MemoryStatistics.AvailableMemoryInMb * 0.10))); // AvailableMemory reports in MB
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =

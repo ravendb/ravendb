@@ -284,7 +284,7 @@ namespace Raven.Database.Indexing
 								context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
 							}
 						}
-					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
+					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
 				Interlocked.Increment(ref executedPartially);
 			}
 			catch (InvalidDataException e)
@@ -598,48 +598,47 @@ namespace Raven.Database.Indexing
 							  batchForIndex.Index.PublicName);
 				}
 
-				if (wasOutOfMemory == false && wasOperationCanceled == false)
-				{
-				bool keepTrying = true;
 				try
 				{
-					for (int i = 0; i < 10 && keepTrying; i++)
+					if (wasOutOfMemory == false && wasOperationCanceled == false)
 					{
-						keepTrying = false;
-				transactionalStorage.Batch(actions =>
-					{
-								{
-									try
-									{
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
-										actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-									}
-									catch (Exception e)
-									{
-										if (actions.IsWriteConflict(e))
-										{
-											keepTrying = true;
-											return;
-										}
-										throw;
-									}
-								});
-					});
-				}
-				else if (wasOutOfMemory)
-					HandleOutOfMemory(batchForIndex);
+						bool keepTrying = true;
 
-						if (keepTrying)
-							Thread.Sleep(11);
+						for (int i = 0; i < 10 && keepTrying; i++)
+						{
+							keepTrying = false;
+							transactionalStorage.Batch(actions =>
+							{
+								try
+								{
+								// whatever we succeeded in indexing or not, we have to update this
+								// because otherwise we keep trying to re-index failed documents
+								actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+								}
+								catch (Exception e)
+								{
+									if (actions.IsWriteConflict(e))
+									{
+										keepTrying = true;
+										return;
+									}
+									throw;
+								}
+							});
+
+							if (keepTrying)
+								Thread.Sleep(11);
+						}
 					}
+					else if (wasOutOfMemory)
+						HandleOutOfMemory(batchForIndex);
 				}
 				finally
 				{
-				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+					currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
 					batchForIndex.SignalIndexingComplete();
 					batchForIndex.Index.IsMapIndexingInProgress = false;
-			}
+				}
 			}
 
 			return performanceResult;
