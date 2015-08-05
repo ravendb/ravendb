@@ -144,10 +144,10 @@ namespace Raven.Database.Smuggler
 								jsonWriter.WriteValue(counterInfo.CounterName);
 
 								jsonWriter.WritePropertyName("Positive");
-								//TODO: jsonWriter.WriteValue(counterInfo.Increments);
+								jsonWriter.WriteValue(counterInfo.Increments);
 
 								jsonWriter.WritePropertyName("Negative");
-								//TODO: jsonWriter.WriteValue(counterInfo.Decrements);
+								jsonWriter.WriteValue(counterInfo.Decrements);
 								
 							jsonWriter.WriteEndObject();
 						}
@@ -157,58 +157,75 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
+		private async Task ImportData(CounterConnectionStringOptions connectionString, Stream stream, bool ownedStream = false)
+		{
+			try
+			{
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true))
+				using (var streamReader = new StreamReader(gZipStream))
+				{
+					var jsonReader = new JsonTextReader(streamReader);
+					if (jsonReader.Read() == false)
+						return;
+
+					if(jsonReader.TokenType != JsonToken.StartObject)
+						throw new InvalidDataException("StartObject was expected");
+				}
+			}
+			finally
+			{
+				if (ownedStream && stream != null)
+					stream.Dispose();				
+			}
+		}
+
 		public async Task ImportData(SmugglerImportOptions<CounterConnectionStringOptions> importOptions)
 		{
-			throw new NotImplementedException();
-//			if (Options.Incremental == false)
-//			{
-//				Stream stream = importOptions.FromStream;
-//				bool ownStream = false;
-//				try
-//				{
-//					if (stream == null)
-//					{
-//						stream = File.OpenRead(importOptions.FromFile);
-//						ownStream = true;
-//					}
-//					await ImportData(importOptions, stream);
-//				}
-//				finally
-//				{
-//					if (stream != null && ownStream)
-//						stream.Dispose();
-//				}
-//				return;
-//			}
-//
-//			var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
-//				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
-//				.OrderBy(File.GetLastWriteTimeUtc)
-//				.ToArray();
-//
-//			if (files.Length == 0)
-//				return;
-//
-//			var oldItemType = Options.OperateOnTypes;
-//
-//			Options.OperateOnTypes = Options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers);
-//
-//			for (var i = 0; i < files.Length - 1; i++)
-//			{
-//				using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
-//				{
-//					Operations.ShowProgress("Starting to import file: {0}", files[i]);
-//					await ImportData(importOptions, fileStream);
-//				}
-//			}
-//
-//			Options.OperateOnTypes = oldItemType;
-//
-//			using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
-//			{
-//				Operations.ShowProgress("Starting to import file: {0}", files.Last());
-//				await ImportData(importOptions, fileStream);
-//			}
+			if (Options.Incremental == false)
+			{
+				var stream = importOptions.FromStream;
+				var ownStream = false;
+				try
+				{
+					if (stream == null)
+					{
+						stream = File.OpenRead(importOptions.FromFile);
+						ownStream = true;
+					}
+
+					await ImportData(importOptions.To, stream);
+				}
+				finally
+				{
+					if (stream != null && ownStream)
+						stream.Dispose();
+				}
+			}
+			else
+			{
+				var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
+					.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
+					.OrderBy(File.GetLastWriteTimeUtc)
+					.ToArray();
+
+				if (files.Length == 0)
+					return;
+
+				for (var i = 0; i < files.Length - 1; i++)
+				{
+					using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
+					{
+						//Operations.ShowProgress("Starting to import file: {0}", files[i]);
+						await ImportData(importOptions.To, fileStream);
+					}
+				}
+
+				using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
+				{
+					//Operations.ShowProgress("Starting to import file: {0}", files.Last());
+					await ImportData(importOptions.To, fileStream);
+				}
+			}
 		}
 
 		public Task Between(SmugglerBetweenOptions<CounterConnectionStringOptions> betweenOptions)
