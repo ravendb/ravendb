@@ -497,7 +497,7 @@ namespace Raven.Client.FileSystem
                     await TryReadNextPageStart().ConfigureAwait(false);
 
 					await EnsureValidEndOfResponse().ConfigureAwait(false);
-
+					this.Dispose();
                     return false;
                 }
 
