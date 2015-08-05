@@ -128,7 +128,7 @@ namespace Raven.Database.Server.Controllers
                 var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
                 queryOp.Init();
 
-                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
+                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
                 msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
                 msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
                 msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
@@ -140,6 +140,11 @@ namespace Raven.Database.Server.Controllers
                 {
                     msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                accessor.Dispose();
+                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
             }
             catch (Exception)
             {
