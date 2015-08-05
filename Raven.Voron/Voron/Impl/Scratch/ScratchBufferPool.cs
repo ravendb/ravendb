@@ -250,6 +250,7 @@ namespace Voron.Impl.Scratch
 
 			// we don't have free pages to give out, need to allocate some
 			result = _current.Allocate(tx, numberOfPages, size);
+			_options.OnScratchBufferSizeChanged(sizeAfterAllocation);
 
 			return result;
 		}

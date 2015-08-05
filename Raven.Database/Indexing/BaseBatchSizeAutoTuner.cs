@@ -5,13 +5,15 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
+
+using Raven.Database.Storage;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	using Raven.Abstractions.Util;
 
-	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler, ITransactionalStorageNotificationHandler
 	{
 		protected readonly WorkContext context;
 
@@ -30,6 +32,7 @@ namespace Raven.Database.Indexing
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
+			context.TransactionalStorage.RegisterTransactionalStorageNotificationHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
 		}
 
@@ -42,6 +45,11 @@ namespace Raven.Database.Indexing
 		public void SoftMemoryRelease()
 		{
 			
+		}
+
+		public void HandleTransactionalStorageNotification()
+		{
+			HandleLowMemory();
 		}
 
 		public virtual LowMemoryHandlerStatistics GetStats()

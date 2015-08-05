@@ -284,6 +284,7 @@ namespace Raven.Database.Config
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
 			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+			Storage.Voron.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
@@ -1324,9 +1325,18 @@ namespace Raven.Database.Config
 
 				/// <summary>
 				/// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
-				/// Default: 512.
+				/// Default: 6144.
 				/// </summary>
 				public int MaxScratchBufferSize { get; set; }
+
+				/// <summary>
+				/// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
+				/// Default: 
+				/// 1024 when MaxScratchBufferSize > 1024, 
+				/// 512 when MaxScratchBufferSize > 512
+				/// -1 otherwise (disabled) 
+				/// </summary>
+				public int ScratchBufferSizeNotificationThreshold { get; set; }
 
 				/// <summary>
 				/// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 

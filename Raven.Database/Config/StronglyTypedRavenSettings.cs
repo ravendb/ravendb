@@ -215,8 +215,17 @@ namespace Raven.Database.Config
 
             Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
             Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
-			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 1024);
-            Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 6144);
+
+			var maxScratchBufferSize = Voron.MaxScratchBufferSize.Value;
+			var scratchBufferSizeNotificationThreshold = -1;
+			if (maxScratchBufferSize > 1024)
+				scratchBufferSizeNotificationThreshold = 1024;
+			else if (maxScratchBufferSize > 512)
+				scratchBufferSizeNotificationThreshold = 512;
+			Voron.ScratchBufferSizeNotificationThreshold = new IntegerSetting(settings[Constants.Voron.ScratchBufferSizeNotificationThreshold], scratchBufferSizeNotificationThreshold);
+
+			Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
 			Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
@@ -430,6 +439,8 @@ namespace Raven.Database.Config
 			public NullableIntegerSetting InitialFileSize { get; set; }
 
 			public IntegerSetting MaxScratchBufferSize { get; set; }
+
+			public IntegerSetting ScratchBufferSizeNotificationThreshold { get; set; }
 
 			public BooleanSetting AllowIncrementalBackups { get; set; }
 
