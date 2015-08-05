@@ -141,7 +141,7 @@ namespace Raven.Database.Server.Controllers
                     msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
                 accessor.Dispose();
                 throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
