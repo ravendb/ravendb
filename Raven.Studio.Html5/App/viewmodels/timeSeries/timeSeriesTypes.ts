@@ -92,6 +92,8 @@ class timeSeriesTypes extends viewModelBase {
 
 
     attached() {
+        super.attached();
+
         /*super.createKeyboardShortcut("F2", () => this.editSelectedTimeSeries(), timeSeries.gridSelector);*/
 
         // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?

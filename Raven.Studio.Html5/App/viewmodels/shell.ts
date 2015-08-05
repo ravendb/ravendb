@@ -260,7 +260,7 @@ class shell extends viewModelBase {
             { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
             { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
             { route: "counterstorages/edit", title: "Edit Counter", moduleId: "viewmodels/counter/editCounter", nav: false },
-            { route: "timeseries/series", title: "Series", moduleId: "viewmodels/timeSeries/timeSeries", nav: true, hash: this.appUrls.timeSeries },
+            { route: "timeseries/types", title: "Types", moduleId: "viewmodels/timeSeries/timeSeriesTypes", nav: true, hash: this.appUrls.timeSeriesType },
             { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
             { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
         ]).buildNavigationModel();
