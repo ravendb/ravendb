@@ -112,7 +112,7 @@ namespace Raven.Tests.Core.Commands
 
                 var document = await store.AsyncDatabaseCommands.GetAsync("items/1");
                 Assert.Equal("NewValue", document.DataAsJson.Value<string>("NewName"));
-
+                WaitForIndexing(store);
                 store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery { Query = "" }, null).WaitForCompletion();
                 var documents = store.DatabaseCommands.GetDocuments(0, 25);
                 Assert.Equal(0, documents.Length);
