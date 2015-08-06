@@ -16,6 +16,8 @@ namespace Raven.Monitor.IO.Data
 			Databases = new List<Result>();
 		}
 
+		public string DisplayName { get; set; }
+
 		public int ProcessId { get; set; }
 
 		public string ProcessName { get; set; }

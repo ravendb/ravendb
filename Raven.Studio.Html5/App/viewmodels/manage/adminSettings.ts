@@ -29,6 +29,7 @@ class adminSettings extends viewModelBase {
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/manage/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
         var ioTestRoute = { route: 'admin/settings/ioTest', moduleId: 'viewmodels/manage/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest() };
+        var diskIoViewerRoute = { route: 'admin/settings/diskIoViewer', moduleId: 'viewmodels/manage/diskIoViewer', title: 'Disk IO Viewer', nav: true, hash: appUrl.forDiskIoViewer() };
 	    var consoleRoute = { route: 'admin/settings/console', moduleId: "viewmodels/manage/console", title: "Administator JS Console", nav: true, hash: appUrl.forAdminJsConsole() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/manage/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
 
@@ -45,7 +46,8 @@ class adminSettings extends viewModelBase {
 		    trafficWatchRoute,
 		    licenseInformation,
 		    debugInfoRoute,
-		    ioTestRoute,
+            ioTestRoute,
+            diskIoViewerRoute,
 		    consoleRoute,
 		    studioConfigRoute
 	    ];

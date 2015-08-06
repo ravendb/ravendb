@@ -1414,3 +1414,33 @@ enum checkbox {
     SomeChecked = 1,
 	Checked = 2
 }
+
+
+interface diskIoPerformanceRunDto {
+    ProcessId: number;
+    ProcessName: string;
+    DurationInMinutes: number;
+    StartTime: string;
+    Databases: Array<diskIoPerformanceRunResultDto>;
+}
+
+interface diskIoPerformanceRunResultDto
+{
+    Name: string;
+    Results: dictionary<Array<diskIoPerformanceRunIoResultDto>>;
+}
+
+interface diskIoPerformanceRunIoResultDto extends documentDto {
+    PathType: string;
+	WriteDurationInMilliseconds: number;
+	WriteIoSizeInBytes: number;
+	ReadDurationInMilliseconds: number;
+	ReadIoSizeInBytes: number;
+	NumberOfReadOperations: number;
+	NumberOfWriteOperations: number;
+}
+
+interface performanceRunItemDto {
+    displayName: string;
+    documentId: string;
+}

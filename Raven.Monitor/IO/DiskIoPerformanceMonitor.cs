@@ -58,12 +58,12 @@ namespace Raven.Monitor.IO
 			run.ProcessId = options.ProcessId;
 			run.ProcessName = process.ProcessName;
 			run.DurationInMinutes = options.IoOptions.DurationInMinutes;
+			run.DisplayName = GenerateDisplayName(run);
 
 			timer = new Timer(_ => Stop(), null, TimeSpan.FromMinutes(options.IoOptions.DurationInMinutes), TimeSpan.FromMilliseconds(-1));
 
-			session = new TraceEventSession("RavenIO");
-			session.EnableKernelProvider(KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.All);
-			TraceLog.CreateFromTraceEventSession(session);
+			session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
+			session.EnableKernelProvider(KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.FileIO);
 
 			session.Source.Kernel.FileIORead += data =>
 			{
@@ -105,8 +105,7 @@ namespace Raven.Monitor.IO
 
 			session.Source.Kernel.FileIOOperationEnd += data =>
 			{
-				if (data.ProcessID != options.ProcessId)
-					return;
+				//NOTE: we can't compare data.ProcessID with options.ProcessId, because data.ProcessID is always -1 on Windows 7 (however it works on Win 8).
 
 				FileIoData value;
 				if (operations.TryRemove(data.IrpPtr, out value) == false)
@@ -192,11 +191,21 @@ namespace Raven.Monitor.IO
 			if (store == null)
 				return;
 
+
 			using (var s = store.OpenSession())
 			{
 				s.Store(run);
 				s.SaveChanges();
 			}
+		}
+
+		private string GenerateDisplayName(DiskIoPerformanceRun diskIoPerformanceRun)
+		{
+			return string.Format("Monitoring of {0} (PID={1}) for {2} minutes at {3}", 
+				diskIoPerformanceRun.ProcessName, 
+				diskIoPerformanceRun.ProcessId, 
+				diskIoPerformanceRun.DurationInMinutes,
+				diskIoPerformanceRun.StartTime.ToLocalTime().ToString("G"));
 		}
 
 		private void StartProcessingOperations()
@@ -241,11 +250,10 @@ namespace Raven.Monitor.IO
 
 		private void DisposeSession()
 		{
-			if (session == null)
-				return;
-
 			lock (locker)
 			{
+				if (session == null)
+					return;
 				session.Dispose();
 				session = null;
 			}
