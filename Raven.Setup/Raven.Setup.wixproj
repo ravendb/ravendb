@@ -96,11 +96,11 @@
       <Name>WixNetFxExtension</Name>
     </WixExtension>
     <WixExtension Include="WixIIsExtension">
-      <HintPath>..\..\..\..\Program Files (x86)\WiX Toolset v3.7\bin\WixIIsExtension.dll</HintPath>
+      <HintPath>..\Tools\WiX\3.7\WixIIsExtension.dll</HintPath>
       <Name>WixIIsExtension</Name>
     </WixExtension>
     <WixExtension Include="WixUtilExtension">
-      <HintPath>..\..\..\..\Program Files (x86)\WiX Toolset v3.7\bin\WixUtilExtension.dll</HintPath>
+      <HintPath>..\Tools\WiX\3.7\bin\WixUtilExtension.dll</HintPath>
       <Name>WixUtilExtension</Name>
     </WixExtension>
     <WixExtension Include="WixUIExtension">

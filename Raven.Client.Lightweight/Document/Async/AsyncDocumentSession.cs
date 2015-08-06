@@ -456,8 +456,11 @@ namespace Raven.Client.Document.Async
 
 			public async Task<bool> MoveNextAsync()
 			{
-                if (await enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
+				if (await enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
+				{
+					this.Dispose();
 					return false;
+				}
 
 				SetCurrent();
 

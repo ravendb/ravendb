@@ -434,6 +434,7 @@
     <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
     <Compile Include="RavenDB_3612.cs" />
+    <Compile Include="RavenDB_3628.cs" />
     <Compile Include="RavenDB_3629.cs" />
     <Compile Include="RavenDB_3625.cs" />
     <Compile Include="RavenDB_3647.cs" />

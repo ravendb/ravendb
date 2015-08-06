@@ -1910,7 +1910,7 @@ namespace Raven.Client.Connection.Async
 					await TryReadNextPageStart().ConfigureAwait(false);
 
 					await EnsureValidEndOfResponse().ConfigureAwait(false);
-
+					this.Dispose();
 					return false;
 				}
 				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);

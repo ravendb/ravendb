@@ -59,8 +59,7 @@ namespace Raven.Abstractions.Extensions
             var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
             if (IsJson(streamWithCachedHeader))
 			{
-                using (var streamReader = new StreamReader(streamWithCachedHeader, Encoding.UTF8, false, 1024, true))
-                using (var jsonReader = new RavenJsonTextReader(streamReader))
+                using (var jsonReader = RavenJsonTextReaderFromStream.Create(streamWithCachedHeader))
                 {
                     return RavenJObject.Load(jsonReader);
                 }

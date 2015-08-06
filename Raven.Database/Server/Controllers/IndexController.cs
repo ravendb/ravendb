@@ -134,7 +134,14 @@ namespace Raven.Database.Server.Controllers
                 if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false) 
                     return GetExplanation(index);
 
-                return GetIndexQueryResult(index, cts.Token);
+                try
+                {
+                    return GetIndexQueryResult(index, cts.Token);
+                }
+                catch (OperationCanceledException e)
+                {
+                    throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+                }
             }
 		}
 

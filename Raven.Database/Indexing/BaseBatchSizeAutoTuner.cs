@@ -5,13 +5,15 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
+
+using Raven.Database.Storage;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	using Raven.Abstractions.Util;
 
-	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler, ITransactionalStorageNotificationHandler
 	{
 		protected readonly WorkContext context;
 
@@ -30,6 +32,7 @@ namespace Raven.Database.Indexing
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
+			context.TransactionalStorage.RegisterTransactionalStorageNotificationHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
 		}
 
@@ -42,6 +45,11 @@ namespace Raven.Database.Indexing
 		public void SoftMemoryRelease()
 		{
 			
+		}
+
+		public void HandleTransactionalStorageNotification()
+		{
+			HandleLowMemory();
 		}
 
 		public virtual LowMemoryHandlerStatistics GetStats()
@@ -173,7 +181,7 @@ namespace Raven.Database.Indexing
 			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
 			// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
 
-			RavenGC.CollectGarbage(compactLoh: true, afterCollect: null);
+		    RavenGC.ConsiderRunningGC();
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
@@ -231,7 +239,7 @@ namespace Raven.Database.Indexing
 			// but we only want to do it if the change was significant 
 			if (NumberOfItemsToProcessInSingleBatch - old > 4096)
 			{
-				RavenGC.CollectGarbage(1, GCCollectionMode.Optimized);
+				RavenGC.ConsiderRunningGC();
 			}
 
 			return true;
