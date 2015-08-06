@@ -273,11 +273,13 @@ namespace Raven.Client.Connection.Async
 				try
 				{
 					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
-					if (overwrite == false) throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+					if (overwrite == false)
+						throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.NotFound) throw;
+					if (e.StatusCode != HttpStatusCode.NotFound)
+						throw;
 				}
 			}
 
