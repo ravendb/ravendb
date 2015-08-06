@@ -9,6 +9,7 @@ class cell {
     static customTemplate = "customTemplate";
 	static counterGroupTemplate = "counterGroupTemplate";
 	static counterNameTemplate = "counterNameTemplate";
+    static timeSeriesKeyTemplate = "timeSeriesKeyTemplate";
 
     constructor(data: any, public templateName: string) {
         this.update(data);

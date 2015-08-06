@@ -96,3 +96,10 @@
 		<span data-bind="text: $parent.cellMap[binding].data"></span>
 	</a>
 </script>
+
+<script id="timeSeriesKeyTemplate" type="text/template">
+    <span class="collection-color-strip" data-bind="css: $parent.calculateExternalIdCellColor($parent.cellMap[binding].data())"></span>
+    <a href="#" data-bind="attr: { href: $parent.editUrl() }">
+        <span data-bind="text: $parent.getCellData(binding)"></span>
+    </a>
+</script>
