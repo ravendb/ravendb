@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -10,7 +9,6 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
 using Raven.Client.Counters;
-using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Tests.Helpers;
 

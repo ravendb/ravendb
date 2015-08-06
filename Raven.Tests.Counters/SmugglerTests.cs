@@ -48,7 +48,7 @@ namespace Raven.Tests.Counters
 				await counterStore.ChangeAsync("g1", "c1", 5);
 				await counterStore.IncrementAsync("g1", "c1");
 				await counterStore.IncrementAsync("g1", "c2");
-				await counterStore.IncrementAsync("g2", "c1");
+				await counterStore.DecrementAsync("g2", "c1");
 
 				var smugglerApi = new SmugglerCounterApi(counterStore);
 
@@ -64,19 +64,24 @@ namespace Raven.Tests.Counters
 
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
-					FromFile = CounterDumpFilename
+					FromFile = CounterDumpFilename,
+					To = new CounterConnectionStringOptions
+					{
+						Url = counterStore.Url,
+						CounterStoreId = counterStore.Name
+					}
 				});
 
-				var summary = await counterStore.Admin.GetCounterStorageSummary("storeToImportTo");
+				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
 
 				summary.Should().HaveCount(3); //sanity check
 				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
 				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
 				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(5);
+				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(6); //change + inc
 				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(1);
+				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(-1);
 			}
 
 		}

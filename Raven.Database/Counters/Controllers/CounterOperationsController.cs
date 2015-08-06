@@ -36,8 +36,8 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -128,8 +128,8 @@ namespace Raven.Database.Counters.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								AssertName(change.Group);
-								AssertName(change.Name);
+								VerifyNameCorrect(change.Group);
+								VerifyNameCorrect(change.Name);
 								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
@@ -268,8 +268,8 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -298,8 +298,8 @@ namespace Raven.Database.Counters.Controllers
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -386,8 +386,8 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -401,8 +401,8 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
         public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -414,7 +414,7 @@ namespace Raven.Database.Counters.Controllers
 
 // ReSharper disable once UnusedParameter.Local
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void AssertName(string name)
+		private static void VerifyNameCorrect(string name)
 		{
 			if (string.IsNullOrEmpty(name))
 				throw new ArgumentException("A name can't be null");

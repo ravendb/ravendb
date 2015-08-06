@@ -139,10 +139,9 @@ namespace Raven.Database.Counters.Controllers
 		    var counterSummaries = new List<CounterSummary>();
 		    using (var reader = counterStorage.CreateReader())
 		    {
-			    /*TODO: use the new api
-				 * counterSummaries.AddRange(
-					reader.GetAllCounterGroupAndNames()
-						  .Select(reader.GetCounterSummary));*/
+				  counterSummaries.AddRange(
+					reader.GetCounterGroups()
+						  .SelectMany(x => reader.GetCountersSummary(x.Name)));
 		    }
 
 			return GetMessageWithObject(counterSummaries);
