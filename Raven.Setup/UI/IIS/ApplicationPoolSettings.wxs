@@ -26,7 +26,7 @@
 				<Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="300" Height="33" X="35" Y="56">
 					<RadioButtonGroup Property="APPLICATION_POOL_TYPE">
 						<RadioButton Text="Create a new one" Value="NEW" Height="17" Width="90" X="0" Y="7" />
-						<RadioButton Text="Use an existing one (Integrated mode, .NET 4.0)" Value="EXISTING" Height="17" Width="240" X="100" Y="7" />
+						<RadioButton Text="Use an existing one (Integrated mode, .NET 4.0)" Value="EXISTING" Height="17" Width="200" X="100" Y="7" />
 					</RadioButtonGroup>
 				</Control>
 				<Control Id="PoolNameLabel" Type="Text" X="40" Y="94" Width="52" Height="15" TabSkip="no" Text="&amp;Pool name:" />
