@@ -14,8 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Lucene.Net.Analysis.Standard;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -36,7 +34,10 @@ namespace Raven.Database.Actions
 {
     public class IndexActions : ActionsBase
     {
-        public IndexActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+		private volatile bool isPrecomputedBatchForNewIndexIsRunning;
+	    private readonly object precomputedLock = new object();
+
+	    public IndexActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
         {
         }
@@ -452,12 +453,12 @@ namespace Raven.Database.Actions
 	        Action precomputeTask = null;
 	        if (WorkContext.RunIndexing &&
 				name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
-	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
+	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex) && isPrecomputedBatchForNewIndexIsRunning == false)
 	        {
 		        // optimization of handling new index creation when the number of document in a database is significantly greater than
 		        // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-		        precomputeTask  = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
+				precomputeTask = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
 	        }
 	        else
 	        {
@@ -470,15 +471,14 @@ namespace Raven.Database.Actions
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
 			// we start the precomuteTask _after_ we finished adding the index
-	        if (precomputeTask != null)
-	        {
-		        precomputeTask();
-	        }
+			if (precomputeTask != null)
+			{
+				precomputeTask();
+			}
 
 	        WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
-
 
         private Action TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
@@ -491,10 +491,20 @@ namespace Raven.Database.Actions
 	            return null;
             }
 
+			lock (precomputedLock)
+			{
+				if (isPrecomputedBatchForNewIndexIsRunning)
+				{
+					index.IsMapIndexingInProgress = false;
+					return null;
+				}
+
+				isPrecomputedBatchForNewIndexIsRunning = true;
+			}
+
             try
             {
 				var cts = new CancellationTokenSource();
-			
 				var task = new Task(() =>
 				{
 					try
@@ -507,6 +517,7 @@ namespace Raven.Database.Actions
 					}
 					finally
 					{
+						isPrecomputedBatchForNewIndexIsRunning = false;
 						index.IsMapIndexingInProgress = false;
 						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
 						WorkContext.NotifyAboutWork();
@@ -537,6 +548,7 @@ namespace Raven.Database.Actions
 		            catch (Exception)
 		            {
 						index.IsMapIndexingInProgress = false;
+			            isPrecomputedBatchForNewIndexIsRunning = false;
 			            throw;
 		            }
 	            };
@@ -544,6 +556,7 @@ namespace Raven.Database.Actions
             catch (Exception)
             {
                 index.IsMapIndexingInProgress = false;
+				isPrecomputedBatchForNewIndexIsRunning = false;
                 throw;
             }
         }
