@@ -5,14 +5,15 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Net;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 
-namespace Raven.Client.Smuggler
+namespace Raven.Database.Smuggler
 {
-	public class ServerValidation
+	internal class ServerValidation
 	{
 		public static void ValidateThatServerIsUpAndDatabaseExists(RavenConnectionStringOptions server, DocumentStore s)
 		{
