@@ -257,7 +257,7 @@ namespace Raven.Client.Indexes
 
 	    private void UpdateSideBySideIndex(IDatabaseCommands databaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, string replaceIndexName, IndexDefinition indexDefinition)
 	    {
-		    databaseCommands.PutIndex(replaceIndexName, indexDefinition);
+		    databaseCommands.PutIndex(replaceIndexName, indexDefinition, true);
 
 		    databaseCommands
 			    .Put(Constants.IndexReplacePrefix + replaceIndexName,
@@ -437,7 +437,7 @@ namespace Raven.Client.Indexes
 
 	    private async Task UpdateSideBySideIndexAsync(IAsyncDatabaseCommands asyncDatabaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token, string replaceIndexName, IndexDefinition indexDefinition)
 	    {
-		    await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, token).ConfigureAwait(false);
+		    await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, true, token).ConfigureAwait(false);
 
 		    await asyncDatabaseCommands
 			    .PutAsync(Constants.IndexReplacePrefix + replaceIndexName,
