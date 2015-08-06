@@ -6,6 +6,6 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+				}			
+			}
 		}
-	}
-}

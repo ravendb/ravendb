@@ -52,7 +52,7 @@ class createConfigurationKey extends dialogViewModelBase {
         if (keyName == null) {
             errorMessage = "Please fill out the Configuration Key name field";
         }
-        else if (this.isConfigurationKeyExists(keyName, this.keys) === true) {
+        else if (this.isConfigurationKeyExists(keyName, this.keys)) {
             errorMessage = "Configuration Key Already Exists!";
         }
         else if ((errorMessage = this.checkInput(keyName)) != null) { }

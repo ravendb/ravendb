@@ -20,7 +20,7 @@ define('dagre', ['d3/d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
 // Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
 // OPTIMIZED BUILD INLINE DURANDAL HERE
 
-define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dialog'], function (system, app, viewLocator, dialog) {
+define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], function (system, app, viewLocator, dialog, composition) {
     //system.debug(true);
 	
 	NProgress.configure({ showSpinner: false });
@@ -41,7 +41,8 @@ define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dial
 
         if ("WebSocket" in window || "EventSource" in window) {
             //Show the app by setting the root view model for our application with a transition.
-            app.setRoot('viewmodels/shell');
+        	app.setRoot("viewmodels/shell", "entrance");
+        	composition.defaultTransitionName = "fadeIn";
         } else {
             //The browser doesn't support nor WebSocket nor EventSource. IE 9, Firefox 6, Chrome 6 and below.
             app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);

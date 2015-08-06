@@ -21,7 +21,6 @@ class apiKeys extends viewModelBase {
     canActivate(args) {
         var deffered = $.Deferred();
         this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
-
         return deffered;
     }
 

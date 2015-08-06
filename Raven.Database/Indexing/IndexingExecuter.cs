@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -283,7 +284,7 @@ namespace Raven.Database.Indexing
 								context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
 							}
 						}
-					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
+					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
 				Interlocked.Increment(ref executedPartially);
 			}
 			catch (InvalidDataException e)
@@ -548,7 +549,8 @@ namespace Raven.Database.Indexing
 				return null;
 			}
 			IndexingPerformanceStats performanceResult = null;
-
+			var wasOutOfMemory = false;
+			var wasOperationCanceled = false;
 			try
 			{
 				transactionalStorage.Batch(actions => { performanceResult = IndexDocuments(actions, batchForIndex, token); });
@@ -558,9 +560,27 @@ namespace Raven.Database.Indexing
 				if (performanceResult != null)
                     performanceResult.RunCompleted();
 			}
+			catch (OperationCanceledException)
+			{
+				wasOperationCanceled = true;
+				throw;
+			}
 			catch (Exception e)
 			{
-				Log.WarnException("Failed to index " + batchForIndex.Index.PublicName, e);
+				var exception = e;
+				var aggregateException = exception as AggregateException;
+				if (aggregateException != null)
+					exception = aggregateException.ExtractSingleInnerException();
+
+				if (TransactionalStorageHelper.IsWriteConflict(exception))
+					return null;
+
+				Log.WarnException(string.Format("Failed to index documents for index: {0}", batchForIndex.Index.PublicName), exception);
+
+				wasOutOfMemory = TransactionalStorageHelper.IsOutOfMemoryException(exception);
+
+				if (wasOutOfMemory == false)
+					context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, exception);
 			}
 			finally
 			{
@@ -578,46 +598,81 @@ namespace Raven.Database.Indexing
 							  batchForIndex.Index.PublicName);
 				}
 
-				bool keepTrying = true;
 				try
 				{
-					for (int i = 0; i < 10 && keepTrying; i++)
+					if (wasOutOfMemory == false && wasOperationCanceled == false)
 					{
-						keepTrying = false;
-				transactionalStorage.Batch(actions =>
-								{
-									try
-									{
-					// whatever we succeeded in indexing or not, we have to update this
-					// because otherwise we keep trying to re-index failed documents
-										actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-									}
-									catch (Exception e)
-									{
-										if (actions.IsWriteConflict(e))
-										{
-											keepTrying = true;
-											return;
-										}
-										throw;
-									}
-								});
+						bool keepTrying = true;
 
-						if (keepTrying)
-							Thread.Sleep(11);
+						for (int i = 0; i < 10 && keepTrying; i++)
+						{
+							keepTrying = false;
+							transactionalStorage.Batch(actions =>
+							{
+								try
+								{
+								// whatever we succeeded in indexing or not, we have to update this
+								// because otherwise we keep trying to re-index failed documents
+								actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+								}
+								catch (Exception e)
+								{
+									if (actions.IsWriteConflict(e))
+									{
+										keepTrying = true;
+										return;
+									}
+									throw;
+								}
+							});
+
+							if (keepTrying)
+								Thread.Sleep(11);
+						}
 					}
+					else if (wasOutOfMemory)
+						HandleOutOfMemory(batchForIndex);
 				}
 				finally
 				{
-				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+					currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
 					batchForIndex.SignalIndexingComplete();
 					batchForIndex.Index.IsMapIndexingInProgress = false;
-			}
+				}
 			}
 
 			return performanceResult;
 		}
 
+		private void HandleOutOfMemory(IndexingBatchForIndex batchForIndex)
+		{
+			transactionalStorage.Batch(actions =>
+			{
+				var instance = context.IndexStorage.GetIndexInstance(batchForIndex.IndexId);
+				if (instance == null)
+				{
+					return;
+				}
+
+				Log.Error("Disabled index '{0}'. Reason: out of memory.", instance.PublicName);
+
+				string configurationKey = null;
+				if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
+				{
+					configurationKey = Constants.Voron.MaxScratchBufferSize;
+				}
+				else if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.EsentTypeName, StringComparison.OrdinalIgnoreCase))
+				{
+					configurationKey = Constants.Esent.MaxVerPages;
+				}
+
+				Debug.Assert(configurationKey != null);
+
+				actions.Indexing.SetIndexPriority(batchForIndex.IndexId, IndexingPriority.Disabled);
+				context.Database.AddAlert(new Alert { AlertLevel = AlertLevel.Error, CreatedAt = SystemTime.UtcNow, Title = string.Format("Index '{0}' was disabled", instance.PublicName), UniqueKey = string.Format("Index '{0}' was disabled", instance.IndexId), Message = string.Format("Out of memory exception occured in storage during indexing process for index '{0}'. As a result of this action, index changed state to disabled. Try increasing '{1}' value in configuration.", instance.PublicName, configurationKey) });
+				instance.Priority = IndexingPriority.Disabled;
+			});
+		}
 
 		public class IndexingBatchForIndex
 		{
@@ -824,9 +879,6 @@ namespace Raven.Database.Indexing
 
 			var batch = indexingBatchForIndex.Batch;
 
-			IndexingPerformanceStats performanceStats = null;
-			try
-			{
 				if (Log.IsDebugEnabled)
 				{
 					string ids;
@@ -841,23 +893,8 @@ namespace Raven.Database.Indexing
 
 				token.ThrowIfCancellationRequested();
 				
-				performanceStats = context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue, token);
+			return context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue, token); ;
 			}
-			catch (OperationCanceledException)
-			{
-				throw;
-			}
-			catch (Exception e)
-			{
-				if (actions.IsWriteConflict(e))
-					return null;
-
-				Log.WarnException(string.Format("Failed to index documents for index: {0}", indexingBatchForIndex.Index.PublicName), e);
-				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e);
-			}
-
-			return performanceStats;
-		}
 
 		protected override void Dispose()
 		{

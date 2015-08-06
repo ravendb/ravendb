@@ -279,6 +279,10 @@ class appUrl {
         return "#admin/settings/ioTest";
     }
 
+    static forDiskIoViewer(): string {
+        return "#admin/settings/diskIoViewer";
+    }
+
 	static forAdminJsConsole(): string {
 		return "#admin/settings/console";
 	}

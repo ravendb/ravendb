@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Util;
 using System.Linq;
+using Raven.Database.Storage;
 using Sparrow.Collections;
 
 namespace Raven.Storage.Esent.StorageActions
@@ -66,8 +67,13 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 		private readonly ConcurrentSet<Key> itemsToDelete = new ConcurrentSet<Key>(); 
+		private readonly RemainingReductionPerLevel itemsToDeletePerViewAndLevel =
+			new  RemainingReductionPerLevel();
+		public RemainingReductionPerLevel ItemsToDeletePerViewAndLevel { get { return itemsToDeletePerViewAndLevel; } }
 
-		public bool Add(JET_SESID session, JET_TABLEID table)
+		public int IndexId { get; set; }
+
+		public bool Add(JET_SESID session, JET_TABLEID table, int level)
 		{
 			byte[] buffer;
 			int actualBookmarkSize;
@@ -85,8 +91,12 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				IndexReaderBuffers.Buffers.ReturnBuffer(largeBuffer);
 			}
-
-			return itemsToDelete.TryAdd(new Key(buffer, actualBookmarkSize));
+			var res = itemsToDelete.TryAdd(new Key(buffer, actualBookmarkSize));
+			if (res)
+			{
+				itemsToDeletePerViewAndLevel.DecrementPerLevelCounters(level);
+			}
+			return res;
 		}
 
 		public IEnumerable<Tuple<byte[],int>> GetSortedBookmarks()

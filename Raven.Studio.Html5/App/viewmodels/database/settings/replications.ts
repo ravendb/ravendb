@@ -308,7 +308,7 @@ class replications extends viewModelBase {
     }
 
     createNewTransformativeReplication(destination: replicationDestination) {
-        destination.transformScripts.push(new replicationPatchScript());
+        destination.transformScripts.push(replicationPatchScript.empty());
     }
 }
 

@@ -6,13 +6,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Xml;
 using Xunit;
 using Xunit.Sdk;
 
 namespace Raven.Tests.Common.Attributes
 {
-	public class TimeBombedFactAttribute : FactAttribute
+	public class TimeBombedFactAttribute : FactAttribute, ITestCommand
 	{
 		public TimeBombedFactAttribute(int year, int month, int day, string msg)
 		{
@@ -25,8 +25,27 @@ namespace Raven.Tests.Common.Attributes
 		{
 			if (DateTime.Today < SkipUntil)
 				return Enumerable.Empty<ITestCommand>();
-			throw new InvalidOperationException("Time bombed fact expired");
-			//return base.EnumerateTestCommands(method);
+		    return new[] {this};
+		    //return base.EnumerateTestCommands(method);
 		}
+
+
+	    public MethodResult Execute(object testClass)
+	    {
+            throw new InvalidOperationException("Time bombed fact expired");
+        }
+
+        public XmlNode ToStartXml()
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml("<dummy/>");
+            XmlNode testNode = XmlUtility.AddElement(doc.ChildNodes[0], "start");
+
+            XmlUtility.AddAttribute(testNode, "name", DisplayName);
+
+            return testNode;
+        }
+
+	    public bool ShouldCreateInstance { get { return false; } }
 	}
 }

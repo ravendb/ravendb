@@ -202,5 +202,6 @@ RavenDB.sln.ide/
 /Raven.Web/Raven/CompiledIndexCache
 _NCrunch_RavenDB/
 /Raven.Tests.Web/CompiledIndexCache
+.vs/
 /Raven.Database/LuceneQueryParser.Language.analyzer.lst
 /Raven.Database/LuceneQueryParser.Language.grammar.lst

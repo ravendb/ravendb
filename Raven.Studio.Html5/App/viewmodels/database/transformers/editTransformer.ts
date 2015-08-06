@@ -63,6 +63,7 @@ class editTransformer extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.addTransformerHelpPopover();
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
