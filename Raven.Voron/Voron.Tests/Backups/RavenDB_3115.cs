@@ -27,7 +27,7 @@ namespace Voron.Tests.Backups
 			Clean();
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone()
 		{
 			var bytes = new byte[1024];

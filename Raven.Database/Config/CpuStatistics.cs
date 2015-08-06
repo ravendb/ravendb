@@ -6,40 +6,44 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Management;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using NLog.Internal;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using ConfigurationManager = System.Configuration.ConfigurationManager;
+using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
+using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
 	public static class CpuStatistics
 	{
-		private const int HighNotificationThreshold = 80;
-        private const int LowNotificationThreshold = 60;
+		private const float HighNotificationThreshold = 0.8f;
+        private const float LowNotificationThreshold = 0.6f;
 
 		private const int NumberOfItemsInQueue = 5;
 
-		private static readonly int[] LastUsages = new int[NumberOfItemsInQueue];
+		private static readonly float[] LastUsages = new float[NumberOfItemsInQueue];
 
 		private static readonly ConcurrentSet<WeakReference<ICpuUsageHandler>> CpuUsageHandlers = new ConcurrentSet<WeakReference<ICpuUsageHandler>>();
 
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-	    private static bool errorGettingCpuStats;
 		private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
-	    private static bool dynamicLoadBalancding;
+	    private static bool dynamicLoadBalancing;
 
 	    static CpuStatistics()
 		{
-	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancding) && 
-                dynamicLoadBalancding == false)
+	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) && 
+                dynamicLoadBalancing == false)
 		        return; // disabled, so we avoid it
-	        dynamicLoadBalancding = true;
+	        dynamicLoadBalancing = true;
 
 		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => _domainUnload.Set();
 
@@ -47,47 +51,13 @@ namespace Raven.Database.Config
 			{
 			    try
 			    {
-                    ManagementObjectSearcher searcher;
-                    try
-			        {
-                        searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor WHERE Name='_Total'");
-			        }
-			        catch (Exception e)
-			        {
-			            Log.WarnException("Could not get the CPU statistics, automatic CPU thorttling disabled!", e);
-			            return;
-			        }
+				    var usage = new CpuUsage();
 			        while (true)
 			        {
 			            if (_domainUnload.Wait(1000))
 			                return;
 
-                        int totalUsage;
-                        try
-			            {
-			                totalUsage = searcher
-			                    .Get()
-			                    .Cast<ManagementObject>()
-			                    .Select(x => int.Parse(x["PercentProcessorTime"].ToString()))
-			                    .FirstOrDefault();
-			                errorGettingCpuStats = false;
-			            }
-			            catch (Exception e)
-			            {
-			                if (errorGettingCpuStats)
-			                {
-                                Log.WarnException("Repeatedly cannot get CPU usage from system, assuming temporary issue, will try again in a few minutes", 
-                                    e);
-			                    if (_domainUnload.Wait(7*60*1000))
-			                        return;
-			                }
-			                else
-			                {
-                                Log.WarnException("Could not get current CPU usage from system, will try again later", e);
-			                }
-			                errorGettingCpuStats = true;
-                            continue;
-			            }
+				        var totalUsage = usage.GetCurrentUsage();
 			            try
 			            {
 			                HandleCpuUsage(totalUsage);
@@ -107,10 +77,10 @@ namespace Raven.Database.Config
 			{
 				IsBackground = true,
 				Name = "CPU usage notification thread"
-			}.Start();
+			};//.Start();
 		}
 
-		private static void HandleCpuUsage(int usageInPercents)
+		private static void HandleCpuUsage(float usageInPercents)
 		{
 			var previousWriteIndex = nextWriteIndex;
 			LastUsages[previousWriteIndex] = usageInPercents;
@@ -134,7 +104,7 @@ namespace Raven.Database.Config
 
 		public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
 		{
-		    if (dynamicLoadBalancding == false)
+		    if (dynamicLoadBalancing == false)
 		        return;
 			CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
 		}
@@ -173,5 +143,65 @@ namespace Raven.Database.Config
 		void HandleHighCpuUsage();
 
 		void HandleLowCpuUsage();
+	}
+
+	public class CpuUsage
+	{
+		private ulong _previousIdleTicks;
+		private ulong _previousTotalTicks;
+		private float _previousResult;
+
+		public CpuUsage()
+		{
+			FILETIME currentIdleTime;
+			FILETIME currentKernelTime;
+			FILETIME currentUserTime;
+			if (GetSystemTimes(out currentIdleTime, out currentKernelTime, out currentUserTime) == false)
+				throw new Win32Exception();
+
+			_previousIdleTicks = FileTimeToULong(currentIdleTime);
+
+			_previousTotalTicks = FileTimeToULong(currentKernelTime) + FileTimeToULong(currentUserTime);
+		}
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool GetSystemTimes(
+			out FILETIME lpIdleTime,
+			out FILETIME lpKernelTime,
+			out FILETIME lpUserTime);
+
+		public float GetCurrentUsage()
+		{
+			FILETIME currentIdleTime;
+			FILETIME currentKernelTime;
+			FILETIME currentUserTime;
+			if (GetSystemTimes(out currentIdleTime, out currentKernelTime, out currentUserTime) == false)
+				throw new Win32Exception();
+
+			ulong idleTicks = FileTimeToULong(currentIdleTime);
+			ulong totalTicks = FileTimeToULong(currentKernelTime) + FileTimeToULong(currentUserTime);
+			ulong totalTicksSinceLastTime = totalTicks - _previousTotalTicks;
+			ulong idleTicksSinceLastTime = idleTicks - _previousIdleTicks;
+
+			float ret;
+			if (totalTicksSinceLastTime == 0)
+			{
+				ret = _previousResult;
+			}
+			else
+			{
+				ret = 1.0f - ((float)idleTicksSinceLastTime) / totalTicksSinceLastTime;
+			}
+			_previousResult = ret;
+			_previousTotalTicks = totalTicks;
+			_previousIdleTicks = idleTicks;
+			return ret;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private ulong FileTimeToULong(FILETIME time)
+		{
+			return ((ulong)time.dwHighDateTime << 32) + (uint)time.dwLowDateTime;
+		}
 	}
 }

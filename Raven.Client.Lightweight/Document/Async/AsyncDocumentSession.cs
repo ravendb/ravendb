@@ -21,6 +21,7 @@ using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Runtime.Remoting.Messaging;
 
 namespace Raven.Client.Document.Async
 {
@@ -88,7 +89,9 @@ namespace Raven.Client.Document.Async
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="ids">The ids of the documents to load.</param>
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token)
         {
             return Lazily.LoadAsync<T>(ids, null, token);
         }
@@ -98,8 +101,9 @@ namespace Raven.Client.Document.Async
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The id.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns></returns>
-		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token)
         {
             return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
@@ -193,6 +197,12 @@ namespace Raven.Client.Document.Async
             return AddLazyOperation<TResult[]>(lazyOp, null, token);
         }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			IncrementRequestCount();
+			return AsyncDatabaseCommands.GetMultiFacetsAsync(queries);
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -202,7 +212,7 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token)
         {
 			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
@@ -446,8 +456,11 @@ namespace Raven.Client.Document.Async
 
 			public async Task<bool> MoveNextAsync()
 			{
-                if (await enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
+				if (await enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
+				{
+					this.Dispose();
 					return false;
+				}
 
 				SetCurrent();
 
@@ -688,14 +701,16 @@ namespace Raven.Client.Document.Async
 			return LoadAsync<T>(documentKeys, token);
 		}
 
-		/// <summary>
-		/// Begins the async load operation
-		/// </summary>
-		/// <param name="id">The id.</param>
-		/// <returns></returns>
-		public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
+        /// <summary>
+        /// Begins the async load operation
+        /// </summary>
+        /// <param name="id">The id.</param>
+        /// <param name="token">The canecllation token.</param>
+        /// <returns></returns>
+        public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
-			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
+			if (id == null)
+				throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
@@ -731,7 +746,7 @@ namespace Raven.Client.Document.Async
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0], token);
+			return LoadAsyncInternal<T>(ids.ToArray(), token);
 		}
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
@@ -848,7 +863,40 @@ namespace Raven.Client.Document.Async
 			return multiLoadOperation.Complete<T>();
 		}
 
-     
+		/// <summary>
+		/// Begins the async multi load operation
+		/// </summary>
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToArray();
+
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
+
+				multiLoadOperation.Complete<T>();
+			}
+
+			var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token)).ToArray();
+			var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
+			return loadedData;
+		}
 
 		/// <summary>
 		/// Begins the async save changes operation
@@ -978,9 +1026,10 @@ namespace Raven.Client.Document.Async
 
 		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
 		{
-			 var metadata = await GetDocumentMetadataAsync(instance);
+			var metadata = await GetDocumentMetadataAsync(instance);
 			return metadata.Metadata;
 		}
+
 		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
 		{
 			DocumentMetadata value;
@@ -1008,7 +1057,7 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Get the json document by key from the store
 		/// </summary>
-		public async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
 		{
 			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
 			if (jsonDocument == null)

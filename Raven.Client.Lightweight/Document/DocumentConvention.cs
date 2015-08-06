@@ -262,7 +262,7 @@ namespace Raven.Client.Document
 
 			if (t.Name.Contains("<>"))
 				return null;
-			if (t.IsGenericType())
+			if (t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
 				if (name.Contains('`'))
@@ -323,12 +323,14 @@ namespace Raven.Client.Document
 	      return GetTypeTagName(entity.GetType());
 	   }
 
-		/// <summary>
-		/// Generates the document key.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
+        /// <summary>
+        /// Generates the document key.
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        /// <param name="dbName">Name of the database</param>
+        /// <param name="databaseCommands">Low level database commands.</param>
+        /// <returns></returns>
+        public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
 		{
 			var type = entity.GetType();
 			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
@@ -668,7 +670,7 @@ namespace Raven.Client.Document
 
 		/// <summary>
 		/// How index and transformer updates should be handled in replicated setup.
-		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode.All"/>.
+		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode"/>.
 		/// </summary>
 		public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
 

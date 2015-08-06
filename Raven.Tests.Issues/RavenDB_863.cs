@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -14,6 +16,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using Xunit.Extensions;
+using Sparrow.Collections;
 
 namespace Raven.Tests.Issues
 {
@@ -42,7 +45,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 2 }).ToList();
+                    var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new HashSet<string> { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 2 }, CancellationToken.None).ToList();
 					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Bucket, results[1].Bucket);
 				});
@@ -70,7 +73,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 3 }).ToList();
+                    var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new HashSet<string> { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 3 }, CancellationToken.None).ToList();
 					Assert.Equal(4, results.Count);
 				});
 			}

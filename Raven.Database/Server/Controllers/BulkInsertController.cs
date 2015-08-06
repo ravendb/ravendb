@@ -23,6 +23,7 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -88,7 +89,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     CurrentOperationContext.User.Value = user;
                     CurrentOperationContext.Headers.Value = headers;
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token);
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token, timeout);
                 }
 				catch (InvalidDataException e)
 				{
@@ -116,6 +117,8 @@ namespace Raven.Database.Server.Controllers
                     status.Documents = documents;
 	                CurrentOperationContext.User.Value = null;
 	                CurrentOperationContext.Headers.Value = null;
+
+					timeout.Dispose();
                 }
 			}, tre.Token);
 
@@ -139,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 				}, httpStatusCode);
             }
 	        if (status.IsTimedOut)
-                throw new TimeoutException("Bulk insert operation did not receive new data longer than configured treshold");
+				throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
 
             sp.Stop();
 

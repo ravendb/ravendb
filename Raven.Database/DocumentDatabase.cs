@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
 using Raven.Abstractions;
@@ -42,6 +43,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
+using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -77,6 +79,8 @@ namespace Raven.Database
 
 		private volatile bool backgroundWorkersSpun;
 
+		private volatile bool indexingWorkersStoppedManually;
+
 		private volatile bool disposed;
 
 		private Task indexingBackgroundTask;
@@ -108,6 +112,7 @@ namespace Raven.Database
 				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
+				initializer.SubscribeToDiskSpaceChanges();
 				initializer.ExecuteAlterConfiguration();
 				initializer.SatisfyImportsOnce();
 
@@ -171,7 +176,9 @@ namespace Raven.Database
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
+					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+						(key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
+						(key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
 					InitializeTriggersExceptIndexCodecs();
 					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
@@ -223,6 +230,8 @@ namespace Raven.Database
 		public event Action OnIndexingWiringComplete;
 
 		public event Action<DocumentDatabase> OnBackupComplete;
+
+		public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
 		public static string BuildVersion
 		{
@@ -503,7 +512,7 @@ namespace Raven.Database
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
 					SupportsDtc = TransactionalStorage.SupportsDtc,
-
+                    Is64Bit = Environment.Is64BitProcess
 				};
 
 				TransactionalStorage.Batch(actions =>
@@ -533,6 +542,12 @@ namespace Raven.Database
 		})
 						.Where(x => x != null)
 						.ToArray();
+
+					result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
+						result.StaleIndexes.Contains(idx.Name)
+						&& !idx.Priority.HasFlag(IndexingPriority.Disabled)
+						&& !idx.Priority.HasFlag(IndexingPriority.Abandoned));
 				});
 
 				if (result.Indexes != null)
@@ -565,7 +580,23 @@ namespace Raven.Database
 			}
 		}
 
-		public TaskActions Tasks { get; private set; }
+		public Dictionary<string, RemainingReductionPerLevel> GetRemainingScheduledReductions()
+		{
+			Dictionary<string, RemainingReductionPerLevel> res = new Dictionary<string, RemainingReductionPerLevel>();
+			TransactionalStorage.Batch(accessor =>
+			{
+				var remaining = accessor.MapReduce.GetRemainingScheduledReductionPerIndex();
+				foreach (var keyValue in remaining)
+				{
+					var index = IndexStorage.GetIndexInstance(keyValue.Key);
+					if (index == null) continue;
+					res[index.PublicName] = keyValue.Value;
+				}
+			});
+			return res;
+		}
+
+	    public TaskActions Tasks { get; private set; }
 
 		[CLSCompliant(false)]
 		public ITransactionalStorage TransactionalStorage { get; private set; }
@@ -713,6 +744,14 @@ namespace Raven.Database
 
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
+			var metrics = WorkContext.MetricsCounters;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metrics.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
+
 			EventHandler onDisposing = Disposing;
 			if (onDisposing != null)
 			{
@@ -749,22 +788,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (ExtensionsState == null)
-				return;
+			{
+				if (ExtensionsState == null)
+					return;
 
-			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-				exceptionAggregator.Execute(value.Dispose);
-		});
+				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+					exceptionAggregator.Execute(value.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			if (toDispose == null)
-				return;
+			{
+				if (toDispose == null)
+					return;
 
-			foreach (IDisposable shouldDispose in toDispose)
-				exceptionAggregator.Execute(shouldDispose.Dispose);
-		});
+				foreach (IDisposable shouldDispose in toDispose)
+					exceptionAggregator.Execute(shouldDispose.Dispose);
+			});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -784,11 +823,11 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-		{
-			var disposable = backgroundTaskScheduler as IDisposable;
-			if (disposable != null)
-				disposable.Dispose();
-		});
+			{
+				var disposable = backgroundTaskScheduler as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			});
 
 
 			if (IndexStorage != null)
@@ -926,8 +965,11 @@ namespace Raven.Database
 			}
 		}
 
-		public void SpinBackgroundWorkers()
+		public void SpinBackgroundWorkers(bool manualStart = false)
 		{
+			if (manualStart == false && indexingWorkersStoppedManually)
+				return;
+
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
@@ -938,6 +980,7 @@ namespace Raven.Database
 				if (res && disableIndexingStatus) return; //indexing were set to disable 
 			}
 			backgroundWorkersSpun = true;
+			indexingWorkersStoppedManually = false;
 
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
@@ -959,8 +1002,16 @@ namespace Raven.Database
 			backgroundWorkersSpun = false;
 		}
 
-		public void StopIndexingWorkers()
+		public void StartIndexingWorkers()
 		{
+			workContext.StartIndexing();
+		}
+
+		public void StopIndexingWorkers(bool manualStop)
+		{
+			if (manualStop == false && indexingWorkersStoppedManually)
+				return;
+
 			workContext.StopIndexing();
 			try
 			{
@@ -981,6 +1032,12 @@ namespace Raven.Database
 			}
 
 			backgroundWorkersSpun = false;
+			indexingWorkersStoppedManually = manualStop;
+		}
+
+		public void ForceLicenseUpdate()
+		{
+			initializer.validateLicense.ForceExecute(Configuration);
 		}
 
 		protected void RaiseIndexingWiringComplete()
@@ -1104,12 +1161,13 @@ namespace Raven.Database
 		private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
 		{
 			var results = new BatchResult[commands.Count];
+			var participatingIds = commands.Select(x => x.Key).ToArray();
+
 			for (int index = 0; index < commands.Count; index++)
 			{
 				token.ThrowIfCancellationRequested();
 
-				ICommandData command = commands[index];
-				results[index] = command.ExecuteBatch(this);
+				results[index] = commands[index].ExecuteBatch(this, participatingIds);
 			}
 
 			return results;
@@ -1136,7 +1194,7 @@ namespace Raven.Database
 
 			private readonly InMemoryRavenConfiguration configuration;
 
-			private ValidateLicense validateLicense;
+			internal ValidateLicense validateLicense;
 
 			public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
 			{
@@ -1226,7 +1284,7 @@ namespace Raven.Database
 								if (database.StorageInaccessible != null)
 									database.StorageInaccessible(database, EventArgs.Empty);
 
-							});
+							}, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
@@ -1240,7 +1298,51 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
+			public void SubscribeToDiskSpaceChanges()
+			{
+				database.OnDiskSpaceChanged = notification =>
+				{
+					if (notification.PathType != PathType.Index)
+						return;
 
+					if (configuration.Indexing.DisableIndexingFreeSpaceThreshold < 0)
+						return;
+
+					var thresholdInMb = configuration.Indexing.DisableIndexingFreeSpaceThreshold;
+					var warningThresholdInMb = Math.Max(thresholdInMb * 2, 1024);
+					var freeSpaceInMb = (int)(notification.FreeSpaceInBytes / 1024 / 1024);
+
+					if (freeSpaceInMb <= thresholdInMb)
+					{
+						if (database.backgroundWorkersSpun)
+							database.StopIndexingWorkers(false);
+
+						database.AddAlert(new Alert
+						{
+							AlertLevel = AlertLevel.Error,
+							CreatedAt = SystemTime.UtcNow,
+							Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+							UniqueKey = "Free space (index)"
+						});
+		}
+					else
+					{
+						if (freeSpaceInMb <= warningThresholdInMb)
+						{
+							database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Warning,
+								CreatedAt = SystemTime.UtcNow,
+								Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+								UniqueKey = "Free space warning (index)"
+							});
+						}
+
+						if (database.backgroundWorkersSpun == false)
+							database.SpinBackgroundWorkers(false);
+					}
+				};
+			}
 		}
 
 		public void RaiseBackupComplete()

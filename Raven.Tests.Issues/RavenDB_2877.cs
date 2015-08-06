@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 	    }
             
             
-            [Fact]
+        [Fact]
 		public async Task CanHandleHandleLongUrl()
 		{
 			using (var store = NewDocumentStore())
@@ -62,7 +62,7 @@ namespace Raven.Tests.Issues
 				store.InitializeProfiling();
 			    store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
                 var offices = Enumerable.Range(1, 20).Select(x => new Office() { FacilityName = "Main Offices", OfficeNumber = x });
-				Guid id;
+
 				using (var s = store.OpenSession())
 				{
 				    foreach (var office in offices)

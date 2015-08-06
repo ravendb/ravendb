@@ -32,12 +32,12 @@ using System.Text;
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.LinqToSql
 {
-  [MetadataType(typeof(DepartmentMetadata))]
-  public partial class Department
-  {
-    [JsonConverter(typeof(DepartmentConverter))]
-    public class DepartmentMetadata
+    [MetadataType(typeof(DepartmentMetadata))]
+    public partial class Department
     {
+        [JsonConverter(typeof(DepartmentConverter))]
+        public class DepartmentMetadata
+        {
+        }
     }
-  }
 }

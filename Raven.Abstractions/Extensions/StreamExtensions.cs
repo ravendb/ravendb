@@ -22,11 +22,9 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class StreamExtensions
     {
-        private static readonly IBufferPool BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-
         public static void CopyTo(this Stream stream, Stream other)
         {
-            var buffer = BufferPool.TakeBuffer(0x1000);
+            var buffer = BufferSharedPools.ByteArray.Allocate();
 
             try
             {
@@ -40,7 +38,7 @@ namespace Raven.Abstractions.Extensions
             }
             finally
             {
-                BufferPool.ReturnBuffer(buffer);
+                BufferSharedPools.ByteArray.Free(buffer);
             }
         }
 
@@ -171,25 +169,27 @@ namespace Raven.Abstractions.Extensions
         public static byte[] ReadData(this Stream stream)
         {
             var list = new List<byte[]>();
-            const int DefaultBufferSize = 1024 * 16;
 
-            var buffer = BufferPool.TakeBuffer(DefaultBufferSize);
+            var buffer = BufferSharedPools.ByteArray.Allocate();
 
             try
             {
                 var currentOffset = 0;
                 int read;
+
                 while ((read = stream.Read(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
                 {
                     currentOffset += read;
                     if (currentOffset == buffer.Length)
                     {
                         list.Add(buffer);
-                        buffer = BufferPool.TakeBuffer(DefaultBufferSize);
+                        buffer = BufferSharedPools.ByteArray.Allocate();
                         currentOffset = 0;
                     }
                 }
+
                 var totalSize = list.Sum(x => x.Length) + currentOffset;
+
                 var result = new byte[totalSize];
                 var resultOffset = 0;
                 foreach (var partial in list)
@@ -197,15 +197,16 @@ namespace Raven.Abstractions.Extensions
                     Buffer.BlockCopy(partial, 0, result, resultOffset, partial.Length);
                     resultOffset += partial.Length;
                 }
+
                 Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
                 return result;
             }
             finally
             {
                 foreach (var partial in list)
-                    BufferPool.ReturnBuffer(partial);
+                    BufferSharedPools.ByteArray.Free(partial);
 
-                BufferPool.ReturnBuffer(buffer);
+                BufferSharedPools.ByteArray.Free(buffer);
             }
         }
 
@@ -217,9 +218,8 @@ namespace Raven.Abstractions.Extensions
         public static async Task<byte[]> ReadDataAsync(this Stream stream)
         {
             var list = new List<byte[]>();
-            const int DefaultBufferSize = 1024 * 16;
 
-            var buffer = BufferPool.TakeBuffer(DefaultBufferSize);
+            var buffer = BufferSharedPools.ByteArray.Allocate();
 
             try
             {
@@ -231,7 +231,7 @@ namespace Raven.Abstractions.Extensions
                     if (currentOffset == buffer.Length)
                     {
                         list.Add(buffer);
-                        buffer = BufferPool.TakeBuffer(DefaultBufferSize);
+                        buffer = BufferSharedPools.ByteArray.Allocate();
                         currentOffset = 0;
                     }
                 }
@@ -249,9 +249,9 @@ namespace Raven.Abstractions.Extensions
             finally
             {
                 foreach (var partial in list)
-                    BufferPool.ReturnBuffer(partial);
+                    BufferSharedPools.ByteArray.Free(partial);
 
-                BufferPool.ReturnBuffer(buffer);
+                BufferSharedPools.ByteArray.Free(buffer);
             }
         }
 

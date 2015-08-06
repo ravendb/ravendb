@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
@@ -109,6 +110,11 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
+		public Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+		{
+			throw new NotSupportedException("Multi faceted searching is currently not supported by async sharded document store");
+		}
+
 		public string GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -122,7 +128,7 @@ namespace Raven.Client.Shard
 			return commands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -622,11 +628,6 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<RavenJObject> GetMetadataForAsync<T>(T instance)
-		{
-			throw new NotImplementedException("GetMetadataForAsync currently not supported by sharded document store");
-		}
-
 		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
 		{
 			DocumentMetadata value;
@@ -662,7 +663,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token = default (CancellationToken))
+		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
 		{
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
 											 .ContinueWith(keysTask =>
@@ -751,5 +752,57 @@ namespace Raven.Client.Shard
 	    {
 	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }
+
+		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+		{
+			var metadata = await GetDocumentMetadataAsync(instance);
+			return metadata.Metadata;
+		}
+
+		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+			{
+				string id;
+				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+					|| (instance is IDynamicMetaObjectProvider &&
+					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+				{
+					AssertNoNonUniqueInstance(instance, id);
+					var jsonDocument = await GetJsonDocumentAsync(id);
+					value = GetDocumentMetadataValue(instance, id, jsonDocument);
+				}
+				else
+				{
+					throw new InvalidOperationException("Could not find the document key for " + instance);
+				}
+			}
+			return value;
+		}
+
+		/// <summary>
+		/// Get the json document by key from the store
+		/// </summary>
+		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+		{
+			 var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof(object),
+				Keys = { documentKey }
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+
+			var documents = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands,
+																	shardRequestData,
+																	(commands, i) => commands.GetAsync(documentKey));
+
+			var document = documents.FirstOrDefault(x => x != null);
+			if (document != null)
+				return document;
+
+			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			 
+		}
 	}
 }

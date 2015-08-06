@@ -11,7 +11,8 @@ using Voron.Trees;
 
 namespace Voron
 {
-	using Util;
+    using Sparrow;
+    using Util;
 
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
 	public struct PrefixedSliceHeader
@@ -28,6 +29,8 @@ namespace Voron
 
 	public unsafe sealed class PrefixedSlice : MemorySlice
 	{
+        public static PrefixedSliceComparer MemoryComparerInstance = Memory.Compare;
+
 		public static PrefixedSlice AfterAllKeys = new PrefixedSlice(SliceOptions.AfterAllKeys);
 		public static PrefixedSlice BeforeAllKeys = new PrefixedSlice(SliceOptions.BeforeAllKeys);
 		public static PrefixedSlice Empty = new PrefixedSlice(Slice.Empty)
@@ -172,11 +175,13 @@ namespace Voron
 			fixed (byte* slicePtr = sliceData)
 			{
 				if (Prefix.Value == null)
-                    MemoryUtils.Copy(slicePtr, Prefix.ValuePtr + bytesToSkip, prefixPart);
+                {
+                    Memory.Copy(slicePtr, Prefix.ValuePtr + bytesToSkip, prefixPart);
+                }                    
 				else
 				{
 					fixed (byte* prefixVal = Prefix.Value)
-                        MemoryUtils.Copy(slicePtr, prefixVal + bytesToSkip, prefixPart);
+                        Memory.Copy(slicePtr, prefixVal + bytesToSkip, prefixPart);
 				}
 			}
 
@@ -190,13 +195,13 @@ namespace Voron
 			var prefixedSlice = other as PrefixedSlice;
 
 			if (prefixedSlice != null)
-				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, MemoryUtils.MemoryComparerInstance, size);
+                return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, PrefixedSlice.MemoryComparerInstance, size);
 
 			var slice = other as Slice;
 
 			if (slice != null)
 			{
-				return PrefixedSliceComparisonMethods.Compare(slice, this, MemoryUtils.MemoryComparerInstance, size) * -1;
+                return PrefixedSliceComparisonMethods.Compare(slice, this, PrefixedSlice.MemoryComparerInstance, size) * -1;
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
@@ -217,6 +222,17 @@ namespace Voron
 			}
 
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
+		}
+
+		public override void PrepareForSearching()
+		{
+			if (Prefix == null && NewPrefix != null)
+			{
+				Prefix = new PrefixNode(new PrefixNodeHeader
+				{
+					PrefixLength = NewPrefix.KeyLength
+				}, NewPrefix.Array, -1);
+			}
 		}
 
 		public override string ToString()

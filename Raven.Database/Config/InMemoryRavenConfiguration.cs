@@ -103,6 +103,8 @@ namespace Raven.Database.Config
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
 			FileSystem.InitializeFrom(this);
 
+			MaxClauseCount = ravenSettings.MaxClauseCount.Value;
+
 			AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
 
 			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
@@ -282,6 +284,7 @@ namespace Raven.Database.Config
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
 			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+			Storage.Voron.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
@@ -289,6 +292,7 @@ namespace Raven.Database.Config
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
 		    Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
+			
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
@@ -307,6 +311,8 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
+			Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
+			Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -336,6 +342,8 @@ namespace Raven.Database.Config
 
 			return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
 		}
+
+		public int MaxClauseCount { get; set; }
 
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
@@ -745,7 +753,7 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The directory for the RavenDB database. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// Default: ~\Data
+		/// Default: ~\Databases\System
 		/// </summary>
 		public string DataDirectory
 		{
@@ -924,7 +932,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath, journalStoragePath;
+		private string indexStoragePath;
 		
 		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
@@ -963,6 +971,27 @@ namespace Raven.Database.Config
 		/// Limit of how much memory a batch processing can take (in MBytes)
 		/// </summary>
 		public int MemoryLimitForProcessingInMb { get; set; }
+
+		public long DynamicMemoryLimitForProcessing
+		{
+			get
+			{
+				var availableMemory = MemoryStatistics.AvailableMemoryInMb;
+				var minFreeMemory = (MemoryLimitForProcessingInMb * 2L);
+				// we have more memory than the twice the limit, we can use the default limit
+				if (availableMemory > minFreeMemory)
+					return MemoryLimitForProcessingInMb * 1024L * 1024L;
+
+				// we don't have enough room to play with, if two databases will request the max memory limit
+				// at the same time, we'll start paging because we'll run out of free memory. 
+				// Because of that, we'll dynamically adjust the amount
+				// of memory available for processing based on the amount of memory we actually have available,
+				// assuming that we have multiple concurrent users of memory at the same time.
+				// we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
+                return Math.Min(availableMemory * 1024L * 1024L / 4, 16 * 1024 * 1024);
+
+			}
+		}
 
 		public string IndexStoragePath
 		{
@@ -1133,15 +1162,16 @@ namespace Raven.Database.Config
 		}
 
 		[CLSCompliant(false)]
-		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
 		{
 			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
 			var type = Type.GetType(storageEngine);
 
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
+			Action dummyAction = () => { };
 
-			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible);
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
 		}
 
 
@@ -1253,6 +1283,7 @@ namespace Raven.Database.Config
 		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 
 		    AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
+			Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
@@ -1294,9 +1325,18 @@ namespace Raven.Database.Config
 
 				/// <summary>
 				/// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
-				/// Default: 512.
+				/// Default: 6144.
 				/// </summary>
 				public int MaxScratchBufferSize { get; set; }
+
+				/// <summary>
+				/// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
+				/// Default: 
+				/// 1024 when MaxScratchBufferSize > 1024, 
+				/// 512 when MaxScratchBufferSize > 512
+				/// -1 otherwise (disabled) 
+				/// </summary>
+				public int ScratchBufferSizeNotificationThreshold { get; set; }
 
 				/// <summary>
 				/// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
@@ -1422,6 +1462,10 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+
+			public int DisableIndexingFreeSpaceThreshold { get; set; }
+
+			public bool DisableMapReduceInMemoryTracking { get; set; }
 		}
 
 		public class WebSocketsConfiguration

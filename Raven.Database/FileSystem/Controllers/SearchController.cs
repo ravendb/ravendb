@@ -74,7 +74,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 					DeleteFiles(keys, totalResults, progress);
 
-					FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
+					SynchronizationTask.Context.NotifyAboutWork();
 				}
 				catch (Exception e)
 				{
@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Controllers
 					{
 						Synchronizations.AssertFileIsNotBeingSynced(fileName);
 					}
-					catch (Exception e)
+					catch (Exception)
 					{
 						//ignore files that are being synced
 						continue;

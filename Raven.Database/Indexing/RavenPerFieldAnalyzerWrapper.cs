@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
@@ -13,7 +14,44 @@ namespace Raven.Database.Indexing
 	public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
 	{
 		private readonly Analyzer defaultAnalyzer;
-		private readonly IDictionary<string, Analyzer> analyzerMap = new Dictionary<string, Analyzer>();
+		private readonly IDictionary<string, Analyzer> analyzerMap = new Dictionary<string, Analyzer>( new PerFieldAnalyzerComparer() );
+
+		public class PerFieldAnalyzerComparer : IEqualityComparer<string>
+        {
+            public bool Equals(string inDictionary, string value)
+            {
+	            if (value.Length == 0 || value[0] != '@') 
+					return string.Equals(inDictionary, value, StringComparison.Ordinal);
+				var start = value.IndexOf('<', 1) + 1;
+				var end = value.IndexOf('>', start + 1);
+				if(end == -1)
+					return string.Equals(inDictionary, value, StringComparison.Ordinal);
+	            return string.CompareOrdinal(inDictionary, 0, value, start, inDictionary.Length) == 0;
+            }
+
+            public int GetHashCode(string obj)
+            {
+	            if (obj.Length == 0)
+		            return -1;
+
+	            int start = 0;
+				int end = obj.Length;
+				if (obj[0] == '@')
+				{
+					start = obj.IndexOf('<', 1) + 1;
+					end = obj.IndexOf('>', start + 1);
+					if (end == -1)
+						end = obj.Length;
+				}
+
+	            var hash = 0;
+	            for (int i = start; i < end; i++)
+	            {
+		            hash = obj[i]*397 ^ hash;
+	            }
+	            return hash;
+            }
+        }
 
 		public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer)
 		{
@@ -32,15 +70,9 @@ namespace Raven.Database.Indexing
 
 		private Analyzer GetAnalyzer(string fieldName)
 		{
-			if (fieldName.StartsWith("@"))
-			{
-				var indexOfFieldStart = fieldName.IndexOf('<');
-				var indexOfFieldEnd = fieldName.LastIndexOf('>');
-				if (indexOfFieldStart != -1 && indexOfFieldEnd != -1)
-				{
-					fieldName = fieldName.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
-				}
-			}
+            if (analyzerMap.Count == 0)
+                return defaultAnalyzer;
+
 			Analyzer value;
 			analyzerMap.TryGetValue(fieldName, out value);
 			return value ?? defaultAnalyzer;

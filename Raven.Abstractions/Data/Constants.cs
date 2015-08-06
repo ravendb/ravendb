@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Data
 			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
+	    public const string IsIndexReplicatedUrlParamName = "is-replicated";
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
@@ -122,7 +123,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
+		public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
+		public const string RavenReplicationConflictDocumentForcePut = "Raven-Replication-Conflict-Document-Force-Put";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
@@ -201,6 +204,8 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
+		// Queries
+		public const string MaxClauseCount = "Raven/MaxClauseCount";
 
 		// General
 		public static partial class Database
@@ -251,7 +256,8 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
 	        public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
-        }
+			public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
+		}
 
 	    public static class Smuggler
 	    {
@@ -266,5 +272,11 @@ namespace Raven.Abstractions.Data
 		}
 
 		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
+
+	    public class Indexing
+	    {
+			public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
+		    public const string DisableMapReduceInMemoryTracking = "Raven/Indexing/DisableMapReduceInMemoryTracking";
+	    }
 	}
 }

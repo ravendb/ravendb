@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Tenancy
                 AssertLicenseParameters(config);
                 var documentDatabase = new DocumentDatabase(config, transportState);
 
-				documentDatabase.SpinBackgroundWorkers();
+				documentDatabase.SpinBackgroundWorkers(false);
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
 				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 	            documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
@@ -211,6 +211,12 @@ namespace Raven.Database.Server.Tenancy
             {
                 Settings = new NameValueCollection(parentConfiguration.Settings),
             };
+
+	        if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
+	        {
+				var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
+				config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+	        }
 
             SetupTenantConfiguration(config);
 

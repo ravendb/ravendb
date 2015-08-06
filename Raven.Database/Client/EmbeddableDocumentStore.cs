@@ -4,9 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -19,6 +21,7 @@ using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Client;
 using Raven.Database.Config;
+using Raven.Database.FileSystem.Util;
 using Raven.Server;
 
 namespace Raven.Client.Embedded
@@ -27,7 +30,7 @@ namespace Raven.Client.Embedded
     {
         private IDocumentStore _inner;
         private string _connectionStringName;
-        public RavenConfiguration Configuration { get; set; }
+        public RavenConfiguration Configuration { get; private set; }
 
         public string ConnectionStringName
         {
@@ -82,10 +85,24 @@ namespace Raven.Client.Embedded
             Conventions = new DocumentConvention();
             Listeners = new DocumentSessionListeners();
             Configuration = new RavenConfiguration();
+	        LegacyDataDirSupport(Configuration);
+
             EnlistInDistributedTransactions = true;
         }
 
-        private IDocumentStore Inner
+	    private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
+	    {
+		    if (System.IO.Directory.Exists(configuration.DataDirectory))
+				return;
+
+			var directory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(configuration.WorkingDirectory, "~\\Data");
+			if (System.IO.Directory.Exists(directory) == false)
+				return;
+			
+		    configuration.DataDirectory = "~\\Data";
+	    }
+
+	    private IDocumentStore Inner
         {
             get
             {
@@ -316,10 +333,20 @@ namespace Raven.Client.Embedded
             Inner.ExecuteIndex(indexCreationTask);
         }
 
-        public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+		    Inner.ExecuteIndexes(indexCreationTasks);
+	    }
+
+	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
             return Inner.ExecuteIndexAsync(indexCreationTask);
         }
+
+	    public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+	    {
+		    return Inner.ExecuteIndexesAsync(indexCreationTasks);
+	    }
 
 	    public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 	    {

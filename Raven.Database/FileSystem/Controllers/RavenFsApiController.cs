@@ -34,6 +34,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Raven.Client.FileSystem.Extensions;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Controllers
@@ -310,7 +311,7 @@ namespace Raven.Database.FileSystem.Controllers
 	        get { return FileSystem.Configuration; }
 	    }
 
-	    public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
         {
             if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
                 throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");
@@ -348,14 +349,15 @@ namespace Raven.Database.FileSystem.Controllers
                         Logger.Warn(msg);
                         throw new HttpException(503, msg);
                     }
-                    var args = new BeforeRequestWebApiEventArgs()
+                    
+					args = new RequestWebApiEventArgs()
                     {
                         Controller = this,
                         IgnoreRequest = false,
                         TenantId = tenantId,
                         FileSystem = resourceStoreTask.Result
                     };
-                    rm.OnBeforeRequest(args);
+
                     if (args.IgnoreRequest)
                         return false;
                 }

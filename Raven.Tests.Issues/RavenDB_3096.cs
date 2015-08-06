@@ -24,25 +24,6 @@ namespace RavenDbShardingTests
             public string Location { get; set; }
         }
 
-        public IDocumentStore NewRemoteDocumentStoreWithUrl(int port, bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-            bool runInMemory = true,
-            string dataDirectory = null,
-            string requestedStorage = null,
-            bool enableAuthentication = false)
-        {
-            ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
-            ModifyServer(ravenDbServer);
-            var store = new DocumentStore
-            {
-                Url = GetServerUrl(port),
-                DefaultDatabase = databaseName,
-            };
-            stores.Add(store);
-            store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
-            ModifyStore(store);
-            return store.Initialize();
-        }
-
         public class HybridShardingResolutionStrategy : DefaultShardResolutionStrategy
         {
             private readonly HashSet<Type> sharedTypes;
@@ -56,21 +37,16 @@ namespace RavenDbShardingTests
                 this.defaultShard = defaultShard;
             }
 
-            public override string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
+            public override string GenerateShardIdFor(object entity, object owner)
             {
                 if (!sharedTypes.Contains(entity.GetType()))
                     return ShardIds.FirstOrDefault(x => x == defaultShard);
 
-                return base.GenerateShardIdFor(entity, sessionMetadata);
+                return base.GenerateShardIdFor(entity, owner);
             }
         }
 
-        private static string GetServerUrl(int port)
-        {
-            return "http://localhost:" + port;
-        }
-
-        public class ProfileIndex: AbstractIndexCreationTask
+       public class ProfileIndex: AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -83,24 +59,25 @@ namespace RavenDbShardingTests
         [Fact]
         public void ToFacetsDoesntWorkWithShardedDocumentSession()
         {
-            using (var store1 = NewRemoteDocumentStoreWithUrl(8079, ravenDbServer: GetNewServer(8079)))
-            {
-                using (var store2 = NewRemoteDocumentStoreWithUrl(8078, ravenDbServer: GetNewServer(8078)))
-                {
-                    var shards = new List<IDocumentStore> { 
-                        new DocumentStore { Identifier="Shard1", Url = store1.Url}, 
-                        new DocumentStore { Identifier="Shard2", Url = store2.Url} }
-                            .ToDictionary(x => x.Identifier, x => x);
+			var server1 = GetNewServer(8079);
+			var server2 = GetNewServer(8078);
+			var shards = new Dictionary<string, IDocumentStore>
+			{
+				{"Shard1", new DocumentStore{Url = server1.Configuration.ServerUrl}},
+				{"Shard2", new DocumentStore{Url = server2.Configuration.ServerUrl}},
+			};
 
-                    var shardStrategy = new ShardStrategy(shards);
-                    shardStrategy.ShardResolutionStrategy = new HybridShardingResolutionStrategy(shards.Keys, shardStrategy, new Type[0], "Shard1");
-                    shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                    using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
-                    {
-                        shardedDocumentStore.Initialize();
-                        new ProfileIndex().Execute(shardedDocumentStore);
-                        /*var facetSetup = new FacetSetup
+
+	        var shardStrategy = new ShardStrategy(shards);
+	        shardStrategy.ShardResolutionStrategy = new HybridShardingResolutionStrategy(shards.Keys, shardStrategy, new Type[0], "Shard1");
+	        shardStrategy.ShardingOn<Profile>(x => x.Location);
+
+	        using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
+	        {
+		        shardedDocumentStore.Initialize();
+		        new ProfileIndex().Execute(shardedDocumentStore);
+		        /*var facetSetup = new FacetSetup
                         {
                             Id = "facets/ProfileFacet",
                             Facets = new List<Facet>
@@ -108,27 +85,25 @@ namespace RavenDbShardingTests
                                 new Facet {Name = "Name", Mode = FacetMode.Default}
                             }
                         };*/
-                        var facets = new List<Facet>
-                        {
-                            new Facet {Name = "Name", Mode = FacetMode.Default}
-                        };
-                        var profile = new Profile { Name = "Test", Location = "Shard1" };
+		        var facets = new List<Facet>
+		        {
+			        new Facet {Name = "Name", Mode = FacetMode.Default}
+		        };
+		        var profile = new Profile {Name = "Test", Location = "Shard1"};
 
-                        using (var documentSession = shardedDocumentStore.OpenSession())
-                        {
-                            documentSession.Store(profile, profile.Id);
-                            //documentSession.Store(facetSetup);
-                            documentSession.SaveChanges();
-                        }
-                        using (var documentSession = shardedDocumentStore.OpenSession())
-                        {
-                            var query = documentSession.Query<Profile>("ProfileIndex").Where(x => x.Name == "Test");
-                            var res = query.ToFacets(facets);
-                            Assert.Equal(1,res.Results.Count);
-                        }
-                    }
-                }
-            }
+		        using (var documentSession = shardedDocumentStore.OpenSession())
+		        {
+			        documentSession.Store(profile, profile.Id);
+			        //documentSession.Store(facetSetup);
+			        documentSession.SaveChanges();
+		        }
+		        using (var documentSession = shardedDocumentStore.OpenSession())
+		        {
+			        var query = documentSession.Query<Profile>("ProfileIndex").Where(x => x.Name == "Test");
+			        var res = query.ToFacets(facets);
+			        Assert.Equal(1, res.Results.Count);
+		        }
+	        }
         }
     }
 }

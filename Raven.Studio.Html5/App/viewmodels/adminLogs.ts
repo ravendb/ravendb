@@ -142,6 +142,7 @@ class adminLogs extends viewModelBase {
     }
 
     attached() {
+	    super.attached();
         this.logsContainer = document.getElementById("rawLogsContainer");
     }
 

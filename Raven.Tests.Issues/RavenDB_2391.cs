@@ -9,6 +9,7 @@ using System.Net;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Counters;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -97,7 +98,7 @@ namespace Raven.Tests.Issues
 									   ApiKey = "key1/ThisIsMySecret"
 				                   }.Initialize(ensureFileSystemExists: true))
 				{
-					var files = store.AsyncFilesCommands.BrowseAsync().ResultUnwrap();
+					var files = AsyncHelpers.RunSync(() => store.AsyncFilesCommands.BrowseAsync());
 				}
 
 				using (var store = new DocumentStore
@@ -117,7 +118,7 @@ namespace Raven.Tests.Issues
 					ApiKey = "key2/ThisIsMySecret2"
 				}.Initialize())
 				{
-					var exception = Assert.Throws<ErrorResponseException>(() => store.AsyncFilesCommands.BrowseAsync().ResultUnwrap());
+					var exception = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => store.AsyncFilesCommands.BrowseAsync()));
 					Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
 				}
 

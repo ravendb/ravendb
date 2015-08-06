@@ -8,7 +8,7 @@ namespace Voron.Tests.Trees
 {
     public class CanDefrag : StorageTest
     {
-        [Fact]
+        [PrefixesFact]
         public void CanDeleteAtRoot()
         {
             var size = 250;

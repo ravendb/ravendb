@@ -1,10 +1,4 @@
-﻿using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Imports.Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -13,8 +7,14 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Client.FileSystem
+namespace Raven.Client.FileSystem.Extensions
 {
 	/// <summary>
 	///     Extension methods to handle common scenarios
@@ -147,7 +147,7 @@ namespace Raven.Client.FileSystem
 
             var errorResponseException = exception as ErrorResponseException;
             if (errorResponseException != null)
-                throw errorResponseException.SimplifyException();
+                return errorResponseException.SimplifyException();
 
             return exception;
 		}

@@ -9,12 +9,18 @@
             Importing will overwrite any existing documents and indexes.
         </p>
         <div data-bind="with: activeDatabase">
-            <span class="btn btn-primary btn-file" data-bind="visible: !isImporting()">
-                Choose file <input id="importDatabaseFilePicker" type="file" data-bind="visible: isImporting() == false, event: { change: $root.fileSelected.bind($root, $element.value) }" />
-            </span>
-            <br />
-            <br />
-            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting()"></p>
+			<span class="btn btn-primary btn-file" data-bind="disable: isImporting">
+				Choose file <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }" />
+			</span>
+            <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root), disable: !$root.hasFileSelected() || isImporting()">
+                <i class="fa fa-upload"></i>
+                Import Database
+            </button>
+            <p data-bind="visible: $root.hasFileSelected()">
+                Selected file name: <span data-bind="text: $root.importedFileName()"></span>
+            </p>
+            <br />           
+            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting() || !!importStatus()"></p>
             <br />
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
@@ -54,7 +60,7 @@
                     <div class="col-sm-offset-2 col-sm-5">
                         <div class="checkbox">
                             <label>
-                                <input type="checkbox" data-bind="checked: stripReplicationInformation"> Strip replication information
+                                <input type="checkbox" data-bind="checked: stripReplicationInformation"> Strip replication information from documents metadata
                             </label>
                         </div>
                     </div>

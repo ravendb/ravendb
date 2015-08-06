@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Raven.Database.Extensions
@@ -16,53 +17,111 @@ namespace Raven.Database.Extensions
 		}
 	}
 
-
     public class CancellationTimeout : IDisposable
     {
-        private readonly CancellationTokenSource source;
+		public CancellationTokenSource CancellationTokenSource { get; private set; }
         private readonly Timer timer;
         private readonly long dueTime;
-        private bool isTimerDisposed;
+		private readonly object locker = new object();
+        private volatile bool isTimerDisposed;
+        private Stopwatch sp  = Stopwatch.StartNew();
 
         public void ThrowIfCancellationRequested()
         {
-            source.Token.ThrowIfCancellationRequested();
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
         }
 
-        public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
+        public CancellationTimeout(CancellationTokenSource cancellationTokenSource, TimeSpan dueTime)
         {
-            if (source == null)
-                throw new ArgumentNullException("source");
+            if (cancellationTokenSource == null)
+                throw new ArgumentNullException("cancellationTokenSource");
             if (dueTime < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException("dueTime");
 
             isTimerDisposed = false;
-            this.source = source;
+            CancellationTokenSource = cancellationTokenSource;
             this.dueTime = (long)dueTime.TotalMilliseconds;
-            timer = new Timer(self =>
-            {
-                timer.Dispose();
-                isTimerDisposed = true;
-                try
-                {
-                    this.source.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }, null, this.dueTime, -1);
+			timer = new Timer(self =>
+			{
+				var source = self as CancellationTokenSource;
+				if (source == null)
+					return;
+
+				try
+				{
+					source.Cancel();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}, cancellationTokenSource, this.dueTime, -1);
         }
 
-        public void Delay()
+	    ~CancellationTimeout()
+	    {
+			DisposeInternal();
+	    }
+
+	    public void Delay()
         {
-            if (!isTimerDisposed)
+			if (isTimerDisposed)
+				return;
+
+	        if (sp.ElapsedMilliseconds < 500)
+	            return;
+
+	        lock (locker)
+	        {
+		        if (isTimerDisposed) 
+					return;
+                if (sp.ElapsedMilliseconds < 500)
+                    return;
+
+                sp.Restart();
                 timer.Change(dueTime, -1);
+	        }
         }
+
+		public void Pause()
+		{
+			if (isTimerDisposed)
+				return;
+
+			lock (locker)
+			{
+				if (isTimerDisposed)
+					return;
+
+				timer.Change(Timeout.Infinite, Timeout.Infinite);
+			}	
+		}
+
+		public void Resume()
+		{
+			Delay();
+		}
 
         public void Dispose()
         {
-	       isTimerDisposed = true;
-           timer.Dispose();
+			GC.SuppressFinalize(this);
+	        DisposeInternal();
         }
+
+		private void DisposeInternal()
+		{
+			if (isTimerDisposed)
+				return;
+
+			lock (locker)
+			{
+				if (isTimerDisposed)
+					return;
+
+				isTimerDisposed = true;
+			}
+
+			if (timer != null)
+				timer.Dispose();
+		}
     }
 }

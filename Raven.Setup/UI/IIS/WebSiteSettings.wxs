@@ -67,12 +67,19 @@
 					<Condition Action="show"><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>
 					<Condition Action="hide"><![CDATA[WEBSITE_TYPE = "EXISTING"]]></Condition>
 				</Control>
-				<Control Type="Edit" Id="WebSitePortEdit" Width="220" Height="15" X="110" Y="172" Property="WEBSITE_PORT" Text="[WEBSITE_PORT]">
+				<Control Type="Edit" Id="WebSitePortEdit" Width="71" Height="15" X="110" Y="172" Property="WEBSITE_PORT" Text="[WEBSITE_PORT]">
 					<Condition Action="show"><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>
 					<Condition Action="hide"><![CDATA[WEBSITE_TYPE = "EXISTING"]]></Condition>
 				</Control>
+				<Control Type="PushButton" Id="checkPort" Width="75" Height="17" X="185" Y="171">
+					<Text>Check availability</Text>
+				</Control>
+				<Control Type="Text" Id="portInfo" Width="91" Height="17" X="262" Y="174" Property="PORT_AVAILABILITY" Text="[PORT_AVAILABILITY]" />
+				<Control Id="RevokePortReservation" Type="CheckBox" X="110" Y="190" Width="250" Height="15" Property="REVOKE_PORT_RESERVATION" CheckBoxValue="1" TabSkip="no">
+					<Text>{\SmallInfo}&amp;Revoke URL reservation for this port in HTTP.SYS</Text>
+				</Control>
 				<Control Id="CustomAppPoolCheckBox" Type="CheckBox" X="45" Y="218" Width="250" Height="15" Property="CUSTOM_APPLICATION_POOL" CheckBoxValue="1" TabSkip="no">
-					<Text>Use a &amp;custom application pool instead of the web site default</Text>
+					<Text>Use a &amp;custom application pool instead of the web site's default</Text>
 				</Control>
 			</Dialog>
 			<Publish Dialog="WebSiteSettingsDlg" Control="btnChange" Event="DoAction" Value="OpenWebSiteDirectoryChooser" Order="1">1</Publish>

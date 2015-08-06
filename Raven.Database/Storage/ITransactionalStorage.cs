@@ -4,12 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -21,6 +23,8 @@ namespace Raven.Database.Storage
 		/// This is used mostly for replication
 		/// </summary>
 		Guid Id { get; }
+
+		IDocumentCacher DocumentCacher { get; }
 
 		IDisposable DisableBatchNesting();
 
@@ -51,5 +55,19 @@ namespace Raven.Database.Storage
         List<TransactionContextData> GetPreparedTransactions();
 
 		object GetInFlightTransactionsInternalStateForDebugOnly();
+
+		ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();
+		/// <summary>
+		/// Scheduled reduction tracking is a memory living entity it will get corrupted on a reset.
+		/// The reset must occur while there are no map/reduce indexing activity going on.
+		/// </summary>
+		void ResetScheduledReductionsTracking();
+
+		void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler);
+	}
+
+	public interface ITransactionalStorageNotificationHandler
+	{
+		void HandleTransactionalStorageNotification();
 	}
 }

@@ -1,12 +1,14 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/transformer");
 import getTransformersCommand = require("commands/getTransformersCommand");
+import saveTransformerLockModeCommand = require("commands/saveTransformerLockModeCommand");
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/deleteTransformerConfirm");
 import dialog = require("plugins/dialog");
 import app = require("durandal/app");
 import changeSubscription = require("models/changeSubscription");
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import copyTransformerDialog = require("viewmodels/copyTransformerDialog");
 
 class Transformers extends viewModelBase {
@@ -17,8 +19,7 @@ class Transformers extends viewModelBase {
     containerSelector = "#transformersContainer";
     transformersMutex = true;
     allTransformersExpanded = ko.observable(true);
-    expandCollapseTitle = ko.computed(() => this.allTransformersExpanded() ? "Collapse all" : "Expand all");
-
+    expandCollapseTitle = ko.computed(() => this.allTransformersExpanded() ? "Collapse all" : "Expand all");	
 
     constructor() {
         super();
@@ -38,6 +39,7 @@ class Transformers extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.updateHelpLink('OWRJLV');
         this.createKeyboardShortcut("Alt+N", () => this.navigate(this.newTransformerUrl()), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
@@ -54,7 +56,7 @@ class Transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
     }
 
     private processTransformerEvent(e: transformerChangeNotificationDto) {
@@ -138,6 +140,19 @@ class Transformers extends viewModelBase {
     private removeTransformersFromAllGroups(transformers: Array<transformer>) {
         this.transformersGroups().forEach(transGroup => transGroup.transformers.removeAll(transformers));
         this.transformersGroups.remove((item: { entityName: string; transformers: KnockoutObservableArray<transformer> }) => item.transformers().length === 0);
+    }
+
+    updateTransformerLockMode(t: transformer) {
+
+        var originalLockMode = t.lockMode();
+		var newLockMode = t.isLocked() ? 'Unlock' : 'LockedIgnore';
+        if (originalLockMode !== newLockMode) {
+            t.lockMode(newLockMode);
+
+            new saveTransformerLockModeCommand(t.name(), newLockMode, this.activeDatabase())
+                .execute()
+                .fail(() => t.lockMode(originalLockMode));
+        }
     }
 }
 

@@ -3,18 +3,27 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
 import shell = require("viewmodels/shell");
+import changesContext = require("common/changesContext");
 import changeSubscription = require('models/changeSubscription');
 import optional = require("common/optional");
 
 class statistics extends viewModelBase {
     stats = ko.observable<databaseStatisticsDto>();
     indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
-    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().StaleIndexes.length == 0);
+    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0);
+
+    disabledIndexes = ko.computed(() => {
+        if (this.stats()) {
+            var stats = this.stats();
+            return stats.Indexes.filter(idx => idx.Priority.indexOf("Disabled") >= 0).map(idx => idx.Name);
+        }
+    });
 
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;
 
     attached() {
+		super.attached();
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
         this.fetchStats();
         this.updateHelpLink('H6GYYL');
@@ -40,10 +49,9 @@ class statistics extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [
-            shell.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
-            shell.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
-        ];
+		return [
+			changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
+			changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))];
     }
 
 

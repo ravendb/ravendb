@@ -27,7 +27,6 @@ using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Data;
-using Raven.Database.FileSystem.Storage.Voron;
 using TaskActions = Raven.Database.FileSystem.Actions.TaskActions;
 
 namespace Raven.Database.FileSystem
@@ -116,6 +115,8 @@ namespace Raven.Database.FileSystem
             search.Initialize(this);
 
 			SecondStageInitialization();
+
+			synchronizationTask.Start();
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled
@@ -319,6 +320,12 @@ namespace Raven.Database.FileSystem
 		{
 			if (disposed)
 				return;
+
+			// give it 3 seconds to complete requests
+			for (int i = 0; i < 30 && Interlocked.Read(ref metricsCounters.ConcurrentRequestsCount) > 0; i++)
+			{
+				Thread.Sleep(100);
+			}
 
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;

@@ -66,6 +66,11 @@ namespace Raven.Database.Commercial
 			ExecuteInternal(config);
 		}
 
+		public void ForceExecute(InMemoryRavenConfiguration config)
+		{
+			ExecuteInternal(config);
+		}
+
 		private void ExecuteInternal(InMemoryRavenConfiguration config)
 		{
 			var licensePath = GetLicensePath(config);
@@ -200,7 +205,7 @@ namespace Raven.Database.Commercial
 			}
 
 			licenseValidator.DisableFloatingLicenses = true;
-			licenseValidator.SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc";
+			licenseValidator.SubscriptionEndpoint = "http://licensing.ravendb.net/Subscriptions.svc";
 			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
 			licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
 

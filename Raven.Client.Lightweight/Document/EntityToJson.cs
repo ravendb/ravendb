@@ -29,7 +29,7 @@ namespace Raven.Client.Document
             Listeners = listeners;
         }
 
-        public Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
+		public readonly Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
 
         public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
         {
@@ -81,10 +81,12 @@ namespace Raven.Client.Document
                 foreach (var item in value)
                 {
                     writer.WritePropertyName(item.Key);
-                    if (item.Value == null)
-                        writer.WriteNull();
-                    else
-                        item.Value.WriteTo(writer);
+	                if (item.Value == null)
+		                writer.WriteNull();
+	                else
+	                {
+		                item.Value.WriteTo(writer);
+	                }
                 }
             };
 

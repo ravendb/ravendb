@@ -89,6 +89,11 @@ namespace Raven.Abstractions.Logging
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{}
+
+		    public bool ShouldLog(LogLevel logLevel)
+		    {
+		        return false;
+		    }
 		}
 
 		public static IDisposable OpenNestedConext(string context)

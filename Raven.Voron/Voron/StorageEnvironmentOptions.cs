@@ -14,6 +14,7 @@ using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
 using Mono.Unix.Native;
+using Sparrow;
 
 namespace Voron
 {
@@ -32,6 +33,8 @@ namespace Voron
 
 			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
+
+		public Action<long> OnScratchBufferSizeChanged = delegate { };
 
 		public long? InitialFileSize { get; set; }
 
@@ -82,8 +85,11 @@ namespace Voron
 		private long _initialLogFileSize;
 		private long _maxLogFileSize;
 
+	    public Func<string, bool> ShouldUseKeyPrefix { get; set; }
+
 		protected StorageEnvironmentOptions()
 		{
+            ShouldUseKeyPrefix = name => false;
 			MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
 
 			IdleFlushTimeout = 5000; // 5 seconds
@@ -97,7 +103,6 @@ namespace Voron
 			ScratchBufferOverflowTimeout = 5000;
 
 			MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
-
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
@@ -392,7 +397,7 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-                MemoryUtils.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+                Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)
@@ -468,6 +473,5 @@ namespace Voron
 				}
 			}
 		}
-
 	}
 }

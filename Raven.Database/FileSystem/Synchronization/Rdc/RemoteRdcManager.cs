@@ -11,18 +11,18 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
 	public class RemoteRdcManager
 	{
-        private readonly IAsyncFilesSynchronizationCommands commands;		
+		private readonly ISynchronizationServerClient synchronizationServerClient;		
 
 		private readonly ISignatureRepository localSignatureRepository;
-        private readonly ISignatureRepository remoteCacheSignatureRepository;        
+        private readonly ISignatureRepository remoteCacheSignatureRepository;
 
-        public RemoteRdcManager(IAsyncFilesSynchronizationCommands commands, 
+		public RemoteRdcManager(ISynchronizationServerClient synchronizationServerClient, 
                                 ISignatureRepository localSignatureRepository,
 								ISignatureRepository remoteCacheSignatureRepository)
 		{            
 			this.localSignatureRepository = localSignatureRepository;
 			this.remoteCacheSignatureRepository = remoteCacheSignatureRepository;
-			this.commands = commands;
+			this.synchronizationServerClient = synchronizationServerClient;
 		}
 
 		/// <summary>
@@ -33,7 +33,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 		/// <returns></returns>
         public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
         {
-            var remoteSignatureManifest = await commands.GetRdcManifestAsync(dataInfo.Name);
+			var remoteSignatureManifest = await synchronizationServerClient.GetRdcManifestAsync(dataInfo.Name);
             if (remoteSignatureManifest.Signatures.Any())
             {
                 var sigPairs = PrepareSigPairs(remoteSignatureManifest);
@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 
                 using (var highestSigContent = remoteCacheSignatureRepository.CreateContent(highestSigName))
                 {
-                    await commands.DownloadSignatureAsync(highestSigName, highestSigContent);
+					await synchronizationServerClient.DownloadSignatureAsync(highestSigName, highestSigContent);
                     await SynchronizePairAsync(sigPairs, token);
                 }
             }
@@ -80,7 +80,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 		{
 			using (var needListGenerator = new NeedListGenerator(localSignatureRepository, remoteCacheSignatureRepository))
 			{
-				var source = new RemoteSignaturePartialAccess(commands, remoteSigName);
+				var source = new RemoteSignaturePartialAccess(synchronizationServerClient, remoteSigName);
 				var seed = new SignaturePartialAccess(localSigName, localSignatureRepository);
 				var needList = needListGenerator.CreateNeedsList(SignatureInfo.Parse(localSigSigName),
 																 SignatureInfo.Parse(remoteSigSigName), token);

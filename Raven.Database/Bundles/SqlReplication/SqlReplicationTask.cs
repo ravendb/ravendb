@@ -29,6 +29,7 @@ using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -76,7 +77,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public void Execute(DocumentDatabase database)
 		{
-			defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication");
 			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 
 			Database = database;
@@ -443,7 +444,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					return prefetchingBehavior;
 			}
 
-			var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
+			var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication");
 
 			prefetchingBehaviors.Add(newPrefetcher);
 			usedPrefetchers.Add(newPrefetcher);
@@ -480,6 +481,11 @@ namespace Raven.Database.Bundles.SqlReplication
 					var obj = RavenJObject.FromObject(localReplicationStatus);
 					Database.Documents.Put(RavenSqlReplicationStatus, null, obj, new RavenJObject(), null);
 
+					break;
+				}
+				catch (SynchronizationLockException)
+				{
+					// just ignore it, we'll save that next time
 					break;
 				}
 				catch (ConcurrencyException)

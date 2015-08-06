@@ -1,32 +1,32 @@
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-
 using System.IO.Compression;
-
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler.Data;
-using Raven.Abstractions.Util;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Extensions;
+using Raven.Database.Data;
 
 namespace Raven.Abstractions.Smuggler
 {
     public abstract class SmugglerDatabaseApiBase : ISmugglerApi<RavenConnectionStringOptions, SmugglerDatabaseOptions, OperationState>
 	{
+		const int RetriesCount = 5;
+
 		public ISmugglerDatabaseOperations Operations { get; protected set; }
 
         public SmugglerDatabaseOptions Options { get; private set; }
@@ -35,7 +35,15 @@ namespace Raven.Abstractions.Smuggler
 
         protected SmugglerDatabaseApiBase(SmugglerDatabaseOptions options)
 		{
-			this.Options = options;
+			Options = options;
+		}
+
+		protected bool IgnoreErrorsAndContinue
+		{
+			get
+			{
+				return Options != null && Options.IgnoreErrorsAndContinue;
+			}
 		}
 
         public virtual async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
@@ -198,31 +206,65 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
 		{
+			var retries = RetriesCount;
+
 			Operations.ShowProgress("Exporting Identities");
 
-			var identities = await Operations.GetIdentities();
-
-			Operations.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
-
-			var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, operateOnTypes)).ToList();
-
-			Operations.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
-
-			jsonWriter.WritePropertyName("Identities");
-			jsonWriter.WriteStartArray();
-
-			foreach (var identityInfo in filteredIdentities)
+			while (true)
 			{
-				new RavenJObject
+				List<KeyValuePair<string, long>> identities;
+				try
+				{
+					identities = await Operations.GetIdentities();
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0 && IgnoreErrorsAndContinue)
+					{
+						Operations.ShowProgress("Failed to fetch identities too much times. Cancelling identities export. Message: {0}", e.Message);
+						return;
+					}
+
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("Failed to fetch identities. {0} retries remaining. Message: {1}", retries, e.Message);
+					continue;
+				}
+
+				Operations.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+
+				var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, operateOnTypes)).ToList();
+
+				Operations.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+
+				jsonWriter.WritePropertyName("Identities");
+				jsonWriter.WriteStartArray();
+
+				foreach (var identityInfo in filteredIdentities)
+				{
+					try
+					{
+						new RavenJObject
 						{
-							{ "Key", identityInfo.Key }, 
+							{ "Key", identityInfo.Key },
 							{ "Value", identityInfo.Value }
 						}.WriteTo(jsonWriter);
-		    }
+					}
+					catch (Exception e)
+					{
+						if (IgnoreErrorsAndContinue == false)
+							throw;
 
-			jsonWriter.WriteEndArray();
+						Operations.ShowProgress("Export of identity {0} failed. Message: {1}", identityInfo.Key, e.Message);
+					}
+				}
 
-			Operations.ShowProgress("Done with exporting identities");
+				jsonWriter.WriteEndArray();
+
+				Operations.ShowProgress("Done with exporting identities");
+				return;
+			}
 		}
 
 		public bool FilterIdentity(string indentityName, ItemType operateOnTypes)
@@ -295,10 +337,32 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task ExportTransformers(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
 		{
-			int totalCount = 0;
+			var totalCount = 0;
+			var retries = RetriesCount;
+
 			while (true)
 			{
-				var transformers = await Operations.GetTransformers(src, totalCount);
+				RavenJArray transformers;
+
+				try
+				{
+					transformers = await Operations.GetTransformers(src, totalCount);
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0 & IgnoreErrorsAndContinue)
+					{
+						Operations.ShowProgress("Failed getting transformers too much times, stopping the transformer export entirely. Message: {0}", e.Message);
+						return;
+					}
+
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("Failed fetching transformer information from exporting store. {0} retries remaining. Message: {1}", retries, e.Message);
+					continue;
+				}
+
 				if (transformers.Length == 0)
 				{
 					Operations.ShowProgress("Done with reading transformers, total: {0}", totalCount);
@@ -310,7 +374,17 @@ namespace Raven.Abstractions.Smuggler
 
 				foreach (var transformer in transformers)
 				{
-					transformer.WriteTo(jsonWriter);
+					try
+					{
+						transformer.WriteTo(jsonWriter);
+					}
+					catch (Exception e)
+					{
+						if (IgnoreErrorsAndContinue == false)
+							throw;
+
+						Operations.ShowProgress("PUT of a transformer {0} failed. Message: {1}", transformer.Value<string>("name"), e.Message);
+					}
 				}
 			}
 		}
@@ -321,7 +395,9 @@ namespace Raven.Abstractions.Smuggler
 		protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
+			var retries = RetriesCount;
 			var maxEtagReached = false;
+
 			while (true)
 			{
 				try
@@ -331,11 +407,45 @@ namespace Raven.Abstractions.Smuggler
 						Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount);
 						return lastEtag;
 					}
+
                     var maxRecords = Math.Min(Options.Limit - totalCount, Options.BatchSize);
-					var attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+					List<AttachmentInformation> attachments;
+
+					try
+					{
+						attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+					}
+					catch (Exception e)
+					{
+						if (retries-- == 0 && IgnoreErrorsAndContinue)
+							return Etag.InvalidEtag;
+
+						if (IgnoreErrorsAndContinue == false)
+							throw;
+
+						Operations.ShowProgress("Failed to get attachments. {0} retries remaining. Message: {1}", retries, e.Message);
+						continue;
+					}
+
 					if (attachments.Count == 0)
 					{
-						var databaseStatistics = await Operations.GetStats();
+						DatabaseStatistics databaseStatistics;
+						try
+						{
+							databaseStatistics = await Operations.GetStats();
+						}
+						catch (Exception e)
+						{
+							if (retries-- == 0 && IgnoreErrorsAndContinue)
+								return Etag.Empty;
+
+							if (IgnoreErrorsAndContinue == false)
+								throw;
+
+							Operations.ShowProgress("Failed to get database statistics. Message: {0}", e.Message);
+							continue;
+						}
+
 						if (lastEtag == null) lastEtag = Etag.Empty;
 						if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 						{
@@ -347,29 +457,42 @@ namespace Raven.Abstractions.Smuggler
 						Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount);
 						return lastEtag;
 					}
+
 					totalCount += attachments.Count;
 					Operations.ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Count, totalCount);
-					foreach (var attachment in attachments)
+					foreach (var attachmentInformation in attachments)
 					{
-						if (maxEtag != null && attachment.Etag.CompareTo(maxEtag) > 0)
+						if (maxEtag != null && attachmentInformation.Etag.CompareTo(maxEtag) > 0)
 						{
 							maxEtagReached = true;
 							break;
 						}
 
-						var attachmentData = await Operations.GetAttachmentData(attachment);
-						if (attachmentData == null)
-							continue;
+						Operations.ShowProgress("Downloading attachment: {0}", attachmentInformation.Key);
 
-						new RavenJObject
+						try
 						{
-							{ "Data", attachmentData }, 
-							{ "Metadata", attachment.Metadata }, 
-							{ "Key", attachment.Key }, 
-							{ "Etag", new RavenJValue(attachment.Etag.ToString()) }
-						}.WriteTo(jsonWriter);
+							var attachmentData = await Operations.GetAttachmentData(attachmentInformation);
+							if (attachmentData == null)
+								continue;
 
-						lastEtag = attachment.Etag;
+							new RavenJObject
+							{
+								{ "Data", attachmentData },
+								{ "Metadata", attachmentInformation.Metadata },
+								{ "Key", attachmentInformation.Key },
+								{ "Etag", new RavenJValue(attachmentInformation.Etag.ToString()) }
+							}.WriteTo(jsonWriter);
+
+							lastEtag = attachmentInformation.Etag;
+						}
+						catch (Exception e)
+						{
+							if (IgnoreErrorsAndContinue == false)
+								throw;
+
+							Operations.ShowProgress("EXPORT of an attachment {0} failed. Message: {1}", attachmentInformation.Key, e.Message);
+						}
 					}
 				}
 				catch (Exception e)
@@ -384,64 +507,67 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var now = SystemTime.UtcNow;
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
-			var errorsCount = 0;
 			var reachedMaxEtag = false;
 			Operations.ShowProgress("Exporting Documents");
-           
+
 			while (true)
 			{
 				bool hasDocs = false;
 				try
 				{
-                    var maxRecords = Options.Limit - totalCount;
+					var maxRecords = Options.Limit - totalCount;
 					if (maxRecords > 0 && reachedMaxEtag == false)
 					{
 						var amountToFetchFromServer = Math.Min(Options.BatchSize, maxRecords);
 						using (var documents = await Operations.GetDocuments(src, lastEtag, amountToFetchFromServer))
 						{
-							var watch = Stopwatch.StartNew();
-
 							while (await documents.MoveNextAsync())
 							{
 								hasDocs = true;
 								var document = documents.Current;
 
-                                var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+								var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-                                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
+								Debug.Assert(!string.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
 
-                                if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                {
-                                    reachedMaxEtag = true;
-                                    break;
-                                }
-                                lastEtag = tempLastEtag;
+								if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+								{
+									reachedMaxEtag = true;
+									break;
+								}
+								lastEtag = tempLastEtag;
 
-                                if (!Options.MatchFilters(document))
+								if (!Options.MatchFilters(document))
 									continue;
 
-                                if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+								if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
 									continue;
 
-								document.WriteTo(jsonWriter);
+								try
+								{
+									document.WriteTo(jsonWriter);
+								}
+								catch (Exception e)
+								{
+									if (IgnoreErrorsAndContinue == false)
+										throw;
+
+									Operations.ShowProgress("EXPORT of a document {0} failed. Message: {1}", document, e.Message);
+								}
+
 								totalCount++;
 
-                                if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                                {
-                                    Operations.ShowProgress("Exported {0} documents", totalCount);
-                                    lastReport = SystemTime.UtcNow;
-                                }
-
-                                if (watch.ElapsedMilliseconds > 100)
-                                    errorsCount++;
-
-								watch.Start();
+								if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+								{
+									Operations.ShowProgress("Exported {0} documents", totalCount);
+									lastReport = SystemTime.UtcNow;
+								}
 							}
 						}
 
@@ -464,6 +590,27 @@ namespace Raven.Abstractions.Smuggler
 							continue;
 						}
 					}
+
+					// Load HiLo documents for selected collections
+					Options.Filters.ForEach(filter =>
+					{
+						if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+						{
+							filter.Values.ForEach(collectionName =>
+							{
+								JsonDocument doc = Operations.GetDocument("Raven/Hilo/" + collectionName);
+								if (doc != null)
+								{
+									doc.Metadata["@id"] = doc.Key;
+									doc.ToJson().WriteTo(jsonWriter);
+									totalCount++;
+								}
+							});
+						}
+					});
+
+					Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+					return lastEtag;
 				}
 				catch (Exception e)
 				{
@@ -474,31 +621,10 @@ namespace Raven.Abstractions.Smuggler
 						LastEtag = lastEtag,
 					};
 				}
-
-				// Load HiLo documents for selected collections
-                Options.Filters.ForEach(filter =>
-				{
-					if (filter.Path == "@metadata.Raven-Entity-Name")
-					{
-						filter.Values.ForEach(collectionName =>
-						{
-							JsonDocument doc = Operations.GetDocument("Raven/Hilo/" + collectionName);
-							if (doc != null)
-							{
-								doc.Metadata["@id"] = doc.Key;
-								doc.ToJson().WriteTo(jsonWriter);
-								totalCount++;
-							}
-						});
-					}
-				});
-
-                Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-				return lastEtag;
 			}
 		}
 
-        public async Task WaitForIndexingAsOfLastWrite()
+		public async Task WaitForIndexingAsOfLastWrite()
         {
             var stopwatch = Stopwatch.StartNew();
             var justIndexingWait = Stopwatch.StartNew();
@@ -756,10 +882,21 @@ namespace Raven.Abstractions.Smuggler
 
 				var identityName = identity.Value<string>("Key");
 
-				if(FilterIdentity(identityName, Options.OperateOnTypes) == false)
+				if (FilterIdentity(identityName, Options.OperateOnTypes) == false)
 					continue;
 
-				await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value"));
+				try
+				{
+					await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value"));
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("Failed seeding identity for {0}. Message: {1}", identityName, e.Message);
+					continue;
+				}
 
 				count++;
 			}
@@ -782,9 +919,19 @@ namespace Raven.Abstractions.Smuggler
 				var deletedDocumentInfo = new JsonSerializer { Converters = DefaultConverters }
                                                     .Deserialize<Tombstone>(new RavenJTokenReader(item));
 
-				Operations.ShowProgress("Importing deleted documents {0}", deletedDocumentInfo.Key);
+				Operations.ShowProgress("Importing deleted document {0}", deletedDocumentInfo.Key);
 
-				await Operations.DeleteDocument(deletedDocumentInfo.Key);
+				try
+				{
+					await Operations.DeleteDocument(deletedDocumentInfo.Key);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("IMPORT of an deleted document {0} failed. Message: {1}", deletedDocumentInfo.Key, e.Message);
+				}
 
 				count++;
 			}
@@ -792,23 +939,33 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportDeletedAttachments(JsonReader jsonReader)
 		{
 			var count = 0;
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
+				Options.CancelToken.Token.ThrowIfCancellationRequested();
 
 				var item = RavenJToken.ReadFrom(jsonReader);
 
 				var deletedAttachmentInfo = new JsonSerializer { Converters = DefaultConverters }
-                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
+													.Deserialize<Tombstone>(new RavenJTokenReader(item));
 
-				Operations.ShowProgress("Importing deleted attachments {0}", deletedAttachmentInfo.Key);
+				Operations.ShowProgress("Importing deleted attachment {0}", deletedAttachmentInfo.Key);
 
-				await Operations.DeleteAttachment(deletedAttachmentInfo.Key);
+				try
+				{
+					await Operations.DeleteAttachment(deletedAttachmentInfo.Key);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("IMPORT of an deleted attachment {0} failed. Message: {1}", deletedAttachmentInfo.Key, e.Message);
+				}
 
 				count++;
 			}
@@ -822,25 +979,35 @@ namespace Raven.Abstractions.Smuggler
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
+				Options.CancelToken.Token.ThrowIfCancellationRequested();
 
 				var transformer = RavenJToken.ReadFrom(jsonReader);
-                if ((Options.OperateOnTypes & ItemType.Transformers) != ItemType.Transformers)
+				if ((Options.OperateOnTypes & ItemType.Transformers) != ItemType.Transformers)
 					continue;
 
 				var transformerName = transformer.Value<string>("name");
 
-				await Operations.PutTransformer(transformerName, transformer);
+				try
+				{
+					await Operations.PutTransformer(transformerName, transformer);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("PUT of a transformer {0} failed. Message: {1}", transformerName, e.Message);
+				}
 
 				count++;
 			}
 
 			await Operations.PutTransformer(null, null); // force flush
 
-				return count;
+			return count;
 		}
 
-        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
+		private static readonly Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
         {
             var converters = new JsonConverterCollection()
             {
@@ -857,164 +1024,220 @@ namespace Raven.Abstractions.Smuggler
             get { return defaultConverters.Value; }
         }
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
 		{
 			var count = 0;
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
+				Options.CancelToken.Token.ThrowIfCancellationRequested();
 
 				var item = RavenJToken.ReadFrom(jsonReader);
-                if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
+				if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
 
 				var attachmentExportInfo = new JsonSerializer { Converters = DefaultConverters }
-                                                    .Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+													.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
-				if (Options.StripReplicationInformation) 
-					attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
+				try
+				{
+					if (Options.StripReplicationInformation)
+						attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
 
-				await Operations.PutAttachment(dst, attachmentExportInfo);
+					await Operations.PutAttachment(dst, attachmentExportInfo);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("IMPORT of an attachment {0} failed. Message: {1}", attachmentExportInfo.Key, e.Message);
+				}
 
 				count++;
 			}
 
 			await Operations.PutAttachment(dst, null); // force flush
 
-				return count;
+			return count;
 		}
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader)
 		{
 			var now = SystemTime.UtcNow;
 			var count = 0;
-            string continuationDocId = "Raven/Smuggler/Continuation/" + Options.ContinuationToken;
+			string continuationDocId = "Raven/Smuggler/Continuation/" + Options.ContinuationToken;
 
-            var state = new OperationState
-            {
-                FilePath = Options.ContinuationToken,
-                LastDocsEtag = Options.StartDocsEtag,
-            };
-
-            JsonDocument lastEtagsDocument = null;
-            if (Options.UseContinuationFile)
-            {
-                lastEtagsDocument = Operations.GetDocument(continuationDocId);
-                if ( lastEtagsDocument == null )
-                {
-                    lastEtagsDocument = new JsonDocument()
-                    {
-                        Key = continuationDocId,                        
-                        Etag = Etag.Empty,
-                        DataAsJson = RavenJObject.FromObject(state)
-                    };
-                }
-                else
-                {                    
-                    state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
-                }
-
-                JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
-            }
-
-            int skippedDocuments = 0;
-            long skippedDocumentsSize = 0;
-
-            Etag tempLastEtag = Etag.Empty;
-
-            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			var state = new OperationState
 			{
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
+				FilePath = Options.ContinuationToken,
+				LastDocsEtag = Options.StartDocsEtag,
+			};
 
-				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-                var size = DocumentHelpers.GetRoughSize(document);
-				if (size > 1024 * 1024)
+			JsonDocument lastEtagsDocument = null;
+
+			try
+			{
+				if (Options.UseContinuationFile)
 				{
-					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
-									    (double)size / 1024,
-									    document["@metadata"].Value<string>("@id"));
+					lastEtagsDocument = Operations.GetDocument(continuationDocId);
+					if (lastEtagsDocument == null)
+					{
+						lastEtagsDocument = new JsonDocument()
+						{
+							Key = continuationDocId,
+							Etag = Etag.Empty,
+							DataAsJson = RavenJObject.FromObject(state)
+						};
+					}
+					else
+					{
+						state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
+					}
+
+					JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
 				}
-                if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
-					continue;
-                if (Options.MatchFilters(document) == false)
-					continue;
+			}
+			catch (Exception e)
+			{
+				if (IgnoreErrorsAndContinue == false)
+					throw;
 
-                if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
-					continue;
+				Operations.ShowProgress("Failed loading continuation state. Message: {0}", e.Message);
+			}
 
-                if (!string.IsNullOrEmpty(Options.TransformScript))
-                    document = await Operations.TransformDocument(document, Options.TransformScript);
+			int skippedDocuments = 0;
+			long skippedDocumentsSize = 0;
 
-                // If document is null after a transform we skip it. 
-                if (document == null)
-                    continue;
+			Etag tempLastEtag = Etag.Empty;
 
-                var metadata = document["@metadata"] as RavenJObject;
-                if (metadata != null)
-                {
-                    if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
-                        continue;
+			var affectedCollections = new List<string>();
+			Options.Filters.ForEach(filter =>
+			{
+				if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+				{
+					filter.Values.ForEach(collectionName =>
+					{
+						affectedCollections.Add(collectionName);
+					});
+				}
+			});
 
-                    if (Options.StripReplicationInformation)
-                        document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+				Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-					if(Options.ShouldDisableVersioningBundle)
-						document["@metadata"] = Operations.DisableVersioning(metadata);
-                }
+				RavenJObject document = null;
+				try
+				{
+					document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+					var size = DocumentHelpers.GetRoughSize(document);
+					if (size > 1024 * 1024)
+					{
+						Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
+								(double)size / 1024,
+											document["@metadata"].Value<string>("@id"));
+					}
+					if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
+						continue;
 
-                if (Options.UseContinuationFile)
-                {
-                    tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                    if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
-                    {
-                        skippedDocuments++;
-                        skippedDocumentsSize += size;
-                        continue;
-                    }     
-                }
+					if (Options.MatchFilters(document) == false)
+					{
+						if (affectedCollections.Count <= 0)
+							continue;
 
-				await Operations.PutDocument(document, (int)size);
+						if (document.ContainsKey("@metadata") == false)
+							continue;
 
+						var key = document["@metadata"].Value<string>("@id");
+						if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+							continue;
+					}
+
+					if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+						continue;
+
+					if (!string.IsNullOrEmpty(Options.TransformScript))
+						document = await Operations.TransformDocument(document, Options.TransformScript);
+
+					// If document is null after a transform we skip it. 
+					if (document == null)
+						continue;
+
+					var metadata = document["@metadata"] as RavenJObject;
+					if (metadata != null)
+					{
+						if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+							continue;
+
+						if (Options.StripReplicationInformation)
+							document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+						if (Options.ShouldDisableVersioningBundle)
+							document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+
+						document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+					}
+
+					if (Options.UseContinuationFile)
+					{
+						tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+						if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
+						{
+							skippedDocuments++;
+							skippedDocumentsSize += size;
+							continue;
+						}
+					}
+
+					await Operations.PutDocument(document, (int)size);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("Failed to import document. Message: {0}", e.Message);
+				}
 				count++;
 
-                if (count % Options.BatchSize == 0)
-				{                    
-                    if (Options.UseContinuationFile)
-                    {                        
-                        if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-                            state.LastDocsEtag = tempLastEtag;
+				if (count % Options.BatchSize == 0)
+				{
+					if (Options.UseContinuationFile)
+					{
+						if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+							state.LastDocsEtag = tempLastEtag;
 
-                        await WriteLastEtagToDatabase(state, lastEtagsDocument);
-                    }
+						await WriteLastEtagToDatabase(state, lastEtagsDocument);
+					}
 
-                    // Wait for the batch to be indexed before continue.
-                    if (Options.WaitForIndexing)
-                        await WaitForIndexingAsOfLastWrite();
+					// Wait for the batch to be indexed before continue.
+					if (Options.WaitForIndexing)
+						await WaitForIndexingAsOfLastWrite();
 
-                    Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
+					Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
 				}
-			}            
+			}
 
-            if (Options.UseContinuationFile)
-            {
-                if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-                    state.LastDocsEtag = tempLastEtag;
+			if (Options.UseContinuationFile)
+			{
+				if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+					state.LastDocsEtag = tempLastEtag;
 
-                await WriteLastEtagToDatabase(state, lastEtagsDocument);
+				await WriteLastEtagToDatabase(state, lastEtagsDocument);
 
-                Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
-            }
+				Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
+			}
 
-            await Operations.PutDocument(null, -1); // force flush    
+			await Operations.PutDocument(null, -1); // force flush    
 
 			return count;
 		}
 
-        private async Task WriteLastEtagToDatabase(OperationState state, JsonDocument lastEtagsDocument)
+		private async Task WriteLastEtagToDatabase(OperationState state, JsonDocument lastEtagsDocument)
         {
             lastEtagsDocument.DataAsJson = RavenJObject.FromObject(state);
 
@@ -1048,7 +1271,17 @@ namespace Raven.Abstractions.Smuggler
 					definition.Remove("Analyzers");
 				}
 
-				await Operations.PutIndex(indexName, index);
+				try
+				{
+					await Operations.PutIndex(indexName, index);
+				}
+				catch (Exception e)
+				{
+					if (IgnoreErrorsAndContinue == false)
+						throw;
+
+					Operations.ShowProgress("Failed to import index {0}. Message: {1}", indexName, e.Message);
+				}
 
 				count++;
 			}
@@ -1060,10 +1293,32 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task ExportIndexes(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
 		{
-			int totalCount = 0;
+			var totalCount = 0;
+			int retries = RetriesCount;
+
 			while (true)
 			{
-				var indexes = await Operations.GetIndexes(src, totalCount);
+				RavenJArray indexes;
+
+				try
+				{
+					indexes = await Operations.GetIndexes(src, totalCount);
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0 && IgnoreErrorsAndContinue)
+					{
+						Operations.ShowProgress("Failed getting indexes too much times, stopping the index export entirely. Message: {0}", e.Message);
+						return;
+					}
+
+					if (IgnoreErrorsAndContinue == false)
+						throw new SmugglerExportException(e.Message, e);
+
+					Operations.ShowProgress("Failed fetching indexes. {0} retries remaining. Message: {1}", retries, e.Message);
+					continue;
+				}
+
 				if (indexes.Length == 0)
 				{
 					Operations.ShowProgress("Done with reading indexes, total: {0}", totalCount);
@@ -1073,7 +1328,17 @@ namespace Raven.Abstractions.Smuggler
 				Operations.ShowProgress("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", indexes.Length, totalCount);
 				foreach (var index in indexes)
 				{
-					index.WriteTo(jsonWriter);
+					try
+					{
+						index.WriteTo(jsonWriter);
+					}
+					catch (Exception e)
+					{
+						if (IgnoreErrorsAndContinue == false)
+							throw new SmugglerExportException(e.Message, e);
+
+						Operations.ShowProgress("Failed to export index {0}. Message: {1}", index, e.Message);
+					}
 				}
 			}
 		}

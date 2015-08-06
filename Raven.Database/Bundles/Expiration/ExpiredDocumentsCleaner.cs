@@ -29,8 +29,6 @@ namespace Raven.Bundles.Expiration
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		public DocumentDatabase Database { get; set; }
 
-		private volatile bool executing;
-
 		public void Execute(DocumentDatabase database)
 		{
 			Database = database;
@@ -56,15 +54,16 @@ namespace Raven.Bundles.Expiration
 			logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
 						deleteFrequencyInSeconds);
 
-			database.TimerManager.NewTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+			database.TimerManager.NewTimer(state => TimerCallback(), TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 		}
 
-		private void TimerCallback(object state)
-		{
-			if (executing)
-				return;
+		private object locker = new object();
 
-			executing = true;
+		public bool TimerCallback()
+		{
+			if (Monitor.TryEnter(locker) == false)
+				return false;
+
 			try
 			{
 				DateTime currentTime = SystemTime.UtcNow;
@@ -81,8 +80,8 @@ namespace Raven.Bundles.Expiration
 					QueryResultWithIncludes queryResult;
 					using(var cts = new CancellationTokenSource())
 					using (Database.DisableAllTriggersForCurrentThread())
+					using (cts.TimeoutAfter(TimeSpan.FromMinutes(5)))
 					{
-						cts.TimeoutAfter(TimeSpan.FromMinutes(5));
 						queryResult = Database.Queries.Query(RavenDocumentsByExpirationDate, new IndexQuery
 						{
 							Start = start,
@@ -105,7 +104,7 @@ namespace Raven.Bundles.Expiration
 				}
 
 				if (list.Count == 0)
-					return;
+					return true;
 
 				logger.Debug(
 					() => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
@@ -121,9 +120,9 @@ namespace Raven.Bundles.Expiration
 			}
 			finally
 			{
-				executing = false;
+				Monitor.Exit(locker);
 			}
-
+			return true;
 		}
 
 		/// <summary>

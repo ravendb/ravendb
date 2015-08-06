@@ -87,7 +87,7 @@ namespace Raven.Tests.Issues
                      {
                          maryMallon = session.Load<User>(maryMallon.Id);
                      }
-                     catch (Exception ex)
+                     catch (Exception)
                      {
                          Assert.True(false);
                      }
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 
 
                  }
-                 catch (Exception ex)
+                 catch (Exception)
                  {
                      Assert.True(false);
                  }

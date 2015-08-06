@@ -19,16 +19,16 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication()
         {
-            var server = CreateServer(Ports[0], fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
+            var server = CreateServer(8079, fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
 
             using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
                 await client.Admin.CreateFileSystemAsync(new FileSystemDocument()
                 {
-                    Id = "Raven/FileSystem/" + client.FileSystem,
+                    Id = "Raven/FileSystem/" + client.FileSystemName,
                     Settings =
                     {
-                        {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", client.FileSystem)}
+                        {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", client.FileSystemName)}
                     }
                 });
 

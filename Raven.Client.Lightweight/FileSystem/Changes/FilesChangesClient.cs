@@ -7,6 +7,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -27,7 +28,6 @@ namespace Raven.Client.FileSystem.Changes
         private bool watchAllConfigurations;
         private bool watchAllConflicts;
         private bool watchAllSynchronizations;
-        private bool watchAllCancellations;
 
         private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
@@ -62,6 +62,7 @@ namespace Raven.Client.FileSystem.Changes
                     },
                     configurationSubscriptionTask);
             });
+
             var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
                 notification => true);
@@ -178,9 +179,6 @@ namespace Raven.Client.FileSystem.Changes
 
             if (watchAllSynchronizations)
                 await Send("watch-sync", null).ConfigureAwait(false);
-
-            if (watchAllCancellations)
-                await Send("watch-cancellations", null).ConfigureAwait(false);
 
             foreach (var watchedFolder in watchedFolders)
             {

@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void MissingScratchPagesInPageTable()
 		{
 			var bytes = new byte[1000];

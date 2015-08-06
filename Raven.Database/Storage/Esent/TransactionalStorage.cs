@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
@@ -30,6 +31,7 @@ using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Esent;
 using Raven.Database.Storage.Esent.Backup;
@@ -63,6 +65,7 @@ namespace Raven.Storage.Esent
         private EsentInFlightTransactionalState inFlightTransactionalState;
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel = new ConcurrentDictionary<int, RemainingReductionPerLevel>();
 
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
@@ -86,13 +89,14 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible)
+	    public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
         {
             configuration.Container.SatisfyImportsOnce(this);
             documentCacher = new DocumentCacher(configuration);
             database = configuration.DataDirectory;
             this.configuration = configuration;
             this.onCommit = onCommit;
+			
             path = database;
             if (Path.IsPathRooted(database) == false)
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
@@ -104,9 +108,25 @@ namespace Raven.Storage.Esent
 
             uniquePrefix = Interlocked.Increment(ref instanceCounter) + "-" + Base62Util.Base62Random();
             CreateInstance(out instance, uniquePrefix + "-" + database);
+		    this.onNestedTransactionEnter = onNestedTransactionEnter;
+		    this.onNestedTransactionExit = onNestedTransactionExit;
         }
 
-        public TableColumnsCache TableColumnsCache
+	    public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
+	    {
+			return configuration.Indexing.DisableMapReduceInMemoryTracking ? null : scheduledReductionsPerViewAndLevel;
+	    }
+
+	    public void ResetScheduledReductionsTracking()
+	    {
+			scheduledReductionsPerViewAndLevel.Clear();
+	    }
+
+	    public void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler)
+	    {
+	    }
+
+	    public TableColumnsCache TableColumnsCache
         {
             get { return tableColumnsCache; }
         }
@@ -122,10 +142,9 @@ namespace Raven.Storage.Esent
         }
 
         public Guid Id { get; private set; }
+		public IDocumentCacher DocumentCacher { get { return documentCacher; } }
 
-
-
-        public void Dispose()
+	    public void Dispose()
         {
             var tryEnterWriteLock = disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2));
             try
@@ -337,8 +356,10 @@ namespace Raven.Storage.Esent
 
 
         private static object compactLocker = new object();
+	    private Action onNestedTransactionEnter;
+	    private Action onNestedTransactionExit;
 
-        public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
+	    public static void Compact(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
         {
             bool lockTaken = false;
             try
@@ -703,10 +724,22 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public IDisposable DisableBatchNesting()
+	    /// <summary>
+	    /// Force current operations inside context to be performed directly
+	    /// </summary>
+	    /// <returns></returns>
+	    public IDisposable DisableBatchNesting()
         {
             disableBatchNesting.Value = new object();
-            return new DisposableAction(() => disableBatchNesting.Value = null);
+		    if (onNestedTransactionEnter != null)
+			    onNestedTransactionEnter();
+		    
+			return new DisposableAction(() =>
+			{
+				if (onNestedTransactionExit!= null)
+					onNestedTransactionExit();
+				disableBatchNesting.Value = null;
+			});
         }
 
         public IDisposable SetTransactionContext(EsentTransactionContext context)
@@ -723,58 +756,69 @@ namespace Raven.Storage.Esent
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            var batchNestingAllowed = disableBatchNesting.Value == null;
+		    var batchNestingAllowed = disableBatchNesting.Value == null;
 
-            if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
-            {
-                if (current.Value != null) // check again, just to be sure
-                {
-                    current.Value.IsNested = true;
-                    action(current.Value);
-                    current.Value.IsNested = false;
-                    return;
-                }
-            }
-            Action afterStorageCommit = null;
+		    if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
+		    {
+			    if (current.Value != null) // check again, just to be sure
+			    {
+				    current.Value.IsNested = true;
+				    action(current.Value);
+				    current.Value.IsNested = false;
+				    return;
+			    }
+		    }
+		    Action afterStorageCommit = null;
 
-            disposerLock.EnterReadLock();
-            try
-            {
-                afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
+		    disposerLock.EnterReadLock();
+	        try
+	        {
+		        afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
 
-                if (dtcTransactionContext.Value != null)
-                {
-                    dtcTransactionContext.Value.AfterCommit((Action)afterStorageCommit.Clone());
-                    afterStorageCommit = null; // delay until transaction will be committed
-                }
-            }
-            catch (EsentErrorException e)
-            {
-                if (disposed)
-                {
-                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
-                    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-                }
+		        if (dtcTransactionContext.Value != null)
+		        {
+			        dtcTransactionContext.Value.AfterCommit((Action) afterStorageCommit.Clone());
+			        afterStorageCommit = null; // delay until transaction will be committed
+		        }
+	        }
+		    catch (Exception ex)
+		    {
+			    if (disposed)
+			    {
+				    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + ex);
+				    if (Environment.StackTrace.Contains(".Finalize()") == false)
+					    throw;
+				    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+			    }
 
-                switch (e.Error)
-                {
-                    case JET_err.WriteConflict:
-                    case JET_err.SessionWriteConflict:
-                    case JET_err.WriteConflictPrimaryIndex:
-                        throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
-                    default:
-                        throw;
-                }
-            }
-            finally
-            {
-                disposerLock.ExitReadLock();
-                if (disposed == false && disableBatchNesting.Value == null)
-                    current.Value = null;
-            }
-            if (afterStorageCommit != null)
-                afterStorageCommit();
-            onCommit(); // call user code after we exit the lock
+			    EsentErrorException e = ex as EsentErrorException;
+			    if (e != null)
+			    {
+				    switch (e.Error)
+				    {
+					    case JET_err.WriteConflict:
+					    case JET_err.SessionWriteConflict:
+					    case JET_err.WriteConflictPrimaryIndex:
+						    throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
+					    default:
+						    throw;
+				    }
+			    }
+			    throw;
+		    }
+		    finally
+		    {
+			    disposerLock.ExitReadLock();
+			    if (disposed == false && disableBatchNesting.Value == null)
+				    current.Value = null;
+		    }
+		    if (afterStorageCommit != null)
+			    afterStorageCommit();
+
+			if (onCommit!= null)
+				onCommit(); // call user code after we exit the lock
+	        
+	        
         }
 
         //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]

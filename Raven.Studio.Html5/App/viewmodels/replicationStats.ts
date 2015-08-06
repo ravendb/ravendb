@@ -91,6 +91,7 @@ class replicationStats extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.resize();
         d3.select(window).on("resize", this.resize.bind(this));
         $("#replicationTopologySection").scroll(() => this.graphScrolled());

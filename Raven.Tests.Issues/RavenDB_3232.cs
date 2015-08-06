@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_3232 : RavenTest
 	{
-		private class Person
+		public class Person
 		{
 			public string Id { get; set; }
 
@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
 			public string LastName { get; set; }
 		}
 
-		private class TestIndex : AbstractIndexCreationTask<Person>
+		public class TestIndex : AbstractIndexCreationTask<Person>
 		{
 			public TestIndex()
 			{
@@ -163,6 +163,34 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(1, count);
 				}
+			}
+		}
+
+		[Fact]
+		public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
+		{
+			using (var store = NewDocumentStore(runInMemory: false))
+			{
+				var indexName = new TestIndex().IndexName;
+
+				new TestIndex().SideBySideExecute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Person { FirstName = "John", LastName = "Doe" });
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+				store.DocumentDatabase.StopBackgroundWorkers();
+				store
+					.DatabaseCommands
+					.Admin
+					.StopIndexing();
+
+				new TestIndex().SideBySideExecute(store);
+
+				Assert.Null(store.DatabaseCommands.GetIndex("ReplacementOf/" + indexName));
 			}
 		}
 	}

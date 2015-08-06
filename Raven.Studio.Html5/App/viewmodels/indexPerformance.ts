@@ -3,6 +3,7 @@
 
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
+import changesContext = require("common/changesContext");
 import getIndexingBatchStatsCommand = require("commands/getIndexingBatchStatsCommand");
 import getReducingBatchStatsCommand = require("commands/getReducingBatchStatsCommand");
 import d3 = require('d3/d3');
@@ -178,6 +179,7 @@ class metrics extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
         this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
@@ -195,7 +197,7 @@ class metrics extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e))];
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {

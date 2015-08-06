@@ -35,11 +35,14 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
 using System.Security.Cryptography;
+using Lucene.Net.Util;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Indexing
 {
@@ -65,10 +68,58 @@ namespace Raven.Database.Indexing
 		private ConcurrentDictionary<int, Index> indexes =
 			new ConcurrentDictionary<int, Index>();
 
+	    public class RegisterLowMemoryHandler : ILowMemoryHandler
+	    {
+	        static RegisterLowMemoryHandler _instance;
+
+	        public static void Setup()
+	        {
+	            if (_instance != null)
+	                return;
+	            lock (typeof (RegisterLowMemoryHandler))
+	            {
+	                if (_instance != null)
+	                    return;
+                    _instance = new RegisterLowMemoryHandler();
+                    MemoryStatistics.RegisterLowMemoryHandler(_instance);
+	            }
+	        }
+
+	        public void HandleLowMemory()
+	        {
+                FieldCache_Fields.DEFAULT.PurgeAllCaches();
+	            
+	        }
+
+		    public void SoftMemoryRelease()
+		    {
+		    }
+
+		    public LowMemoryHandlerStatistics GetStats()
+		    {
+			    var cacheEntries = FieldCache_Fields.DEFAULT.GetCacheEntries();
+			    var memorySum = cacheEntries.Sum(x =>
+			    {
+				    var curEstimator = new RamUsageEstimator(false);
+				    return curEstimator.EstimateRamUsage(x);
+			    });
+			    return new LowMemoryHandlerStatistics
+			    {
+					Name = "LuceneLowMemoryHandler",
+					EstimatedUsedMemory = memorySum,
+					Metadata = new
+					{
+						CachedEntriesAmount = cacheEntries.Length
+					}
+			    };
+		    }
+	    }
+
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
 			try
 			{
+                RegisterLowMemoryHandler.Setup();
 				this.indexDefinitionStorage = indexDefinitionStorage;
 				this.configuration = configuration;
 				this.documentDatabase = documentDatabase;
@@ -452,7 +503,7 @@ namespace Raven.Database.Indexing
 
 					foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
 					{
-						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexDefinition.IndexId, reduceKey).Distinct();
+						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexDefinition.IndexId, reduceKey, CancellationToken.None).Distinct();
 
 						itemsToScheduleOnLevel0.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
 
@@ -912,7 +963,14 @@ namespace Raven.Database.Indexing
 			.FirstOrDefault();
 		}
 
-		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, CancellationToken token)
+		public IEnumerable<IndexQueryResult> Query(string index, 
+            IndexQuery query, 
+            Func<IndexQueryResult, bool> shouldIncludeInResults, 
+            FieldsToFetch fieldsToFetch, 
+            OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, 
+            CancellationToken token,
+            Action<double> parseTiming = null
+            )
 		{
 			Index value = TryIndexByName(index);
 			if (value == null)
@@ -948,10 +1006,13 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
+
+		    if (parseTiming != null)
+		        parseTiming(indexQueryOperation.QueryParseDuration.TotalMilliseconds);
+
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
 				return indexQueryOperation.IntersectionQuery(token);
-
-
+          
 			return indexQueryOperation.Query(token);
 		}
 
@@ -971,23 +1032,6 @@ namespace Raven.Database.Indexing
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, false, null), indexQueryTriggers, reduceKeys);
 			return indexQueryOperation.IndexEntries(totalResults);
-		}
-
-		protected internal static IDisposable EnsureInvariantCulture()
-		{
-			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)
-				return null;
-
-			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
-			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
-
-			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
-			return new DisposableAction(() =>
-			{
-				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
-				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
-			});
 		}
 
 		public void RemoveFromIndex(int index, string[] keys, WorkContext context)
@@ -1015,7 +1059,7 @@ namespace Raven.Database.Indexing
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return null;
 			}
-			using (EnsureInvariantCulture())
+			using (CultureHelper.EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
@@ -1052,7 +1096,7 @@ namespace Raven.Database.Indexing
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
 				return null;
 			}
-			using (EnsureInvariantCulture())
+			using (CultureHelper.EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
 
@@ -1470,7 +1514,7 @@ namespace Raven.Database.Indexing
 			index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
 
-		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
+		internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
 		{
 			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
 
@@ -1481,8 +1525,7 @@ namespace Raven.Database.Indexing
 			if (indexToReplace == null)
 				return true;
 
-			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
-
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement:true);
 			return true;
 		}
 	}

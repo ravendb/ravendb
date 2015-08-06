@@ -163,67 +163,59 @@ namespace Raven.Database.Embedded
 
 			var linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(abort.Token, cancellationToken).Token;
 
-			await tryTakeDataLock.WaitAsync(linkedCancelToken);
-			try
+			var bytesRead = 0;
+
+			while (true)
 			{
-				var bytesRead = 0;
-
-				while (true)
+				try
 				{
-					try
+					abort.Token.ThrowIfCancellationRequested();
+
+					if (currentBlock != null)
 					{
-						abort.Token.ThrowIfCancellationRequested();
+						int copy = Math.Min(count - bytesRead, currentBlock.Length - currentBlockIndex);
+						Buffer.BlockCopy(currentBlock, currentBlockIndex, buffer, offset + bytesRead, copy);
+						currentBlockIndex += copy;
+						bytesRead += copy;
 
-						if (currentBlock != null)
+						if (currentBlock.Length <= currentBlockIndex)
 						{
-							int copy = Math.Min(count - bytesRead, currentBlock.Length - currentBlockIndex);
-							Buffer.BlockCopy(currentBlock, currentBlockIndex, buffer, offset + bytesRead, copy);
-							currentBlockIndex += copy;
-							bytesRead += copy;
-
-							if (currentBlock.Length <= currentBlockIndex)
-							{
-								currentBlock = null;
-								currentBlockIndex = 0;
-							}
-
-							try
-							{
-								if (bytesRead == count || blocks.Count == 0)
-									return bytesRead;
-							}
-							catch (ObjectDisposedException)
-							{
-								return bytesRead;
-							}
+							currentBlock = null;
+							currentBlockIndex = 0;
 						}
 
-						await tryTakeDataLock.WaitAsync(linkedCancelToken).ConfigureAwait(false);
 						try
 						{
-							if (disposed)
-								return bytesRead;
-
-							if (blocks.TryTake(out currentBlock, Timeout.Infinite, linkedCancelToken) == false)
+							if (bytesRead == count || blocks.Count == 0)
 								return bytesRead;
 						}
-						finally
+						catch (ObjectDisposedException)
 						{
-							tryTakeDataLock.Release();
+							return bytesRead;
 						}
 					}
-					catch (OperationCanceledException)
-					{
-						if (abort.IsCancellationRequested)
-							throw new IOException("Read operation has been aborted", abortException);
 
-						throw;
+					await tryTakeDataLock.WaitAsync(linkedCancelToken).ConfigureAwait(false);
+					try
+					{
+						if (disposed)
+							return bytesRead;
+
+						if (blocks.TryTake(out currentBlock, Timeout.Infinite, linkedCancelToken) == false)
+							return bytesRead;
+					}
+					finally
+					{
+						tryTakeDataLock.Release();
 					}
 				}
-			}
-			finally
-			{
-				tryTakeDataLock.Release();
+				catch (OperationCanceledException)
+				{
+					if (abort.IsCancellationRequested)
+						throw new IOException("Read operation has been aborted", abortException);
+
+					throw;
+				}
 			}
 		}
 
@@ -313,7 +305,8 @@ namespace Raven.Database.Embedded
 			if (disposed)
 				return;
 
-			blocks.CompleteAdding();
+			if (blocks.IsAddingCompleted == false)
+				blocks.CompleteAdding();
 
 			base.Dispose(disposing);
 

@@ -1,5 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
+import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
@@ -58,6 +59,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
 
     attached() {
+		super.attached();
         $("#replicationStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#replicationStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();
@@ -65,7 +67,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [shell.currentResourceChangesApi().watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)) ];
+        return [changesContext.currentResourceChangesApi().watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)) ];
     }
 
     processUpdate(e: documentChangeNotificationDto) {

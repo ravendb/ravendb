@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Owin;
@@ -10,7 +12,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Connections
@@ -44,7 +48,7 @@ namespace Raven.Database.Server.Connections
         bool, // end of message?
         int>; // count
 
-    public class WebSocketTransportFactory
+    public static class WebSocketTransportFactory 
     {
         public const string ChangesApiWebsocketSuffix = "/changes/websocket";
         public const string WatchTrafficWebsocketSuffix = "/traffic-watch/websocket";
@@ -52,24 +56,60 @@ namespace Raven.Database.Server.Connections
         public const string WebsocketValidateSuffix = "/websocket/validate";
 
         private static CancellationTokenSource ravenGcCancellation = new CancellationTokenSource();
-        private static readonly Action DisconnectWebSockets = () =>
+        public static CancellationTokenSource RavenGcCancellation
         {
-            ravenGcCancellation.Cancel();
-            ravenGcCancellation = new CancellationTokenSource();
+            get { return ravenGcCancellation; }
+        }
+
+        private class DisconnectWebSockets : ILowMemoryHandler
+        {
+            public static readonly DisconnectWebSockets Instance = new DisconnectWebSockets();
+            
+
+	        public void HandleLowMemory()
+	        {
+				SoftMemoryRelease();
+	        }
+
+	        public void SoftMemoryRelease()
+	        {
+				var cancellationTokenSource = ravenGcCancellation;
+				ravenGcCancellation = new CancellationTokenSource();
+				cancellationTokenSource.Cancel();
+	        }
+
+	        public LowMemoryHandlerStatistics GetStats()
+	        {
+		        return new LowMemoryHandlerStatistics
+		        {
+			        EstimatedUsedMemory = 0,
+					Name = "DisconnectWebSockets",
+					Metadata = new 
+					{
+						WebsocketTransportsCount = webSocektTransportsCount
+					}
+		        };
+	        }
         };
 
         static WebSocketTransportFactory()
         {
-            RavenGC.Register(DisconnectWebSockets);
-            AppDomain.CurrentDomain.DomainUnload += (s, e) => RavenGC.Unregister(DisconnectWebSockets);
+			MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
         }
 
+		private static int webSocektTransportsCount = 0;
+
+	    public static void DecrementWebSocketTransportsCount()
+	    {
+		    Interlocked.Decrement(ref webSocektTransportsCount);
+	    }
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
             try
             {
                 if (RavenGC.GcCollectLock.TryEnterReadLock(5000) == false)
                     throw new TimeoutException("Could not create a new web socket connection. Probably because GC is currently in progress, try again later.");
+				Interlocked.Increment(ref webSocektTransportsCount);
                 var localPath = context.Request.Path.Value;
                 if (localPath.EndsWith(ChangesApiWebsocketSuffix))
                 {
@@ -87,6 +127,7 @@ namespace Raven.Database.Server.Connections
                 {
                     return new WebSocketsValidateTransport(options, context, ravenGcCancellation.Token);
                 }
+				Interlocked.Decrement(ref webSocektTransportsCount);
                 return null;
             }
             finally
@@ -211,7 +252,7 @@ namespace Raven.Database.Server.Connections
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
-            PreAllocatedBuffer = options.WebSocketBufferPool.TakeBuffer();
+            PreAllocatedBuffer = WebSocketBufferPool.Instance.TakeBuffer();
         }
 
         protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
@@ -229,7 +270,17 @@ namespace Raven.Database.Server.Connections
 
         public void Dispose()
         {
+            cancellationTokenSource.Cancel();
+        }
 
+	    private readonly DateTime _started = SystemTime.UtcNow;
+        private CancellationTokenSource cancellationTokenSource;
+        public TimeSpan Age
+        {
+            get
+            {
+                return SystemTime.UtcNow - _started;
+            }
         }
 
         public event Action Disconnected;
@@ -242,65 +293,70 @@ namespace Raven.Database.Server.Connections
 
         public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
-            try
-            {
-                var sendAsync = (WebSocketSendAsync)websocketContext["websocket.SendAsync"];
+	        try
+	        {
+		        var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
+	            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
 
-                var token = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken).Token;
+		        var memoryStream = new MemoryStream();
+		        var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
-                var memoryStream = new MemoryStream();
-                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+		        CreateWaitForClientCloseTask(websocketContext);
 
-                CreateWaitForClientCloseTask(websocketContext, token);
+                while (cancellationTokenSource.IsCancellationRequested == false)
+		        {
+                    var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
+                    if (cancellationTokenSource.IsCancellationRequested)
+				        break;
 
-                while (token.IsCancellationRequested == false)
-                {
-                    var result = await manualResetEvent.WaitAsync(5000);
-                    if (token.IsCancellationRequested)
-                        break;
+			        if (result == false)
+			        {
+				        await SendMessage(memoryStream, serializer,
+					        new {Type = "Heartbeat", Time = SystemTime.UtcNow},
+                            sendAsync, cancellationTokenSource.Token);
 
-                    if (result == false)
-                    {
-                        await SendMessage(memoryStream, serializer,
-                            new { Type = "Heartbeat", Time = SystemTime.UtcNow },
-                            sendAsync, token);
+				        if (lastMessageEnqueuedAndNotSent != null)
+				        {
+					        await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
+					        lastMessageEnqueuedAndNotSent = null;
+					        lastMessageSentTick = Environment.TickCount;
+				        }
+				        continue;
+			        }
 
-                        if (lastMessageEnqueuedAndNotSent != null)
-                        {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, token);
-                            lastMessageEnqueuedAndNotSent = null;
-                            lastMessageSentTick = Environment.TickCount;
-                        }
-                        continue;
-                    }
+			        manualResetEvent.Reset();
 
-                    manualResetEvent.Reset();
+			        object message;
+			        while (msgs.TryDequeue(out message))
+			        {
+                        if (cancellationTokenSource.IsCancellationRequested)
+					        break;
 
-                    object message;
-                    while (msgs.TryDequeue(out message))
-                    {
-                        if (token.IsCancellationRequested)
-                            break;
+				        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+				        {
+					        lastMessageEnqueuedAndNotSent = message;
+					        continue;
+				        }
 
-                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-                        {
-                            lastMessageEnqueuedAndNotSent = message;
-                            continue;
-                        }
-
-                        await SendMessage(memoryStream, serializer, message, sendAsync, token);
-                        lastMessageEnqueuedAndNotSent = null;
-                        lastMessageSentTick = Environment.TickCount;
-                    }
-                }
-            }
+                        await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token);
+				        lastMessageEnqueuedAndNotSent = null;
+				        lastMessageSentTick = Environment.TickCount;
+			        }
+		        }
+	        }
+	        catch (Exception e)
+	        {
+		        Log.Info("Error when handling web socket connection", e);
+		        if (cancellationTokenSource != null)
+			        cancellationTokenSource.Cancel();
+	        }
             finally
             {
                 OnDisconnection();
             }
         }
 
-        private void CreateWaitForClientCloseTask(IDictionary<string, object> websocketContext, CancellationToken cancelToken)
+        private void CreateWaitForClientCloseTask(IDictionary<string, object> websocketContext)
         {
             new Task(async () =>
             {
@@ -308,11 +364,33 @@ namespace Raven.Database.Server.Connections
                 var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
                 var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
 
-                while (cancelToken.IsCancellationRequested == false)
+                while (true)
                 {
                     try
                     {
-                        WebSocketReceiveResult receiveResult = await receiveAsync(buffer, cancelToken);
+                        bool cancelled = false;
+                        WebSocketReceiveResult receiveResult = null;
+                        try
+                        {
+                            receiveResult = await receiveAsync(buffer, cancellationTokenSource.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            cancelled = true;
+                        }
+                        if (cancelled)
+                        {
+                            try
+                            {
+                                await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None);
+                                manualResetEvent.Set();
+                            }
+                            catch (Exception e)
+                            {
+                                Log.WarnException("Error when closing connection web socket transport", e);
+                            }
+                            return;
+                        }
 
                         if (receiveResult.Item1 == WebSocketCloseMessageType)
                         {
@@ -321,7 +399,8 @@ namespace Raven.Database.Server.Connections
 
                             if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                             {
-                                await closeAsync(clientCloseStatus, clientCloseDescription, cancelToken);
+                                await closeAsync(clientCloseStatus, clientCloseDescription, cancellationTokenSource.Token);
+                                manualResetEvent.Set();
                             }
 
                             //At this point the WebSocket is in a 'CloseReceived' state, so there is no need to continue waiting for messages
@@ -359,7 +438,7 @@ namespace Raven.Database.Server.Connections
             }
             finally
             {
-                _options.WebSocketBufferPool.ReturnBuffer(PreAllocatedBuffer);
+                WebSocketBufferPool.Instance.ReturnBuffer(PreAllocatedBuffer);
             }
         }
 

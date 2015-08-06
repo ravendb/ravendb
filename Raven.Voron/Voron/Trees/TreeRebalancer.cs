@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Debugging;
@@ -53,6 +54,14 @@ namespace Voron.Trees
                 return parentPage;
             }
 
+			if (page.IsBranch && page.NumberOfEntries == 1)
+			{
+				RemoveBranchWithOneEntry(page, parentPage);
+				_cursor.Pop();
+
+				return parentPage;
+			}
+
             var minKeys = page.IsBranch ? 2 : 1;
             if ((page.UseMoreSizeThan(_tx.DataPager.PageMinSpace)) &&
                 page.NumberOfEntries >= minKeys)
@@ -62,6 +71,9 @@ namespace Voron.Trees
 
             var sibling = SetupMoveOrMerge(page, parentPage);
             Debug.Assert(sibling.PageNumber != page.PageNumber);
+
+	        if (page.Flags != sibling.Flags)
+		        return null;
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
             if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
@@ -85,7 +97,7 @@ namespace Voron.Trees
             }
             else // this is the left page, merge right
             {
-	            if (TryMergePages(parentPage, page, sibling) == false)
+				if (TryMergePages(parentPage, page, sibling) == false)
 					return null;
             }
 
@@ -94,13 +106,34 @@ namespace Voron.Trees
             return parentPage;
         }
 
+		private void RemoveBranchWithOneEntry(Page page, Page parentPage)
+		{
+			var pageRefNumber = page.GetNode(0)->PageNumber;
+
+			NodeHeader* nodeHeader = null;
+
+			for (int i = 0; i < parentPage.NumberOfEntries; i++)
+			{
+				nodeHeader = parentPage.GetNode(i);
+
+				if (nodeHeader->PageNumber == page.PageNumber)
+					break;
+			}
+
+			Debug.Assert(nodeHeader->PageNumber == page.PageNumber);
+
+			nodeHeader->PageNumber = pageRefNumber;
+
+			_tx.FreePage(page.PageNumber);
+		}
+
 		private bool TryMergePages(Page parentPage, Page left, Page right)
 		{
 			TemporaryPage tmp;
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
 				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
-                MemoryUtils.Copy(mergedPage.Base, left.Base, left.PageSize);
+                Memory.Copy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
 
@@ -121,7 +154,7 @@ namespace Voron.Trees
 					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
 				}
 
-                MemoryUtils.Copy(left.Base, mergedPage.Base, left.PageSize);
+                Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
 			}
 
 			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
@@ -192,7 +225,7 @@ namespace Voron.Trees
 	        }
 			
 			if(dataPos != null && fromDataSize > 0)
-                MemoryUtils.Copy(dataPos, val, fromDataSize);
+                Memory.Copy(dataPos, val, fromDataSize);
             
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 

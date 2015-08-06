@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
+using Raven.Database.Plugins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -19,9 +20,11 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
-		private readonly WebSocketBufferPool webSocketBufferPool;
 
-		private bool preventDisposing = false;
+		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
+		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
+
+		private bool preventDisposing;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
@@ -36,19 +39,28 @@ namespace Raven.Database.Server
 				{
 					configuration.UpdateDataDirForLegacySystemDb();
 					systemDatabase = new DocumentDatabase(configuration);
-					systemDatabase.SpinBackgroundWorkers();
+					systemDatabase.SpinBackgroundWorkers(false);
 				}
 				else
 				{
 					systemDatabase = db;
 				}
+
+				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
 			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				countersLandlord = new CountersLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				webSocketBufferPool = new WebSocketBufferPool(configuration.WebSockets.InitialBufferPoolSize);
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
+
+				serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
+
+				foreach (var task in serverStartupTasks)
+				{
+					toDispose.Add(task);
+					task.Execute(this);
+				}
 			}
 			catch
 			{
@@ -56,6 +68,11 @@ namespace Raven.Database.Server
 					systemDatabase.Dispose();
 				throw;
 			}
+		}
+
+		public IEnumerable<IServerStartupTask> ServerStartupTasks
+		{
+			get { return serverStartupTasks; }
 		}
 
 		public DocumentDatabase SystemDatabase
@@ -87,26 +104,22 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
-		public WebSocketBufferPool WebSocketBufferPool
-		{
-			get { return webSocketBufferPool; }
-		}
+		public bool Disposed { get; private set; }
 
 		public void Dispose()
 		{
-			if(preventDisposing)
+			if (preventDisposing || Disposed)
 				return;
 
-		    var toDispose = new List<IDisposable>
-		                    {
-		                        mixedModeRequestAuthorizer, 
-                                databasesLandlord, 
-                                fileSystemLandlord,
-                                systemDatabase, 
-                                LogManager.GetTarget<AdminLogsTarget>(),
-                                requestManager,
-                                countersLandlord
-		                    };
+			Disposed = true;
+
+			toDispose.Add(mixedModeRequestAuthorizer);
+			toDispose.Add(databasesLandlord);
+			toDispose.Add(fileSystemLandlord);
+			toDispose.Add(systemDatabase);
+			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
+			toDispose.Add(requestManager);
+			toDispose.Add(countersLandlord);
 
             var errors = new List<Exception>();
 

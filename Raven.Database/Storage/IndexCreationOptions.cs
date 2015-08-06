@@ -9,6 +9,7 @@ namespace Raven.Database.Storage
 	{
 		Noop,
 		Update,
-		Create
+		Create,
+		UpdateWithoutUpdatingCompiledIndex
 	}
 }

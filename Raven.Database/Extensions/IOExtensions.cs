@@ -19,6 +19,14 @@ namespace Raven.Database.Extensions
 	{
 		const int retries = 10;
 
+		public static void CreateDirectoryIfNotExists(string dirPath)
+		{
+			if (Directory.Exists(dirPath) == false)
+			{
+				Directory.CreateDirectory(dirPath);
+			}
+		}
+
 		public static void DeleteFile(string file)
 		{
 			try

@@ -70,7 +70,7 @@ namespace Raven.Client.Linq
 	    /// <param name="isMapReduce"></param>
 	    /// <param name="resultsTransformer"></param>
 		/// <param name="transformerParameters"></param>
-		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExcuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
+		public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExecuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -79,7 +79,7 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
-		    this.afterStreamExcuted = afterStreamExcuted;
+		    this.afterStreamExcuted = afterStreamExecuted;
 		    this.customizeQuery = customizeQuery;
 		    this.resultsTransformer = resultsTransformer;
 			this.transformerParameters = transformerParameters;
@@ -820,7 +820,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
-			if (declaringType.IsGenericType() &&
+			if (declaringType.IsGenericType &&
 				declaringType.GetGenericTypeDefinition() == typeof(List<>))
 			{
 				VisitListMethodCall(expression);
@@ -1114,7 +1114,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				case "Select":
 				{
-					if (expression.Arguments[0].Type.IsGenericType() &&
+					if (expression.Arguments[0].Type.IsGenericType &&
 							expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
 					    expression.Arguments[0].Type != expression.Arguments[1].Type)
 					{

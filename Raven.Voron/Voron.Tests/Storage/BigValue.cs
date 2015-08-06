@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
@@ -15,7 +16,7 @@ namespace Voron.Tests.Storage
 			options.ManualFlushing = true;
 		}
 
-		[Theory]
+		[PrefixesTheory]
 		[InlineData(0)]
 		[InlineData(1)]
 		[InlineData(2)]
@@ -127,10 +128,10 @@ namespace Voron.Tests.Storage
 		{
 			fixed(byte* b = buffer)
 			fixed (byte* c = memoryStream.GetBuffer())
-                Assert.Equal(0, MemoryUtils.Compare(b, c, buffer.Length));
+                Assert.Equal(0, Memory.Compare(b, c, buffer.Length));
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanStoreInOneTransactionReallyBigValue()
 		{
 			var random = new Random(43321);
@@ -154,7 +155,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void CanStoreInOneTransactionManySmallValues()
 		{
 			var buffers = new List<byte[]>();

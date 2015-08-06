@@ -139,7 +139,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
 		/// </summary>
-		protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>();
+		protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>(SortOptionsEqualityProvider.Instance);
 
 		/// <summary>
 		///   The page size to use when querying the index
@@ -420,7 +420,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
 		{
-			OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat, lng));
+			OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
 			return this;
 		}
 
@@ -429,7 +429,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
 		{
-			OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng, sortedFieldName));
+			OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
 			return this;
 		}
 
@@ -596,7 +596,6 @@ namespace Raven.Client.Document
 		protected internal QueryOperation InitializeQueryOperation()
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
-			this.afterStreamExecutedCallback = afterStreamExecutedCallback;
 
 			if (beforeQueryExecutionAction != null)
 				beforeQueryExecutionAction(indexQuery);
@@ -1204,6 +1203,10 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WhereEquals(WhereParams whereParams)
 		{
 			EnsureValidFieldName(whereParams);
+
+			if (theSession != null && whereParams.Value != null)
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(whereParams.FieldName, theSession.Conventions.GetDefaultSortOption(whereParams.Value.GetType())));
+
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
 
@@ -1918,7 +1921,7 @@ If you really want to do in memory filtering on the data returned from the query
 					ExplainScores = shouldExplainScores
 				};
 			}
-
+		
 			var indexQuery = new IndexQuery
 			{
 				IsDistinct = isDistinct,
@@ -2341,5 +2344,8 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			isDistinct = true;
 		}
+
 	}
+
+
 }

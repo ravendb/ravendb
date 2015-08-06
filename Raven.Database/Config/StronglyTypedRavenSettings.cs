@@ -49,6 +49,9 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			//1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
+			MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount],1024); 
+
 			AllowScriptsToAdjustNumberOfSteps = new BooleanSetting(settings[Constants.AllowScriptsToAdjustNumberOfSteps], false);
 
 			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
@@ -67,7 +70,7 @@ namespace Raven.Database.Config
 
 			MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
 				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
+				Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
 
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -131,7 +134,7 @@ namespace Raven.Database.Config
 			WorkingDir =
 				new StringSetting(settings["Raven/WorkingDir"], @"~\");
 			DataDir =
-				new StringSetting(settings["Raven/DataDir"], @"~\Data");
+				new StringSetting(settings["Raven/DataDir"], @"~\Databases\System");
 			IndexStoragePath =
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 			CountersDataDir =
@@ -212,8 +215,17 @@ namespace Raven.Database.Config
 
             Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
             Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
-			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 1024);
-            Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 6144);
+
+			var maxScratchBufferSize = Voron.MaxScratchBufferSize.Value;
+			var scratchBufferSizeNotificationThreshold = -1;
+			if (maxScratchBufferSize > 1024)
+				scratchBufferSizeNotificationThreshold = 1024;
+			else if (maxScratchBufferSize > 512)
+				scratchBufferSizeNotificationThreshold = 512;
+			Voron.ScratchBufferSizeNotificationThreshold = new IntegerSetting(settings[Constants.Voron.ScratchBufferSizeNotificationThreshold], scratchBufferSizeNotificationThreshold);
+
+			Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
 			Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
@@ -239,6 +251,8 @@ namespace Raven.Database.Config
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
 			Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+			Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
+			Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
 
 			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
@@ -274,6 +288,7 @@ namespace Raven.Database.Config
 			return val;
 		}
 
+		public IntegerSetting MaxClauseCount { get; private set; }
 		public BooleanSetting AllowScriptsToAdjustNumberOfSteps { get; private set; }
 
 		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
@@ -425,6 +440,8 @@ namespace Raven.Database.Config
 
 			public IntegerSetting MaxScratchBufferSize { get; set; }
 
+			public IntegerSetting ScratchBufferSizeNotificationThreshold { get; set; }
+
 			public BooleanSetting AllowIncrementalBackups { get; set; }
 
 			public StringSetting TempPath { get; set; }
@@ -442,6 +459,9 @@ namespace Raven.Database.Config
 		public class IndexingConfiguration
 		{
 			public IntegerSetting MaxNumberOfItemsToProcessInTestIndexes { get; set; }
+
+			public IntegerSetting DisableIndexingFreeSpaceThreshold { get; set; }
+			public BooleanSetting DisableMapReduceInMemoryTracking { get; set; }
 		}
 
 		public class PrefetcherConfiguration

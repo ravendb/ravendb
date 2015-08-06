@@ -54,7 +54,14 @@ task Compile -depends Init, CompileHtml5 {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
+
+	&"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
+	
+	Write-Host "msbuild exit code:  $LastExitCode"
+
+	if( $LastExitCode -ne 0){
+		throw "Failed to build"
+	}
 	
 	if ($commit -ne "0000000000000000000000000000000000000000") {
 		exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
@@ -95,6 +102,7 @@ task Test -depends Compile {
 	$test_prjs = @( `
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
 		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
+		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
@@ -208,12 +216,10 @@ task CopySmuggler {
 task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
 }
 
 task CopyMigration {
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Migration
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
 }
 
@@ -415,6 +421,10 @@ task UpdateLiveTest {
 </html>
 '@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
 
+	Remove-Item "C:\Sites\RavenDB 3\Web\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB 3\Web\Plugins" -ErrorAction SilentlyContinue
+	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "C:\Sites\RavenDB 3\Web\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
+	
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue

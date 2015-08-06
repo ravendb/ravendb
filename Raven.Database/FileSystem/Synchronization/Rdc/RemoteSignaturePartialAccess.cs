@@ -7,17 +7,17 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 	public class RemoteSignaturePartialAccess : IPartialDataAccess
 	{
 		private readonly string _fileName;
-        private readonly IAsyncFilesSynchronizationCommands synchronizationClient;
+		private readonly ISynchronizationServerClient synchronizationServerClient;
 
-        public RemoteSignaturePartialAccess(IAsyncFilesSynchronizationCommands synchronizationClient, string fileName)
+		public RemoteSignaturePartialAccess(ISynchronizationServerClient synchronizationServerClient, string fileName)
 		{
-			this.synchronizationClient = synchronizationClient;
+			this.synchronizationServerClient = synchronizationServerClient;
 			_fileName = fileName;
 		}
 
 		public Task CopyToAsync(Stream target, long from, long length)
 		{
-			return synchronizationClient.DownloadSignatureAsync(_fileName, target, from, from + length);
+			return synchronizationServerClient.DownloadSignatureAsync(_fileName, target, from, from + length);
 		}
 	}
 }

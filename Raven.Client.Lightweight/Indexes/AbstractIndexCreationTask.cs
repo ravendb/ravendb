@@ -6,7 +6,6 @@
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -255,10 +254,15 @@ namespace Raven.Client.Indexes
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
                 var serverDef = databaseCommands.GetIndex(IndexName);
-                if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+	            if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+	            {
+		            AfterExecute(databaseCommands, documentConvention);
+					return;
+	            }
             }
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
@@ -266,21 +270,45 @@ namespace Raven.Client.Indexes
             // the new definition.
             databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
-			if(Priority != null)
+			if (Priority != null)
 				databaseCommands.SetIndexPriority(IndexName, Priority.Value);
 
-            if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-                ReplicateIndexesIfNeeded(databaseCommands);
+			AfterExecute(databaseCommands, documentConvention);
         }
 
-        private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
-        {
-            if (serverDef.Equals(indexDefinition))
-                return true;
+		public virtual void AfterExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+	    {
+			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				ReplicateIndexesIfNeeded(databaseCommands);
+	    }
 
-            // now we need to check if this is a legacy index...
-            var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-            return serverDef.Equals(legacyIndexDefinition);
+		public virtual async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+		{
+			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
+		}
+
+	    private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
+        {
+           
+			var oldIndexId = serverDef.IndexId;
+
+			try
+			{
+				serverDef.IndexId = indexDefinition.IndexId;
+
+				if (serverDef.Equals(indexDefinition, false))
+					return true;
+
+				// now we need to check if this is a legacy index...
+				var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+
+			    return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutput: true);
+			}
+			finally
+			{
+				serverDef.IndexId = oldIndexId;
+			}
         }
 
         private void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
@@ -313,7 +341,7 @@ namespace Raven.Client.Indexes
             {
                 try
                 {
-                    await replicateIndexRequest.ExecuteRawResponseAsync();
+                    await replicateIndexRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
@@ -324,7 +352,7 @@ namespace Raven.Client.Indexes
         }
 
 
-        private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+        public IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
 			var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;
@@ -391,19 +419,22 @@ namespace Raven.Client.Indexes
             var indexDefinition = CreateIndexDefinition();
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
-                var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token);
-                if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+                var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
+	            if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+	            {
+		            await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
+		            return;
+	            }
             }
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
-            await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token);
+            await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token).ConfigureAwait(false);
 	        if (Priority != null)
-		        await asyncDatabaseCommands.SetIndexPriorityAsync(IndexName, Priority.Value, token);
+		        await asyncDatabaseCommands.SetIndexPriorityAsync(IndexName, Priority.Value, token).ConfigureAwait(false);
 
-            if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-                await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands);
+			await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
         }
     }
 

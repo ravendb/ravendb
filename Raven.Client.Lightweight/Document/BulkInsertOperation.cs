@@ -1,4 +1,5 @@
-﻿using Raven.Client.Connection.Async;
+﻿using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -56,7 +57,9 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
+				AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
+
 			Operation = GetBulkInsertOperation(options, DatabaseCommands, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}

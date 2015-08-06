@@ -3,38 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Database.Commercial;
-using Raven.Database.Config;
-using Raven.Database.Server.Connections;
-using Raven.Database.FileSystem;
 using Raven.Abstractions.FileSystem;
-using System.Collections.Specialized;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -292,7 +280,7 @@ namespace Raven.Database.Server.Tenancy
 
 	    protected override DateTime LastWork(RavenFileSystem resource)
         {
-            return resource.SynchronizationTask.LastSuccessfulSynchronizationTime;
+            return resource.SynchronizationTask.Context.LastSuccessfulSynchronizationTime;
         }
 
         public async Task<RavenFileSystem> GetFileSystemInternal(string name)

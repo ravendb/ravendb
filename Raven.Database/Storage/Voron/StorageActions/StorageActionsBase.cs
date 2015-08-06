@@ -237,7 +237,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         protected BufferPoolMemoryStream CreateStream()
         {
-            return new BufferPoolMemoryStream(bufferPool);
+            return new BufferPoolMemoryStream();
         }
 	}
 }

@@ -9,17 +9,19 @@ namespace Raven.Client.Changes
     public class DatabaseConnectionState : IChangesConnectionState
 	{
 		private readonly Action onZero;
-		private readonly Task task;
+	    private readonly Func<DatabaseConnectionState, Task> ensureConnection;
+	    private Task task;
 		private int value;
 		public Task Task
 		{
 			get { return task; }
 		}
 
-		public DatabaseConnectionState(Action onZero, Task task)
+		public DatabaseConnectionState(Action onZero, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
 		{
 			value = 0;
 			this.onZero = onZero;
+			this.ensureConnection = ensureConnection;
 			this.task = task;
 		}
 
@@ -27,7 +29,8 @@ namespace Raven.Client.Changes
 		{
 			lock (this)
 			{
-				value++;
+				if (++value == 1)
+					task = ensureConnection(this);
 			}
 
 		}
@@ -50,6 +53,8 @@ namespace Raven.Client.Changes
 	    public event Action<TransformerChangeNotification> OnTransformerChangeNotification;
 
 		public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
+
+		public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
 
 		public event Action<Exception> OnError;
 
@@ -90,6 +95,13 @@ namespace Raven.Client.Changes
 				onOnBulkInsertChangeNotification(bulkInsertChangeNotification);
 
 			Send((DocumentChangeNotification)bulkInsertChangeNotification);
+		}
+
+		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+		{
+			var onOnDataSubscriptionChangeNotification = OnDataSubscriptionNotification;
+			if (onOnDataSubscriptionChangeNotification != null)
+				onOnDataSubscriptionChangeNotification(dataSubscriptionChangeNotification);
 		}
 
 		public void Error(Exception e)

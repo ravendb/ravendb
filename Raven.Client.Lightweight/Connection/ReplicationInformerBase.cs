@@ -4,28 +4,25 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -33,13 +30,13 @@ namespace Raven.Client.Connection
 	{
 		protected readonly ILog log = LogManager.GetCurrentClassLogger();
 
-        protected bool firstTime = true;
-		protected readonly Convention conventions;
+        protected bool FirstTime = true;
+		protected readonly Convention Conventions;
 	    private readonly HttpJsonRequestFactory requestFactory;
-	    protected DateTime lastReplicationUpdate = DateTime.MinValue;
-        protected readonly object replicationLock = new object();
+	    protected DateTime LastReplicationUpdate = DateTime.MinValue;
+        protected readonly object ReplicationLock = new object();
 		private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
-		protected static int readStripingBase;
+		protected static int ReadStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -58,7 +55,7 @@ namespace Raven.Client.Connection
 		{
 			get
 			{
-				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return ReplicationDestinations
@@ -72,7 +69,7 @@ namespace Raven.Client.Connection
 		///</summary>
 		protected ReplicationInformerBase(Convention conventions, HttpJsonRequestFactory requestFactory, int delayTime=1000)
 		{
-			this.conventions = conventions;
+			this.Conventions = conventions;
 		    this.requestFactory = requestFactory;
 		    ReplicationDestinations = new List<OperationMetadata>();
 		    DelayTimeInMiliSec = delayTime;
@@ -88,11 +85,11 @@ namespace Raven.Client.Connection
 
 		protected abstract void UpdateReplicationInformationFromDocument(JsonDocument document);
 
-		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
+		protected readonly ConcurrentDictionary<string, FailureCounter> failureCounts = new ConcurrentDictionary<string, FailureCounter>();
 
-		protected Task refreshReplicationInformationTask;
+		protected Task RefreshReplicationInformationTask;
 
-	    public class FailureCounter
+		protected class FailureCounter
 		{
 			public long Value;
 			public DateTime LastCheck;
@@ -136,7 +133,7 @@ namespace Raven.Client.Connection
 	    /// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
-	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error, CancellationToken token)
+	    protected virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error, CancellationToken token)
 	    {
 	        if (primary == false)
 	            AssertValidOperation(method, error);
@@ -160,7 +157,7 @@ namespace Raven.Client.Connection
 	                    {
 	                        var r = await TryOperationAsync<object>(async metadata =>
 	                        {
-	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
+	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, Conventions);
 		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 		                        {
 			                        await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -193,9 +190,9 @@ namespace Raven.Client.Connection
 
 	    protected abstract string GetServerCheckUrl(string baseUrl);
 
-	    protected void AssertValidOperation(string method, Exception e)
+		private void AssertValidOperation(string method, Exception e)
 		{
-			switch (conventions.FailoverBehaviorWithoutFlags)
+			switch (Conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
 					if (method == "GET")
@@ -204,14 +201,14 @@ namespace Raven.Client.Connection
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
-					var allowReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
+					var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 					if (allowReadFromAllServers && method == "GET")
 						return;
 					break;
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
 												" operation to secondary node, failover behavior is: " +
-												conventions.FailoverBehavior, e);
+												Conventions.FailoverBehavior, e);
 		}
 
 		protected FailureCounter GetHolder(string operationUrl)
@@ -223,7 +220,7 @@ namespace Raven.Client.Connection
 		/// Determines whether this is the first failure on the specified operation URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
-		public bool IsFirstFailure(string operationUrl)
+		private bool IsFirstFailure(string operationUrl)
 		{
 			FailureCounter value = GetHolder(operationUrl);
 			return value.Value == 0;
@@ -233,7 +230,7 @@ namespace Raven.Client.Connection
 		/// Increments the failure count for the specified operation URL
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
-		public void IncrementFailureCount(string operationUrl)
+		private void IncrementFailureCount(string operationUrl)
 		{
 			var value = GetHolder(operationUrl);
 			
@@ -259,7 +256,7 @@ namespace Raven.Client.Connection
 		/// Resets the failure count for the specified URL
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
-		public virtual void ResetFailureCount(string operationUrl)
+		protected virtual void ResetFailureCount(string operationUrl)
 		{
 			var value = GetHolder(operationUrl);
 			if (value.Reset() != 0)
@@ -275,7 +272,7 @@ namespace Raven.Client.Connection
 
 		public virtual int GetReadStripingBase(bool increment)
 		{
-            return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
+            return increment ? Interlocked.Increment(ref ReadStripingBase) : ReadStripingBase;
 		}
 
 		public async Task<T> ExecuteWithReplicationAsync<T>(string method, 
@@ -289,7 +286,7 @@ namespace Raven.Client.Connection
             var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
             var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
 
-            var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
+            var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
             var operationResult = new AsyncOperationResult<T>();
 
             if (shouldReadFromAllServers && method == "GET")
@@ -522,7 +519,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 	    public virtual void Dispose()
 		{
-			var replicationInformationTaskCopy = refreshReplicationInformationTask;
+			var replicationInformationTaskCopy = RefreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();
 		}

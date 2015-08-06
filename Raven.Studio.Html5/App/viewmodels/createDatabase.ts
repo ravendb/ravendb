@@ -96,9 +96,6 @@ class createDatabase extends viewModelBase {
 	    this.fetchAllowVoron();
     }
 
-	attached() {
-    }
-
     deactivate() {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never started it.

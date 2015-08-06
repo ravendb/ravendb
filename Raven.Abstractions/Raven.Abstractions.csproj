@@ -12,8 +12,6 @@
     <AssemblyName>Raven.Abstractions</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -25,9 +23,8 @@
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -39,8 +36,7 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -54,7 +50,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <Optimize>true</Optimize>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -113,6 +109,9 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
       <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\JsonPath\*.cs">
+      <Link>Imports\Newtonsoft.Json\Linq\JsonPath\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
       <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
     </Compile>
@@ -156,6 +155,7 @@
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
+    <Compile Include="Data\GCInfo.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\Alert.cs" />
@@ -230,6 +230,7 @@
     <Compile Include="Data\SubscriptionCriteria.cs" />
     <Compile Include="Data\SubscriptionConfig.cs" />
     <Compile Include="Data\SubscriptionConnectionOptions.cs" />
+    <Compile Include="Data\SubscriptionOpeningStrategy.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />
@@ -247,8 +248,8 @@
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
-    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
@@ -262,6 +263,7 @@
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
+    <Compile Include="Extensions\FilesystemPathExtentions.cs" />
     <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
@@ -282,7 +284,9 @@
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
+    <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
+    <Compile Include="Indexing\TransformerLockMode.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
@@ -382,6 +386,7 @@
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
+    <Compile Include="Replication\SideBySideReplicationInfo.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
@@ -396,6 +401,7 @@
     <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
     <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
     <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
+    <Compile Include="Smuggler\SmugglerHelper.cs" />
     <Compile Include="Smuggler\SmugglerMode.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />
@@ -404,12 +410,12 @@
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
+    <Compile Include="Util\AsyncHelpers.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
-    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\DocumentHelpers.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\Encryptors\DefaultEncryptor.cs" />
@@ -423,14 +429,14 @@
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
+    <Compile Include="Util\IndexPrettyPrinterEqualityComparer.cs" />
     <Compile Include="Util\MD5.cs" />
-    <Compile Include="Util\ObjectPool.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
-    <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\BufferSharedPools.cs" />
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
@@ -444,7 +450,12 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->

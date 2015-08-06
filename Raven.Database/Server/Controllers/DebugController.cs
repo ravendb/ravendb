@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -34,6 +35,15 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
+
+		[HttpGet]
+		[RavenRoute("debug/cache-details")]
+		[RavenRoute("databases/{databaseName}/debug/cache-details")]
+		public HttpResponseMessage CacheDetails()
+		{
+			return GetMessageWithObject(Database.TransactionalStorage.DocumentCacher.GetStatistics());
+		}
+
 		[HttpGet]
 		[RavenRoute("debug/enable-query-timing")]
 		[RavenRoute("databases/{databaseName}/debug/enable-query-timing")]
@@ -74,7 +84,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.Debug("Failed to deserialize debug request. Error: " + e);
+				Log.DebugException("Failed to deserialize debug request.", e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity."
@@ -83,7 +93,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.Debug("Failed to deserialize debug request. Error: " + e);
+				Log.DebugException("Failed to deserialize debug request." , e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -460,6 +470,7 @@ namespace Raven.Database.Server.Controllers
 				Results = results
 			});
 		}
+
         //DumpAllReferancesToCSV
 		[HttpGet]
 		[RavenRoute("debug/d0crefs-t0ps")]
@@ -657,6 +668,23 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[RavenRoute("debug/remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/remaining-reductions")]
+		public HttpResponseMessage CurrentlyRemainingReductions()
+		{
+			return GetMessageWithObject(Database.GetRemainingScheduledReductions());
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/clear-remaining-reductions")]
+		[RavenRoute("databases/{databaseName}/debug/clear-remaining-reductions")]
+		public HttpResponseMessage ResetRemainingReductionsTracking()
+		{
+		    Database.TransactionalStorage.ResetScheduledReductionsTracking();
+		    return GetEmptyMessage();
+		}
+
+		[HttpGet]
 		[RavenRoute("debug/request-tracing")]
 		[RavenRoute("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
@@ -738,6 +766,21 @@ namespace Raven.Database.Server.Controllers
 			{
 				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
 			});
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/subscriptions")]
+		[RavenRoute("databases/{databaseName}/debug/subscriptions")]
+		public HttpResponseMessage Subscriptions()
+		{
+			return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/gc-info")]
+		public HttpResponseMessage GCInfo()
+		{
+			return GetMessageWithObject(new GCInfo {LastForcedGCTime = RavenGC.LastForcedGCTime, MemoryBeforeLastForcedGC = RavenGC.MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC = RavenGC.MemoryAfterLastForcedGC});
 		}
 	}
 

@@ -28,7 +28,7 @@ namespace Raven.Database.FileSystem.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-        public override async Task<SynchronizationReport> PerformAsync(IAsyncFilesSynchronizationCommands destination)
+		public override async Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient synchronizationServerClient)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
@@ -36,13 +36,13 @@ namespace Raven.Database.FileSystem.Synchronization
 
 	        if (conflict != null)
 	        {
-				var report = await HandleConflict(destination, conflict, log);
+				var report = await HandleConflict(synchronizationServerClient, conflict, log);
 
 				if (report != null)
 					return report;
 	        }
 
-            return await destination.UpdateMetadataAsync(FileName, FileMetadata, FileSystemInfo);
+			return await synchronizationServerClient.UpdateMetadataAsync(FileName, FileMetadata, FileSystemInfo);
 		}
 
 		public override bool Equals(object obj)

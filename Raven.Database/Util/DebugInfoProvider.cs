@@ -4,17 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -199,17 +195,18 @@ namespace Raven.Database.Util
 				try
 				{
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
-					availableMemory = MemoryStatistics.AvailableMemory;
+					availableMemory = MemoryStatistics.AvailableMemoryInMb;
 
-					var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor");
-
-					cpuTimes = searcher.Get()
-						.Cast<ManagementObject>()
-						.Select(mo => new
-						{
-							Name = mo["Name"],
-							Usage = string.Format("{0} %", mo["PercentProcessorTime"])
-						}).ToArray();
+					using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
+					{
+						cpuTimes = searcher.Get()
+							.Cast<ManagementObject>()
+							.Select(mo => new
+							{
+								Name = mo["Name"],
+								Usage = string.Format("{0} %", mo["PercentProcessorTime"])
+							}).ToArray();	
+					}
 				}
 				catch (Exception e)
 				{
@@ -290,22 +287,23 @@ namespace Raven.Database.Util
 			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-
 			return new
 			{
 				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x => new
+				Indexes = uniqueIndexesBeingProcessed.Select(x =>				
+				new
 				{
 					IndexName = x.PublicName,
 					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount }),
+					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
 					Priority = x.Priority,
 					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
 					{
 						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
+						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
 					})
-				})
+				}
+				)
 			};
 		}
 

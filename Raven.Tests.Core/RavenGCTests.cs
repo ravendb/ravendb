@@ -1,11 +1,12 @@
 ﻿using System;
+
 using Raven.Abstractions.Util;
-using Raven.Tests.Helpers;
+using Raven.Database.Util;
 using Xunit;
 
 namespace Raven.Tests.Core
 {
-	public class RavenGCTests : RavenTestBase
+	public class RavenGCTests : IDisposable
 	{
 		public RavenGCTests()
 		{
@@ -26,6 +27,10 @@ namespace Raven.Tests.Core
 			RavenGC.CollectGarbage(true, () => { },true);
 
 			Assert.True(RavenGC.MemoryBeforeLastForcedGC > RavenGC.MemoryAfterLastForcedGC);	
+		}
+
+		public void Dispose()
+		{
 		}
 	}
 }

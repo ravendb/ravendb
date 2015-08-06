@@ -21,6 +21,7 @@ class replications extends viewModelBase {
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
 
+
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
@@ -28,7 +29,40 @@ class replications extends viewModelBase {
     isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
-    isReplicateIndexesToAllEnabled : KnockoutComputed<boolean>;
+
+    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
+
+    skipIndexReplicationForAll = ko.observable<boolean>();
+    
+    private skipIndexReplicationForAllSubscription : KnockoutSubscription;
+
+    private refereshSkipIndexReplicationForAllDestinations() {
+        if (this.skipIndexReplicationForAllSubscription != null)
+            this.skipIndexReplicationForAllSubscription.dispose();
+
+        var newStatus = this.getIndexReplicationStatusForAllDestinations();
+        this.skipIndexReplicationForAll(newStatus === 'all');
+
+        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
+    }
+
+    private getIndexReplicationStatusForAllDestinations(): string {
+        var countOfSkipIndexReplication: number = 0;
+        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
+            if (dest.skipIndexReplication() === true) {
+                countOfSkipIndexReplication++;
+            }
+        });
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
+
+        // ReSharper disable once ConditionIsAlwaysConst
+        if (countOfSkipIndexReplication === 0)
+            return 'none';
+
+        return 'mixed';
+    }
 
     readFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
@@ -53,15 +87,14 @@ class replications extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.updateHelpLink('7K1KES');
-        
+
         this.serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
         this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
-        this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
         var combinedFlag = ko.computed(() => {
             return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty() || this.serverPrefixForHiLoDirtyFlag().isDirty());
         });
@@ -90,7 +123,20 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         new getReplicationsCommand(db)
             .execute()
-            .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
+            .done(repSetup =>
+            {
+                this.replicationsSetup(new replicationsSetup(repSetup));
+                              
+                ko.postbox.subscribe('skip-index-replication',() => this.refereshSkipIndexReplicationForAllDestinations());
+
+                var status = this.getIndexReplicationStatusForAllDestinations();
+                if (status === 'all')
+                    this.skipIndexReplicationForAll(true);
+                else
+                    this.skipIndexReplicationForAll(false);    
+
+                this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
+            })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
@@ -98,6 +144,7 @@ class replications extends viewModelBase {
     createNewDestination() {
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
+        this.refereshSkipIndexReplicationForAllDestinations();
     }
 
     removeDestination(repl: replicationDestination) {
@@ -137,7 +184,13 @@ class replications extends viewModelBase {
         }
     }
 
-    sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        
+    toggleIndexReplication(skipReplicationValue : boolean) {
+        this.replicationsSetup().destinations().forEach(dest => {
+            dest.skipIndexReplication(skipReplicationValue);
+        });
+    }
+
+    sendReplicateCommand(destination: replicationDestination, parentClass: replications) {        
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
@@ -155,7 +208,6 @@ class replications extends viewModelBase {
         } else {
             alert('No database selected! This error should not be seen.'); //precaution to ease debugging - in case something bad happens
         }
-
     }
 
     saveServerPrefixForHiLo() {

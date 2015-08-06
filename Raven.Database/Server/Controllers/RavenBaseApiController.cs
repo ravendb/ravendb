@@ -241,16 +241,16 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(InnerRequest, key);
 		}
 
-	/*	public static string GetQueryStringValue(HttpRequestMessage req, string key)
-		{
-			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
-			if (value != null)
-				value = Uri.UnescapeDataString(value);
-			return value;
-		}*/
+//		public static string GetQueryStringValue(HttpRequestMessage req, string key)
+//		{
+//			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+//			if (value != null)
+//				value = Uri.UnescapeDataString(value);
+//			return value;
+//		}
 
 
-        public static string GetQueryStringValue(HttpRequestMessage req, string key)
+	    public static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
             NameValueCollection nvc;
             object value;
@@ -260,7 +260,11 @@ namespace Raven.Database.Server.Controllers
                 return nvc[key];
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-            req.Properties["Raven.QueryString"] = nvc;
+
+		    foreach (var _key in nvc.AllKeys)
+				nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
+
+	        req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
 
@@ -394,6 +398,7 @@ namespace Raven.Database.Server.Controllers
 				// contains non ASCII chars, needs encoding
 				return Uri.EscapeDataString(str);
 			}
+
 			return str;
 		}
 
@@ -721,7 +726,7 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+	    public abstract bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args);
 
         public abstract string TenantName { get; }
 

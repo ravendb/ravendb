@@ -14,15 +14,15 @@ namespace Raven.Client.FileSystem.Extensions
         public static async Task EnsureFileSystemExistsAsync(this IAsyncFilesCommands commands)
         {
             var existingSystems = await commands.Admin.GetNamesAsync().ConfigureAwait(false);
-            if (existingSystems.Any(x => x.Equals(commands.FileSystem, StringComparison.InvariantCultureIgnoreCase)))
+            if (existingSystems.Any(x => x.Equals(commands.FileSystemName, StringComparison.InvariantCultureIgnoreCase)))
                 return;
 
             await commands.Admin.CreateFileSystemAsync(new FileSystemDocument
             {
-                Id = "Raven/FileSystem/" + commands.FileSystem,
+                Id = "Raven/FileSystem/" + commands.FileSystemName,
                 Settings =
                  {
-                     {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", commands.FileSystem)}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", commands.FileSystemName)}
                  }
             }).ConfigureAwait(false);
         }

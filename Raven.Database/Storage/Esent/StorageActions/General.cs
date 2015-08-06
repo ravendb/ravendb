@@ -62,7 +62,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher,
 			EsentTransactionContext transactionContext,
-			TransactionalStorage transactionalStorage)
+			TransactionalStorage transactionalStorage
+			)
 		{
 			this.tableColumnsCache = tableColumnsCache;
 			this.documentCodecs = documentCodecs;
@@ -70,7 +71,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			this.cacher = cacher;
 			this.transactionalStorage = transactionalStorage;
 			this.transactionContext = transactionContext;
-
+			scheduledReductionsPerViewAndLevel = transactionalStorage.GetScheduledReductionsPerViewAndLevel();
 			try
 			{
 				if (transactionContext == null)

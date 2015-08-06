@@ -96,7 +96,8 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                         return {
                             "Transformer": {
                                 'Name': transformer.name,
-                                'TransformResults': transformer.definition.TransformResults
+                                'TransformResults': transformer.definition.TransformResults,
+								'LockMode':transformer.definition.LockMode
                             }
                         }
                     }));
@@ -119,7 +120,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                 indexesDefinitions.forEach((index: indexDefinitionDto) => {
                     var curDeferred = $.Deferred();
                     allOperationsPromises.push(curDeferred);
-                    new saveIndexDefinitionCommand(index, indexPriority.normal, this.db)
+                    new saveIndexDefinitionCommand(index, this.db)
                         .execute()
                         .done(() => succeededIndexes.push(index.Name))
                         .fail(() => failedIndexes.push(index.Name))

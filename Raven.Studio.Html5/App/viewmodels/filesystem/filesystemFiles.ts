@@ -3,6 +3,8 @@ import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import shell = require("viewmodels/shell");
 
+import changesContext = require("common/changesContext");
+
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
@@ -21,8 +23,7 @@ import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFi
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
-import filerenamedialog = require("viewmodels/filesystem/filerenamedialog");
-import renameFileCommand = require("commands/filesystem/renameFileCommand");
+import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
 
 class filesystemFiles extends viewModelBase {
 
@@ -99,7 +100,8 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    attached(view, parent) {
+    attached() {
+	    super.attached();
         this.collapseUploadQueuePanel();
     }
 
@@ -122,7 +124,7 @@ class filesystemFiles extends viewModelBase {
         }
 
         if (!this.folderNotificationSubscriptions[newFolder]) {
-            this.folderNotificationSubscriptions[newFolder] = shell.currentResourceChangesApi()
+            this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
                     if (!callbackFolder)
@@ -286,7 +288,7 @@ class filesystemFiles extends viewModelBase {
             if (selectedFolder == null)
                 selectedFolder = "";
 
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + selectedItem.getId();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + encodeURIComponent(selectedItem.getId());
             window.location.assign(url);
         }
     }
@@ -297,7 +299,7 @@ class filesystemFiles extends viewModelBase {
         if (grid) {
             var selectedItem = <file>grid.getSelectedItems(1).first();
             var currentFileName = selectedItem.getId();
-            var dialog = new filerenamedialog(currentFileName, this.activeFilesystem());
+            var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
             dialog.onExit().done((newName: string) => {
                 var currentFilesystemName = this.activeFilesystem().name;
                 var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);

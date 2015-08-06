@@ -15,6 +15,7 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
+    <Prefer32Bit>false</Prefer32Bit>
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>9ceba09c</NuGetPackageImportStamp>
   </PropertyGroup>
@@ -28,8 +29,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
-    <NoWarn>1573, 1587, 1591</NoWarn>
-    <Prefer32Bit>false</Prefer32Bit>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,9 +40,7 @@
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <Prefer32Bit>false</Prefer32Bit>
-    <Prefer32Bit>false</Prefer32Bit>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -55,7 +53,7 @@
     <DefineConstants>TRACE;CLIENT</DefineConstants>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <Optimize>true</Optimize>
-    <NoWarn>1591</NoWarn>
+    <NoWarn>1591, 618</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -116,6 +114,7 @@
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
+    <Compile Include="Document\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />
@@ -128,10 +127,14 @@
     <Compile Include="Document\ResponseTimeInformation.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
+    <Compile Include="Document\ShardedBulkInsertOperation.cs" />
+    <Compile Include="Document\SortOptionsEqualityProvider.cs" />
     <Compile Include="Document\Subscription.cs" />
     <Compile Include="Document\DocumentSubscriptions.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
+    <Compile Include="Extensions\SecurityExtensions.cs" />
     <Compile Include="FileSystem\AbstractFilesQuery.cs" />
+    <Compile Include="FileSystem\Extensions\AsyncFilesServerClientExtension.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
@@ -168,6 +171,9 @@
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="FileSystem\SynchronizationServerClient.cs" />
+    <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
+    <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
@@ -212,7 +218,6 @@
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
-    <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
     <Compile Include="Connection\Profiling\RequestStatus.cs" />
@@ -371,6 +376,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

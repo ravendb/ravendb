@@ -56,6 +56,8 @@ namespace Raven.Tests.Issues
 
 				Assert.Empty((RavenJArray)result);
 
+                WaitForIndexing(store);
+
 				result = store.DatabaseCommands.UpdateByIndex("Users/ByName", 
 					new IndexQuery(),
 					new[]
@@ -73,7 +75,9 @@ namespace Raven.Tests.Issues
 				result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery())
 					.WaitForCompletion();
 
-				Assert.Empty((RavenJArray)result);
+                WaitForIndexing(store);
+
+                Assert.Empty((RavenJArray)result);
 			}
 		}
 

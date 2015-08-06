@@ -47,11 +47,16 @@ namespace Raven.Database.Actions
             return new RavenJArray(
             IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
                 .Select(
-                    indexName => new RavenJObject
-							{
-								{"name", new RavenJValue(indexName) },
-								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetTransformerDefinition(indexName))}
-							}));
+                    indexName =>
+                    {
+	                    var definitions = IndexDefinitionStorage.GetTransformerDefinition(indexName);
+	                    return new RavenJObject
+	                                 {
+		                                 {"name", new RavenJValue(indexName) },
+		                                 {"definition", RavenJObject.FromObject(definitions)},
+										 {"lockMode",new RavenJValue(definitions.LockMode.ToString())}
+	                                 };
+                    }));
 
         }
 
@@ -84,8 +89,21 @@ namespace Raven.Database.Actions
             name = name.Trim();
 
             var existingDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
-            if (existingDefinition != null && existingDefinition.Equals(definition))
-                return name; // no op for the same transformer
+	        if (existingDefinition != null)
+	        {
+		        switch (existingDefinition.LockMode)
+		        {
+			        case TransformerLockMode.Unlock:
+				        if (existingDefinition.Equals(definition))
+					        return name; // no op for the same transformer
+				        break;
+			        case TransformerLockMode.LockedIgnore:
+						Log.Info("Transformer {0} not saved because it was lock (with ignore)", name);
+                        return name;
+			        default:
+				        throw new ArgumentOutOfRangeException();
+		        }
+	        }
 
 			var generator = IndexDefinitionStorage.CompileTransform(definition);
 

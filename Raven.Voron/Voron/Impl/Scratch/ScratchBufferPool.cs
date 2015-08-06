@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace Voron.Impl.Scratch
 		private StorageEnvironmentOptions _options;
 		private int _currentScratchNumber = -1;
 		private long _oldestTransactionWhenFlushWasForced = -1;
-		private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>(IntEqualityComparer.Instance);
+        private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>(NumericEqualityComparer.Instance);
 
 		public ScratchBufferPool(StorageEnvironment env)
 		{
@@ -39,7 +40,7 @@ namespace Voron.Impl.Scratch
 
 		public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
 		{
-			return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState, IntEqualityComparer.Instance);
+            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState, NumericEqualityComparer.Instance);
 		}
 
 		internal long GetNumberOfAllocations(int scratchNumber)
@@ -236,10 +237,10 @@ namespace Voron.Impl.Scratch
 											   "Already flushed and waited for {4:#,#;;0} ms for read transactions to complete.\r\n" +
 											   "Do you have a long running read transaction executing?\r\n" + 
 											   "Debug info:\r\n{5}",
-					_current.Size / 1024,
-					_current.SizeAfterAllocation(size) / 1024,
-					sizeAfterAllocation / 1024,
-					_sizeLimit / 1024,
+					_current.Size / 1024L,
+					_current.SizeAfterAllocation(size) / 1024L,
+					sizeAfterAllocation / 1024L,
+					_sizeLimit / 1024L,
 					sp.ElapsedMilliseconds,
 					debugInfo
 					);
@@ -249,6 +250,7 @@ namespace Voron.Impl.Scratch
 
 			// we don't have free pages to give out, need to allocate some
 			result = _current.Allocate(tx, numberOfPages, size);
+			_options.OnScratchBufferSizeChanged(sizeAfterAllocation);
 
 			return result;
 		}

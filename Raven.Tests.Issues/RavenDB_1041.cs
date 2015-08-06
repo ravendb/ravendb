@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
@@ -128,6 +128,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
+			ShowLogs = true;
+
 			var store1 = CreateStore(requestedStorageType: "esent");
 			var store2 = CreateStore(requestedStorageType: "esent");
 

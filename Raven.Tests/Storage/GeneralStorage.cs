@@ -16,6 +16,9 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using Raven.Database.Config;
+using Raven.Storage.Esent;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Storage
 {
@@ -57,7 +60,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Documents.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var doc = db.Documents.GetDocuments(0, 10, null, CancellationToken.None)
+			var doc = db.Documents.GetDocumentsAsJson(0, 10, null, CancellationToken.None)
 				.OfType<RavenJObject>()
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");
@@ -287,5 +290,7 @@ namespace Raven.Tests.Storage
 
 			});
 		}
+
+		
 	}
 }

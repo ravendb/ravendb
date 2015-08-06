@@ -1,64 +1,33 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.FileSystem;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+using Raven.Tests.Core.ChangesApi;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
-    public class Customer
-    {
-        public string Region;
-        public string Id;
-    }
+	public class Customer
+	{
+		public string Region;
+		public string Id;
+	}
 
-    public class Invoice
-    {
-        public string Customer;
-    }
-    public class Program
-    {
-        private static void Main()
-        {
-            var shards = new Dictionary<string, IDocumentStore>
-            {
-                {"_", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop"}}, //existing data
-                {"ME", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_ME"}},
-                {"US", new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "Shop_US"}},
-            };
+	public class Invoice
+	{
+		public string Customer;
+	}
 
-            var shardStrategy = new ShardStrategy(shards)
-                .ShardingOn<Customer>(c => c.Region)
-                .ShardingOn<Invoice>(i => i.Customer);
+	public class Program
+	{
+		private static void Main()
+		{
+			for (int i = 0; i < 1000; i++)
+			{
+				using (var test = new RavenDB_3629())
+				{
+					test.Referenced_files_should_be_replicatedB();
+				}			
+				Console.WriteLine(i);
+			}
+		}
 
-            var x = new ShardedDocumentStore(shardStrategy).Initialize();
-            using (var s = x.OpenSession())
-            {
-                var customer = new Customer
-                {
-                    Region = "US"
-                };
-                s.Store(customer);
-                s.Store(new Invoice
-                {
-                    Customer = customer.Id
-                });
-                s.SaveChanges();
-            }
-        }
-
-    }
+	}
 }

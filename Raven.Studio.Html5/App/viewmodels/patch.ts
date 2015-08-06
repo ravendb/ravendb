@@ -20,6 +20,12 @@ import executePatchCommand = require("commands/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/evalByQueryCommand");
 import documentMetadata = require("models/documentMetadata");
+import getIndexTermsCommand = require("commands/getIndexTermsCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
+import queryUtil = require("common/queryUtil");
 
 class patch extends viewModelBase {
 
@@ -94,6 +100,10 @@ class patch extends viewModelBase {
             owner: this
         });
 
+        // Refetch the index fields whenever the selected index name changes.
+        this.selectedIndex
+            .where(indexName => indexName != null)
+            .subscribe(indexName => this.fetchIndexFields(indexName));
     }
 
 	compositionComplete() {
@@ -141,6 +151,7 @@ class patch extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
@@ -158,6 +169,12 @@ class patch extends viewModelBase {
             rowCreatedEvent.off();
         });
     }
+
+    detached() {
+        super.detached();
+        aceEditorBindingHandler.detached();
+    }
+
 
     loadDocumentToTest(selectedItem: string) {
         if (selectedItem) {
@@ -234,6 +251,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
+        this.selectedIndex(indexName);///
         this.patchDocument().selectedItem(indexName);
         this.runQuery();
     }
@@ -242,6 +260,7 @@ class patch extends viewModelBase {
         var selectedIndex = this.patchDocument().selectedItem();
         if (selectedIndex) {
             var queryText = this.patchDocument().query();
+            this.queryText(queryText);
             var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, []);
@@ -442,7 +461,50 @@ class patch extends viewModelBase {
 
 	activateAfterMeta() {
 		this.afterPatchDocMode(false);
-	}
+    }
+
+    indexFields = ko.observableArray<string>();
+    selectedIndex = ko.observable<string>();
+    dynamicPrefix = "dynamic/";
+    isTestIndex = ko.observable<boolean>(false);
+    queryText = ko.observable("");
+
+    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+
+        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.dynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
+
+    }
+
+
+    fetchIndexFields(indexName: string) {
+        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
+        // Fields don't show for All Documents.
+        var self = this;
+        var isAllDocumentsDynamicQuery = indexName === "All Documents";
+        if (!isAllDocumentsDynamicQuery) {
+            //if index is dynamic, get columns using index definition, else get it using first index result
+            if (indexName.indexOf(this.dynamicPrefix) === 0) {
+                var collectionName = indexName.substring(8);
+                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
+                    .execute()
+                    .done((result: pagedResultSet) => {
+                    if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
+                        var dynamicIndexPattern: document = new document(result.items[0]);
+                        if (!!dynamicIndexPattern) {
+                            this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                        }
+                    }
+                });
+            } else {
+                new getIndexDefinitionCommand(indexName, this.activeDatabase())
+                    .execute()
+                    .done((result: indexDefinitionContainerDto) => {
+                    self.isTestIndex(result.Index.IsTestIndex);
+                    self.indexFields(result.Index.Fields);
+                });
+            }
+        }
+    }
 }
 
 export = patch;

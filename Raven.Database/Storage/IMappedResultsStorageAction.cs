@@ -5,11 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading;
+
 using Raven.Database.Indexing;
 using Raven.Abstractions.Data;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Sparrow.Collections;
+using Sparrow;
 
 namespace Raven.Database.Storage
 {
@@ -21,7 +25,7 @@ namespace Raven.Database.Storage
 		void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
 		void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
 		void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed);
-		void DeleteMappedResultsForView(int indexId);
+		void DeleteMappedResultsForView(int indexId, CancellationToken token);
 
 		IEnumerable<string> GetKeysForIndexForDebug(int index, string startsWith, string sourceId, int start, int take);
         IEnumerable<string> GetSourcesForIndexForDebug(int index, string startsWith, int take);
@@ -31,30 +35,31 @@ namespace Raven.Database.Storage
 		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int index, int start, int take);
 
 		void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken);
 		ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete);
+		Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex();
 		void DeleteScheduledReduction(int index, int level, string reduceKey);
 		void PutReducedResult(int index, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(int index, int level, string reduceKey, int sourceBucket);
-		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep);
+		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken);
 		void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(int index, string reduceKey);
-		IEnumerable<int> GetMappedBuckets(int index, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned);
+		IEnumerable<int> GetMappedBuckets(int index, string reduceKey, CancellationToken cancellationToken);
+		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken);
 		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
 	{
 
-		public GetItemsToReduceParams(int index, IEnumerable<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
+		public GetItemsToReduceParams(int index, HashSet<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
 		{
 			Index = index;
 			Level = level;
 			LoadData = loadData;
 			ItemsToDelete = itemsToDelete;
-			ItemsAlreadySeen = new HashSet<Tuple<string, int>>();
-			ReduceKeys = new HashSet<string>(reduceKeys);
+            ItemsAlreadySeen = new HashSet<ReduceKeyAndBucket>();
+			ReduceKeys = reduceKeys;
 		}
 
 		public int Index { get; private set; }
@@ -62,7 +67,7 @@ namespace Raven.Database.Storage
 		public bool LoadData { get; private set; }
 		public int Take { get; set; }
 		public ConcurrentSet<object> ItemsToDelete { get; private set; }
-		public HashSet<Tuple<string, int>> ItemsAlreadySeen { get; private set; }
+        public HashSet<ReduceKeyAndBucket> ItemsAlreadySeen { get; private set; }
 		public HashSet<string> ReduceKeys { get; private set; }
 	}
 
@@ -78,11 +83,6 @@ namespace Raven.Database.Storage
 			ReduceKey = reduceKey;
 		}
 
-		protected bool Equals(ReduceKeyAndBucket other)
-		{
-			return Bucket == other.Bucket && string.Equals(ReduceKey, other.ReduceKey);
-		}
-
 		public override string ToString()
 		{
 			return Bucket + " - " + ReduceKey;
@@ -93,17 +93,44 @@ namespace Raven.Database.Storage
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != GetType()) return false;
-			return Equals((ReduceKeyAndBucket) obj);
+
+            var y = (ReduceKeyAndBucket) obj;
+
+            return this.Bucket == y.Bucket && string.Equals(this.ReduceKey, y.ReduceKey);
 		}
 
 		public override int GetHashCode()
 		{
-			unchecked
-			{
-				return (Bucket*397) ^ (ReduceKey != null ? ReduceKey.GetHashCode() : 0);
-			}
+            unsafe
+            {
+                fixed (char* buffer = this.ReduceKey)
+                {
+                    return this.Bucket ^ (int)Hashing.XXHash32.CalculateInline((byte*)buffer, this.ReduceKey.Length * sizeof(char));
+                }
+            }
 		}
 	}
+
+    internal sealed class ReduceKeyAndBucketEqualityComparer : IEqualityComparer<ReduceKeyAndBucket>
+    {
+        public static ReduceKeyAndBucketEqualityComparer Instance = new ReduceKeyAndBucketEqualityComparer();
+
+        public bool Equals(ReduceKeyAndBucket x, ReduceKeyAndBucket y)
+        {
+            return x.Bucket == y.Bucket && string.Equals(x.ReduceKey, y.ReduceKey);
+        }
+
+        public int GetHashCode(ReduceKeyAndBucket obj)
+        {
+            unsafe
+            {
+                fixed (char* buffer = obj.ReduceKey)
+                {
+                    return obj.Bucket ^ (int)Hashing.XXHash32.CalculateInline((byte*)buffer, obj.ReduceKey.Length * sizeof(char));
+                }
+            }
+        }
+    }
 
 	public class ScheduledReductionInfo
 	{

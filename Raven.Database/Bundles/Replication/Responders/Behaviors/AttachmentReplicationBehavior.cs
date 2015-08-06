@@ -131,7 +131,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
 			{
-				if (replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment,
+				if (replicationConflictResolver.TryResolveConflict(id, metadata, data, existing, Actions.Attachments.GetAttachment,
 				                                           out metadataToSave, out dataToSave))
 					return true;
 			}

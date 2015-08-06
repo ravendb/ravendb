@@ -6,6 +6,7 @@
 
 using System.Globalization;
 using System.IO;
+using Mono.CSharp;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -154,13 +155,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			token.ThrowIfCancellationRequested();
 
-			RemoveAllDocumentReferencesByView(id);
+			RemoveAllDocumentReferencesByView(id, token);
 
 			var mappedResultsStorageActions = (MappedResultsStorageActions)currentStorageActionsAccessor.MapReduce;
 
-			mappedResultsStorageActions.DeleteMappedResultsForView(id);
-			mappedResultsStorageActions.DeleteScheduledReductionForView(id);
-			mappedResultsStorageActions.RemoveReduceResultsForView(id);
+			mappedResultsStorageActions.DeleteMappedResultsForView(id, token);
+			mappedResultsStorageActions.DeleteScheduledReductionForView(id, token);
+			mappedResultsStorageActions.RemoveReduceResultsForView(id, token);
 		}
 
 		public void SetIndexPriority(int id, IndexingPriority priority)
@@ -168,6 +169,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes((int)priority));
 		}
 
+		public void SetIndexesPriority(int[] ids, IndexingPriority[] priorities)
+		{
+			for (int i = 0; i < ids.Length; i++)
+			{
+				var id = ids[i];
+				var priority = priorities[i];
+				tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes((int)priority));
+			}
+		}
 		public IndexFailureInformation GetFailureRate(int id)
 		{
             var key = new Slice(CreateKey(id));
@@ -275,7 +285,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             RemoveDocumentReferenceByKey((Slice)key);
 		}
 
-		public void RemoveAllDocumentReferencesByView(int view)
+		public void RemoveAllDocumentReferencesByView(int view, CancellationToken token)
 		{
 			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
 
@@ -283,7 +293,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
-                    RemoveDocumentReference(iterator, PulseTransaction);
+                    RemoveDocumentReference(iterator, PulseTransaction, token);
 				}
 			}
 		}
@@ -306,7 +316,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
-                    RemoveDocumentReference(iterator);
+                    RemoveDocumentReference(iterator, null, CancellationToken.None);
 				}
 			}
 
@@ -346,7 +356,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var structReader = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (structReader == null)
+						continue;
 				    var item = structReader.ReadString(DocumentReferencesFields.Key);
 				    if (result.Add(item))
 				        yield return item;
@@ -423,7 +434,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					result.Add(value.ReadString(DocumentReferencesFields.Reference));
 				}
 				while (iterator.MoveNext());
@@ -453,6 +465,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				        {
 					        ushort version;
 					        var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+							if (value == null)
+								continue;
 					        var currentKeyStr = docRefIterator.CurrentKey.ToString();
 					        DocCountWithSampleDocIds docData;
 					        if (keysToRef.TryGetValue(currentKeyStr, out docData) == false)
@@ -528,11 +542,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
 
-                RemoveDocumentReference(iterator);
+                RemoveDocumentReference(iterator, null, CancellationToken.None);
 			}
 		}
 
-        private void RemoveDocumentReference(global::Voron.Trees.IIterator iterator, Action afterDocumentReferenceRemove = null)
+        private void RemoveDocumentReference(global::Voron.Trees.IIterator iterator, Action afterDocumentReferenceRemove, CancellationToken token)
         {
             var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
             var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
@@ -546,6 +560,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 ushort version;
                 var value = LoadStruct(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
+				if (value == null)
+					continue;
                 var reference = value.ReadString(DocumentReferencesFields.Reference);
                 var view = value.ReadInt(DocumentReferencesFields.IndexId).ToString(CultureInfo.InvariantCulture);
                 var key = value.ReadString(DocumentReferencesFields.Key);
@@ -561,7 +577,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (afterDocumentReferenceRemove != null)
                     afterDocumentReferenceRemove();
             }
-            while (iterator.MoveNext());
+            while (iterator.MoveNext() && token.IsCancellationRequested == false);
         }
 
 		private int ReadPriority(string key)

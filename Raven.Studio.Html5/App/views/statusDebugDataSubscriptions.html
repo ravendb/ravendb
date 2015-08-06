@@ -1,0 +1,126 @@
+﻿<div class="panel-group" data-bind="foreach: data">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" data-bind="text: 'Id: ' + SubscriptionId, attr: { href: '#statsDebugDataSubscriptionsCollapse' + $index() }"></a>
+            </h4>
+        </div>
+        <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugDataSubscriptionsCollapse' + $index() }">
+            <div class="panel-body">
+                <div class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">Acknowledged ETag</label>
+                        <div class="col-md-10">
+                            <p class="form-control-static" data-bind="text: AckEtag"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">Last batch sent time</label>
+                        <div class="col-md-10">
+                            <p class="form-control-static" data-bind="text: TimeOfSendingLastBatch"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">Last client activity time</label>
+                        <div class="col-md-10">
+                            <p class="form-control-static" data-bind="text: TimeOfLastClientActivity"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">Criteria</label>
+                    </div>
+
+                    <div data-bind="with: Criteria">
+                        <div class="form-group" data-bind="visible: KeyStartsWith !== null">
+                            <label class="col-md-3 col-md-offset-2">Document key has to starts with</label>
+                            <div class="col-md-7">
+                                <p data-bind="text: KeyStartsWith"></p>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="visible: BelongsToAnyCollection !== null">
+                            <label class="col-md-3 col-md-offset-2">Document has to belong to any of collections</label>
+                            <div class="col-md-7">
+                                <p data-bind="text: BelongsToAnyCollection"></p>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="visible: PropertiesMatch !== null">
+                            <label class="col-md-3 col-md-offset-2">Properties must match values</label>
+                            <div class="col-md-7" data-bind="foreach: PropertiesMatch">
+                                <p>
+                                    <span data-bind="text: Key"></span>&nbsp;:&nbsp;<span data-bind="text: Value"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="form-group" data-bind="visible: PropertiesNotMatch !== null">
+                            <label class="col-md-3 col-md-offset-2">Properties cannot match values</label>
+                            <div class="col-md-7" data-bind="foreach: PropertiesNotMatch">
+                                <p>
+                                    <span data-bind="text: Key"></span> : <span data-bind="text: Value"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">Open</label>
+                        <div class="col-md-10">
+                            <p class="form-control-static" data-bind="text: IsOpen"></p>
+                        </div>
+                    </div>
+
+                    <div data-bind="visible: IsOpen">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Connection options</label>
+                        </div>
+
+                        <div data-bind="with: ConnectionOptions">
+                            <div class="form-group">
+                                <label class="col-md-3 col-md-offset-2">Id</label>
+                                <div class="col-md-7">
+                                    <p data-bind="text: ConnectionId"></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-md-3 col-md-offset-2">Client alive notification interval</label>
+                                <div class="col-md-7">
+                                    <p data-bind="text: ClientAliveNotificationInterval"></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-md-3 col-md-offset-2">Ignore subscribers errors</label>
+                                <div class="col-md-7">
+                                    <p data-bind="text: IgnoreSubscribersErrors"></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-md-3 col-md-offset-2">Batch options</label>
+                            </div>
+                            <div data-bind="with: BatchOptions">
+                                <div class="form-group">
+                                    <label class="col-md-2 col-md-offset-3">AcknowledgmentTimeout</label>
+                                    <div class="col-md-2">
+                                        <p data-bind="text: AcknowledgmentTimeout"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 col-md-offset-3">Max document count</label>
+                                    <div class="col-md-2">
+                                        <p data-bind="text: MaxDocCount"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 col-md-offset-3">Max batch size</label>
+                                    <div class="col-md-2">
+                                        <p data-bind="text: MaxSize"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

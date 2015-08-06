@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -16,8 +15,6 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -25,7 +22,6 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -192,7 +188,7 @@ namespace Raven.Database.Counters.Controllers
 	        get { throw new NotImplementedException(); }
 	    }
 
-	    public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
 		{
 			var tenantId = CountersName;
 
@@ -224,14 +220,15 @@ namespace Raven.Database.Counters.Controllers
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}
-					var args = new BeforeRequestWebApiEventArgs
+
+					args = new RequestWebApiEventArgs
 					{
 						Controller = this,
 						IgnoreRequest = false,
 						TenantId = tenantId,
 						Counters = resourceStoreTask.Result
 					};
-					rm.OnBeforeRequest(args);
+
 					if (args.IgnoreRequest)
 						return false;
 				}

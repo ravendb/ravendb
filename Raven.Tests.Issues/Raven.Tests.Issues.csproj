@@ -23,7 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>618, 3016, 3005</NoWarn>
+    <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -33,6 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <NoWarn>618</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -40,9 +41,25 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <NoWarn>618</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.Core.dll</HintPath>
     </Reference>
     <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -73,7 +90,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Formatting, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -89,6 +108,7 @@
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
@@ -117,17 +137,31 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="BackupRestore.cs" />
+    <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
     <Compile Include="RavenDB-3179.cs" />
     <Compile Include="RavenDB-3302.cs" />
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
+    <Compile Include="RavenDB-3420.cs" />
+    <Compile Include="RavenDB-3460.cs" />
+    <Compile Include="RavenDB-3465.cs" />
     <Compile Include="RavenDB-3472.cs" />
     <Compile Include="RavenDB-3383.cs" />
     <Compile Include="RavenDB-3393.cs" />
     <Compile Include="RavenDB-3401.cs" />
     <Compile Include="RavenDB-3451.cs" />
+    <Compile Include="RavenDB-3491.cs" />
+    <Compile Include="RavenDB-3509.cs" />
+    <Compile Include="RavenDB-3530.cs" />
+    <Compile Include="RavenDB-3632.cs" />
     <Compile Include="RavenDB_3230.cs" />
+    <Compile Include="RavenDB_3543.cs" />
+    <Compile Include="RavenDB_3570.cs" />
+    <Compile Include="RavenDB_3573.cs" />
+    <Compile Include="RavenDB_3365.cs" />
+    <Compile Include="RavenDB_3580.cs" />
     <Compile Include="RavenDB_3271.cs" />
     <Compile Include="RavenDB_3276.cs" />
     <Compile Include="BulkInsertAuth.cs" />
@@ -142,7 +176,6 @@
     <Compile Include="RavenDB-3300.cs" />
     <Compile Include="RavenDB-3301.cs" />
     <Compile Include="RavenDB3075.cs" />
-    <Compile Include="RavenDB_2627.cs" />
     <Compile Include="RavenDB_2867.cs" />
     <Compile Include="RavenDB_2879.cs" />
     <Compile Include="RavenDB-2716.cs" />
@@ -391,8 +424,21 @@
     <Compile Include="RavenDB_3418.cs" />
     <Compile Include="RavenDB_3422.cs" />
     <Compile Include="RavenDB_3435.cs" />
+    <Compile Include="RavenDB_3442.cs" />
+    <Compile Include="RavenDB_3448.cs" />
     <Compile Include="RavenDB_3462.cs" />
+    <Compile Include="RavenDB_3484.cs" />
     <Compile Include="RavenDB_349.cs" />
+    <Compile Include="RavenDB_3501.cs" />
+    <Compile Include="RavenDB_3525.cs" />
+    <Compile Include="RavenDB_3574.cs" />
+    <Compile Include="Prefetcher\RavenDB_3581.cs" />
+    <Compile Include="RavenDB_3612.cs" />
+    <Compile Include="RavenDB_3628.cs" />
+    <Compile Include="RavenDB_3629.cs" />
+    <Compile Include="RavenDB_3625.cs" />
+    <Compile Include="RavenDB_3647.cs" />
+    <Compile Include="RavenDB_3658.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />
@@ -439,6 +485,7 @@
     <Compile Include="RavenDB_993.cs" />
     <Compile Include="RavenDB_2344.cs" />
     <Compile Include="RavenDB_2907.cs" />
+    <Compile Include="RavenDB_3555.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
@@ -448,6 +495,7 @@
     <Compile Include="RDBQA_4.cs" />
     <Compile Include="RDBQA_7.cs" />
     <Compile Include="RDBQA_9.cs" />
+    <Compile Include="RDoc_391.cs" />
     <Compile Include="RDoc_56.cs" />
     <Compile Include="RDoc_60.cs" />
     <Compile Include="RDoc_76.cs" />
@@ -492,6 +540,10 @@
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
       <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
       <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>

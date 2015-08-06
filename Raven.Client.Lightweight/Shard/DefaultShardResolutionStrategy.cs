@@ -89,12 +89,12 @@ namespace Raven.Client.Shard
 		/// <summary>
 		///  Generate a shard id for the specified entity
 		///  </summary>
-		public virtual string GenerateShardIdFor(object entity, ITransactionalDocumentSession sessionMetadata)
+		public virtual string GenerateShardIdFor(object entity, object owner)
 		{
 			if (shardResultToStringByType.Count == 0)
 			{ 
 				// one shard per session
-				return ShardIds[sessionMetadata.GetHashCode() % ShardIds.Count];
+				return ShardIds[owner.GetHashCode() % ShardIds.Count];
 			}
 
 			Func<object, string> func;

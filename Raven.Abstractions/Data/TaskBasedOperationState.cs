@@ -15,9 +15,12 @@ namespace Raven.Abstractions.Data
 	{
 		private readonly Task task;
 
-		public TaskBasedOperationState(Task task)
+		private readonly RavenJToken stateOverride;
+
+		public TaskBasedOperationState(Task task, RavenJToken stateOverride = null)
 		{
 			this.task = task;
+			this.stateOverride = stateOverride;
 		}
 
 		public bool Completed
@@ -42,7 +45,7 @@ namespace Raven.Abstractions.Data
 			{
 				if (!Faulted)
 				{
-					return null;
+					return stateOverride;
 				}
 				return RavenJObject.FromObject(new
 											   {

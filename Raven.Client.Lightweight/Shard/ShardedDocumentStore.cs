@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -288,9 +290,15 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
+		[Obsolete("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead",error: true)]
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
+			throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");
+		}
+
+		public  ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+		{
+			return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
 		}
 
 		public override void InitializeProfiling()
@@ -399,7 +407,14 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
-        /// <summary>
+
+		public override void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				store.ExecuteIndexes(indexCreationTasks);
+		}
+
+		/// <summary>
         /// Executes the index creation against each of the shards Async.
         /// </summary>
         public override Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
@@ -422,6 +437,12 @@ namespace Raven.Client.Shard
                 return tcs.Task;
             });
         }
+
+		public override async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				await store.ExecuteIndexesAsync(indexCreationTasks).ConfigureAwait(false);
+		}
 
 		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{

@@ -97,7 +97,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					ushort version;
 					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					DatabaseTask task;
 					try
 					{
@@ -143,7 +144,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					ushort version;
 					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
-
+					if (value == null)
+						continue;
 					DatabaseTask existingTask;
 					try
 					{

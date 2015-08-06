@@ -81,6 +81,28 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		[HttpPost]
+		[RavenRoute("transformers/{*id}")]
+		[RavenRoute("databases/{databaseName}/transformers/{*id}")]
+		public async Task<HttpResponseMessage> TransformersPost(string id)
+		{
+			var transformer = id;
+			var lockModeStr = GetQueryStringValue("mode");
+
+			TransformerLockMode transformerLockMode;
+			if (Enum.TryParse(lockModeStr, out transformerLockMode) == false)
+				return GetMessageWithString("Cannot understand transformer lock mode: " + lockModeStr, HttpStatusCode.BadRequest);
+
+			var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformer);
+			if (transformerDefinition == null)
+				return GetMessageWithString("Cannot find transformer : " + transformer, HttpStatusCode.NotFound);
+
+			transformerDefinition.LockMode = transformerLockMode;
+			Database.IndexDefinitionStorage.UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(transformerDefinition);
+
+			return GetEmptyMessage();
+		}
+
 		[HttpDelete]
 		[RavenRoute("transformers/{*id}")]
 		[RavenRoute("databases/{databaseName}/transformers/{*id}")]

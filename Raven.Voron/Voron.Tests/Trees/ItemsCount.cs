@@ -5,7 +5,7 @@ namespace Voron.Tests.Trees
 {
 	public class ItemCount : StorageTest
 	{
-		[Fact]
+		[PrefixesFact]
 		public void ItemCountIsConsistentWithAdditionsAndRemovals()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -46,7 +46,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[Fact]
+		[PrefixesFact]
 		public void ItemCountIsConsistentWithUpdates()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
