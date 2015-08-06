@@ -329,7 +329,7 @@ namespace Raven.Storage.Voron
 				if (configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold < 0)
 					return;
 
-				if (size < configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold * 1024L * 1024)
+				if (size < configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
 					return;
 
 				RunTransactionalStorageNotificationHandlers();
@@ -371,7 +371,7 @@ namespace Raven.Storage.Voron
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
 		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-		    options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024 * 1024;
+		    options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
 
             return options;
         }
