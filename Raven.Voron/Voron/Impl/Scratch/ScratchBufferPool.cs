@@ -237,10 +237,10 @@ namespace Voron.Impl.Scratch
 											   "Already flushed and waited for {4:#,#;;0} ms for read transactions to complete.\r\n" +
 											   "Do you have a long running read transaction executing?\r\n" + 
 											   "Debug info:\r\n{5}",
-					_current.Size / 1024,
-					_current.SizeAfterAllocation(size) / 1024,
-					sizeAfterAllocation / 1024,
-					_sizeLimit / 1024,
+					_current.Size / 1024L,
+					_current.SizeAfterAllocation(size) / 1024L,
+					sizeAfterAllocation / 1024L,
+					_sizeLimit / 1024L,
 					sp.ElapsedMilliseconds,
 					debugInfo
 					);
