@@ -44,10 +44,10 @@
     </Property>
 
     <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS32">
-      <![CDATA[NOT VersionNT64 AND ((IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH <> "#1") OR (IISMAJORVERSION >= "#8" AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
+      <![CDATA[NOT VersionNT64 AND (((IISMAJORVERSION >= "#7" OR IISMAJORVERSION = "#10") AND IIS_WIN_AUTH <> "#1") OR ((IISMAJORVERSION >= "#8" OR IISMAJORVERSION = "#10") AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
     </SetProperty>
     <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS64">
-      <![CDATA[VersionNT64 AND ((IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH_64 <> "#1") OR (IISMAJORVERSION >= "#8" AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
+      <![CDATA[VersionNT64 AND (((IISMAJORVERSION >= "#7" OR IISMAJORVERSION = "#10") AND IIS_WIN_AUTH_64 <> "#1") OR ((IISMAJORVERSION >= "#8" OR IISMAJORVERSION = "#10") AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
     </SetProperty>
     
     <DirectoryRef Id="INSTALLFOLDER">
@@ -58,7 +58,7 @@
                                  UIDeletable="no"/>
       </Component>
       <Component Id="DisableWebDAVExtensionIIS6" Permanent="no" Guid="{9088113E-517B-45DD-AF70-19E391108143}">
-        <Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
+        <Condition><![CDATA[IISMAJORVERSION < "#7" AND IISMAJORVERSION <> "#10"]]></Condition>
         <CreateFolder />
         <iis:WebServiceExtension Id="WebDavModule" Group="WebDAV" Allow="no"
                                  File="[WindowsFolder]system32\inetsrv\httpext.dll" Description="WebDAV"
