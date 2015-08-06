@@ -461,9 +461,9 @@ namespace Raven.Smuggler
 						{
 							if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
 							{
-								filter.Values.ForEach(async collectionName =>
+								filter.Values.ForEach(collectionName =>
 								{
-									var doc = await exportStore.AsyncDatabaseCommands.GetAsync("Raven/Hilo/" + collectionName).ConfigureAwait(false);
+									var doc = exportStore.DatabaseCommands.Get("Raven/Hilo/" + collectionName);
 									if (doc == null)
 										return;
 
