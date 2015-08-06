@@ -6,11 +6,11 @@
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
+
 using System;
 using System.IO;
 using System.Net;
@@ -20,7 +20,6 @@ namespace Raven.Smuggler
 {
 	public class SmugglerDatabaseApi : SmugglerDatabaseApiBase
 	{
-
 		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
 			: base(options ?? new SmugglerDatabaseOptions())
 		{

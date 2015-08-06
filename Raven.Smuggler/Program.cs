@@ -100,9 +100,9 @@ namespace Raven.Smuggler
 				                                                 Values = FilterSetting.ParseValues(val)
 			                                                 }));
 
-			databaseOptionSet.Add("log-errors-and-continue", OptionCategory.SmugglerDatabase, "If this option is enabled, smuggler will not halt its operation on errors, but instead will log them using configured Nlog logger.", value =>
+			databaseOptionSet.Add("ignore-errors-and-continue", OptionCategory.SmugglerDatabase, "If this option is enabled, smuggler will not halt its operation on errors. Errors still will be displayed to the user.", value =>
 			{
-				databaseOptions.ShouldLogErrorsAndContinue = true;
+				databaseOptions.IgnoreErrorsAndContinue = true;
 			});
 			databaseOptionSet.Add("transform:", OptionCategory.SmugglerDatabase, "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script);
 			databaseOptionSet.Add("transform-file:", OptionCategory.SmugglerDatabase, "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script));
