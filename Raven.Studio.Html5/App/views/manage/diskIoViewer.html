@@ -1,0 +1,41 @@
+﻿<div class="panel panel-default">
+	<div class="panel-heading panel-info">
+		Disk IO Viewer
+	</div>
+	<div class="panel-body">
+		<div data-bind="visible: performanceRuns().length == 0">
+			<span class="fa fa-info-circle"></span> There are no results to display. Use Raven.Monitor.exe to generate Disk IO Performance report.
+		</div>
+
+		<div>
+			<span data-bind="visible: performanceRuns().length > 0">
+				Report:
+				<div class="btn-group">
+					<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+						<span data-bind="text: currentPeformanceRunLabel">Select</span>
+						<span class="caret"></span>
+					</button>
+					<ul class="dropdown-menu" role="menu" data-bind="foreach: performanceRuns">
+						<li><a href="#" data-bind="click: $root.switchReport.bind($root), text: displayName"></a></li>
+					</ul>
+				</div>
+			</span>
+
+			<span data-bind="visible: perDbReports().length > 0">
+				Database:
+				<div class="btn-group">
+					<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+						<span data-bind="text: currentDbReportLabel"></span>
+						<span class="caret"></span>
+					</button>
+					<ul class="dropdown-menu" role="menu" data-bind="foreach: perDbReports">
+						<li><a href="#" data-bind="click: $root.switchDatabase.bind($root), text: Name"></a></li>
+					</ul>
+				</div>
+			</span>
+		</div>
+		<div id="diskMonitorContainer" class="with-3d-shadow with-transitions">
+			<svg height="300" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }"></svg>
+		</div>
+	</div>
+</div>

@@ -41,8 +41,8 @@ namespace Raven.Monitor
 		{
 			optionSet = new OptionSet();
 			optionSet.Add("disk-io", OptionCategory.None, "Disk IO monitoring", _ => options.Action = MonitorActions.DiskIo);
-			optionSet.Add("processid=", OptionCategory.None, "ProcessID to monitor", processId => options.ProcessId = int.Parse(processId));
-			optionSet.Add("output-path=", OptionCategory.None, "File output path", s => options.OutputPath = s);
+			optionSet.Add("process-id=", OptionCategory.None, "ProcessID to monitor", processId => options.ProcessId = int.Parse(processId));
+			optionSet.Add("server-url=", OptionCategory.None, "ServerUrl to RavenDB server", serverUrl => options.ServerUrl = serverUrl);
 			optionSet.Add("disk-io-duration=", OptionCategory.DiskIOMonitoring, "Disk IO monitoring duration (in minutes)", duration => options.IoOptions.DurationInMinutes = int.Parse(duration));
 			optionSet.Add("h|?|help", OptionCategory.Help, string.Empty, v =>
 			{
@@ -60,15 +60,15 @@ namespace Raven.Monitor
 					Environment.Exit((int)ExitCodes.InvalidArguments);
 					break;
 				case MonitorActions.DiskIo:
-					if (string.IsNullOrEmpty(options.OutputPath))
-					{
-						Console.WriteLine("OutputPath (--output-path) cannot be empty.");
-						Environment.Exit((int)ExitCodes.InvalidArguments);
-					}
-
 					if (options.ProcessId <= 0)
 					{
 						Console.WriteLine("ProcessID (--process-id) cannot be empty.");
+						Environment.Exit((int)ExitCodes.InvalidArguments);
+					}
+
+					if (string.IsNullOrEmpty(options.ServerUrl))
+					{
+						Console.WriteLine("ServerUrl (--server-url) cannot be empty.");
 						Environment.Exit((int)ExitCodes.InvalidArguments);
 					}
 
