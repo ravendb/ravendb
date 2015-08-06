@@ -11,7 +11,7 @@ IF NOT EXIST version.txt (
 )
 
 :START-RAVENDB
-start %~dp0\Server\Raven.Server.exe --debug --browser
+start "Raven DB" "%~dp0\Server\Raven.Server.exe" --debug --browser
 GOTO END
 
 :FIRST-RUN-START
