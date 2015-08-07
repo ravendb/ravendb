@@ -254,9 +254,9 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
-		public Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken))
+		public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
 		{
-			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(names, indexDefs, priorities, operationMetadata, token), token);
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
 		}
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
@@ -306,20 +306,22 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		public async Task<List<string>> DirectPutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities
-			,OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		public async Task<string[]> DirectPutIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes";
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 			{
-				var serializeObject = JsonConvert.SerializeObject(new MultiplePutIndexParam { Definitions = indexDefs, IndexesNames = names, Priorities = priorities}, Default.Converters);
+				var serializeObject = JsonConvert.SerializeObject(indexesToAdd, Default.Converters);
 
 				ErrorResponseException responseException;
 				try
 				{
 					await request.WriteAsync(serializeObject).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    return result.Value<RavenJArray>("Indexes").Select(x=>x.Value<string>()).ToList();
+					return result
+						.Value<RavenJArray>("Indexes")
+						.Select(x => x.Value<string>())
+						.ToArray();
 				}
 				catch (ErrorResponseException e)
 				{
