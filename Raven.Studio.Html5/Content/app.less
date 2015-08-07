@@ -416,6 +416,7 @@ html, body {
             cursor: pointer;
             border-radius: 2px;
             box-shadow: 0 0 5px 2px silver;
+            border-left: solid 5px silver;
             min-width: 160px;
             min-height: 70px;
             display: inline-block;
@@ -562,6 +563,9 @@ html, body {
 
             &.selected {
                 box-shadow: 0 0 20px 0 @selectColor;
+            }
+            &.isLoaded {
+                border-left: solid 5px @brand-success;
             }
 
             &.system-database {

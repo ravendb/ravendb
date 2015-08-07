@@ -23,6 +23,7 @@ class timeSeries extends resource {
     }
 
     activate() {
+        this.isLoaded(true);
         ko.postbox.publish("ActivateTimeSeries", this);
     }
 

@@ -677,6 +677,7 @@ namespace Raven.Database.Server.Controllers
 
 		protected class TenantData
 		{
+			public bool IsLoaded { get; set; }
 			public string Name { get; set; }
 			public bool Disabled { get; set; }
 			public string[] Bundles { get; set; }

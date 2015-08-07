@@ -6,6 +6,7 @@
     itemCountText: KnockoutComputed<string>;
     isVisible = ko.observable(true);
     isLoading = ko.observable(false);
+    isLoaded = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
     activeBundles = ko.observableArray<string>();

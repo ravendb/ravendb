@@ -81,7 +81,7 @@
 
     <div class="resources-container" data-bind="foreach: resources">
         <!--ko if: $data.isDatabase() -->
-        <div class="resource" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+        <div class="resource" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled, isLoaded: isLoaded() }">
             <div class="checkbox" data-bind="click: function(){ checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
             </div>
@@ -156,7 +156,7 @@
         <!-- /ko -->
 
         <!-- ko if: $data.isFileSystem() -->
-        <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+        <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled, isLoaded: isLoaded() }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: $root.isGlobalAdmin()" />
             </div>
