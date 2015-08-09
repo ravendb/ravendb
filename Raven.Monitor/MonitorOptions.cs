@@ -9,7 +9,11 @@ namespace Raven.Monitor
 	{
 		public MonitorOptions()
 		{
-			IoOptions = new IoOptions();
+			IoOptions = new IoOptions
+			{
+			    DurationInMinutes = 1
+			};
+            Action=MonitorActions.DiskIo;
 		}
 
 		public MonitorActions Action { get; set; }
