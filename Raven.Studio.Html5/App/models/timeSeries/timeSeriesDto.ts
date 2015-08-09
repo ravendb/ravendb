@@ -5,7 +5,7 @@ interface timeSeriesTypeDto {
 }
 
 interface timeSeriesKeyDto {
-    Type: string;
+    Type: timeSeriesTypeDto;
     Key: string;
     PointsCount: number;
 }

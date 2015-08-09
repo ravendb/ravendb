@@ -20,18 +20,13 @@ class timeSeriesType implements ICollectionBase {
 		ko.postbox.publish("ActivateType", this);
     }
 
-    getTimeSeries() {
+    getKeys() {
         if (!this.timeSeriesList) {
             this.timeSeriesList = this.createPagedList();
         }
 
         return this.timeSeriesList;
     }
-
-	invalidateCache() {
-		var timeSeriesList = this.getTimeSeries();
-		timeSeriesList.invalidateCache();
-	}
 
     static fromDto(dto: timeSeriesTypeDto, ts: timeSeries): timeSeriesType {
         return new timeSeriesType(dto.Type, dto.Fields, dto.KeysCount, ts);

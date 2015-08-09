@@ -11,8 +11,8 @@ class getKeysCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
         var doneTask = $.Deferred();
-        var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => new timeSeriesKey(key));
-        var task = this.query("/" + this.type + "/keys", {
+        var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => new timeSeriesKey(key, this.ts));
+        var task = this.query("/keys/" + this.type, {
             skip: this.skip,
             take: this.take
         }, this.ts, selector);

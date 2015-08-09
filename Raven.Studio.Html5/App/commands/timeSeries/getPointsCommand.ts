@@ -9,15 +9,15 @@ class getPointsCommand extends commandBase {
     * @param skip - number of entries to skip
     * @param take - number of entries to take
     */
-    constructor(private ts: timeSeries, private skip: number, private take: number, private type: string,
+    constructor(private ts: timeSeries, private skip: number, private take: number, private type: string, private fields: string[],
         private key: string, private pointsCount: number) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultSet> {
-        var url = "/" + this.type + "/" + this.key + "/points";
+        var url = "/points/" + this.type + "/" + this.key;
         var doneTask = $.Deferred();
-        var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.type, this.key, d));
+        var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.type, this.fields, this.key, d));
         var task = this.query(url, {
             skip: this.skip,
             take: this.take

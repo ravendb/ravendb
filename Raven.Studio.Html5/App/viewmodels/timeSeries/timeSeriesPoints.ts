@@ -6,67 +6,67 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
-import getTypesCommand = require("commands/timeSeries/getTypesCommand");
+import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
+import getKeyCommand = require("commands/timeSeries/getKeyCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 // import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 
-class timeSeriesTypes extends viewModelBase {
+class timeSeriesPoints extends viewModelBase {
 
-    types = ko.observableArray<timeSeriesType>();
-    selectedType = ko.observable<timeSeriesType>().subscribeTo("ActivateType").distinctUntilChanged();
-    currentType = ko.observable<timeSeriesType>();
-    typeToSelect: string;
-    currentTypePagedItems = ko.observable<pagedList>();
-    selectedKeysIndices = ko.observableArray<number>();
-    selectedKeysText: KnockoutComputed<string>;
-    hasKeys: KnockoutComputed<boolean>;
-    hasAnyKeysSelected: KnockoutComputed<boolean>;
-    hasAllKeysSelected: KnockoutComputed<boolean>;
-    isAnyKeysAutoSelected = ko.observable<boolean>(false);
-    isAllKeysAutoSelected = ko.observable<boolean>(false);
-	keysSelection: KnockoutComputed<checkbox>;
+    type: string;
+    key: string;
+    types = ko.observableArray<timeSeriesType>([]);
+    currentKey = ko.observable<timeSeriesKey>();
+
+    pagedItems = ko.observable<pagedList>();
+    selectedPointsIndices = ko.observableArray<number>();
+    selectedPointsText: KnockoutComputed<string>;
+    hasPoints: KnockoutComputed<boolean>;
+    hasAnyPointsSelected: KnockoutComputed<boolean>;
+    hasAllPointsSelected: KnockoutComputed<boolean>;
+    isAnyPointsAutoSelected = ko.observable<boolean>(false);
+    isAllPointsAutoSelected = ko.observable<boolean>(false);
+	pointsSelection: KnockoutComputed<checkbox>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
-    static gridSelector = "#keysGrid";
+    static gridSelector = "#pointsGrid";
 	static isInitialized = ko.observable<boolean>(false);
-    isInitialized = timeSeriesTypes.isInitialized;
+    isInitialized = timeSeriesPoints.isInitialized;
 
 	constructor() {
         super();
 
-        this.selectedType.subscribe(t => this.selectedTypeChanged(t));
+        this.hasPoints = ko.computed(() => {
+            var currentKey= this.currentKey();
+            if (!currentKey)
+                return false;
+            return currentKey.Points > 0;
+        });
 
-        this.hasKeys = ko.computed(() => {
-            var selectedType: timeSeriesType = this.selectedType();
-            if (!!selectedType) {
-                return this.selectedType().keysCount() > 0;
+        this.hasAnyPointsSelected = ko.computed(() => this.selectedPointsIndices().length > 0);
+
+        this.hasAllPointsSelected = ko.computed(() => {
+            var numOfSelectedPoints = this.selectedPointsIndices().length;
+            var currentKey = this.currentKey();
+            if (!!currentKey && numOfSelectedPoints !== 0) {
+                return numOfSelectedPoints === currentKey.Points;
             }
             return false;
         });
 
-        this.hasAnyKeysSelected = ko.computed(() => this.selectedKeysIndices().length > 0);
-
-        this.hasAllKeysSelected = ko.computed(() => {
-            var numOfSelectedKeys = this.selectedKeysIndices().length;
-            if (!!this.selectedType() && numOfSelectedKeys !== 0) {
-                return numOfSelectedKeys === this.selectedType().keysCount();
-            }
-            return false;
-        });
-
-        this.selectedKeysText = ko.computed(() => {
-            if (!!this.selectedKeysIndices()) {
-                var documentsText = "time series";
+        this.selectedPointsText = ko.computed(() => {
+            if (!!this.selectedPointsIndices()) {
+                var documentsText = "points";
                 return documentsText;
             }
             return "";
         });
 
-        this.keysSelection = ko.computed(() => {
-            if (this.hasAllKeysSelected())
+        this.pointsSelection = ko.computed(() => {
+            if (this.hasAllPointsSelected())
                 return checkbox.Checked;
-            if (this.hasAnyKeysSelected())
+            if (this.hasAnyPointsSelected())
                 return checkbox.SomeChecked;
             return checkbox.UnChecked;
         });
@@ -80,16 +80,16 @@ class timeSeriesTypes extends viewModelBase {
 
         // We can optionally pass in a key name to view's URL, e.g. #timeSeries/timeSeries?key=Foo&timeSeriestorage=test
         if (args && args.type && args.key) {
-            this.typeToSelect = args.type;
+            this.type = args.type;
+            this.key = args.key;
+
+            this.fetchKey().done(result => {
+                this.currentKey(result);
+                this.pagedItems(this.currentKey().getPoints());
+                timeSeriesPoints.isInitialized(true);
+            });
         }
-
-        var ts = this.activeTimeSeries();
-        this.fetchTypes(ts).done(results => {
-	        this.typesLoaded(results, ts);
-	        timeSeriesTypes.isInitialized(true);
-        });
     }
-
 
     attached() {
         super.attached();
@@ -106,45 +106,31 @@ class timeSeriesTypes extends viewModelBase {
 
 	deactivate() {
 		super.deactivate();
-		timeSeriesTypes.isInitialized(false);
+		timeSeriesPoints.isInitialized(false);
 	}
 
     createNotifications(): Array<changeSubscription> {
         return [
             /*TODO: Implement this in changes api:
-            changesContext.currentResourceChangesApi().watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshKeys()),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.refreshKeys())*/
+            changesContext.currentResourceChangesApi().watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshPoints()),
+            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.refreshPoints())*/
         ];
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
         //    ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
-            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
-            ko.postbox.subscribe("SortTypes", () => this.sortTypes())
+//            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadData(ts)),
         ];
     }
 
-    private fetchTypes(ts: timeSeries): JQueryPromise<any> {
+    private fetchKey(): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getTypesCommand(ts).execute().done((results: timeSeriesType[]) => deferred.resolve(results));
+        new getKeyCommand(this.activeTimeSeries(), this.type, this.key).execute().done((result: timeSeriesKey) => deferred.resolve(result));
         return deferred;
     }
 
-    typesLoaded(types: Array<timeSeriesType>, ts: timeSeries) {
-        this.types(types);
-
-        if (this.typeToSelect)
-            this.types.first(g => g.name === this.typeToSelect).activate();
-        else {
-            var allTypes = this.types();
-            if (allTypes.length > 0) {
-                allTypes[0].activate();
-            }
-        }
-    }
-
-    newKey() {
+    newPoint() {
         /*var changeVm = new editPointDialog();
         changeVm.updateTask.done((change: timeSeriesChange) => {
             var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
@@ -154,13 +140,14 @@ class timeSeriesTypes extends viewModelBase {
         app.showDialog(changeVm);*/
     }
 
-	refresh() {
-		var selectedKeyName = this.selectedType().name;
-		this.refreshGridAndKey(selectedKeyName);
+    refresh() {
+        this.getPointsGrid().refreshCollectionData();
+        this.currentKey().getPoints().invalidateCache();
+        this.selectNone();
 	}
 
-    changeKey() {
-        /*var grid = this.getKeysGrid();
+    changePoint() {
+        /*var grid = this.getPointsGrid();
         if (grid) {
             var timeSeriesData = grid.getSelectedItems(1).first();
             var dto = {
@@ -180,70 +167,53 @@ class timeSeriesTypes extends viewModelBase {
         }*/
     }
 
-	refreshGridAndKey(changedKeyName: string) {
-		var type = this.selectedType();
-		if (type.name === changedKeyName) {
-			this.getKeysGrid().refreshCollectionData();
-		}
-		type.getKeys().invalidateCache();
-		this.selectNone();
-	}
-
-    private selectedTypeChanged(selected: timeSeriesType) {
-        if (!!selected) {
-            var pagedList = selected.getKeys();
-            this.currentTypePagedItems(pagedList);
-            this.currentType(selected);
-        }
-    }
-
     toggleSelectAll() {
-        var pointsGrid = this.getKeysGrid();
+        var pointsGrid = this.getPointsGrid();
         if (!!pointsGrid) {
-            if (this.hasAnyKeysSelected()) {
+            if (this.hasAnyPointsSelected()) {
                 pointsGrid.selectNone();
             } else {
                 pointsGrid.selectSome();
-                this.isAnyKeysAutoSelected(this.hasAllKeysSelected() === false);
+                this.isAnyPointsAutoSelected(this.hasAllPointsSelected() === false);
             }
         }
     }
 
     selectAll() {
-        var typesGrid = this.getKeysGrid();
-        var type: timeSeriesType = this.selectedType();
-        if (!!typesGrid && !!type) {
-            typesGrid.selectAll(type.keysCount());
+        var pointsGrid = this.getPointsGrid();
+        var currentKey = this.currentKey();
+        if (!!pointsGrid && !!currentKey) {
+            pointsGrid.selectAll(currentKey.Points);
         }
     }
 
     selectNone() {
-        var pointsGrid = this.getKeysGrid();
+        var pointsGrid = this.getPointsGrid();
         if (!!pointsGrid) {
             pointsGrid.selectNone();
         }
     }
 
-    deleteSelectedKeys() {
-        if (this.hasAllKeysSelected()) {
-            this.deleteGroupInternal(this.selectedType());
+    deleteSelectedPoints() {
+        if (this.hasAllPointsSelected()) {
+            this.deleteKey(this.currentKey());
         } else {
-            var grid = this.getKeysGrid();
+            var grid = this.getPointsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
             }
         }
     }
 
-    private deleteGroupInternal(key: timeSeriesType) {
+    private deleteKey(key: timeSeriesKey) {
 	  /*  var deleteGroupVm = new deleteGroup(key, this.activeTimeSeries());
             deleteGroupVm.deletionTask.done(() => {
-				if (!key.isAllKeysGroup) {
-                    this.types.remove(key);
+				if (!key.isAllPointsGroup) {
+                    this.points.remove(key);
 
-                    var selectedCollection: timeSeriesType = this.selectedKey();
+                    var selectedCollection: timeSeriesType = this.selectedPoint();
                     if (key.name === selectedCollection.name) {
-                        this.selectedKey(this.allKeysGroup);
+                        this.selectedPoint(this.allPointsGroup);
                     }
                 } else {
                     this.refreshGridAndGroup(key.name);
@@ -252,7 +222,7 @@ class timeSeriesTypes extends viewModelBase {
 		app.showDialog(deleteGroupVm);*/
     }
 
-    private updateTypes(receivedTypes: Array<timeSeriesType>) {
+    /*private updateTypes(receivedTypes: Array<timeSeriesType>) {
         var deletedTypes = [];
 
         this.types().forEach((t: timeSeriesType) => {
@@ -267,45 +237,45 @@ class timeSeriesTypes extends viewModelBase {
             if (!foundType) {
                 this.types.push(receivedGroup);
             } else {
-                foundType.keysCount(receivedGroup.keysCount());
+                foundType.pointsCount(receivedGroup.pointsCount());
             }
         });
     }
 
-    private refreshKeysData() {
+    private refreshPointsData() {
         var selectedGroup: timeSeriesType = this.selectedType();
 
         this.types().forEach((key: timeSeriesType) => {
             if (key.name === selectedGroup.name) {
-                var docsGrid = this.getKeysGrid();
+                var docsGrid = this.getPointsGrid();
                 if (!!docsGrid) {
                     docsGrid.refreshCollectionData();
                 }
             } else {
-                var pagedList = key.getKeys();
+                var pagedList = key.getTimeSeries();
                 pagedList.invalidateCache();
             }
         });
     }
 
-    private refreshKeys(): JQueryPromise<any> {
+    private refreshPoints(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var ts = this.activeTimeSeries();
 
-        this.fetchTypes(ts).done(results => {
+        this.fetchPoints(ts).done(results => {
             this.updateTypes(results);
-	        this.refreshKeysData();
+	        this.refreshPointsData();
             deferred.resolve();
         });
 
         return deferred;
-    }
-
-    private reloadTimeSeriesData(ts: timeSeries) {
+    }*/
+/*
+    private reloadData(ts: timeSeries) {
         if (ts.name === this.activeTimeSeries().name) {
-            this.refreshKeys().done(() => this.refreshKeysData());
+            this.refreshPoints().done(() => this.refreshPointsData());
         }
-    }
+    }*/
 
     selectType(type: timeSeriesType, event?: MouseEvent) {
         if (!event || event.which !== 3) {
@@ -315,36 +285,14 @@ class timeSeriesTypes extends viewModelBase {
         }
     }
 
-    private getKeysGrid(): virtualTable {
-        var gridContents = $(timeSeriesTypes.gridSelector).children()[0];
+    private getPointsGrid(): virtualTable {
+        var gridContents = $(timeSeriesPoints.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
 
         return null;
     }
-
-	private sortTypes() {
-		this.types.sort((c1: timeSeriesType, c2: timeSeriesType) => {
-			return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-		});
-	}
-
-	// Animation callbacks for the types list
-	showTypeElement(element) {
-		if (element.nodeType === 1 && timeSeriesTypes.isInitialized()) {
-			$(element).hide().slideDown(500, () => {
-				ko.postbox.publish("SortTypes");
-				$(element).highlight();
-			});
-		}
-	}
-
-	hideTypeElement(element) {
-		if (element.nodeType === 1) {
-			$(element).slideUp(1000, () => { $(element).remove(); });
-		}
-	}
 }
 
-export = timeSeriesTypes;
+export = timeSeriesPoints;

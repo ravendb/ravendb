@@ -517,6 +517,22 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
+			public TimeSeriesKey GetKey(string typeName, string key)
+			{
+				var type = storage.GetType(typeName);
+				if (type == null)
+					return null;
+
+				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
+				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
+				return new TimeSeriesKey
+				{
+					Type = type,
+					Key = key,
+					PointsCount = fixedTree.NumberOfEntries,
+				};
+			}
+
 			public IEnumerable<TimeSeriesKey> GetKeys(string typeName, int skip)
 			{
 				var type = storage.GetType(typeName);
@@ -534,7 +550,7 @@ namespace Raven.Database.TimeSeries
 							var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
 							yield return new TimeSeriesKey
 							{
-								Type = type.Type,
+								Type = type,
 								Key = key,
 								PointsCount = fixedTree.NumberOfEntries,
 							};

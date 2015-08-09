@@ -61,7 +61,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/append/{type}/{key}")]
+		[RavenRoute("ts/{timeSeriesName}/append/{type}/{*key}")]
 		[HttpPost]
 		public HttpResponseMessage Append(string type, string key, TimeSeriesPoint input)
 		{
@@ -276,7 +276,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/delete/{type}/{key}")]
+		[RavenRoute("ts/{timeSeriesName}/delete/{type}/{*key}")]
 		[HttpDelete]
 		public HttpResponseMessage Delete(string type, string key)
 		{
@@ -305,7 +305,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/deleteRange/{type}/{key}")]
+		[RavenRoute("ts/{timeSeriesName}/deleteRange/{type}/{*key}")]
 		[HttpDelete]
 		public HttpResponseMessage DeleteRange(string type, string key, long start, long end)
 		{
@@ -351,7 +351,19 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/{type}/keys")]
+		[RavenRoute("ts/{timeSeriesName}/key/{type}/{*key}")]
+		[HttpGet]
+		public HttpResponseMessage GetKey(string type, string key)
+		{
+			using (var reader = Storage.CreateReader())
+			{
+				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				var result = reader.GetKey(type, key);
+				return Request.CreateResponse(HttpStatusCode.OK, result);
+			}
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/keys/{type}")]
 		[HttpGet]
 		public HttpResponseMessage GetKeys(string type, int skip = 0, int take = 20)
 		{
@@ -363,7 +375,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/{type}/{key}/points")]
+		[RavenRoute("ts/{timeSeriesName}/points/{type}/{*key}")]
 		[HttpGet]
 		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20)
 		{

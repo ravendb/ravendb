@@ -21,7 +21,6 @@
     <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\counter\backupCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersByGroupCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
@@ -78,6 +77,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\getKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTypesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getPointsCommand.ts" />
@@ -96,16 +96,6 @@
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterChange.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterSummary.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
-    <TypeScriptCompile Include="App\models\counter\counter.ts" />
-    <TypeScriptCompile Include="App\models\counter\serverValue.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterDto.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
@@ -123,23 +113,6 @@
     <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
     <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\file.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\folder.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\uploadItem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\pointChange.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesKey.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesPoint.ts" />
@@ -400,6 +373,7 @@
     <Content Include="App\views\shell.html" />
     <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
+    <Content Include="App\views\timeSeries\timeSeriesPoints.html" />
     <Content Include="App\views\timeSeries\timeSeriesTypes.html" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <Content Include="Content\app.css">
@@ -987,7 +961,6 @@
     <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
-    <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\auth\apiKey.ts" />
     <TypeScriptCompile Include="App\models\auth\license.ts" />
     <TypeScriptCompile Include="App\models\auth\windowsAuthData.ts" />
@@ -1278,6 +1251,7 @@
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editPointDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesPoints.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />

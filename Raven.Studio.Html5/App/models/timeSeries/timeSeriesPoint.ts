@@ -1,23 +1,18 @@
 ﻿class timeSeriesPoint implements documentBase {
-    Type: string;
-    Key: string;
+    type: string;
+    fields: string[];
+    key: string;
     At: string; 
-    Values: number[]; 
 
-    constructor(type: string, key: string, dto: pointDto) {
-        this.Type = type;
-        this.Key = key;
+    constructor(type: string, fields: string[], key: string, dto: pointDto) {
+        this.type = type;
+        this.fields = fields;
+        this.key = key;
         this.At = dto.At;
-        this.Values = dto.Values;
 
-        if (this.Values.length === 1) {
-            this["Value"] = this.Values[0];
-        } else {
-            for (var i = 0; i < this.Values.length; i++) {
-                this["Value " + (i + 1)] = this.Values[i];
-            }
+        for (var i = 0; i < this.fields.length; i++) {
+            this[fields[i]] = dto.Values[i];
         }
-        
     }
 
     getEntityName() {
@@ -26,18 +21,14 @@
 
     getDocumentPropertyNames(): Array<string> {
         var columns = ["At"];
-        if (this.Values.length === 1) {
-            columns.push("Value");
-        } else {
-            for (var i = 0; i < this.Values.length; i++) {
-                columns.push("Value " + (i + 1));
-            }
+        for (var i = 0; i < this.fields.length; i++) {
+            columns.push(this.fields[i]);
         }
         return columns;
     }
 
     getId() {
-        return this.Type + "/" + this.Key;
+        return this.type + "/" + this.key + "/" + this.At;
     }
 
     getUrl() {

@@ -215,7 +215,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1, fourValues.KeysCount);
 				var keys = await store.Advanced.GetKeys(fourValues.Type);
 				Assert.Equal(1, keys.Length); var time = keys[0];
-				Assert.Equal("FourValues", time.Type);
+				Assert.Equal("FourValues", time.Type.Type);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(18888, time.PointsCount);
 
@@ -226,11 +226,11 @@ namespace Raven.Tests.TimeSeries
 				keys = await store.Advanced.GetKeys(simple.Type);
 				Assert.Equal(2, keys.Length);
 				var _is = keys[0];
-				Assert.Equal("Simple", _is.Type);
+				Assert.Equal("Simple", _is.Type.Type);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(18888, _is.PointsCount);
 				var money = keys[1];
-				Assert.Equal("Simple", money.Type);
+				Assert.Equal("Simple", money.Type.Type);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(18888, money.PointsCount);
 
@@ -272,7 +272,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1, fourValues.KeysCount);
 				var keys = await store.Advanced.GetKeys(fourValues.Type);
 				Assert.Equal(1, keys.Length); var time = keys[0];
-				Assert.Equal("FourValues", time.Type);
+				Assert.Equal("FourValues", time.Type.Type);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
@@ -283,11 +283,11 @@ namespace Raven.Tests.TimeSeries
 				keys = await store.Advanced.GetKeys(simple.Type);
 				Assert.Equal(2, keys.Length);
 				var _is = keys[0];
-				Assert.Equal("Simple", _is.Type);
+				Assert.Equal("Simple", _is.Type.Type);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
 				var money = keys[1];
-				Assert.Equal("Simple", money.Type);
+				Assert.Equal("Simple", money.Type.Type);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 
@@ -342,7 +342,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(1, fourValues.KeysCount);
 				var keys = await store.Advanced.GetKeys(fourValues.Type);
 				Assert.Equal(1, keys.Length); var time = keys[0];
-				Assert.Equal("FourValues", time.Type);
+				Assert.Equal("FourValues", time.Type.Type);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
 
@@ -353,11 +353,11 @@ namespace Raven.Tests.TimeSeries
 				keys = await store.Advanced.GetKeys(simple.Type, cancellationToken);
 				Assert.Equal(2, keys.Length);
 				var _is = keys[0];
-				Assert.Equal("Simple", _is.Type);
+				Assert.Equal("Simple", _is.Type.Type);
 				Assert.Equal("Is", _is.Key);
 				Assert.Equal(2, _is.PointsCount);
 				var money = keys[1];
-				Assert.Equal("Simple", money.Type);
+				Assert.Equal("Simple", money.Type.Type);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
 

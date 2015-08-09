@@ -16,7 +16,6 @@ import customColumnParams = require("models/database/documents/customColumnParam
 import customColumns = require("models/database/documents/customColumns");
 import customFunctions = require("models/database/documents/customFunctions");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
-import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
 
 class ctor {
