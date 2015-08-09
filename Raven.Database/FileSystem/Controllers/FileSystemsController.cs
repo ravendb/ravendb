@@ -28,7 +28,7 @@ namespace Raven.Database.FileSystem.Controllers
 			return Resources<FileSystemData>(Constants.FileSystem.Prefix, GetFileSystemsData, getAdditionalData);
 		}
 
-		private static List<FileSystemData> GetFileSystemsData(IEnumerable<RavenJToken> fileSystems)
+		private List<FileSystemData> GetFileSystemsData(IEnumerable<RavenJToken> fileSystems)
 		{
 			return fileSystems
 				.Select(fileSystem =>
@@ -43,12 +43,14 @@ namespace Raven.Database.FileSystem.Controllers
 							bundles = activeBundles.Split(';');
 						}
 					}
-					return new FileSystemData
+					var fsName = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty);
+                    return new FileSystemData
 					{
-						Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
+						Name = fsName,
 						Disabled = fileSystem.Value<bool>("Disabled"),
 						Bundles = bundles,
 						IsAdminCurrentTenant = true,
+						IsLoaded = FileSystemsLandlord.IsFileSystemLoaded(fsName)
 					};
 				}).ToList();
 		}
