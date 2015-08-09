@@ -60,10 +60,10 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/indexes")]
 		public async Task<HttpResponseMessage> IndexMultiPut()
 		{
-			MultiplePutIndexParam multiplePutIndexParam;
+			IndexToAdd[] indexesToAdd;
 			try
 			{
-				multiplePutIndexParam = await ReadJsonObjectAsync<MultiplePutIndexParam>().ConfigureAwait(false);
+				indexesToAdd = await ReadJsonObjectAsync<IndexToAdd[]>().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -84,19 +84,18 @@ namespace Raven.Database.Server.Controllers
 					Error = e
 				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 			}
-			var definitions = multiplePutIndexParam.Definitions;
-			var priorities = multiplePutIndexParam.Priorities;
-			var indexes = multiplePutIndexParam.IndexesNames;
-			string[] createdIndexes;
-			for (int i =0; i< indexes.Length; i++)
+			
+			foreach (var indexToAdd in indexesToAdd)
 			{
-				var data = definitions[i];											
-				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+				var data = indexToAdd.Definition;
+                if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 			}
+
+			string[] createdIndexes;
 			try
 			{
-				createdIndexes = Database.Indexes.PutIndexes(indexes, definitions, priorities);
+				createdIndexes = Database.Indexes.PutIndexes(indexesToAdd);
 			}
 			catch (Exception ex)
 			{

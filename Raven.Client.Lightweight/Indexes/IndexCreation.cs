@@ -49,10 +49,16 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				databaseCommands.PutIndexes(indexesNames, definitions, priorities);
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				databaseCommands.PutIndexes(indexesToAdd);
 
 				foreach (var task in tasks)
 					task.AfterExecute(databaseCommands, conventions);
@@ -95,10 +101,16 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				await databaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await databaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
 		        foreach (var task in tasks)
 					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
@@ -200,10 +212,16 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
 				foreach (var task in tasks)
 					await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);

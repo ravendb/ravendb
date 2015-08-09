@@ -302,17 +302,18 @@ namespace Raven.Database.Actions
         }
 
 		[MethodImpl(MethodImplOptions.Synchronized)]
-		public string[] PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities)
+		public string[] PutIndexes(IndexToAdd[] indexesToAdd)
 		{
 			var createdIndexes = new List<string>();
 			var prioritiesList = new List<IndexingPriority>();
 			try
 			{
-				for (int i = 0; i < names.Length; i++)
+				foreach (var indexToAdd in indexesToAdd)
 				{
-					var name = names[i];
-					var definition = definitions[i];
-					var priority = priorities[i];
+					var name = indexToAdd.Name;
+					var definition = indexToAdd.Definition;
+					var priority = indexToAdd.Priority;
+
 					if (name == null)
 						throw new ArgumentNullException("names","Names cannot contain null values");
 
