@@ -16,7 +16,6 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -32,6 +31,17 @@ namespace Raven.Database.Counters.Controllers
 {
 	public class CounterOperationsController : RavenCountersApiController
 	{
+		[RavenRoute("cs/{counterStorageName}/sinceEtag/{etag}")]
+		[HttpGet]
+		public HttpResponseMessage GetCountersDataSinceEtag(long etag, int skip = 0, int take = 1024)
+		{
+			List<CounterDelta> deltas;
+			using (var reader = Storage.CreateReader())
+				deltas = reader.GetCountersSinceEtag(etag + 1, skip, take).ToList();
+
+			return GetMessageWithObject(deltas);
+		}
+
 		[RavenRoute("cs/{counterStorageName}/change/{groupName}/{counterName}")]
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)

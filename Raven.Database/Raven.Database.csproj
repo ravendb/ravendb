@@ -365,7 +365,6 @@
     <Compile Include="FileSystem\Plugins\Builtins\HideDeletingFilesTrigger.cs" />
     <Compile Include="Counters\Controllers\CountersStatsController.cs" />
     <Compile Include="Counters\CounterGroup.cs" />
-    <Compile Include="Counters\ReplicationCounter.cs" />
     <Compile Include="Counters\ValueSign.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />

@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Database.Counters
 {
-	public class ReplicationCounter
+	public class CounterDelta
 	{
 		public string GroupName { get; set; }
 

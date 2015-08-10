@@ -607,16 +607,17 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
+			public IEnumerable<CounterDelta> GetCountersSinceEtag(long etag, int skip = 0, int take = int.MaxValue)
 			{
 				using (var it = etagsToCounters.Iterate())
 				{
 					var buffer = new byte[sizeof(long)];
 					EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
 					var slice = new Slice(buffer);
-					if (it.Seek(slice) == false)
-						yield break;
+					if (it.Seek(slice) == false || it.Skip(skip) == false)
+						yield break;					
 
+					int taken = 0;
 					var serverIdBuffer = new byte[parent.sizeOfGuid];
 					var signBuffer = new byte[sizeof (char)];
 					do
@@ -632,6 +633,7 @@ namespace Raven.Database.Counters
 						valueReader.Read(signBuffer, 0, sizeof(char));
 						var sign = EndianBitConverter.Big.ToChar(signBuffer, 0);
 						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						
 						//single counter names: {counter-id}{server-id}{sign}
 						var singleCounterName = valueReader.AsSlice();
 						var value = GetSingleCounterValue(singleCounterName);
@@ -642,7 +644,7 @@ namespace Raven.Database.Counters
 						Debug.Assert(etagResult != null);
 						var counterEtag = etagResult.Reader.ReadBigEndianInt64();
 
-						yield return new ReplicationCounter
+						yield return new CounterDelta
 						{
 							GroupName = counterNameAndGroup.GroupName,
 							CounterName = counterNameAndGroup.CounterName,
@@ -651,7 +653,8 @@ namespace Raven.Database.Counters
 							Value = value,	
 							Etag = counterEtag
 						};
-					} while (it.MoveNext());
+						taken++;
+					} while (it.MoveNext() && taken < take);
 				}
 			}
 
@@ -796,7 +799,7 @@ namespace Raven.Database.Counters
 				var doesCounterExist = Store(groupName, counterName, parent.ServerId, sign, counterKeySlice =>
 				{
 					if (sign == ValueSign.Negative)
-						delta = -delta;
+						delta = -Math.Abs(delta);
 					counters.Increment(counterKeySlice, delta);
 				});
 
