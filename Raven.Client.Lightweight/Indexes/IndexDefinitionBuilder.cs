@@ -152,79 +152,86 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException(
 					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
 
-			if (Reduce != null)
-				IndexDefinitionHelper.ValidateReduce(Reduce);
+		    try
+		    {
+                if (Reduce != null)
+                    IndexDefinitionHelper.ValidateReduce(Reduce);
 
-			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
-			var indexDefinition = new IndexDefinition
-			{
-				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
-				Indexes = ConvertToStringDictionary(Indexes),
-				Stores = ConvertToStringDictionary(Stores),
-				SortOptions = ConvertToStringDictionary(SortOptions),
-				Analyzers = ConvertToStringDictionary(Analyzers),
-				Suggestions = ConvertToStringDictionary(Suggestions),
-				TermVectors = ConvertToStringDictionary(TermVectors),
-				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
-				DisableInMemoryIndexing = DisableInMemoryIndexing,
-				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
-                LockMode = LockMode,
-			};
+                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+                var indexDefinition = new IndexDefinition
+                {
+                    Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
+                    Indexes = ConvertToStringDictionary(Indexes),
+                    Stores = ConvertToStringDictionary(Stores),
+                    SortOptions = ConvertToStringDictionary(SortOptions),
+                    Analyzers = ConvertToStringDictionary(Analyzers),
+                    Suggestions = ConvertToStringDictionary(Suggestions),
+                    TermVectors = ConvertToStringDictionary(TermVectors),
+                    SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
+                    DisableInMemoryIndexing = DisableInMemoryIndexing,
+                    MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
+                    LockMode = LockMode,
+                };
 
-			if (convention.PrettifyGeneratedLinqExpressions)
-				indexDefinition.Reduce = IndexPrettyPrinter.Format(indexDefinition.Reduce);
+                if (convention.PrettifyGeneratedLinqExpressions)
+                    indexDefinition.Reduce = IndexPrettyPrinter.Format(indexDefinition.Reduce);
 
-			foreach (var indexesString in IndexesStrings)
-			{
-				if (indexDefinition.Indexes.ContainsKey(indexesString.Key))
-					throw new InvalidOperationException("There is a duplicate key in indexes: " + indexesString.Key);
-				indexDefinition.Indexes.Add(indexesString);
-			}
+                foreach (var indexesString in IndexesStrings)
+                {
+                    if (indexDefinition.Indexes.ContainsKey(indexesString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in indexes: " + indexesString.Key);
+                    indexDefinition.Indexes.Add(indexesString);
+                }
 
-			foreach (var storeString in StoresStrings)
-			{
-				if (indexDefinition.Stores.ContainsKey(storeString.Key))
-					throw new InvalidOperationException("There is a duplicate key in stores: " + storeString.Key);
-				indexDefinition.Stores.Add(storeString);
-			}
+                foreach (var storeString in StoresStrings)
+                {
+                    if (indexDefinition.Stores.ContainsKey(storeString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in stores: " + storeString.Key);
+                    indexDefinition.Stores.Add(storeString);
+                }
 
-			foreach (var analyzerString in AnalyzersStrings)
-			{
-				if (indexDefinition.Analyzers.ContainsKey(analyzerString.Key))
-					throw new InvalidOperationException("There is a duplicate key in analyzers: " + analyzerString.Key);
-				indexDefinition.Analyzers.Add(analyzerString);
-			}
+                foreach (var analyzerString in AnalyzersStrings)
+                {
+                    if (indexDefinition.Analyzers.ContainsKey(analyzerString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in analyzers: " + analyzerString.Key);
+                    indexDefinition.Analyzers.Add(analyzerString);
+                }
 
-			foreach (var termVectorString in TermVectorsStrings)
-			{
-				if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
-					throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
-				indexDefinition.TermVectors.Add(termVectorString);
-			}
+                foreach (var termVectorString in TermVectorsStrings)
+                {
+                    if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
+                    indexDefinition.TermVectors.Add(termVectorString);
+                }
 
-			foreach (var spatialString in SpatialIndexesStrings)
-			{
-				if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
-					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
-				indexDefinition.SpatialIndexes.Add(spatialString);
-			}
+                foreach (var spatialString in SpatialIndexesStrings)
+                {
+                    if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
+                    indexDefinition.SpatialIndexes.Add(spatialString);
+                }
 
-			foreach (var sortOption in SortOptionsStrings)
-			{
-				if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
-					throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
-				indexDefinition.SortOptions.Add(sortOption);
-			}
+                foreach (var sortOption in SortOptionsStrings)
+                {
+                    if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
+                        throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
+                    indexDefinition.SortOptions.Add(sortOption);
+                }
 
-			if (Map != null)
-			{
-				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
-					Map, convention, querySource, translateIdentityProperty: true);
+                if (Map != null)
+                {
+                    indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
+                        Map, convention, querySource, translateIdentityProperty: true);
 
-				if (convention.PrettifyGeneratedLinqExpressions)
-					indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
-			}
-			return indexDefinition;
+                    if (convention.PrettifyGeneratedLinqExpressions)
+                        indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
+                }
+                return indexDefinition;
+            }
+		    catch (Exception e)
+		    {
+		        throw new InvalidOperationException("Failed to create index " + GetType().FullName, e);
+		    }
 		}
 
 		private bool ContainsWhereEntityIs()
