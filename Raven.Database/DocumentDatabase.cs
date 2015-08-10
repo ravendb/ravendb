@@ -833,8 +833,8 @@ namespace Raven.Database
 			if (IndexStorage != null)
 				exceptionAggregator.Execute(IndexStorage.Dispose);
 
-			if (TransactionalStorage != null)
-				exceptionAggregator.Execute(TransactionalStorage.Dispose);
+		    if (TransactionalStorage != null)
+		        exceptionAggregator.Execute(() => TransactionalStorage.Dispose());
 
 			if (Configuration != null)
 				exceptionAggregator.Execute(Configuration.Dispose);
