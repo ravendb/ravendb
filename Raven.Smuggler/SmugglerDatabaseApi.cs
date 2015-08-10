@@ -10,6 +10,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
+
 using System;
 using System.IO;
 using System.Net;
@@ -22,7 +23,7 @@ namespace Raven.Smuggler
 		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
 			: base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);
+			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported, () => IsIdentitiesSmugglingSupported);			
 		}
 
 		protected BulkInsertOperation operation;
