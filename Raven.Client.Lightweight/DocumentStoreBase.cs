@@ -116,6 +116,23 @@ namespace Raven.Client
 				task.AfterExecute(DatabaseCommands, Conventions);
 		}
 
+		public void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var indexesToAdd = indexCreationTasks
+				.Select(x => new IndexToAdd
+				{
+					Definition = x.CreateIndexDefinition(),
+					Name = "ReplacementOf/" + x.IndexName,
+					Priority = x.Priority ?? IndexingPriority.Normal
+				})
+				.ToArray();
+
+			DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
+
+			/*foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);*/
+		}
+
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>

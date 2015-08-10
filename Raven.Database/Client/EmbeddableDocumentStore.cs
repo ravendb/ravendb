@@ -338,6 +338,11 @@ namespace Raven.Client.Embedded
 		    Inner.ExecuteIndexes(indexCreationTasks);
 	    }
 
+	    public void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+	    {
+			Inner.ExecuteSideBySideIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+	    }
+
 	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
             return Inner.ExecuteIndexAsync(indexCreationTask);

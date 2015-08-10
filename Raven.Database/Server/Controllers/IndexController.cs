@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -11,21 +10,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
-using ICSharpCode.NRefactory.CSharp;
-using System.Web.Http.Results;
-using JetBrains.Annotations;
-using Lucene.Net.Search;
-using Mono.CSharp;
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -33,7 +24,6 @@ using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Enum = System.Enum;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -72,23 +62,23 @@ namespace Raven.Database.Server.Controllers
 				{
 					Message = "Could not understand json, please check its validity.",
 					Error = e.Message
-				}, (HttpStatusCode) 500); 
+				}, (HttpStatusCode)500);
 
 			}
 			catch (InvalidDataException e)
 			{
 				Log.DebugException("Failed to deserialize index request. Error: ", e);
-				
+
 				return GetMessageWithObject(new
 				{
 					Error = e
 				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 			}
-			
+
 			foreach (var indexToAdd in indexesToAdd)
 			{
 				var data = indexToAdd.Definition;
-                if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 			}
 
@@ -96,6 +86,63 @@ namespace Raven.Database.Server.Controllers
 			try
 			{
 				createdIndexes = Database.Indexes.PutIndexes(indexesToAdd);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
+
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
+			}
+			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
+		}
+
+		[HttpPut]
+		[RavenRoute("side-by-side-indexes")]
+		[RavenRoute("databases/{databaseName}/side-by-side-indexes")]
+		public async Task<HttpResponseMessage> SideBySideIndexMultiPut()
+		{
+			SideBySideIndexes sideBySideIndexes;
+			try
+			{
+				sideBySideIndexes = await ReadJsonObjectAsync<SideBySideIndexes>().ConfigureAwait(false);
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode)500);
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+
+				return GetMessageWithObject(new
+				{
+					Error = e
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+
+			foreach (var indexToAdd in sideBySideIndexes.IndexesToAdd)
+			{
+				var data = indexToAdd.Definition;
+				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+			}
+
+			string[] createdIndexes;
+			try
+			{
+				createdIndexes = Database.Indexes.PutIndexes(sideBySideIndexes.IndexesToAdd);
 			}
 			catch (Exception ex)
 			{

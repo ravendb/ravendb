@@ -157,6 +157,8 @@ namespace Raven.Client
 
 		void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks);
 
+		void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+
         /// <summary>
         /// Executes the index creation.
         /// </summary>

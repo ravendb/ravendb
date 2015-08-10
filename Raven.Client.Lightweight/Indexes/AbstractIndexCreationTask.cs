@@ -297,13 +297,13 @@ namespace Raven.Client.Indexes
 
 		public virtual void AfterExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
 	    {
-			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
 				ReplicateIndexesIfNeeded(databaseCommands);
 	    }
 
 		public virtual async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
 		{
-			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
 				await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
 		}
 

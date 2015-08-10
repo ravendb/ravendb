@@ -161,7 +161,7 @@ namespace Raven.Client.Indexes
 
 				documentStore.ExecuteIndexes(tasks);
 			}
-				// For old servers that don't have the new entrypoint for executing multiple indexes
+			// Old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception ex)
 			{
 			    Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
@@ -177,6 +177,7 @@ namespace Raven.Client.Indexes
 					}
 				}
 			}
+
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
 				task.Execute(documentStore);
@@ -283,7 +284,6 @@ namespace Raven.Client.Indexes
 				{
 					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
-
 			}
 
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
@@ -311,7 +311,6 @@ namespace Raven.Client.Indexes
 				{
 					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
-
 			}
 
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
@@ -331,18 +330,31 @@ namespace Raven.Client.Indexes
 		public static void SideBySideCreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			try
 			{
-				try
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				documentStore.ExecuteSideBySideIndexes(tasks, minimumEtagBeforeReplace, replaceTimeUtc);
+			}
+			// Old servers that don't have the new endpoint for executing multiple indexes
+			catch (Exception ex)
+			{
+				Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
-					task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					try
+					{
+						task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					}
 				}
 			}
-
+			
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
 				task.Execute(documentStore);

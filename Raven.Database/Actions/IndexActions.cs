@@ -315,7 +315,7 @@ namespace Raven.Database.Actions
 					var priority = indexToAdd.Priority;
 
 					if (name == null)
-						throw new ArgumentNullException("names","Names cannot contain null values");
+						throw new ArgumentNullException("names", "Names cannot contain null values");
 
 					IsIndexNameValid(name);
 
@@ -361,7 +361,7 @@ namespace Raven.Database.Actions
 							// ensure that the code can compile
 							new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
 							IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);							
-							break;
+							continue;
 						case IndexCreationOptions.Update:
 							// ensure that the code can compile
 							new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
@@ -369,7 +369,7 @@ namespace Raven.Database.Actions
 							break;
 					}
 
-					PutNewIndexIntoStorage(name, definition,true);
+					PutNewIndexIntoStorage(name, definition, true);
 
 					WorkContext.ClearErrorsFor(name);
 
@@ -398,6 +398,7 @@ namespace Raven.Database.Actions
 				throw;
 			}
 		}
+
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
         {
             foreach (var analyzer in indexDefinition.Analyzers)
