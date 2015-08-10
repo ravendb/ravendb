@@ -123,6 +123,12 @@ namespace Raven.Bundles.Replication.Tasks
 			shouldPause = false;
 		}
 
+		private bool IsHotSpare()
+		{
+			if (docDb.RequestManager == null) return false;
+			return docDb.RequestManager.IsInHotSpareMode;
+		}
+
 		private void Execute()
 		{
 			using (LogContext.WithDatabase(docDb.Name))
@@ -135,7 +141,7 @@ namespace Raven.Bundles.Replication.Tasks
 				bool runningBecauseOfDataModifications = false;
 				var context = docDb.WorkContext;
 				NotifySiblings();
-				while (context.DoWork)
+				while (context.DoWork && !IsHotSpare())
 				{
 					IsRunning = !shouldPause;
 

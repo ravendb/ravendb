@@ -45,6 +45,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Abstractions.Threading;
+using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
 namespace Raven.Database
@@ -612,6 +613,7 @@ namespace Raven.Database
 		{
 			get { return workContext; }
 		}
+		public RequestManager RequestManager { get; set; }
 
 		public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
 		{
@@ -1382,6 +1384,11 @@ namespace Raven.Database
 		{
 			var onOnBackupComplete = OnBackupComplete;
 			if (onOnBackupComplete != null) onOnBackupComplete(this);
+		}
+
+		public LicensingStatus GetLicensingStatus()
+		{
+			return ValidateLicense.CurrentLicense;
 		}
 	}
 }

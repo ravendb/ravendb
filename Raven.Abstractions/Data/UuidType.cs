@@ -19,5 +19,6 @@ namespace Raven.Abstractions.Data
 		Subscriptions = 12,
 		Transformers = 13,
 		Cluster = 14,
+		Licensing = 15
 	}
 }

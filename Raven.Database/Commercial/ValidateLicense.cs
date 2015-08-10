@@ -118,7 +118,7 @@ namespace Raven.Database.Commercial
 				{
 					attributes[licenseAttribute.Key] = licenseAttribute.Value;
 				}
-
+				attributes["UserId"] = licenseValidator.UserId.ToString();
 				var message = "Valid license at " + licensePath;
 				var status = "Commercial";
 				if (licenseValidator.LicenseType != LicenseType.Standard)

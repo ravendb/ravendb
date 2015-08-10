@@ -18,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Queries;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
@@ -63,6 +64,7 @@ namespace Raven.Database.Server.WebApi
 		{
 			get { return Thread.VolatileRead(ref concurrentRequests); }
 		}
+		public HotSpareReplicationBehavior HotSpareValidator { get; set; }
 
 		public event EventHandler<RequestWebApiEventArgs> BeforeRequest;
 		public event EventHandler<RequestWebApiEventArgs> AfterRequest;
@@ -203,12 +205,26 @@ namespace Raven.Database.Server.WebApi
 
 					try
 					{
-						if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+						if (  controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-							response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+							if (controller.ResourceConfiguration.RejectClientsMode)
 							{
-								Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
-							};
+								response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+								{
+									Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
+								};
+							}
+							else if (IsInHotSpareMode)
+							{
+								response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+								{
+									Content = new MultiGetSafeStringContent("This service is not accepting clients calls because this is a 'Hot Spare' server")
+								};
+							}
+							else
+							{
+								response = await action();
+							}
 						}
 						else
 						{
@@ -248,6 +264,14 @@ namespace Raven.Database.Server.WebApi
 			}
 			return response;
 		}
+
+		/// <summary>
+		/// If set all client request to the server will be rejected with 
+		/// the http 503 response.
+		/// And no replication can be done from this database.
+		/// </summary>
+
+		public bool IsInHotSpareMode { get; set; }
 
 
 		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/

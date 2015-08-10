@@ -55,6 +55,7 @@ namespace Raven.Database.Server
 				countersLandlord = new CountersLandlord(systemDatabase);
 				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
+				systemDatabase.RequestManager = requestManager;
 				ClusterManager = new Reference<ClusterManager>();
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
@@ -67,7 +68,7 @@ namespace Raven.Database.Server
 					task.Execute(this);
 				}
 			}
-			catch
+			catch (Exception e)
 			{
 				if (systemDatabase != null)
 					systemDatabase.Dispose();

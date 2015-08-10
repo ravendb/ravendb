@@ -7,8 +7,11 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Raft.Util;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -180,7 +183,46 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return GetEmptyMessage();
         }
-        
+
+		[HttpGet]
+		[RavenRoute("admin/activate-hotspare")]
+		public HttpResponseMessage ActivateHotSpare()
+		{
+			//making sure this endpoint is not invoked on non hot spare license.
+			var status = Database.GetLicensingStatus();
+			string id;
+			if (!status.Attributes.TryGetValue("UserId", out id))
+			{
+				return new HttpResponseMessage(HttpStatusCode.Forbidden)
+				{
+					Content = new MultiGetSafeStringContent("Can't activate Hot Spare server, no valid license found")
+				};
+			}
+
+			
+			RequestManager.HotSpareValidator.ActivateHotSpareLicense();			
+			return GetEmptyMessage();			
+		}
+
+		[HttpGet]
+		[RavenRoute("admin/test-hotspare")]
+		public HttpResponseMessage TestHotSpare()
+		{
+			//making sure this endpoint is not invoked on non hot spare license.
+			var status = Database.GetLicensingStatus();
+			string id;
+			if (!status.Attributes.TryGetValue("UserId", out id))
+			{
+				return new HttpResponseMessage(HttpStatusCode.Forbidden)
+				{
+					Content = new MultiGetSafeStringContent("Can't test Hot Spare server, no valid license found")
+				};
+			}
+
+			RequestManager.HotSpareValidator.EnableTestModeForHotSpareLicense();
+			return GetEmptyMessage();
+		}
+
 		[HttpPost]
 		[RavenRoute("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
