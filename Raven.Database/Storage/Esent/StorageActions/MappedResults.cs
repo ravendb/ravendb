@@ -1078,10 +1078,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                     if (indexFromDb != view || hashReduceKey.SequenceEqual(hashKeyFromDb) == false)
                         break;
-
                     
                     var timestamp = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value;
                     var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+
+                    take--; // We have worked with this reduce key, so we consider it an output even if we don't add it. 
 
                     RavenJObject data = null;
                     if ( loadData )

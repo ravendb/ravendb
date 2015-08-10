@@ -499,17 +499,14 @@ namespace Raven.Database.Indexing
 				var getMappedResultsDuration = new Stopwatch();				
 
 				var reductionPerformanceStats = new List<IndexingPerformanceStats>();
-
-                // Try to diminish the allocations happening because of .Resize()
-                var keysLeftToReduce = new HashSet<string>(keysToReduce);
-                var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);
-                var keysReturned = new HashSet<string>();                  
-                             
+                
+                var keysLeftToReduce = new HashSet<string>(keysToReduce);                                              
 				while (keysLeftToReduce.Count > 0)
-				{					            					                    
-                    // This will clear the data of the list but will not release the memory already allocated, allowing to avoid allocations.
-                    mappedResults.Clear(); 
-                    keysReturned.Clear();                    
+				{
+                    var keysReturned = new HashSet<string>();       
+
+                    // Try to diminish the allocations happening because of .Resize()
+                    var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);                             
                     
                     context.TransactionalStorage.Batch(actions =>
 					{

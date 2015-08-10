@@ -1013,6 +1013,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                         var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
+                        take--; // We have worked with this reduce key, so we consider it an output even if we don't add it. 
+
                         RavenJObject data = null;
                         if ( loadData )
                         {
@@ -1037,9 +1039,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 }
 
                 if (take < 0)
-                {
                     return outputCollection;
-                }
             }
 
             return outputCollection;
