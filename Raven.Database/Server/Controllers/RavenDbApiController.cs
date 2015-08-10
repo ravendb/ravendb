@@ -295,6 +295,12 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
 				query.ShowTimings = true;
 
+            var skipDuplicateCheckingAsstring = GetQueryStringValue("skipDuplicateChecking");
+            bool skipDuplicateChecking;
+            if (string.IsNullOrEmpty(skipDuplicateCheckingAsstring) == false &&
+                bool.TryParse(skipDuplicateCheckingAsstring, out skipDuplicateChecking) && skipDuplicateChecking)
+                query.ShowTimings = true;
+
 			var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
 			var queryShape = GetQueryStringValue("queryShape");
 			SpatialUnits units;
