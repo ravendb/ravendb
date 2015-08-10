@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq.Expressions;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Tests.Core.ChangesApi;
 using Raven.Tests.Issues;
 
@@ -19,15 +22,16 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
-			{
-				using (var test = new RavenDB_3629())
-				{
-					test.Referenced_files_should_be_replicatedB();
-				}			
-				Console.WriteLine(i);
-			}
-		}
+            Expression<Func<object>> a = () => new string[0];
+            
+            Console.WriteLine(a.ToString());
+
+            Console.WriteLine();
+
+            var ab =
+                ExpressionStringBuilder.ExpressionToString(new DocumentConvention(), false, typeof(object), "docs", a);
+            Console.WriteLine(ab);
+        }
 
 	}
 }

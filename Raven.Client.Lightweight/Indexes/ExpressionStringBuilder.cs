@@ -1864,8 +1864,8 @@ namespace Raven.Client.Indexes
 					return node;
 
 				case ExpressionType.NewArrayBounds:
-					Out("new " + node.Type);
-					VisitExpressions('(', node.Expressions, ')');
+					Out("new " + node.Type.GetElementType());
+					VisitExpressions('[', node.Expressions, ']');
 					return node;
 			}
 			return node;
