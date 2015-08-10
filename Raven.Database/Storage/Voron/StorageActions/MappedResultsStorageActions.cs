@@ -977,57 +977,73 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken)
-		{
-			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
-			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
-			var keysToReduce = new HashSet<string>(keysLeftToReduce);
-			foreach (var reduceKey in keysToReduce)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
+        public List<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken, List<MappedResultInfo> outputCollection = null)
+        {
+            if (outputCollection == null)
+                outputCollection = new List<MappedResultInfo>();
 
-				keysLeftToReduce.Remove(reduceKey);
-				
+            var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
+            var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
+            
+            var keysToReduce = new HashSet<string>(keysLeftToReduce);
+            foreach (var reduceKey in keysToReduce)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                keysLeftToReduce.Remove(reduceKey);
+
                 var reduceKeyHash = HashKey(reduceKey);
                 var viewAndReduceKey = (Slice)CreateKey(view, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
-				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
-				{
-					keysReturned.Add(reduceKey);
+                using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
+                {
+                    keysReturned.Add(reduceKey);
 
-					if (!iterator.Seek(Slice.BeforeAllKeys))
-						continue;
+                    if (!iterator.Seek(Slice.BeforeAllKeys))
+                        continue;
 
-					do
-					{
-						cancellationToken.ThrowIfCancellationRequested();
+                    do
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
 
-						ushort version;
-						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-						if (value == null)
-							continue;
-						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
+                        ushort version;
+                        var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+                        if (value == null)
+                            continue;
+                        var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-						var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
+                        var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
-						yield return new MappedResultInfo
-						{
-							Bucket = value.ReadInt(MappedResultFields.Bucket),
-							ReduceKey = readReduceKey,
-							Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
-							Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
-							Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData) : null,
-							Size = size
-						};
-					}
-					while (iterator.MoveNext());
-				}
+                        RavenJObject data = null;
+                        if ( loadData )
+                        {
+                            data = LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData);
+                            if (data == null)
+                                continue; // If we request to load data and it is not there, we ignore it
+                        }
 
-				if (take < 0)
-				{
-					yield break;
-				}
-			}
-		}
+                        var mappedResult = new MappedResultInfo
+                        {
+                            Bucket = value.ReadInt(MappedResultFields.Bucket),
+                            ReduceKey = readReduceKey,
+                            Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
+                            Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
+                            Data = data,
+                            Size = size
+                        };
+
+                        outputCollection.Add(mappedResult);
+                    }
+                    while (iterator.MoveNext());
+                }
+
+                if (take < 0)
+                {
+                    return outputCollection;
+                }
+            }
+
+            return outputCollection;
+        }
 
 		private RavenJObject LoadMappedResult(Slice key, string reduceKey, VoronIndex dataIndex)
 		{

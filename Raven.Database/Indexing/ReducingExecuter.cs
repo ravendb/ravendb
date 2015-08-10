@@ -500,21 +500,24 @@ namespace Raven.Database.Indexing
 
 				var reductionPerformanceStats = new List<IndexingPerformanceStats>();
 
+                // Try to diminish the allocations happening because of .Resize()
                 var keysLeftToReduce = new HashSet<string>(keysToReduce);
+                var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);
+                var keysReturned = new HashSet<string>();                  
+                             
 				while (keysLeftToReduce.Count > 0)
-				{					
-					var keysReturned = new HashSet<string>();
-
-                    List<MappedResultInfo> mappedResults = null;
+				{					            					                    
+                    // This will clear the data of the list but will not release the memory already allocated, allowing to avoid allocations.
+                    mappedResults.Clear(); 
+                    keysReturned.Clear();                    
+                    
                     context.TransactionalStorage.Batch(actions =>
 					{
 						var take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
 						using (StopwatchScope.For(getMappedResultsDuration))
 						{
-                            mappedResults = actions.MapReduce.GetMappedResults(index.IndexId, keysLeftToReduce, true, take, keysReturned, token)
-                                                             .Where(x => x.Data != null)
-                                                             .ToList();
+                            mappedResults = actions.MapReduce.GetMappedResults(index.IndexId, keysLeftToReduce, true, take, keysReturned, token, mappedResults);
 						}
 					});
 
