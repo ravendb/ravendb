@@ -32,7 +32,7 @@ class versioningEntry implements copyFromParentDto<versioningEntry> {
         this.fromDatabase(fromDatabse);
 
         var id = dto.Id;
-        if (!id) {
+        if (!id && this.__metadata.id) {
             // pre 3.0 backward compatibility
             var prefix = "Raven/Versioning/";
             id = this.__metadata.id;
