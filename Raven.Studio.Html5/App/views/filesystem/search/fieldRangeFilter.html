@@ -10,7 +10,7 @@
         <div class="modal-body" data-bind="visible: isDateTime()">
             <div class="form-group">
                 <label>From: </label>
-                <div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate', isEnabled: datePickerEnabled }">
+                <div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate'}">
                     <input type="text" class="form-control" data-bind="value: from, valueUpdate: 'afterkeydown'" autofocus/>
                     <span class="input-group-addon" data-bind="visible:isDateTime()">
                         <span class="fa fa-calendar"></span>
@@ -19,7 +19,7 @@
             </div>
             <div class="form-group">
                 <label>To: </label>
-                <div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate', isEnabled: datePickerEnabled }">
+                <div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate' }">
                     <input type="text" class="form-control" data-bind="value: to, valueUpdate: 'afterkeydown'" autofocus/>
                     <span class="input-group-addon" data-bind="visible:isDateTime()">
                         <span class="fa fa-calendar"></span>
