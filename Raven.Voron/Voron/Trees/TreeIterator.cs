@@ -187,6 +187,7 @@ namespace Voron.Trees
 
 		public void Dispose()
 		{
+            _cursor.Dispose();
 		}
 
 		public Slice RequiredPrefix { get; set; }
