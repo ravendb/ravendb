@@ -76,6 +76,10 @@ namespace Raven.Client.Document
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
 		    var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
+		    for (int i = 0; i < destinationsToCheck.Count; i++)
+		    {
+		        latestEtags[i]= new ReplicatedEtagInfo {DestinationUrl = destinationsToCheck[i]};
+		    }
 
 			var tasks = destinationsToCheck.Select((url,index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token)).ToArray();
 
