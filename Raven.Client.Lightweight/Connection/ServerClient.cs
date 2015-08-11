@@ -233,7 +233,7 @@ namespace Raven.Client.Connection
 			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));
 		}
 
-		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc)
+		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc));
 		}

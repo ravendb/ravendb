@@ -186,44 +186,41 @@ namespace Raven.Database.Actions
 	        }
         }
 
-        private static void IsIndexNameValid(string indexName)
+        private static void IsIndexNameValid(string name)
         {
-	        var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
-            if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+	        var error = string.Format("Index name {0} not permitted. ", name).Replace("//","__");
+
+            if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(error + "Index names starting with dynamic_ or dynamic/ are reserved.");
-            }
-            if ( indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(error + "Index name dynamic is reserved.");
+				throw new ArgumentException(error + "Index names starting with dynamic_ or dynamic/ are reserved!", "name");
             }
 
-            if (indexName.Contains("//"))
+            if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(error+ "Index names cannot contains // (double slashes)");
+				throw new ArgumentException(error + "Index name dynamic is reserved!", "name");
+            }
 
+            if (name.Contains("//"))
+            {
+				throw new ArgumentException(error + "Index name cannot contain // (double slashes)", "name");
             }
         }
-       
 
         public bool IndexHasChanged(string name, IndexDefinition definition)
         {
             if (name == null)
                 throw new ArgumentNullException("name");
 
+			name = name.Trim();
             IsIndexNameValid(name);
 
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
-
             if (existingIndex == null)
             {
                 return true;
             }
 
-            name = name.Trim();
-
             var creationOption = FindIndexCreationOptions(definition, ref name);
-
             return creationOption != IndexCreationOptions.Noop;
         }
 
@@ -236,23 +233,26 @@ namespace Raven.Database.Actions
 	        return PutIndexInternal(name, definition);
         }
 
-		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
+		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isSideBySide = false)
 	    {
 		    if (name == null)
 			    throw new ArgumentNullException("name");
 
+			name = name.Trim();
 		    IsIndexNameValid(name);
 
 		    var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
-
 		    if (existingIndex != null)
 		    {
 			    switch (existingIndex.LockMode)
 			    {
 				    case IndexLockMode.SideBySide:
-					    Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
-					    throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
-
+					    if (isSideBySide == false)
+					    {
+						    Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
+						    throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
+					    }
+					    break;
 				    case IndexLockMode.LockedIgnore:
 					    Log.Info("Index {0} not saved because it was lock (with ignore)", name);
 					    return null;
@@ -260,19 +260,6 @@ namespace Raven.Database.Actions
 				    case IndexLockMode.LockedError:
 					    throw new InvalidOperationException("Can not overwrite locked index: " + name);
 			    }
-		    }
-
-		    name = name.Trim();
-
-		    if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ||
-		        name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
-		    {
-			    throw new ArgumentException("Cannot use index name " + name + " because it clashes with reserved dynamic index names", "name");
-		    }
-
-		    if (name.Contains("//"))
-		    {
-			    throw new ArgumentException("Cannot use an index with // in the name, but got: " + name, "name");
 		    }
 
 		    AssertAnalyzersValid(definition);
@@ -339,15 +326,15 @@ namespace Raven.Database.Actions
 			}
 		}
 
-		private string PutSideBySideIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
+		/*private string PutSideBySideIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
 
+			name = name.Trim();
 			IsIndexNameValid(name);
 
 			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
-
 			if (existingIndex != null)
 			{
 				switch (existingIndex.LockMode)
@@ -359,19 +346,6 @@ namespace Raven.Database.Actions
 					case IndexLockMode.LockedError:
 						throw new InvalidOperationException("Can not overwrite locked index: " + name);
 				}
-			}
-
-			name = name.Trim();
-
-			if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ||
-				name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
-			{
-				throw new ArgumentException("Cannot use index name " + name + " because it clashes with reserved dynamic index names", "name");
-			}
-
-			if (name.Contains("//"))
-			{
-				throw new ArgumentException("Cannot use an index with // in the name, but got: " + name, "name");
 			}
 
 			AssertAnalyzersValid(definition);
@@ -403,7 +377,7 @@ namespace Raven.Database.Actions
 			}));
 
 			return name;
-		}
+		}*/
 
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
@@ -414,7 +388,9 @@ namespace Raven.Database.Actions
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
-					var nameToAdd = PutSideBySideIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
+					var replaceIndexName = "ReplacementOf/" + indexToAdd.Name;
+					var existingSideBySideIndex = IndexDefinitionStorage.GetIndexDefinition(replaceIndexName);
+					var nameToAdd = PutIndexInternal(existingSideBySideIndex != null ? replaceIndexName : indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true, isSideBySide: true);
 					if (nameToAdd == null)
 						continue;
 

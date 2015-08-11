@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 			string[] createdIndexes;
 			try
 			{
-				createdIndexes = Database.Indexes.PutIndexes(sideBySideIndexes.IndexesToAdd);
+				createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes.IndexesToAdd);
 			}
 			catch (Exception ex)
 			{

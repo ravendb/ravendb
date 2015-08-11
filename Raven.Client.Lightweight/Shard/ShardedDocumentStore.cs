@@ -450,6 +450,12 @@ namespace Raven.Client.Shard
 				store.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
 		}
 
+		public override async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			foreach (var store in ShardStrategy.Shards.Values)
+				await store.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+		}
+
 		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();

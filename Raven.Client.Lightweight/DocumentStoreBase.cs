@@ -122,15 +122,15 @@ namespace Raven.Client
 				.Select(x => new IndexToAdd
 				{
 					Definition = x.CreateIndexDefinition(),
-					Name = "ReplacementOf/" + x.IndexName,
+					Name = x.IndexName,
 					Priority = x.Priority ?? IndexingPriority.Normal
 				})
 				.ToArray();
 
 			DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
 
-			/*foreach (var task in indexCreationTasks)
-				task.AfterExecute(DatabaseCommands, Conventions);*/
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
 		}
 
 		public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
@@ -139,16 +139,15 @@ namespace Raven.Client
 				.Select(x => new IndexToAdd
 				{
 					Definition = x.CreateIndexDefinition(),
-					Name = "ReplacementOf/" + x.IndexName,
+					Name = x.IndexName,
 					Priority = x.Priority ?? IndexingPriority.Normal
 				})
 				.ToArray();
 
 			await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 			
-
-			/*foreach (var task in indexCreationTasks)
-				task.AfterExecute(DatabaseCommands, Conventions);*/
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
 		}
 
 		/// <summary>

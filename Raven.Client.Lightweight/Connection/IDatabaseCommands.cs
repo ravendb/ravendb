@@ -475,7 +475,7 @@ namespace Raven.Client.Connection
 		///      Creates multiple side by side indexes with the specified name, using given index definitions and priorities
 		/// </summary>
 		/// <param name="indexesToAdd">indexes to add</param>
-		string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc);
+		string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
