@@ -306,16 +306,19 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/delete-points")]
 		[HttpDelete]
-		public HttpResponseMessage DeletePoints(TimeSeriesPointId[] points)
+		public async Task<HttpResponseMessage> DeletePoints()
 		{
-			if (points.Length == 0)
+			var points = await ReadJsonObjectAsync<TimeSeriesPointId[]>();
+            if (points == null || points.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
+			var deletedCount = 0;
 			using (var writer = Storage.CreateWriter())
 			{
 				foreach (var point in points)
 				{
-					writer.DeletePoint(point);
+					if (writer.DeletePoint(point))
+						deletedCount++;
 					writer.DeletePointInRollups(point);
 
 					Storage.MetricsTimeSeries.Deletes.Mark();
@@ -328,7 +331,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				}
 				writer.Commit();
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetMessageWithObject(deletedCount);
 			}
 		}
 

@@ -45,13 +45,14 @@ class deleteItems extends dialogViewModelBase {
 			});
             deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
         } else if (this.items()[0] instanceof timeSeriesPoint) {
-            deleteCommand = new deletePointsCommand(this.items().map((x: timeSeriesPoint) => {
+            var points = this.items().map((x: timeSeriesPoint) => {
                 return {
                     Type: x.type,
                     Key: x.key,
                     At: x.At
                 };
-            }), appUrl.getTimeSeries());
+            });
+            deleteCommand = new deletePointsCommand(points, appUrl.getTimeSeries());
         }
         var deleteCommandTask = deleteCommand.execute();
 
