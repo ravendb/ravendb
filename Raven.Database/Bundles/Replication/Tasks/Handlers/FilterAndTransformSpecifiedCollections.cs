@@ -6,49 +6,73 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jint.Native;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 {
-	public class TransformReplicatedDocs : IReplicatedDocsHandler
+	public class FilterAndTransformSpecifiedCollections : IReplicatedDocsHandler
 	{
 		private readonly static ILog Log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentDatabase database;
 		private readonly ReplicationStrategy strategy;
+		private readonly string destinationId;
 
-		public TransformReplicatedDocs(DocumentDatabase database, ReplicationStrategy strategy)
+		public FilterAndTransformSpecifiedCollections(DocumentDatabase database, ReplicationStrategy strategy, string destinationId)
 		{
 			this.database = database;
 			this.strategy = strategy;
+			this.destinationId = destinationId;
 		}
 
 		public IEnumerable<JsonDocument> Handle(IEnumerable<JsonDocument> docs)
 		{
-			if (strategy.TransformScripts == null || strategy.TransformScripts.Count == 0)
+			if (strategy.SpecifiedCollections == null || strategy.SpecifiedCollections.Count == 0)
 				return docs;
 
 			return docs.Select(doc =>
 			{
 				var collection = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-			    if (string.IsNullOrEmpty(collection))
-			        return doc;
+				string script;
+				if (string.IsNullOrEmpty(collection) || strategy.SpecifiedCollections.TryGetValue(collection, out script) == false)
+				{
+					Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because the replication of specified collection is turned on while the document does not belong to any of them", doc.Key, destinationId));
+					return null;
+				}
 
-                string script;
-				if (strategy.TransformScripts.TryGetValue(collection, out script) == false)
+				if (script == null)
 					return doc;
 
-				var patcher = new ScriptedJsonPatcher(database);
+				var scriptedPatchRequest = new ScriptedPatchRequest
+				{
+					Script = script
+				};
+
+				var patcher = new ReplicationScriptedJsonPatcher(database, scriptedPatchRequest);
 				using (var scope = new DefaultScriptedJsonPatcherOperationScope(database))
 				{
 					try
 					{
-						doc.DataAsJson = patcher.Apply(scope, doc.DataAsJson, new ScriptedPatchRequest { Script = script }, doc.SerializedSizeOnDisk);
 						
+						var transformedDoc = patcher.Apply(scope, doc.ToJson(), scriptedPatchRequest, doc.SerializedSizeOnDisk);
+
+						if (scope.ActualPatchResult == JsValue.Null) // null means that document should be skip
+						{
+							Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because a collection specific script filtered it out", doc.Key, destinationId));
+							return null;
+						}
+
+						doc.Metadata = (RavenJObject) transformedDoc[Constants.Metadata];
+						transformedDoc.Remove(Constants.Metadata);
+
+						doc.DataAsJson = transformedDoc;
+
 						return doc;
 					}
 					catch (ParseException e)
@@ -64,7 +88,8 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 						throw;
 					}
 				}
-			});	
+			})
+			.Where(x => x != null);
 		}
 	}
 }

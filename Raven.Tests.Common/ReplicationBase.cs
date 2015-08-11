@@ -230,7 +230,7 @@ namespace Raven.Tests.Common
 			string password = null,
 			string domain = null,
 			ReplicationClientConfiguration clientConfiguration = null,
-			string[] replicationSourceCollections = null,
+			Dictionary<string, string> specifiedCollections = null,
 			bool skipIndexReplication = false)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
@@ -246,7 +246,7 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
 					IgnoredClient = ignoredClient,
-					SourceCollections = replicationSourceCollections,
+					SpecifiedCollections = specifiedCollections,
 					SkipIndexReplication = skipIndexReplication
                 };
                 if (db != null)
@@ -291,20 +291,8 @@ namespace Raven.Tests.Common
 
         }
 
-		protected void SetupReplication(IDatabaseCommands source, Dictionary<DocumentStore, string[]> destinations)
-		{
-			
-			var destinationDocs = destinations.Select(destination => new RavenJObject
-	            {
-		            { "Url", destination.Key.Url },
-		            { "Database", destination.Key.DefaultDatabase },
-					{ "SourceCollections", RavenJToken.FromObject(destination.Value ?? (object)"[]") }
-	            }).ToList();			
 
-			SetupReplication(source, destinationDocs);
-		}
-
-		protected void SetupReplication(IDatabaseCommands source, string[] sourceCollections, params DocumentStore[] destinations)
+		protected void SetupReplication(IDatabaseCommands source, Dictionary<string, string> specifiedCollections, params DocumentStore[] destinations)
 		{
 			Assert.NotEmpty(destinations);
 
@@ -312,7 +300,7 @@ namespace Raven.Tests.Common
 	            {
 		            { "Url", destination.Url },
 		            { "Database", destination.DefaultDatabase },
-					{ "SourceCollections", new RavenJArray(sourceCollections.Cast<Object>()) }
+					{ "SpecifiedCollections", RavenJObject.FromObject(specifiedCollections) }
 	            }).ToList();			
 
 			SetupReplication(source, destinationDocs);

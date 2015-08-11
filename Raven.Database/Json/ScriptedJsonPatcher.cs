@@ -75,7 +75,7 @@ namespace Raven.Database.Json
 			if (document == null)
 				return null;
 
-			if (String.IsNullOrEmpty(patch.Script))
+			if (string.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
 			var resultDocument = ApplySingleScript(document, patch, size, docId, scope);
@@ -111,7 +111,7 @@ namespace Raven.Database.Json
 				PrepareEngine(patch, docId, size, scope, jintEngine);
 
 				var jsObject = scope.ToJsObject(jintEngine, doc);
-				jintEngine.Invoke("ExecutePatchScript", jsObject);
+				scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", jsObject);
 
 				CleanupEngine(patch, jintEngine, scope);
 
