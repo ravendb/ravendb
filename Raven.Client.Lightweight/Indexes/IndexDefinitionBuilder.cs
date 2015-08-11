@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
@@ -20,7 +21,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument, TReduceResult>
 	{
-		/// <summary>
+	    private readonly string indexName;
+	    /// <summary>
 		/// Gets or sets the map function
 		/// </summary>
 		/// <value>The map.</value>
@@ -125,9 +127,10 @@ namespace Raven.Client.Indexes
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
-		public IndexDefinitionBuilder()
+		public IndexDefinitionBuilder(string indexName = null)
 		{
-			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
+	        this.indexName = indexName ?? GetType().FullName;
+	        Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			StoresStrings = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
@@ -150,7 +153,7 @@ namespace Raven.Client.Indexes
 		{
 			if (Map == null && validateMap)
 				throw new InvalidOperationException(
-					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
+					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", indexName));
 
 		    try
 		    {
@@ -230,7 +233,7 @@ namespace Raven.Client.Indexes
             }
 		    catch (Exception e)
 		    {
-		        throw new InvalidOperationException("Failed to create index " + GetType().FullName, e);
+		        throw new IndexCompilationException("Failed to create index " + indexName, e);
 		    }
 		}
 
@@ -271,5 +274,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument>
 	{
+	    public IndexDefinitionBuilder(string indexName = null) : base(indexName)
+	    {
+	    }
 	}
 }
