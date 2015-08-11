@@ -444,10 +444,10 @@ namespace Raven.Client.Shard
 				await store.ExecuteIndexesAsync(indexCreationTasks).ConfigureAwait(false);
 		}
 
-		public override void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		public override void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			foreach (var store in ShardStrategy.Shards.Values)
-				store.ExecuteSideBySideIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+				store.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
 		}
 
 		public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)

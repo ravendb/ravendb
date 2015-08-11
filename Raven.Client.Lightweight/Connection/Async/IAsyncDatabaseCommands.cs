@@ -516,6 +516,15 @@ namespace Raven.Client.Connection.Async
 		Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
+		///     Creates multiple side by side indexes with the specified name, using given index definitions and priorities
+		/// </summary>
+		/// <param name="indexesToAdd">indexes to add</param>
+		/// <param name="minimumEtagBeforeReplace">minimum index etag before replace</param>
+		/// <param name="replaceTimeUtc">replace time in utc</param>
+		/// <param name="token">The cancellation token.</param>
+		Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken));
+
+		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
 		/// </summary>
 		/// <param name="name">name of an index</param>

@@ -339,6 +339,105 @@ namespace Raven.Database.Actions
 			}
 		}
 
+		private string PutSideBySideIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
+
+			IsIndexNameValid(name);
+
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+
+			if (existingIndex != null)
+			{
+				switch (existingIndex.LockMode)
+				{
+					case IndexLockMode.LockedIgnore:
+						Log.Info("Index {0} not saved because it was lock (with ignore)", name);
+						return null;
+
+					case IndexLockMode.LockedError:
+						throw new InvalidOperationException("Can not overwrite locked index: " + name);
+				}
+			}
+
+			name = name.Trim();
+
+			if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ||
+				name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+			{
+				throw new ArgumentException("Cannot use index name " + name + " because it clashes with reserved dynamic index names", "name");
+			}
+
+			if (name.Contains("//"))
+			{
+				throw new ArgumentException("Cannot use an index with // in the name, but got: " + name, "name");
+			}
+
+			AssertAnalyzersValid(definition);
+
+			switch (FindIndexCreationOptions(definition, ref name))
+			{
+				case IndexCreationOptions.Noop:
+					return null;
+				case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+					return null;
+				case IndexCreationOptions.Update:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					DeleteIndex(name);
+					break;
+			}
+
+			PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
+
+			WorkContext.ClearErrorsFor(name);
+
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
+
+			return name;
+		}
+
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
+		{
+			var createdIndexes = new List<string>();
+			var prioritiesList = new List<IndexingPriority>();
+			try
+			{
+				foreach (var indexToAdd in indexesToAdd)
+				{
+					var nameToAdd = PutSideBySideIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
+					if (nameToAdd == null)
+						continue;
+
+					createdIndexes.Add(nameToAdd);
+					prioritiesList.Add(indexToAdd.Priority);
+				}
+
+				var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
+				Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+
+				return createdIndexes.ToArray();
+			}
+			catch (Exception e)
+			{
+				Log.WarnException("Could not create index batch", e);
+				foreach (var index in createdIndexes)
+				{
+					DeleteIndex(index);
+				}
+				throw;
+			}
+		}
+
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
         {
             foreach (var analyzer in indexDefinition.Analyzers)

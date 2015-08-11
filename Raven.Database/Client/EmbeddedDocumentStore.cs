@@ -308,9 +308,9 @@ namespace Raven.Database.Client
 		    server.DocumentStore.ExecuteIndexes(indexCreationTasks);
 	    }
 
-	    public void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+	    public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 	    {
-			server.DocumentStore.ExecuteSideBySideIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+			server.DocumentStore.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
 	    }
 
 	    /// <summary>

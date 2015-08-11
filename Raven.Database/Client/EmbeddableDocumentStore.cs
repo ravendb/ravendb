@@ -328,7 +328,8 @@ namespace Raven.Client.Embedded
         {
             get { return Inner.DatabaseCommands; }
         }
-        public void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
+	    
+	    public void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
         {
             Inner.ExecuteIndex(indexCreationTask);
         }
@@ -338,10 +339,15 @@ namespace Raven.Client.Embedded
 		    Inner.ExecuteIndexes(indexCreationTasks);
 	    }
 
-	    public void ExecuteSideBySideIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+	    public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 	    {
-			Inner.ExecuteSideBySideIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+			Inner.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
 	    }
+
+		public Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			return Inner.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+		}
 
 	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
