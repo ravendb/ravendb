@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
@@ -40,13 +41,12 @@ namespace Raven.Tests.Counters
 				deltas.First(x => x.CounterName == "c1" && x.GroupName == "g1").Value.Should().Be(5);
 				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(1);
 
-				await counterStore.IncrementAsync("g1", "c2");
-				await counterStore.IncrementAsync("g", "c");
+				await counterStore.ChangeAsync("g1", "c2",1);
+				await counterStore.ChangeAsync("g", "c",-2);
 
-				var etag = deltas.Max(x => x.Etag);
-				deltas = await counterStore.Advanced.GetCounterDeltaSinceEtag(etag);
+				deltas = await counterStore.Advanced.GetCounterDeltaSinceEtag(deltas.Max(x => x.Etag));
 
-				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(1);
+				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-2);
 				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(1);
 
 				await counterStore.ChangeAsync("g", "c", -3);

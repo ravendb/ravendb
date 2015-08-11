@@ -735,9 +735,17 @@ namespace Raven.Database.Counters
 		public class Writer : IDisposable
 		{
 			private readonly CounterStorage parent;
-			private readonly Transaction transaction;
+			private readonly Transaction Tx;
 			private readonly Reader reader;
-			private readonly Tree counters, dateToTombstones, groupToCounters, tombstonesGroupToCounters, counterIdWithNameToGroup, etagsToCounters, countersToEtag, serversLastEtag, metadata;
+			private readonly Tree counters, 
+				dateToTombstones, 
+				groupToCounters, 
+				tombstonesGroupToCounters, 
+				counterIdWithNameToGroup, 
+				etagsToCounters, 
+				countersToEtag, 
+				serversLastEtag, 
+				metadata;
 			private readonly Buffer buffer;
 
 			private class Buffer
@@ -757,23 +765,23 @@ namespace Raven.Database.Counters
 				public byte[] CounterNameWithId = new byte[0];
 			}
 
-			public Writer(CounterStorage parent, Transaction transaction)
+			public Writer(CounterStorage parent, Transaction tx)
 			{
-				if (transaction.Flags != TransactionFlags.ReadWrite) //precaution
-					throw new InvalidOperationException(string.Format("Counters writer cannot be created with read-only transaction. (tx id = {0})", transaction.Id));
+				if (tx.Flags != TransactionFlags.ReadWrite) //precaution
+					throw new InvalidOperationException(string.Format("Counters writer cannot be created with read-only transaction. (tx id = {0})", tx.Id));
 
 				this.parent = parent;
-				this.transaction = transaction;
-				reader = new Reader(parent, transaction);
-				counters = transaction.State.GetTree(transaction, TreeNames.Counters);
-				dateToTombstones = transaction.State.GetTree(transaction, TreeNames.DateToTombstones);
-				groupToCounters = transaction.State.GetTree(transaction, TreeNames.GroupToCounters);
-				tombstonesGroupToCounters = transaction.State.GetTree(transaction, TreeNames.TombstonesGroupToCounters);
-				counterIdWithNameToGroup = transaction.State.GetTree(transaction, TreeNames.CounterIdWithNameToGroup);
-				countersToEtag = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
-				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
-				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
-				metadata = transaction.State.GetTree(transaction, TreeNames.Metadata);
+				Tx = tx;
+				reader = new Reader(parent, tx);
+				counters = tx.State.GetTree(tx, TreeNames.Counters);
+				dateToTombstones = tx.State.GetTree(tx, TreeNames.DateToTombstones);
+				groupToCounters = tx.State.GetTree(tx, TreeNames.GroupToCounters);
+				tombstonesGroupToCounters = tx.State.GetTree(tx, TreeNames.TombstonesGroupToCounters);
+				counterIdWithNameToGroup = tx.State.GetTree(tx, TreeNames.CounterIdWithNameToGroup);
+				countersToEtag = tx.State.GetTree(tx, TreeNames.CountersToEtag);
+				etagsToCounters = tx.State.GetTree(tx, TreeNames.EtagsToCounters);
+				serversLastEtag = tx.State.GetTree(tx, TreeNames.ServersLastEtag);
+				metadata = tx.State.GetTree(tx, TreeNames.Metadata);
 				buffer = new Buffer(parent.sizeOfGuid);
 			}
 
@@ -900,8 +908,7 @@ namespace Raven.Database.Counters
 				var idWithCounterNameSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
 				counterIdWithNameToGroup.Add(idWithCounterNameSlice, groupNameSlice);
 			}
-
-
+			
 			private Slice GetFullCounterNameSlice(byte[] counterIdBytes, Guid serverId, char sign)
 			{
 				var sliceWriter = new SliceWriter(buffer.FullCounterName);
@@ -1192,7 +1199,7 @@ namespace Raven.Database.Counters
 
 			public void Commit(bool notifyParent = true)
 			{
-				transaction.Commit();
+				Tx.Commit();
 				parent.LastWrite = SystemTime.UtcNow;
 				if (notifyParent)
 				{
@@ -1202,8 +1209,8 @@ namespace Raven.Database.Counters
 
 			public void Dispose()
 			{
-				if (transaction != null)
-					transaction.Dispose();
+				if (Tx != null)
+					Tx.Dispose();
 			}
 		}
 
