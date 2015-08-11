@@ -349,7 +349,7 @@ namespace Raven.Database.Config
                     // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
 
                     long alreadyAvailableMemory = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
-
+                    CurrentProcess.Refresh(); // we are using a cached instance here, so need to refresh the details
                     long workingSet = CurrentProcess.WorkingSet64;
                     long liveObjectMemory = GC.GetTotalMemory(false);
 
