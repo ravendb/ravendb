@@ -15,7 +15,7 @@ class getPointsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
-        var url = "/points/" + this.type + "/" + this.key;
+        var url = "/points/" + this.type + "?key=" + this.key;
         var doneTask = $.Deferred();
         var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.type, this.fields, this.key, d));
         var task = this.query(url, {

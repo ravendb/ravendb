@@ -15,7 +15,6 @@ using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.TimeSeries.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -61,7 +60,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/append/{type}/{*key}")]
+		[RavenRoute("ts/{timeSeriesName}/append/{type}")]
 		[HttpPost]
 		public HttpResponseMessage Append(string type, string key, TimeSeriesPoint input)
 		{
@@ -276,7 +275,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/delete/{type}/{*key}")]
+		[RavenRoute("ts/{timeSeriesName}/delete/{type}")]
 		[HttpDelete]
 		public HttpResponseMessage Delete(string type, string key)
 		{
@@ -305,7 +304,35 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/deleteRange/{type}/{*key}")]
+		[RavenRoute("ts/{timeSeriesName}/delete-points")]
+		[HttpDelete]
+		public HttpResponseMessage DeletePoints(TimeSeriesPointId[] points)
+		{
+			if (points.Length == 0)
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+
+			using (var writer = Storage.CreateWriter())
+			{
+				foreach (var point in points)
+				{
+					writer.DeletePoint(point);
+					writer.DeletePointInRollups(point);
+
+					Storage.MetricsTimeSeries.Deletes.Mark();
+					Storage.Publisher.RaiseNotification(new KeyChangeNotification
+					{
+						Type = point.Type,
+						Key = point.Key,
+						Action = TimeSeriesChangeAction.Delete,
+					});
+				}
+				writer.Commit();
+
+				return new HttpResponseMessage(HttpStatusCode.OK);
+			}
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/delete-range/{type}")]
 		[HttpDelete]
 		public HttpResponseMessage DeleteRange(string type, string key, long start, long end)
 		{
@@ -351,7 +378,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/key/{type}/{*key}")]
+		[RavenRoute("ts/{timeSeriesName}/key/{type}")]
 		[HttpGet]
 		public HttpResponseMessage GetKey(string type, string key)
 		{
@@ -375,7 +402,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/points/{type}/{*key}")]
+		[RavenRoute("ts/{timeSeriesName}/points/{type}")]
 		[HttpGet]
 		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20)
 		{

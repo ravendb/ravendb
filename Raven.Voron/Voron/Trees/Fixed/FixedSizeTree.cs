@@ -520,29 +520,29 @@ namespace Voron.Trees.Fixed
             return false;
         }
 
-        public void Delete(long key)
+        public DeletionResult Delete(long key)
         {
             switch (_flags)
             {
                 case null:
                     // nothing to do
-                    break;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
-                    RemoveEmbeddedEntry(key);
-                    break;
-                case FixedSizeTreeHeader.OptionFlags.Large:
-                    RemoveLargeEntry(key);
-                    break;
+		            return new DeletionResult();
+				case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    return RemoveEmbeddedEntry(key);
+	            case FixedSizeTreeHeader.OptionFlags.Large:
+                    return RemoveLargeEntry(key);
             }
+
+	        throw new InvalidOperationException("Flags has invalid value: " + _flags);
         }
 
-        public struct RangeDeletionResult
+        public struct DeletionResult
         {
             public long NumberOfEntriesDeleted;
             public bool TreeRemoved;
         }
 
-        public RangeDeletionResult DeleteRange(long start, long end)
+        public DeletionResult DeleteRange(long start, long end)
         {
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
@@ -562,7 +562,7 @@ namespace Voron.Trees.Fixed
                 default:
                     throw new InvalidOperationException("Flags value is not valid: " + _flags);
             }
-            return new RangeDeletionResult
+            return new DeletionResult
             {
                 NumberOfEntriesDeleted = entriedDeleted,
                 TreeRemoved = _flags == null
@@ -766,11 +766,11 @@ namespace Voron.Trees.Fixed
         }
 
 
-        private void RemoveLargeEntry(long key)
+        private DeletionResult RemoveLargeEntry(long key)
         {
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
-                return;
+                return new DeletionResult();
             page = _tx.ModifyPage(page.PageNumber, _parent, page);
 
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
@@ -782,6 +782,8 @@ namespace Voron.Trees.Fixed
             {
                 page = RebalancePage(page);
             }
+
+	        return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
         private void RemoveEntryFromPage(Page page, int pos)
@@ -992,7 +994,7 @@ namespace Voron.Trees.Fixed
         }
 
 
-        private void RemoveEmbeddedEntry(long key)
+        private DeletionResult RemoveEmbeddedEntry(long key)
         {
             byte* ptr = _parent.DirectRead(_treeName);
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
@@ -1000,14 +1002,14 @@ namespace Voron.Trees.Fixed
             var pos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, key, _entrySize);
             if (_lastMatch != 0)
             {
-                return; // not here, nothing to do
+                return new DeletionResult(); // not here, nothing to do
             }
             if (startingEntryCount == 1)
             {
                 // only single entry, just remove it
                 _flags = null;
                 _parent.Delete(_treeName);
-                return;
+                return new DeletionResult {NumberOfEntriesDeleted = 1, TreeRemoved = true};
             }
 
             byte* newData = _parent.DirectAdd(_treeName,
@@ -1021,9 +1023,10 @@ namespace Voron.Trees.Fixed
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+	        return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
-        public Slice Read(long key)
+		public Slice Read(long key)
         {
             switch (_flags)
             {

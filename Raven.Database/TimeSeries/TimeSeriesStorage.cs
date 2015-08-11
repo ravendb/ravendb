@@ -737,20 +737,57 @@ namespace Raven.Database.TimeSeries
 				return true;
 			}
 
+			public bool DeletePoint(TimeSeriesPointId point)
+			{
+				tree = tx.ReadTree(SeriesTreePrefix + point.Type);
+				if (tree == null)
+					return false;
+
+				var type = storage.GetType(point.Type);
+				if (type == null)
+					throw new InvalidOperationException("There is no type named: " + point.Type);
+
+				var fixedTree = tree.FixedTreeFor(point.Key, (byte)(type.Fields.Length * sizeof(double)));
+				var result = fixedTree.Delete(point.At.Ticks);
+				if (result.NumberOfEntriesDeleted > 0)
+				{
+					storage.UpdatePointsCount(tx, -1);
+				}
+				if (result.TreeRemoved)
+				{
+					storage.UpdateKeysCount(tx, -1);
+				}
+
+				return true;
+			}
+
 			public void DeleteKeyInRollups(string type, string key)
 			{
-				var seriesTree = tx.ReadTree(PeriodTreePrefix + type);
-				if (seriesTree == null)
+				var periodTree = tx.ReadTree(PeriodTreePrefix + type);
+				if (periodTree == null)
 					return;
 				
-				using (var it = seriesTree.Iterate())
+				// TODO: Implement better: we cannot delete and continue the iteration without a seek
+				throw new NotImplementedException();
+				using (var it = periodTree.Iterate())
 				{
 					it.RequiredPrefix = key + PeriodsKeySeparator;
 					if (it.Seek(it.RequiredPrefix))
 					{
-						seriesTree.Delete(it.CurrentKey);
+						periodTree.Delete(it.CurrentKey);
 					}
 				}
+			}
+
+			public void DeletePointInRollups(TimeSeriesPointId point)
+			{
+				var periodTree = tx.ReadTree(PeriodTreePrefix + point.Type);
+				if (periodTree == null)
+					return
+						;
+
+				// TODO: Implement better: we cannot delete and continue the iteration without a seek
+				throw new NotImplementedException();
 			}
 
 			public void DeleteRange(string typeName, string key, long start, long end)

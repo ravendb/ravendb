@@ -10,6 +10,12 @@ interface timeSeriesKeyDto {
     PointsCount: number;
 }
 
+interface pointIdDto {
+    Type: string;
+    Key: string;
+    At: string;
+}
+
 interface pointDto {
     At: string;
     Values: number[];

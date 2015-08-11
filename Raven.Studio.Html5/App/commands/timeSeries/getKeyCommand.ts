@@ -11,7 +11,7 @@ class getKeyCommand extends commandBase {
     execute(): JQueryPromise<timeSeriesKey> {
         var doneTask = $.Deferred();
         var selector = (key: timeSeriesKeyDto) => new timeSeriesKey(key, this.ts);
-        var task = this.query("/key/" + this.type + "/" + this.key, null, this.ts, selector);
+        var task = this.query("/key/" + this.type + "?key=" + this.key, null, this.ts, selector);
         task.done((key: timeSeriesKeyDto) => doneTask.resolve(key));
         task.fail(xhr => doneTask.reject(xhr));
         return doneTask;
