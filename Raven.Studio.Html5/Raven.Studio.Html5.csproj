@@ -639,6 +639,7 @@
     <TypeScriptCompile Include="App\commands\database\patch\getPatchesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\patch\savePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\query\enableQueryTimings.ts" />
     <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
