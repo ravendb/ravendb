@@ -56,7 +56,6 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			ShowLogs = true;
 
 			var store1 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store1");
 			var store2 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store2");
@@ -106,6 +105,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanSpecifyTimeoutWhenWaitingForReplication()
 		{
+		    ShowLogs = true;
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
@@ -124,8 +124,6 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-			ShowLogs = true;
-
 			var store1 = CreateStore(requestedStorageType: "esent");
 			var store2 = CreateStore(requestedStorageType: "esent");
 
