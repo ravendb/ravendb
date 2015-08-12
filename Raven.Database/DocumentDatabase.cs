@@ -189,7 +189,6 @@ namespace Raven.Database
 					initializer.InitializeIndexStorage();
 
 				
-
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
@@ -197,6 +196,8 @@ namespace Raven.Database
 					IndexReplacer = new IndexReplacer(this);
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
+
+				    EnsureAllIndexDefinitionsHaveIndexes();
 
 					RaiseIndexingWiringComplete();
 
@@ -221,7 +222,22 @@ namespace Raven.Database
 			}
 		}
 
-		public event EventHandler Disposing;
+	    private void EnsureAllIndexDefinitionsHaveIndexes()
+	    {
+	        // this code is here to make sure that all index defs in the storage have
+            // matching indexes.
+	        foreach (var index in IndexDefinitionStorage.IndexNames)
+	        {
+                if (IndexStorage.HasIndex(index))
+                    continue;
+	            var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
+	            // here we have an index definition without an index
+	            Indexes.DeleteIndex(index);
+	            Indexes.PutIndex(index, indexDefinition);
+	        }
+	    }
+
+	    public event EventHandler Disposing;
 
 		public event EventHandler DisposingEnded;
 
