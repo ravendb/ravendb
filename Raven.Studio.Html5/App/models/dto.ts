@@ -46,6 +46,7 @@ interface logNotificationDto {
     CustomInfo: string;
     TenantType: TenantType;
     InnerRequestsCount?: number;
+    QueryTimings: any;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
