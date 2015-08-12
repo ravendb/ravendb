@@ -434,7 +434,6 @@ namespace Raven.Database.Server.Controllers.Admin
 				foreach (var destination in replicationDocument.Destinations)
 				{
 					destination.Disabled = true;
-					destination.SourceCollections = new string[0];
 				}
 
 				database

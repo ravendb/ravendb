@@ -99,14 +99,11 @@ class replications extends viewModelBase {
 
         $.each(this.replicationsSetup().destinations(), (i, dest) =>
         {
-            replicationSetupDirtyFlagItems.push(<any>dest.sourceCollections);
-            dest.sourceCollections.subscribe(array => {
-                if (array.length > 0)
-                    dest.ignoredClient(true);
-                else {
-                    dest.ignoredClient(false);
-                }
+            replicationSetupDirtyFlagItems.push(<any>dest.specifiedCollections);
+            dest.specifiedCollections.subscribe(array => {
+                dest.ignoredClient(dest.specifiedCollections.length > 0);
             });
+            this.addScriptHelpPopover();
         });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
         
@@ -166,17 +163,48 @@ class replications extends viewModelBase {
         return deferred;
     }
 
-    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
-        if (destination.sourceCollections.indexOf(collectionName) < 0) {
-            destination.sourceCollections.push(collectionName);
+    addScriptHelpPopover() {
+        $(".scriptPopover").popover({
+            html: true,
+            trigger: 'hover',
+            content:
+                'Return <code>null</code> in transform script to skip document from replication. <br />' +
+                    'Example: ' +
+                    '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
+        });
+    }
+
+    public onTransformCollectionClick(destination: replicationDestination, collectionName: string) {
+        var collections = destination.specifiedCollections();
+        var item = collections.first(c => c.collection() === collectionName);
+
+        if (typeof(item.script()) === "undefined") {
+            item.script("");
         } else {
-            destination.sourceCollections.remove(collectionName);
+            item.script(undefined);
         }
+
+        destination.specifiedCollections.notifySubscribers();
+    }
+
+    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
+        var collections = destination.specifiedCollections();
+        var item = collections.first(c => c.collection() === collectionName);
+        if (item) {
+            collections.remove(item);
+        } else {
+            var patchScript = replicationPatchScript.empty();
+            patchScript.collection(collectionName);
+            collections.push(patchScript);
+        }
+
+        destination.specifiedCollections.notifySubscribers();
     }
 
     createNewDestination() {
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
+        this.addScriptHelpPopover();
     }
 
     removeDestination(repl: replicationDestination) {
@@ -307,9 +335,6 @@ class replications extends viewModelBase {
             });
     }
 
-    createNewTransformativeReplication(destination: replicationDestination) {
-        destination.transformScripts.push(replicationPatchScript.empty());
-    }
 }
 
 export = replications; 

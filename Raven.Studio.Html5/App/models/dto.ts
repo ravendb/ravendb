@@ -461,10 +461,9 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
-    SourceCollections: string[];
+    SpecifiedCollections: dictionary<string>;
     HasGlobal?: boolean;
     HasLocal?: boolean;
-    TransformScripts: dictionary<string>;
 }
 
 interface configurationDocumentDto<TClass> {
