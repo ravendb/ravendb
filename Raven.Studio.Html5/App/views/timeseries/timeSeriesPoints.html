@@ -1,0 +1,50 @@
+﻿<div class="documents-page no-outline" tabindex="0">
+    <div class="col-md-12">
+        <div class="btn-toolbar" role="toolbar">
+            <!-- TODO: create a page in documentation -->
+            <!--<a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>-->
+            <div class="btn-group">
+                <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasPoints" title="Select all or none">
+                    <img data-bind="checkboxTriple: pointsSelection" />
+                </button>
+            </div>
+	        <div class="btn-group">
+		        <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newPoint" title="Create a new point (Alt+N)">
+			        <i class="fa fa-plus"></i> New Point
+		        </button>
+	        </div>
+			 <div class="btn-group">
+				<button type="button" class="btn btn-default" data-bind="click: refresh, disable: showLoadingIndicator() || isInitialized() == false" title="Refresh from server">
+					<i class="fa fa-refresh"></i>
+				</button>
+			</div>
+	        <div class="btn-group" data-bind="visible: hasAnyPointsSelected">
+		        <button type="button" class="btn btn-default" data-bind="click: changePoint, enable: selectedPointsIndices().length == 1" title="Change Point Value">
+			        <i class="fa fa-wrench"></i>
+		        </button>
+                <button type="button" class="btn btn-default" data-bind="click: deleteSelectedPoints, attr: { title: selectedPointsIndices().length == 1 ? 'Delete Point' : 'Delete Points' }">
+                    <i class="fa fa-trash-o"></i>
+                </button>
+			</div>
+            <div class="btn-group">
+                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i>
+                </div>
+            </div>
+        </div>
+       <div class="documents-select" data-bind="with: currentKey, visible: hasAnyPointsSelected() && !hasAllPointsSelected() && isAnyPointsAutoSelected()">
+            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedPointsIndices().length"></strong> <span data-bind="text: $root.selectedPointsText"></span>.
+            <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
+                Select all <strong data-bind="text: Points"></strong> <span data-bind="text: $root.selectedPointsText"></span> in <span data-bind="text: Key"></span>
+            </span>
+        </div>
+        <div class="documents-select" data-bind="with: currentKey, visible: hasAllPointsSelected() && isAllPointsAutoSelected()">
+            You have selected <strong data-bind="text: $root.selectedPointsIndices().length"></strong> <span data-bind="text: $root.selectedPointsText"></span> in
+            <span data-bind="text: name"></span>.
+            <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
+                Clear selection
+            </span>
+        </div>
+
+		<div id="pointsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: pagedItems, selectedIndices: selectedPointsIndices, gridSelector: '#pointsGrid', collections: types, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyPointsAutoSelected, isAllAutoSelected: isAllPointsAutoSelected, contextMenuOptions: ['ChangeValue', 'Delete'], showIds: false, noResultsMessage: 'No points were found!' }"></div>
+    </div>
+</div>

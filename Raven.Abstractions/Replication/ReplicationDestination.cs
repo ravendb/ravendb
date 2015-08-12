@@ -24,7 +24,6 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 
 		private string url;
-		private string[] _sourceCollections;
 
 		/// <summary>
 		/// Gets or sets the URL of the replication destination
@@ -36,24 +35,6 @@ namespace Raven.Abstractions.Replication
 			set
 			{
 				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-			}
-		}
-
-		/// <summary>
-		/// If an option to replicate only from specific collections is selected, 
-		/// replicate documents only from the specified collections
-		/// </summary>
-		public string[] SourceCollections
-		{
-			get
-			{
-				return _sourceCollections ?? (_sourceCollections = new string[0]);
-			}
-			set
-			{
-				_sourceCollections = value;
-				if (value != null && value.Length > 0)
-					IgnoredClient = true;
 			}
 		}
 
@@ -110,9 +91,9 @@ namespace Raven.Abstractions.Replication
 		public string ClientVisibleUrl { get; set; }
 
 		/// <summary>
-		/// Gets or sets JS scripts that will transform documents when sending them to a destination
+		/// If not null then only docs from specified collections are replicated and transformed / filtered according to an optional script.
 		/// </summary>
-		public Dictionary<string, string> TransformScripts { get; set; } 
+		public Dictionary<string, string> SpecifiedCollections { get; set; } 
 
 		public string Humane
 		{
@@ -126,7 +107,7 @@ namespace Raven.Abstractions.Replication
 
 		public bool CanBeFailover()
 		{
-			return IgnoredClient == false && Disabled == false && SourceCollections.Length == 0;
+			return IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
 		}
 
 		protected bool Equals(ReplicationDestination other)
@@ -143,7 +124,7 @@ namespace Raven.Abstractions.Replication
 				   IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
 				   ((string.Equals(Url, other.Url, StringComparison.InvariantCultureIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
 				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase))) &&
-				   Extensions.DictionaryExtensions.ContentEquals(TransformScripts, other.TransformScripts);
+				   Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
 		}
 
 		public override bool Equals(object obj)
@@ -198,7 +179,7 @@ namespace Raven.Abstractions.Replication
 						   TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
 						   Url = source.Url,
 						   Username = source.Username,
-						   SourceCollections = source.SourceCollections
+						   SpecifiedCollections = source.SpecifiedCollections
 					   };
 			}
 		}

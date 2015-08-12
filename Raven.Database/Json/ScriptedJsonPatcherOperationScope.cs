@@ -29,6 +29,7 @@ namespace Raven.Database.Json
 
 		public int AdditionalStepsPerSize { get; set; }
 		public int MaxSteps { get; set; }
+		public JsValue ActualPatchResult { get; set; }
 
 		protected ScriptedJsonPatcherOperationScope(DocumentDatabase database, bool debugMode)
 		{

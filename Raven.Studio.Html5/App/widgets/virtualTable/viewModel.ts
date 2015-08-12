@@ -15,6 +15,8 @@ import column = require("widgets/virtualTable/column");
 import customColumnParams = require("models/database/documents/customColumnParams");
 import customColumns = require("models/database/documents/customColumns");
 import customFunctions = require("models/database/documents/customFunctions");
+import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
+import timeSeriesType = require("models/timeSeries/timeSeriesType");
 
 class ctor {
 
@@ -311,10 +313,12 @@ class ctor {
             rowAtIndex.fillCells(rowData);
             var entityName = this.getEntityName(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
-
+            
 	        var editUrl: string;
 			if (rowData instanceof counterSummary) {
 				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group"], rowData["Name"]);
+            } else if (rowData instanceof timeSeriesKey) {
+                editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
 			} else {
 				editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
 			}
@@ -330,8 +334,10 @@ class ctor {
 
 			var editUrl: string;
 			if (selectedItem instanceof counterSummary) {
-				editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Name"], selectedItem["Group"]);
-			} else {
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group"], selectedItem["Name"]);
+            } else if (selectedItem instanceof timeSeriesKey) {
+                editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
+            } else {
 				editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
 			}
             router.navigate(editUrl);
@@ -344,6 +350,9 @@ class ctor {
         }
         if (rowData instanceof counterSummary) {
             return counterGroup.getGroupCssClass(entityName, appUrl.getCounterStorage());
+        }
+        if (rowData instanceof timeSeriesKey) {
+            return timeSeriesType.getTypeCssClass(entityName, appUrl.getTimeSeries());
         }
         return "";
     }
@@ -359,6 +368,10 @@ class ctor {
                 var counterSummaryObj = <counterSummary> obj;
                 return counterSummaryObj.getEntityName();
             }
+            if (obj instanceof timeSeriesKey) {
+                var timeSeriesKeyObj = <timeSeriesKey> obj;
+                return timeSeriesKeyObj.getEntityName();
+            }
         }
         return null;
     }
@@ -366,6 +379,11 @@ class ctor {
 	isCounterView(): boolean {
 		var item = this.items.getItem(0);
 		return item instanceof counterSummary;
+	}
+
+	isTimeSeriesView(): boolean {
+		var item = this.items.getItem(0);
+		return item instanceof timeSeriesKey;
 	}
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {

@@ -217,10 +217,10 @@ class resources extends viewModelBase {
         });
         this.counterStorages().map((cs: counterStorage) => cs.isChecked(!cs.isVisible() ? false : cs.isChecked()));
 
-        this.timeSeries().forEach(cs => {
+        this.timeSeries().forEach(ts => {
             var typeMatch = !this.visibleResource() || this.visibleResource() === timeSeries.type;
-            var isMatch = (!filter || (cs.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
-            cs.isVisible(isMatch);
+            var isMatch = (!filter || (ts.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            ts.isVisible(isMatch);
         });
         this.timeSeries().map((ts: timeSeries) => ts.isChecked(!ts.isVisible() ? false : ts.isChecked()));
     }
@@ -238,7 +238,7 @@ class resources extends viewModelBase {
     }
 
     getTimeSeriesUrl(ts: timeSeries) {
-        return appUrl.forTimeSeriesSeries(null, ts);
+        return appUrl.forTimeSeriesType(null, ts);
     }
 
     selectResource(rs: resource, activateResource: boolean = true) {

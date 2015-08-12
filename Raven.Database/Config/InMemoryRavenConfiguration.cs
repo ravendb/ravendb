@@ -118,6 +118,7 @@ namespace Raven.Database.Config
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
 			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
+			DataDirectory = ravenSettings.DataDir.Value;
 			FileSystem.InitializeFrom(this);
 			Counter.InitializeFrom(this);
 			TimeSeries.InitializeFrom(this);
@@ -241,8 +242,6 @@ namespace Raven.Database.Config
 			DisableInMemoryIndexing = ravenSettings.DisableInMemoryIndexing.Value;
 
 			SetupTransactionMode();
-
-			DataDirectory = ravenSettings.DataDir.Value;
 
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)

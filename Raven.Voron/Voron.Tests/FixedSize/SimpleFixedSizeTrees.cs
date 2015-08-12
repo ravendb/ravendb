@@ -5,16 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Text;
-using Voron.Trees.Fixed;
 using Xunit;
 
 namespace Voron.Tests.FixedSize
 {
     public class SimpleFixedSizeTrees : StorageTest
     {
-
-
         [Fact]
         public void TimeSeries()
         {
@@ -199,6 +195,153 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
         }
+
+		[Fact]
+		public void CanDeleteRange()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					fst.Add(i, new Slice(BitConverter.GetBytes(i + 10L)));
+				}
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				var itemsRemoved = fst.DeleteRange(2, 5);
+				Assert.Equal(4, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(false, itemsRemoved.TreeRemoved);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					if (i >= 2 && i <= 5)
+					{
+						Assert.False(fst.Contains(i), i.ToString());
+						Assert.Null(fst.Read(i));
+					}
+					else
+					{
+						Assert.True(fst.Contains(i), i.ToString());
+						Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+					}
+				}
+				tx.Commit();
+			}
+		}
+
+		[Fact]
+		public void CanDeleteRangeWithGaps()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					fst.Add(i, new Slice(BitConverter.GetBytes(i + 10L)));
+				}
+				for (int i = 30; i <= 40; i++)
+				{
+					fst.Add(i, new Slice(BitConverter.GetBytes(i + 10L)));
+				}
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				var itemsRemoved = fst.DeleteRange(2, 35);
+				Assert.Equal(15, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(false, itemsRemoved.TreeRemoved);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					if (i >= 2)
+					{
+						Assert.False(fst.Contains(i), i.ToString());
+						Assert.Null(fst.Read(i));
+					}
+					else
+					{
+						Assert.True(fst.Contains(i), i.ToString());
+						Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+					}
+				}
+				for (int i = 30; i <= 40; i++)
+				{
+					if (i <= 35)
+					{
+						Assert.False(fst.Contains(i), i.ToString());
+						Assert.Null(fst.Read(i));
+					}
+					else
+					{
+						Assert.True(fst.Contains(i), i.ToString());
+						Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+					}
+				}
+				tx.Commit();
+			}
+		}
+
+		[Fact]
+		public void CanDeleteAllRange()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					fst.Add(i, new Slice(BitConverter.GetBytes(i + 10L)));
+				}
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
+				Assert.Equal(10, itemsRemoved.NumberOfEntriesDeleted);
+				Assert.Equal(true, itemsRemoved.TreeRemoved);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var fst = tx.State.Root.FixedTreeFor("test", 8);
+
+				for (int i = 1; i <= 10; i++)
+				{
+					Assert.False(fst.Contains(i), i.ToString());
+					Assert.Null(fst.Read(i));
+				}
+				tx.Commit();
+			}
+		}
 
         [Fact]
         public void CanAdd_WithValue()

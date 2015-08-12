@@ -13,4 +13,4 @@ class forceLicenseUpdate extends commandBase {
 
 }
 
-export = forceLicenseUpdate; 
+export = forceLicenseUpdate;

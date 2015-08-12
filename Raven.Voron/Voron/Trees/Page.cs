@@ -1051,7 +1051,7 @@ namespace Voron.Trees
 
                 if (prev.Compare(current) >= 0)
                 {
-                    DebugStuff.RenderAndShow(tx, root, 1);
+                    DebugStuff.RenderAndShow(tx, root);
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
@@ -1059,7 +1059,7 @@ namespace Voron.Trees
                 {
                     if (pages.Add(node->PageNumber) == false)
                     {
-                        DebugStuff.RenderAndShow(tx, root, 1);
+                        DebugStuff.RenderAndShow(tx, root);
                         throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
                     }
                 }
