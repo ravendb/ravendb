@@ -871,10 +871,10 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			FlushMapIndexes();
-			FlushReduceIndexes();
-
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly close index storage");
+
+		    exceptionAggregator.Execute(FlushMapIndexes);
+            exceptionAggregator.Execute(FlushReduceIndexes);
 
 			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => exceptionAggregator.Execute(index.Dispose)));
 
