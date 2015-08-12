@@ -233,12 +233,13 @@ namespace Raven.Database.Indexing
 
 							reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
-                            int size = 0;                            
-                            MappedResultInfo[] persistedResults;
+                            int size = 0;                  
+          
+                            IList<MappedResultInfo> persistedResults;
                             var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 							using (StopwatchScope.For(gettingItemsToReduceDuration))
 							{
-                                persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams, token).ToArray();                                
+                                persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams, token);                                
 
                                 foreach (var item in persistedResults)
                                 {
@@ -247,22 +248,22 @@ namespace Raven.Database.Indexing
                                 }
 							}
 
-                            if (persistedResults.Length == 0)
+                            if (persistedResults.Count == 0)
 							{
 								retry = false;
 								return;
 							}
 
-                            var count = persistedResults.Length;
+                            var count = persistedResults.Count;
 
 							autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reduceBatchAutoThrottlerId, size);
 
 							if (Log.IsDebugEnabled)
 							{
-                                if (persistedResults.Length > 0)
+                                if (persistedResults.Count > 0)
                                 {
                                     Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
-                                        persistedResults.Length,
+                                        persistedResults.Count,
                                         string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
                                         index.IndexId, level, batchTimeWatcher.Elapsed));
                                 }
@@ -309,7 +310,7 @@ namespace Raven.Database.Indexing
                             var results = persistedResults.Where(x => x.Data != null)
                                                           .GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data));                            
 
-                            var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Length);
+                            var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
                             context.MetricsCounters.ReducedPerSecond.Mark(results.Count());
 
@@ -498,22 +499,22 @@ namespace Raven.Database.Indexing
 				var getMappedResultsDuration = new Stopwatch();				
 
 				var reductionPerformanceStats = new List<IndexingPerformanceStats>();
-
-                var keysLeftToReduce = new HashSet<string>(keysToReduce);
+                
+                var keysLeftToReduce = new HashSet<string>(keysToReduce);                                              
 				while (keysLeftToReduce.Count > 0)
-				{					
-					var keysReturned = new HashSet<string>();
+				{
+                    var keysReturned = new HashSet<string>();       
 
-                    List<MappedResultInfo> mappedResults = null;
+                    // Try to diminish the allocations happening because of .Resize()
+                    var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);                             
+                    
                     context.TransactionalStorage.Batch(actions =>
 					{
 						var take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
 						using (StopwatchScope.For(getMappedResultsDuration))
 						{
-                            mappedResults = actions.MapReduce.GetMappedResults(index.IndexId, keysLeftToReduce, true, take, keysReturned, token)
-                                                             .Where(x => x.Data != null)
-                                                             .ToList();
+                            mappedResults = actions.MapReduce.GetMappedResults(index.IndexId, keysLeftToReduce, true, take, keysReturned, token, mappedResults);
 						}
 					});
 

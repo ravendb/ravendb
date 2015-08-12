@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,13 +14,16 @@ namespace Voron.Impl
 {
 	public class WriteBatch : IDisposable
 	{
+        private static readonly ObjectPool<Dictionary<Slice, BatchOperation>> _lastOperationsPool = new ObjectPool<Dictionary<Slice, BatchOperation>>(() => new Dictionary<Slice, BatchOperation>(SliceComparer.Instance), 50);
+        private static readonly ObjectPool<Dictionary<Slice, List<BatchOperation>>> _multiTreeOperationsPool = new ObjectPool<Dictionary<Slice, List<BatchOperation>>>(() => new Dictionary<Slice, List<BatchOperation>>(SliceComparer.Instance), 50);
+
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
-		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
+        private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
 
 		private readonly HashSet<string> _trees = new HashSet<string>();
 
-        private readonly SliceComparer _sliceEqualityComparer;
 		private bool _disposeAfterWrite = true;
+        private volatile bool _disposed = false;
 
 		public HashSet<string> Trees
 		{
@@ -34,7 +38,7 @@ namespace Voron.Impl
 			Dictionary<Slice, BatchOperation> operations;
 			if (_lastOperations.TryGetValue(treeName, out operations))
 			{
-				foreach (var operation in operations.OrderBy(x => x.Key, _sliceEqualityComparer))
+                foreach (var operation in operations.OrderBy(x => x.Key, SliceComparer.Instance))
 					yield return operation.Value;
 			}
 
@@ -47,8 +51,8 @@ namespace Voron.Impl
 
             var orderedOperations = multiOperations
                         				.SelectMany(x => x.Value)
-				                        .OrderBy(x => x.ValueSlice, _sliceEqualityComparer)
-                                        .ThenBy(x => x.Key, _sliceEqualityComparer);
+                                        .OrderBy(x => x.ValueSlice, SliceComparer.Instance)
+                                        .ThenBy(x => x.Key, SliceComparer.Instance);
 
             foreach (var operation in orderedOperations)
 				yield return operation;
@@ -119,7 +123,6 @@ namespace Voron.Impl
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
-			_sliceEqualityComparer = new SliceComparer();
 		}
 
 		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
@@ -217,8 +220,8 @@ namespace Voron.Impl
 				Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
 				if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
 				{
-					_multiTreeOperations[treeName] =
-						multiTreeOperationsOfTree = new Dictionary<Slice, List<BatchOperation>>(_sliceEqualityComparer);
+                    _multiTreeOperations[treeName] = multiTreeOperationsOfTree = _multiTreeOperationsPool.Allocate();
+                    Debug.Assert(multiTreeOperationsOfTree.Count == 0);
 				}
 
 				List<BatchOperation> specificMultiTreeOperations;
@@ -234,7 +237,8 @@ namespace Voron.Impl
 				Dictionary<Slice, BatchOperation> lastOpsForTree;
 				if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
 				{
-					_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+                    _lastOperations[treeName] = lastOpsForTree = _lastOperationsPool.Allocate();
+                    Debug.Assert(lastOpsForTree.Count == 0); // Make sure we didn't mess up when cleaning up.
 				}
 
 				BatchOperation old;
@@ -452,19 +456,34 @@ namespace Voron.Impl
 
 		public void Dispose()
 		{
-			foreach (var operation in _lastOperations)
-			{
-				foreach (var val in operation.Value)
-				{
-					if (val.Value.ValueStream == null)
-						continue;
+            // Guard to avoid multiple disposing scenarios. 
+            if (_disposed == false )
+            {
+                _disposed = true;
 
-					val.Value.ValueStream.Dispose();
-				}
+                foreach (var operation in _lastOperations)
+                {
+                    foreach (var val in operation.Value)
+                    {
+                        if (val.Value.ValueStream == null)
+                            continue;
 
-			}
+                        val.Value.ValueStream.Dispose();
+                    }
 
-			_lastOperations.Clear();
+                    operation.Value.Clear();
+                    _lastOperationsPool.Free(operation.Value);
+
+                }
+
+                foreach (var item in _multiTreeOperations)
+                {
+                    item.Value.Clear();
+                    _multiTreeOperationsPool.Free(item.Value);
+                }
+
+                _lastOperations.Clear();
+            }
 		}
 	}
 }

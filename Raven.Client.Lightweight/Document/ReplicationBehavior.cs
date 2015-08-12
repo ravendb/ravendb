@@ -75,7 +75,13 @@ namespace Raven.Client.Document
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, cts.Token)).ToArray();
+		    var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
+		    for (int i = 0; i < destinationsToCheck.Count; i++)
+		    {
+		        latestEtags[i]= new ReplicatedEtagInfo {DestinationUrl = destinationsToCheck[i]};
+		    }
+
+			var tasks = destinationsToCheck.Select((url,index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token)).ToArray();
 
 		    try
 		    {
@@ -99,11 +105,12 @@ namespace Raven.Client.Document
 			    }
 
 			    // we have either completed (but not enough) or cancelled, meaning timeout
-		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", 
+		        var message = string.Format("Could only confirm that the specified Etag {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
                     etag,
                     successCount,
                     destinationsToCheck.Count,
-                    sp.Elapsed);
+                    sp.Elapsed,
+                    string.Join<ReplicatedEtagInfo>("; ", latestEtags));
 
 				if(e is OperationCanceledException)
 					throw new TimeoutException(message);
@@ -112,7 +119,7 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, ReplicatedEtagInfo[] latestEtags, int index, CancellationToken cancellationToken)
 		{
 			while (true)
 			{
@@ -121,6 +128,8 @@ namespace Raven.Client.Document
 				try
 				{
 					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
+
+				    latestEtags[index] = etags;
 
 					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 

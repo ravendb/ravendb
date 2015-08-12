@@ -35,7 +35,7 @@ namespace Raven.Database.Storage
 		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int index, int start, int take);
 
 		void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken);
+		IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken);
 		ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete);
 		Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex();
 		void DeleteScheduledReduction(int index, int level, string reduceKey);
@@ -45,8 +45,10 @@ namespace Raven.Database.Storage
 		void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(int index, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(int index, string reduceKey, CancellationToken cancellationToken);
-		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken);
-		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
+
+        List<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken, List<MappedResultInfo> outputCollection = null);
+	
+        IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
@@ -149,15 +151,20 @@ namespace Raven.Database.Storage
 
 	public class MappedResultInfo
 	{
-		public string ReduceKey { get; set; }
+        // These 3 are a compound key. 
+		public string ReduceKey { get; set; }        
+        public int Bucket { get; set; }
+
+
 		public DateTime Timestamp { get; set; }
 		public Etag Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
+
+        public string Source { get; set; }
+
 		[JsonIgnore]
 		public int Size { get; set; }
-		public int Bucket { get; set; }
-		public string Source { get; set; }
 
 		public override string ToString()
 		{

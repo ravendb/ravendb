@@ -1,38 +1,32 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using ICSharpCode.NRefactory.CSharp.Refactoring;
+﻿using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
-using Raven.Database.Util;
+using Sparrow.Collections;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 using Voron.Trees;
+using VoronIndex = Raven.Database.Storage.Voron.Impl.Index;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Globalization;
-	using System.IO;
-	using System.Linq;
-
-	using Abstractions;
-	using Abstractions.Data;
-	using Abstractions.Extensions;
-	using Abstractions.MEF;
-	using Database.Impl;
-	using Indexing;
-	using Plugins;
-	using Impl;
-	using Raven.Json.Linq;
-
-	using global::Voron;
-	using global::Voron.Impl;
-
-	using Index = Raven.Database.Storage.Voron.Impl.Index;
-    using Sparrow.Collections;
+    using Database.Impl;
+    using global::Voron;
+    using global::Voron.Impl;
+    using Impl;
+    using Indexing;
+    using Plugins;
+    using Raven.Json.Linq;
 
 	internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{
@@ -509,7 +503,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
+		public IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete, o =>
@@ -521,66 +515,76 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return (Slice)etag.ToString();
             });
 
-            var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
-
             var keysToRemove = new List<string>();
-			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
 
-			    var reduceKeyHash = HashKey(reduceKey);
-                var viewAndLevelAndReduceKey = (Slice) CreateKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
-				using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, viewAndLevelAndReduceKey))
-				{
-					if (!iterator.Seek(Slice.BeforeAllKeys))
-						continue;
+            try
+            {
+                var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
+                var mappedResults = new List<MappedResultInfo>();
 
-					do
-					{
-						cancellationToken.ThrowIfCancellationRequested();
+                foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-						if (getItemsToReduceParams.Take <= 0)
-							break;
-
-						ushort version;
-					    var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
-                        if (value == null) // TODO: Check if this is correct. 
+                    var reduceKeyHash = HashKey(reduceKey);
+                    var viewAndLevelAndReduceKey = (Slice)CreateKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
+                    using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, viewAndLevelAndReduceKey))
+                    {
+                        if (!iterator.Seek(Slice.BeforeAllKeys))
                             continue;
 
-						var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);                        
+                        do
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
 
-						var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
-                        var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb);
+                            if (getItemsToReduceParams.Take <= 0)
+                                break;
 
-					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
-						var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
+                            ushort version;
+                            var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+                            if (value == null) // TODO: Check if this is correct. 
+                                continue;
 
-						if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
-						{
-							if (seenLocally.Add(rowKey))
-							{
-								foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
-								{
-									getItemsToReduceParams.Take--;
-									yield return mappedResultInfo;
-								}
-							}
-						}
+                            var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);
 
-						if (getItemsToReduceParams.Take <= 0)
-							yield break;
-					}
-					while (iterator.MoveNext());
-				}
+                            var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
+                            var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb);
 
-                keysToRemove.Add(reduceKey);
+                            var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
+                            var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 
-				if (getItemsToReduceParams.Take <= 0)
-                    yield break;
-			}
+                            if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
+                            {
+                                if (seenLocally.Add(rowKey))
+                                {
+                                    foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
+                                    {
+                                        getItemsToReduceParams.Take--;
 
-            foreach (var keyToRemove in keysToRemove)
-                getItemsToReduceParams.ReduceKeys.Remove(keyToRemove);
+                                        mappedResults.Add(mappedResultInfo);
+                                    }
+                                }
+                            }
+
+                            if (getItemsToReduceParams.Take <= 0)
+                                return mappedResults;
+                        }
+                        while (iterator.MoveNext());
+                    }
+
+                    keysToRemove.Add(reduceKey);
+
+                    if (getItemsToReduceParams.Take <= 0)
+                        break;
+                }
+
+                return mappedResults;
+            }
+            finally
+            {
+                foreach (var keyToRemove in keysToRemove)
+                    getItemsToReduceParams.ReduceKeys.Remove(keyToRemove);
+            }
 		}
 
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData, CancellationToken cancellationToken)
@@ -973,59 +977,75 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken)
-		{
-			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
-			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
-			var keysToReduce = new HashSet<string>(keysLeftToReduce);
-			foreach (var reduceKey in keysToReduce)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
+        public List<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken, List<MappedResultInfo> outputCollection = null)
+        {
+            if (outputCollection == null)
+                outputCollection = new List<MappedResultInfo>();
 
-				keysLeftToReduce.Remove(reduceKey);
-				
+            var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
+            var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
+            
+            var keysToReduce = new HashSet<string>(keysLeftToReduce);
+            foreach (var reduceKey in keysToReduce)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                keysLeftToReduce.Remove(reduceKey);
+
                 var reduceKeyHash = HashKey(reduceKey);
                 var viewAndReduceKey = (Slice)CreateKey(view, ReduceKeySizeLimited(reduceKey), reduceKeyHash);
-				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
-				{
-					keysReturned.Add(reduceKey);
+                using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
+                {
+                    keysReturned.Add(reduceKey);
 
-					if (!iterator.Seek(Slice.BeforeAllKeys))
-						continue;
+                    if (!iterator.Seek(Slice.BeforeAllKeys))
+                        continue;
 
-					do
-					{
-						cancellationToken.ThrowIfCancellationRequested();
+                    do
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
 
-						ushort version;
-						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
-						if (value == null)
-							continue;
-						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
+                        ushort version;
+                        var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+                        if (value == null)
+                            continue;
+                        var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-						var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
+                        var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
-						yield return new MappedResultInfo
-						{
-							Bucket = value.ReadInt(MappedResultFields.Bucket),
-							ReduceKey = readReduceKey,
-							Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
-							Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
-							Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData) : null,
-							Size = size
-						};
-					}
-					while (iterator.MoveNext());
-				}
+                        take--; // We have worked with this reduce key, so we consider it an output even if we don't add it. 
 
-				if (take < 0)
-				{
-					yield break;
-				}
-			}
-		}
+                        RavenJObject data = null;
+                        if ( loadData )
+                        {
+                            data = LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData);
+                            if (data == null)
+                                continue; // If we request to load data and it is not there, we ignore it
+                        }
 
-		private RavenJObject LoadMappedResult(Slice key, string reduceKey, Index dataIndex)
+                        var mappedResult = new MappedResultInfo
+                        {
+                            Bucket = value.ReadInt(MappedResultFields.Bucket),
+                            ReduceKey = readReduceKey,
+                            Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
+                            Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
+                            Data = data,
+                            Size = size
+                        };
+
+                        outputCollection.Add(mappedResult);
+                    }
+                    while (iterator.MoveNext());
+                }
+
+                if (take < 0)
+                    return outputCollection;
+            }
+
+            return outputCollection;
+        }
+
+		private RavenJObject LoadMappedResult(Slice key, string reduceKey, VoronIndex dataIndex)
 		{
 			var read = dataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (read == null)

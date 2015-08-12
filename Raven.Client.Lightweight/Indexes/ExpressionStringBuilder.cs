@@ -1733,6 +1733,8 @@ namespace Raven.Client.Indexes
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
 					case "Reverse":
+                    case "Take":
+                    case "Skip":
 						return true;
 				}
 				return false;
@@ -1864,8 +1866,8 @@ namespace Raven.Client.Indexes
 					return node;
 
 				case ExpressionType.NewArrayBounds:
-					Out("new " + node.Type);
-					VisitExpressions('(', node.Expressions, ')');
+					Out("new " + node.Type.GetElementType());
+					VisitExpressions('[', node.Expressions, ']');
 					return node;
 			}
 			return node;

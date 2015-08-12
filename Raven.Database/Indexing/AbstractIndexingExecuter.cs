@@ -43,8 +43,10 @@ namespace Raven.Database.Indexing
             using (LogContext.WithDatabase(context.DatabaseName))
             {
                 Init();
+
                 var name = GetType().Name;
                 var workComment = "WORK BY " + name;
+
                 bool isIdle = false;
                 while (context.RunIndexing)
                 {
@@ -130,7 +132,7 @@ namespace Raven.Database.Indexing
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
-                    {
+                    {                       
                         context.ShouldNotifyAboutWork(() => workComment);
                         context.NotifyAboutWork();
                     }
@@ -172,7 +174,9 @@ namespace Raven.Database.Indexing
 
                 context.UpdateFoundWork();
 
-                Log.Debug("Executing task: {0}", task);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Executing task: {0}", task);
+
                 foundWork = true;
 
                 context.CancellationToken.ThrowIfCancellationRequested();
