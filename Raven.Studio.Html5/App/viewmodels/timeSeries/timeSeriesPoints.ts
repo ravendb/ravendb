@@ -214,61 +214,6 @@ class timeSeriesPoints extends viewModelBase {
         app.showDialog(deleteKeyVm);
     }
 
-    /*private updateTypes(receivedTypes: Array<timeSeriesType>) {
-        var deletedTypes = [];
-
-        this.types().forEach((t: timeSeriesType) => {
-            if (!receivedTypes.first((receivedGroup: timeSeriesType) => t.name === receivedGroup.name)) {
-                deletedTypes.push(t);
-            }
-        });
-
-        this.types.removeAll(deletedTypes);
-        receivedTypes.forEach((receivedGroup: timeSeriesType) => {
-            var foundType = this.types().first((t: timeSeriesType) => t.name === receivedGroup.name);
-            if (!foundType) {
-                this.types.push(receivedGroup);
-            } else {
-                foundType.pointsCount(receivedGroup.pointsCount());
-            }
-        });
-    }
-
-    private refreshPointsData() {
-        var selectedGroup: timeSeriesType = this.selectedType();
-
-        this.types().forEach((key: timeSeriesType) => {
-            if (key.name === selectedGroup.name) {
-                var docsGrid = this.getPointsGrid();
-                if (!!docsGrid) {
-                    docsGrid.refreshCollectionData();
-                }
-            } else {
-                var pagedList = key.getTimeSeries();
-                pagedList.invalidateCache();
-            }
-        });
-    }
-
-    private refreshPoints(): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        var ts = this.activeTimeSeries();
-
-        this.fetchPoints(ts).done(results => {
-            this.updateTypes(results);
-	        this.refreshPointsData();
-            deferred.resolve();
-        });
-
-        return deferred;
-    }*/
-/*
-    private reloadData(ts: timeSeries) {
-        if (ts.name === this.activeTimeSeries().name) {
-            this.refreshPoints().done(() => this.refreshPointsData());
-        }
-    }*/
-
     selectType(type: timeSeriesType, event?: MouseEvent) {
         if (!event || event.which !== 3) {
             type.activate();
