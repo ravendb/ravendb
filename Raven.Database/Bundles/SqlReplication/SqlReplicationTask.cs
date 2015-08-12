@@ -176,9 +176,9 @@ namespace Raven.Database.Bundles.SqlReplication
 		private void BackgroundSqlReplication()
 		{
 			int workCounter = 0;
-			while (Database.WorkContext.DoWork && !IsHotSpare())
+			while (Database.WorkContext.DoWork)
 			{
-				IsRunning = !shouldPause;
+				IsRunning = !IsHotSpare() && !shouldPause;
 
 				if (!IsRunning)
 					continue;

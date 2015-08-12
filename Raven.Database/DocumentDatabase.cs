@@ -1386,9 +1386,5 @@ namespace Raven.Database
 			if (onOnBackupComplete != null) onOnBackupComplete(this);
 		}
 
-		public LicensingStatus GetLicensingStatus()
-		{
-			return ValidateLicense.CurrentLicense;
-		}
 	}
 }

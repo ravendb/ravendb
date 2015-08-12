@@ -141,9 +141,9 @@ namespace Raven.Bundles.Replication.Tasks
 				bool runningBecauseOfDataModifications = false;
 				var context = docDb.WorkContext;
 				NotifySiblings();
-				while (context.DoWork && !IsHotSpare())
+				while (context.DoWork)
 				{
-					IsRunning = !shouldPause;
+					IsRunning = !IsHotSpare() && !shouldPause;
 
 					log.Debug("Replication task found work. Running: " + IsRunning);
 

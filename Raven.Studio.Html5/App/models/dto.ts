@@ -262,7 +262,14 @@ interface licenseStatusDto {
         ravenfs: string;
         counterStorage: string;
         timeSeries: string;
+		hotSpare: string;
     }
+}
+
+interface HotSpareDto {
+	ActivationMode: string;
+	ActivationTime: string;
+	RemainingTestActivations: number;
 }
 
 interface userInfoDto {

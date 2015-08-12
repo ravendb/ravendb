@@ -73,6 +73,7 @@
     <Content Include="App\views\database\settings\customFunctionsEditor.html" />
     <Content Include="App\views\database\settings\databaseSettings.html" />
     <Content Include="App\views\database\settings\editSqlReplication.html" />
+    <Content Include="App\views\manage\hotSpare.html" />
     <Content Include="App\views\database\settings\periodicExport.html" />
     <Content Include="App\views\database\settings\quotas.html" />
     <Content Include="App\views\database\settings\replications.html" />
@@ -714,6 +715,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\ActivateLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\GetHotSpareInformation.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\TestLicenseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />
@@ -935,6 +939,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\settings\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\settings\databaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\settings\editSqlReplication.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\hotSpare.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\settings\periodicExport.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\settings\quotas.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\settings\replications.ts" />

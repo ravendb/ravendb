@@ -13,6 +13,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Metrics;
+using Raven.Database.Commercial;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
@@ -28,6 +29,7 @@ namespace Raven.Database.Plugins.Builtins
 		public void Dispose()
 		{
 			DeactivateTimer();
+			ValidateLicense.CurrentLicenseChanged -= OnCurrentLicenseChanged;
 		}
 
 		private void DeactivateTimer()
@@ -65,14 +67,23 @@ namespace Raven.Database.Plugins.Builtins
 			landlord = serverOptions.DatabaseLandlord;
 			requestManger.HotSpareValidator = this;
 			licensingStatus = GetLicensingStatus();
-			CheckHotLicenseStats();
+			ValidateLicense.CurrentLicenseChanged += OnCurrentLicenseChanged;
+			CheckHotSpareLicenseStats();
+		}
+
+		private void OnCurrentLicenseChanged(LicensingStatus newLicense)
+		{
+			//don't want to do anything if the license is the same.
+			if (LicenseEqual(licensingStatus, newLicense)) return;
+			licensingStatus = newLicense;
+			CheckHotSpareLicenseStats();
 		}
 
 		private void ClearHotSpareData()
 		{
 			landlord.SystemDatabase.TransactionalStorage.Batch(action =>
 			{
-				action.Lists.RemoveAllOlderThan(HotSpareList,DateTime.MinValue);
+				action.Lists.RemoveAllOlderThan(HotSpareList,DateTime.MaxValue);
 			});
 		}
 
@@ -108,7 +119,12 @@ namespace Raven.Database.Plugins.Builtins
 			var nextCheckTime = ActivationTime - (now - doc.ActivationTime);
 			licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, nextCheckTime.Value, NonRecurringTimeSpan);
 		}
-
+		public bool IsActivationExpired(string id)
+		{
+			var doc = GetOrCreateLicenseDocument(id);
+			return doc.ActivationMode == HotSpareLicenseDocument.HotSpareLicenseActivationMode.Activated && doc.ActivationTime.HasValue
+				   && SystemTime.UtcNow - doc.ActivationTime.Value > ActivationTime;
+		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool IsActivationExpired(HotSpareLicenseDocument doc)
 		{
@@ -154,7 +170,7 @@ namespace Raven.Database.Plugins.Builtins
 			return doc.RemainingTestActivations <= 0;
 		}
 
-		public void CheckHotLicenseStats()
+		public void CheckHotSpareLicenseStats()
 		{
 			var id = GetLicenseId();
 			// Non-comercial license with hot spare history
@@ -228,7 +244,7 @@ namespace Raven.Database.Plugins.Builtins
 			return id;
 		}
 
-		private HotSpareLicenseDocument GetOrCreateLicenseDocument(string id)
+		public HotSpareLicenseDocument GetOrCreateLicenseDocument(string id)
 		{
 			var docKey = GenerateHotSpareDocKey(id);
 			HotSpareLicenseDocument doc;
@@ -281,7 +297,7 @@ namespace Raven.Database.Plugins.Builtins
 			return string.Format("{0}/{1}", HotSpareKeyPrefix, id);
 		}
 
-		private bool IsHotSpareLicense()
+		public bool IsHotSpareLicense()
 		{
 			string isHotSpareStr;
 			licensingStatus.Attributes.TryGetValue("HotSpare", out isHotSpareStr);
@@ -353,7 +369,7 @@ namespace Raven.Database.Plugins.Builtins
 				return;
 			}
 			licensingStatus = newLicense;
-			CheckHotLicenseStats();
+			CheckHotSpareLicenseStats();
 		}
 
 		private void TestTimeoutCallback(object state)
@@ -361,7 +377,7 @@ namespace Raven.Database.Plugins.Builtins
 			licensingStatus = GetLicensingStatus();
 			DeactivateTimer();
 			requestManger.IsInHotSpareMode = true;
-			CheckHotLicenseStats();
+			CheckHotSpareLicenseStats();
 		}
 
 		private static void CreateDefaultHotSpareLicenseDocument(out HotSpareLicenseDocument data, string id)
@@ -378,7 +394,7 @@ namespace Raven.Database.Plugins.Builtins
 
 		private LicensingStatus GetLicensingStatus()
 		{
-			return landlord.SystemDatabase.GetLicensingStatus();
+			return ValidateLicense.CurrentLicense;
 		}
 
 		public class HotSpareLicenseDocument
@@ -411,16 +427,14 @@ namespace Raven.Database.Plugins.Builtins
 		{
 			string id1;
 			string id2;
-			license1.Attributes.TryGetValue("id", out id1);
-			license2.Attributes.TryGetValue("id", out id2);
+			license1.Attributes.TryGetValue("UserId", out id1);
+			license2.Attributes.TryGetValue("UserId", out id2);
 			return (id1 == id2 && license1.Status == license2.Status);
 		}
 		
 		private const int MaxTestAllowance = 500;
-		//private static readonly TimeSpan TestActivationTime = TimeSpan.FromHours(1);
-		private static readonly TimeSpan TestActivationTime = TimeSpan.FromSeconds(10);
-		//private static readonly TimeSpan ActivationTime = TimeSpan.FromHours(96);
-		private static readonly TimeSpan ActivationTime = TimeSpan.FromSeconds(30);
+		private static readonly TimeSpan TestActivationTime = TimeSpan.FromHours(1);			
+		private static readonly TimeSpan ActivationTime = TimeSpan.FromHours(96);
 		private static readonly TimeSpan NonRecurringTimeSpan = TimeSpan.FromMilliseconds(-1);
 		private const string HotSpareList = "HotSpare";
 		private const string HotSpareKeyPrefix = "Raven/HotSpareLicenseState";

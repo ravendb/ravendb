@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-
+import license = require("models/auth/license");
 class adminSettings extends viewModelBase {
 
     router: DurandalRootRouter = null;
@@ -31,6 +31,7 @@ class adminSettings extends viewModelBase {
         var ioTestRoute = { route: 'admin/settings/ioTest', moduleId: 'viewmodels/manage/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest() };
 	    var consoleRoute = { route: 'admin/settings/console', moduleId: "viewmodels/manage/console", title: "Administator JS Console", nav: true, hash: appUrl.forAdminJsConsole() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/manage/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
+		var hotSpareRoute = { route: 'admin/settings/hotSpare', moduleId: 'viewmodels/manage/hotSpare', title: 'Hot Spare', nav: true, hash: appUrl.forHotSpare() };
 
 	    var routes = [
 		    apiKeyRoute,
@@ -47,9 +48,10 @@ class adminSettings extends viewModelBase {
 		    debugInfoRoute,
 		    ioTestRoute,
 		    consoleRoute,
-		    studioConfigRoute
+			studioConfigRoute
 	    ];
-
+	    if (license.licenseStatus().Attributes.hotSpare === "true")
+		    routes.push(hotSpareRoute);
 		if (!shell.has40Features()) {
 			routes.remove(clusterRoute);
 		}

@@ -25,6 +25,7 @@ namespace Raven.Database.Commercial
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
 		public static Dictionary<string, string> LicenseAttributes { get; set; }
+		public static event Action<LicensingStatus>  CurrentLicenseChanged;
 		private AbstractLicenseValidator licenseValidator;
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
@@ -62,7 +63,7 @@ namespace Raven.Database.Commercial
 
 		public void Execute(InMemoryRavenConfiguration config)
 		{
-			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
+			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));			
 
 			ExecuteInternal(config);
 		}
@@ -137,6 +138,8 @@ namespace Raven.Database.Commercial
 					Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
 					Attributes = attributes
 				};
+				if (CurrentLicenseChanged != null)
+					CurrentLicenseChanged(CurrentLicense);
 			}
 			catch (Exception e)
 			{
@@ -320,6 +323,7 @@ namespace Raven.Database.Commercial
 		{
 			if (timer != null)
 				timer.Dispose();
+			CurrentLicenseChanged = null;
 		}
 	}
 }

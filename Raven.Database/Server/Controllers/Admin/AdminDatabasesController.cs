@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Commercial;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Raft.Util;
@@ -181,7 +182,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (message.ErrorCode != HttpStatusCode.OK)
                 return GetMessageWithString(message.Message, message.ErrorCode);
 
-            return GetEmptyMessage();
+			return GetMessageWithObject(new { });
         }
 
 		[HttpGet]
@@ -189,7 +190,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage ActivateHotSpare()
 		{
 			//making sure this endpoint is not invoked on non hot spare license.
-			var status = Database.GetLicensingStatus();
+			var status = ValidateLicense.CurrentLicense;
 			string id;
 			if (!status.Attributes.TryGetValue("UserId", out id))
 			{
@@ -198,10 +199,20 @@ namespace Raven.Database.Server.Controllers.Admin
 					Content = new MultiGetSafeStringContent("Can't activate Hot Spare server, no valid license found")
 				};
 			}
-
-			
-			RequestManager.HotSpareValidator.ActivateHotSpareLicense();			
-			return GetEmptyMessage();			
+			if (RequestManager.HotSpareValidator.IsActivationExpired(id))
+			{
+				var forceStr = GetQueryStringValue("force");
+				bool force;
+				if (!(bool.TryParse(forceStr, out force) && force))
+				{
+					return new HttpResponseMessage(HttpStatusCode.Forbidden)
+					{
+						Content = new MultiGetSafeStringContent("You have already activated your hot spare license")
+					};
+				}
+			}
+			RequestManager.HotSpareValidator.ActivateHotSpareLicense();
+			return GetMessageWithObject(new {});
 		}
 
 		[HttpGet]
@@ -209,7 +220,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage TestHotSpare()
 		{
 			//making sure this endpoint is not invoked on non hot spare license.
-			var status = Database.GetLicensingStatus();
+			var status = ValidateLicense.CurrentLicense;
 			string id;
 			if (!status.Attributes.TryGetValue("UserId", out id))
 			{
@@ -221,6 +232,28 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			RequestManager.HotSpareValidator.EnableTestModeForHotSpareLicense();
 			return GetEmptyMessage();
+		}
+		[HttpGet]
+		[RavenRoute("admin/get-hotspare-information")]
+		public HttpResponseMessage GetHotSpareInformation()
+		{
+			//making sure this endpoint is not invoked on non hot spare license.
+			var status = ValidateLicense.CurrentLicense;
+			string id;
+			if (!status.Attributes.TryGetValue("UserId", out id))
+			{
+				return new HttpResponseMessage(HttpStatusCode.Forbidden)
+				{
+					Content = new MultiGetSafeStringContent("Can't test Hot Spare server, no valid license found")
+				};
+			}
+			var info = RequestManager.HotSpareValidator.GetOrCreateLicenseDocument(id);
+			if (info == null)
+				return new HttpResponseMessage(HttpStatusCode.NotFound)
+				{
+					Content = new MultiGetSafeStringContent("No hot spare license found for current license")
+				};
+			return GetMessageWithObject(info);
 		}
 
 		[HttpPost]
