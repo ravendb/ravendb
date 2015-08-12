@@ -1,4 +1,5 @@
 import replicationPatchScript = require("models/database/replication/replicationPatchScript");
+import collection = require("models/database/documents/collection");
 
 class replicationDestination {
 
@@ -15,11 +16,10 @@ class replicationDestination {
     skipIndexReplication = ko.observable<boolean>().extend({ required: true });
     hasGlobal = ko.observable<boolean>(false);
     hasLocal = ko.observable<boolean>(true);
-    transformScripts = ko.observableArray<replicationPatchScript>([]);
 
     globalConfiguration = ko.observable<replicationDestination>();
 
-    sourceCollections = ko.observableArray<string>().extend({required: false});
+    specifiedCollections = ko.observableArray<replicationPatchScript>().extend({required: false});
     enableReplicateOnlyFromCollections = ko.observable<boolean>();
 
     name = ko.computed(() => {
@@ -96,9 +96,9 @@ class replicationDestination {
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
-        this.sourceCollections(dto.SourceCollections);
+        this.specifiedCollections(this.mapSpecifiedCollections(dto.SpecifiedCollections));
 
-        this.enableReplicateOnlyFromCollections = ko.observable<boolean>(typeof dto.SourceCollections !== 'undefined' && dto.SourceCollections.length > 0);
+        this.enableReplicateOnlyFromCollections = ko.observable<boolean>(this.specifiedCollections().length > 0);
 
         if (this.username()) {
             this.isUserCredentials(true);
@@ -110,11 +110,41 @@ class replicationDestination {
 
         this.hasGlobal(dto.HasGlobal);
         this.hasLocal(dto.HasLocal);
-        for (var collection in dto.TransformScripts) {
-            if (dto.TransformScripts.hasOwnProperty(collection)) {
-                this.transformScripts.push(new replicationPatchScript(collection, dto.TransformScripts[collection]));
+    }
+
+    mapSpecifiedCollections(input: dictionary<string>) {
+        var result = [];
+
+        if (!input) {
+            return result;
+        }
+        for (var key in input) {
+            if (input.hasOwnProperty(key)) {
+                var item = replicationPatchScript.empty();
+                item.collection(key);
+                var script = input[key];
+                if (script === null) {
+                    script = undefined;
+                }
+                item.script(script);
+                result.push(item);
             }
         }
+        return result;
+    }
+
+    public isSelected(col: collection) {
+        var cols = this.specifiedCollections();
+        return !!cols.first(c => c.collection() === col.name);
+    }
+
+    public hasScript(col: collection) {
+        var cols = this.specifiedCollections();
+        var item = cols.first(c => c.collection() === col.name);
+        if (!item) {
+            return false;
+        }
+        return typeof(item.script()) !== "undefined";
     }
 
     static empty(databaseName: string): replicationDestination {
@@ -130,10 +160,9 @@ class replicationDestination {
             Disabled: false,
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
-            SourceCollections: [],
+            SpecifiedCollections: {},
             HasGlobal: false,
-            HasLocal: true,
-            TransformScripts: {}
+            HasLocal: true
         });
     }
 
@@ -166,16 +195,21 @@ class replicationDestination {
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
-            SourceCollections: this.enableReplicateOnlyFromCollections() ? this.sourceCollections() : [],
-            TransformScripts: this.transformScriptsAsDict()
+            SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : {}
         };
     }
 
-    private transformScriptsAsDict():dictionary<string> {
+    specifiedCollectionsToMap(): dictionary<string> {
         var result: dictionary<string> = {};
-        this.transformScripts().forEach(x => {
-            result[x.collection()] = x.script();
-        });
+        var collections = this.specifiedCollections();
+        for (var i = 0; i < collections.length; i++) {
+            var item = collections[i];
+            var script = item.script();
+            if (!script) {
+                script = null;
+            }
+            result[item.collection()] = script;
+        }
         return result;
     }
 
@@ -187,6 +221,12 @@ class replicationDestination {
         return url;
     }
 
+    findEditor(coll: collection) {
+        var collections = this.specifiedCollections();
+        var item = collections.first(c => c.collection() === coll.name);
+        return item.script;
+    }
+    
     copyFromGlobal() {
         if (this.globalConfiguration()) {
             var gConfig = this.globalConfiguration();
@@ -208,9 +248,6 @@ class replicationDestination {
         }
     }
 
-    removeTransformScript(script: replicationPatchScript) {
-        this.transformScripts.remove(script);
-    }
 }
 
 export = replicationDestination;
