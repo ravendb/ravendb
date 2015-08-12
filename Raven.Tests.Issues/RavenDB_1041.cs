@@ -4,15 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Issues
