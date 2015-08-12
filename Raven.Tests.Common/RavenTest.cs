@@ -54,7 +54,7 @@ namespace Raven.Tests.Common
 	    {
 		    if (!ShowLogs)
 			    return;
-
+            
 		    foreach (var databaseName in DatabaseNames)
 		    {
 				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
