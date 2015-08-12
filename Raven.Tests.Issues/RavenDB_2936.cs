@@ -72,7 +72,9 @@ namespace Raven.Tests.Issues
 
 				Assert.Empty((RavenJArray)result);
 
-				result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery())
+                WaitForIndexing(store);
+
+                result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery())
 					.WaitForCompletion();
 
                 WaitForIndexing(store);
