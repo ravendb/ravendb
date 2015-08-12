@@ -106,10 +106,11 @@ namespace Raven.Database
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
-				initializer.ValidateStorage();
+                initializer.ValidateLicense();
+
+                initializer.ValidateStorage();
 
 				initializer.InitializeEncryption();
-				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
 				initializer.SubscribeToDiskSpaceChanges();
