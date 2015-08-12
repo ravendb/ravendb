@@ -184,7 +184,7 @@ namespace Raven.Client.Connection.Async
 					return json.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter())).ToArray();
 				}
 			}, token);
-		}
+		}		
 
 		public Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken))
 		{
@@ -199,6 +199,14 @@ namespace Raven.Client.Connection.Async
 					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token);
+		}
+
+		internal Task ReplicateIndexAsync(string name, CancellationToken token = default(CancellationToken))
+		{
+			var url = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(name));
+
+			using (var request = CreateRequest(url, HttpMethods.Post))
+				return request.ExecuteRawResponseAsync();
 		}
 
 		public Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken))

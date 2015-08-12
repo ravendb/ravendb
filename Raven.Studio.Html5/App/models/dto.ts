@@ -46,6 +46,7 @@ interface logNotificationDto {
     CustomInfo: string;
     TenantType: TenantType;
     InnerRequestsCount?: number;
+    QueryTimings: any;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
@@ -123,6 +124,7 @@ interface indexStatisticsDto {
 }
 
 interface indexingBatchInfoDto {
+    Id: number;
     BatchType: string;
     IndexesToWorkOn: string[];
     TotalDocumentCount: number;
@@ -153,6 +155,7 @@ interface indexPerformanceDto {
 }
 
 interface reducingBatchInfoDto {
+    Id: number;
     IndexesToWorkOn: string[];
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
@@ -465,7 +468,7 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
-    SourceCollections: string[];
+    SpecifiedCollections: dictionary<string>;
     HasGlobal?: boolean;
     HasLocal?: boolean;
 }
@@ -895,13 +898,6 @@ interface statusDebugChangesFileSystemDto {
     WatchedFolders: Array<string>;
 }
 
-interface statusDebugChangesTimeSeriesDto {
-    WatchedChanges: Array<string>;
-    WatchedLocalChanges: Array<string>;
-    WatchedReplicationChanges: Array<string>;
-    WatchedBulkOperationsChanges: Array<string>;
-}
-
 interface statusDebugMetricsDto {
     DocsWritesPerSecond: number;
     IndexedPerSecond: number;
@@ -953,6 +949,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
+	RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;
@@ -1089,6 +1086,7 @@ interface databaseDto extends tenantDto {
 }
 
 interface tenantDto {
+    IsLoaded: boolean;
     Name: string;
     Disabled: boolean;
     Bundles: Array<string>;
@@ -1417,4 +1415,34 @@ enum checkbox {
     UnChecked = 0,
     SomeChecked = 1,
 	Checked = 2
+}
+
+
+interface diskIoPerformanceRunDto {
+    ProcessId: number;
+    ProcessName: string;
+    DurationInMinutes: number;
+    StartTime: string;
+    Databases: Array<diskIoPerformanceRunResultDto>;
+}
+
+interface diskIoPerformanceRunResultDto
+{
+    Name: string;
+    Results: dictionary<Array<diskIoPerformanceRunIoResultDto>>;
+}
+
+interface diskIoPerformanceRunIoResultDto extends documentDto {
+    PathType: string;
+	WriteDurationInMilliseconds: number;
+	WriteIoSizeInBytes: number;
+	ReadDurationInMilliseconds: number;
+	ReadIoSizeInBytes: number;
+	NumberOfReadOperations: number;
+	NumberOfWriteOperations: number;
+}
+
+interface performanceRunItemDto {
+    displayName: string;
+    documentId: string;
 }

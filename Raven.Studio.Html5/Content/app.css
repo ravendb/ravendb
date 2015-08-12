@@ -6921,6 +6921,7 @@ body {
   cursor: pointer;
   border-radius: 2px;
   box-shadow: 0 0 5px 2px silver;
+  border-left: solid 5px silver;
   min-width: 160px;
   min-height: 70px;
   display: inline-block;
@@ -7042,6 +7043,9 @@ body {
 #resources-page .resources-container .resource.selected {
   box-shadow: 0 0 20px 0 #f36523;
 }
+#resources-page .resources-container .resource.isLoaded {
+  border-left: solid 5px #38b44a;
+}
 #resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
@@ -7118,7 +7122,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-overflow: ellipsis;
   max-width: 90%;
 }
-.document-collections li:not(:first-child) {
+.document-collections.has-show-all-items li:not(:first-child) {
   padding-left: 15px;
 }
 #index-merge-suggestions .index-name {
@@ -7172,7 +7176,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   margin-left: 0;
 }
 #watchTrafficContainer .form-group {
-  margin-left: 1%;
+  margin-left: 3px;
 }
 #watchTrafficContainer .selected .column {
   background-color: #ffffcc;
@@ -7922,6 +7926,87 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #requestTracingContainer .unread td {
   font-weight: bold;
 }
+#logsContainer .logButtons,
+#alertsContainer .logButtons,
+#indexErrorsContainer .logButtons,
+#requestTracingContainer .logButtons {
+  margin-left: 0;
+}
+#logsContainer .form-group,
+#alertsContainer .form-group,
+#indexErrorsContainer .form-group,
+#requestTracingContainer .form-group {
+  margin-left: 1px;
+}
+#logsContainer .column,
+#alertsContainer .column,
+#indexErrorsContainer .column,
+#requestTracingContainer .column {
+  display: inline-block;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-word-wrap: break-word;
+  word-wrap: break-word;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #ddd;
+  margin: 0;
+  padding: 5px;
+  height: 30px;
+}
+#logsContainer .selected .column,
+#alertsContainer .selected .column,
+#indexErrorsContainer .selected .column,
+#requestTracingContainer .selected .column {
+  background-color: #ffffcc;
+}
+#logsContainer #logTableContainer,
+#alertsContainer #logTableContainer,
+#indexErrorsContainer #logTableContainer,
+#requestTracingContainer #logTableContainer {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+#logsContainer #logTableContainer .logHeaders,
+#alertsContainer #logTableContainer .logHeaders,
+#indexErrorsContainer #logTableContainer .logHeaders,
+#requestTracingContainer #logTableContainer .logHeaders {
+  max-width: 80vw;
+  width: 80vw;
+  margin-left: calc(0vw);
+}
+#logsContainer #logTableContainer .logRecords,
+#alertsContainer #logTableContainer .logRecords,
+#indexErrorsContainer #logTableContainer .logRecords,
+#requestTracingContainer #logTableContainer .logRecords {
+  max-height: 60vh;
+  max-width: 80vw;
+  width: 80vw;
+  overflow-y: auto;
+}
+#logsContainer #logTableContainer .logRecords-small,
+#alertsContainer #logTableContainer .logRecords-small,
+#indexErrorsContainer #logTableContainer .logRecords-small,
+#requestTracingContainer #logTableContainer .logRecords-small {
+  max-height: 30vh;
+}
+#logsContainer #logTableContainer .log-details,
+#alertsContainer #logTableContainer .log-details,
+#indexErrorsContainer #logTableContainer .log-details,
+#requestTracingContainer #logTableContainer .log-details {
+  max-height: 30vh;
+  height: 30vh;
+  overflow-y: auto;
+  border-top-width: 2px;
+  margin-top: 1%;
+  padding-top: 1%;
+  border: thin dashed black;
+  width: 60vw;
+  margin-left: 1%;
+}
 #databaseSettingsContainer #dbDocEditor {
   height: 500px;
 }
@@ -8447,4 +8532,3 @@ a.global_help_link:focus {
   font-weight: bold;
   color: red;
 }
-/*# sourceMappingURL=app.css.map */

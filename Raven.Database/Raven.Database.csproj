@@ -238,8 +238,9 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />
-    <Compile Include="Bundles\Replication\Tasks\Handlers\TransformReplicatedDocs.cs" />
+    <Compile Include="Bundles\Replication\Tasks\Handlers\FilterAndTransformSpecifiedCollections.cs" />
     <Compile Include="Bundles\Replication\Tasks\IndexReplicationTask.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationTaskBase.cs" />
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
@@ -483,9 +484,11 @@
     <Compile Include="ShiftReduceParserCode.cs" />
     <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
     <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->
+    <Compile Include="Smuggler\ServerValidation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseBetweenOperation.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerFilesApi.cs" />
@@ -497,6 +500,8 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
+    <Compile Include="Storage\RemainingReductionPerLevel.cs" />
+    <Compile Include="Storage\TransactionalStorageHelper.cs" />
     <Compile Include="Storage\StringHelper.cs" />
     <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
@@ -516,6 +521,7 @@
     <Compile Include="TimeSeries\Backup\BackupOperation.cs" />
     <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesChangesController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesOperationsController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />

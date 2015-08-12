@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Monitor.IO.Data
 {
-	public enum OperationType
+	internal enum OperationType
 	{
 		Read,
 		Write

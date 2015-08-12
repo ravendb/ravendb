@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -10,7 +9,6 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Client;
 using Raven.Client.Counters;
-using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Tests.Helpers;
 
@@ -87,7 +85,7 @@ namespace Raven.Tests.Counters
 			return hasReplicated;
 		}
 
-		protected static async Task SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
+		protected static async Task<object> SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
 		{
 			var replicationDocument = new CountersReplicationDocument();
 			foreach (var destStore in destinations)
@@ -100,6 +98,7 @@ namespace Raven.Tests.Counters
 			}
 
 			await source.SaveReplicationsAsync(replicationDocument);
+			return null;
 		}
 	}
 }

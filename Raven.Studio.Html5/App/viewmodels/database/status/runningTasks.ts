@@ -100,9 +100,14 @@ class runningTasks extends viewModelBase {
     fetchTasks(): JQueryPromise<runningTaskDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            return new getRunningTasksCommand(db)
+			var deferred = $.Deferred();
+            new getRunningTasksCommand(db)
                 .execute()
-                .done((results: runningTaskDto[]) => this.processRunningTasksResults(results));
+                .done((results: runningTaskDto[]) => {
+		            this.processRunningTasksResults(results);
+					deferred.resolve(results);
+	            });
+			return deferred;
         }
 
         return null;

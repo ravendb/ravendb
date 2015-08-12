@@ -6,6 +6,8 @@ import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenComm
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
 import resource = require("models/resources/resource");
+import enableQueryTimings = require("commands/database/query/enableQueryTimings");
+import database = require("models/resources/database");
 
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
@@ -24,18 +26,32 @@ class trafficWatch extends viewModelBase {
     maxRequestDuration = ko.observable<number>(0);
     startTraceTime = ko.observable<Moment>();
     startTraceTimeHumanized :KnockoutComputed<string>;
-    showLogDetails=ko.observable<boolean>(false);
-    logRecordsElement:Element;
+    showLogDetails = ko.observable<boolean>(false);
+    logRecordsElement: Element;
+    filter = ko.observable<string>();
+    filterDuration = ko.observable<string>();
+
+    enableTimingsTimer: number;
+    
 
     constructor() {
         super();
+
         this.startTraceTimeHumanized = ko.computed(()=> {
             var a = this.now();
             if (!!this.startTraceTime()) {
                 return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
             }
-        return "";
-    });
+			return "";
+        });
+        this.filter.throttle(250).subscribe(() => this.filterEntries());
+        this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
+    }
+
+    filterEntries() {
+        this.recentEntries().forEach(entry => {
+            entry.Visible(this.isVisible(entry));
+        });
     }
 
     canActivate(args): any {
@@ -57,6 +73,7 @@ class trafficWatch extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });
@@ -98,15 +115,22 @@ class trafficWatch extends viewModelBase {
         });
     }
 
-
     configureConnection() {
         var configDialog = new watchTrafficConfigDialog();
         app.showDialog(configDialog);
 
         configDialog.configurationTask.done((x: any) => {
             this.logConfig(x);
+            this.enableTimingsTimer = setInterval(() => this.enableQueryTiming(), 4.8 * 60 * 1000);
+            this.enableQueryTiming();
             this.reconnect();
         });
+    }
+
+    enableQueryTiming() {
+        if (this.logConfig().Resource.isDatabase()) {
+            new enableQueryTimings(<database>this.logConfig().Resource).execute();
+        }
     }
 
     reconnect() {
@@ -180,12 +204,42 @@ class trafficWatch extends viewModelBase {
 
     deactivate() {
         super.deactivate();
-        if (this.isConnected()==true)
+        if (this.enableTimingsTimer) {
+            clearInterval(this.enableTimingsTimer);
+            this.enableTimingsTimer = null;
+        }
+        if (this.isConnected())
             this.disconnect();
+    }
+
+    isVisible(logEntry) {
+        if (this.filterDuration() && logEntry.Duration < parseInt(this.filterDuration())) {
+            return false;
+        }
+
+        if (this.filter() && logEntry.Url.indexOf(this.filter()) === -1) {
+            return false;
+        }
+        return true;
     }
 
     processHttpTraceMessage(e: logNotificationDto) {
         var logObject;
+        
+        var mapTimings = (value) => {
+            var result = [];
+            if (!value) {
+                return result;
+            }
+            for (var key in value) {
+                if (value.hasOwnProperty(key)) {
+                    result.push({ key: key, value: value[key] });
+                }
+            }
+            return result;
+
+        }
+
         logObject = {
             Time: this.createHumanReadableTime(e.TimeStamp, false, true),
             Duration: e.ElapsedMilliseconds,
@@ -194,10 +248,11 @@ class trafficWatch extends viewModelBase {
             Url: e.RequestUri,
             CustomInfo: e.CustomInfo,
             TimeStampText: this.createHumanReadableTime(e.TimeStamp, true, false),
+            QueryTimings: mapTimings(e.QueryTimings),
+            Visible: ko.observable()
         };
 
         if (logObject.CustomInfo) {
-            console.log
             logObject.CustomInfo = decodeURIComponent(logObject.CustomInfo).replaceAll("\n", "<Br />").replaceAll("Inner Request", "<strong>Inner Request</strong>");
         }
 
@@ -208,6 +263,9 @@ class trafficWatch extends viewModelBase {
         if (this.recentEntries().length == this.logConfig().MaxEntries) {
             this.recentEntries.shift();
         }
+
+        logObject.Visible(this.isVisible(logObject));
+
         this.recentEntries.push(logObject);
 
         if (this.keepDown() == true) {
@@ -280,7 +338,7 @@ class trafficWatch extends viewModelBase {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
         }
     }

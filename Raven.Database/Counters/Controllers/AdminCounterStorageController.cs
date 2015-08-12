@@ -139,10 +139,9 @@ namespace Raven.Database.Counters.Controllers
 		    var counterSummaries = new List<CounterSummary>();
 		    using (var reader = counterStorage.CreateReader())
 		    {
-			    /*TODO: use the new api
-				 * counterSummaries.AddRange(
-					reader.GetAllCounterGroupAndNames()
-						  .Select(reader.GetCounterSummary));*/
+				  counterSummaries.AddRange(
+					reader.GetCounterGroups()
+						  .SelectMany(x => reader.GetCountersSummary(x.Name)));
 		    }
 
 			return GetMessageWithObject(counterSummaries);
@@ -308,10 +307,7 @@ namespace Raven.Database.Counters.Controllers
 			var backupOperation = new BackupOperation(Storage, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
 				backupRequest.BackupLocation, Storage.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
 
-			Task.Factory.StartNew(() =>
-			{
-				backupOperation.Execute();
-			});
+			Task.Factory.StartNew(backupOperation.Execute);
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}

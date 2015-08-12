@@ -147,6 +147,9 @@ class metrics extends viewModelBase {
 
     svg: D3.Selection;
 
+    lastIndexingId: number = 0;
+    lastReducingId: number = 0;
+
     private refreshGraphObservable = ko.observable<number>();
     private refreshSubscription: KnockoutSubscription;
 
@@ -159,11 +162,11 @@ class metrics extends viewModelBase {
     }
 
     fetchMapJsonData() {
-        return new getIndexingBatchStatsCommand(this.activeDatabase()).execute();
+        return new getIndexingBatchStatsCommand(this.activeDatabase(), this.lastIndexingId).execute();
     }
 
     fetchReduceJsonData() {
-        return new getReducingBatchStatsCommand(this.activeDatabase()).execute();
+        return new getReducingBatchStatsCommand(this.activeDatabase(), this.lastReducingId).execute();
     }
 
     activate(args) {
@@ -179,6 +182,7 @@ class metrics extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
         this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
@@ -251,6 +255,13 @@ class metrics extends viewModelBase {
         $.when(mapTask, reduceTask)
             .done((mapResult: any[], reduceResult: any[]) => {
                 var oldAllIndexes = this.allIndexNames();
+
+                if (mapResult.length > 0) {
+                    this.lastIndexingId = d3.max(mapResult, x => x.Id);
+                }
+                if (reduceResult.length > 0) {
+                    this.lastReducingId = d3.max(reduceResult, x => x.Id);
+                } 
 
                 if (oldAllIndexes.length == 0) {
                     if (mapResult.length > 0) {

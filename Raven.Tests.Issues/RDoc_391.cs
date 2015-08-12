@@ -306,7 +306,8 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				var index = new People_By_Name_With_Scripts();
+
+                var index = new People_By_Name_With_Scripts();
 				index.Execute(store);
 
 				WaitForIndexing(store);
@@ -322,7 +323,8 @@ namespace Raven.Tests.Issues
 
 				stats = store.DatabaseCommands.GetStatistics();
 				indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
-				Assert.True(indexStats.LastIndexedEtag.Equals(lastIndexedEtag));
+				Assert.True(indexStats.LastIndexedEtag.Equals(lastIndexedEtag) ||
+                    EtagUtil.IsGreaterThan(indexStats.LastIndexedEtag, lastIndexedEtag));
 			}
 		}
 	}

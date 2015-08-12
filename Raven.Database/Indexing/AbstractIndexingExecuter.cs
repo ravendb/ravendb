@@ -80,9 +80,8 @@ namespace Raven.Database.Indexing
                         var oome = actual as OutOfMemoryException;
                         if (oome == null)
                         {
-                            if (IsEsentOutOfMemory(actual))
+                            if (TransactionalStorageHelper.IsOutOfMemoryException(actual))
                             {
-
                                 autoTuner.HandleOutOfMemory();
                             }
                             Log.ErrorException("Failed to execute indexing", ae);
@@ -101,7 +100,7 @@ namespace Raven.Database.Indexing
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
                         Log.ErrorException("Failed to execute indexing", e);
-                        if (IsEsentOutOfMemory(e))
+                        if (TransactionalStorageHelper.IsOutOfMemoryException(e))
                         {
                             autoTuner.HandleOutOfMemory();
                         }
@@ -144,23 +143,6 @@ namespace Raven.Database.Indexing
 	    {
 		    
 	    }
-
-	    private bool IsEsentOutOfMemory(Exception actual)
-        {
-            var esentErrorException = actual as EsentErrorException;
-            if (esentErrorException == null)
-                return false;
-            switch (esentErrorException.Error)
-            {
-                case JET_err.OutOfMemory:
-                case JET_err.CurrencyStackOutOfMemory:
-                case JET_err.SPAvailExtCacheOutOfMemory:
-                case JET_err.VersionStoreOutOfMemory:
-                case JET_err.VersionStoreOutOfMemoryAndCleanupTimedOut:
-                    return true;
-            }
-            return false;
-        }
 
         protected virtual void Dispose() { }
 

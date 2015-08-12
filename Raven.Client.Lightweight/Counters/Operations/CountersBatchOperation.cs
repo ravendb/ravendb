@@ -54,7 +54,7 @@ namespace Raven.Client.Counters.Operations
 			OperationId = Guid.NewGuid();
 			disposed = false;
 			batchOperationTask = StartBatchOperation();
-			if (streamingStarted.WaitAsync().Wait(DefaultOptions.StreamingInitializeTimeout) == false ||
+			if (AsyncHelpers.RunSync(() => streamingStarted.WaitAsync(DefaultOptions.StreamingInitializeTimeout)) == false ||
 			    batchOperationTask.IsFaulted)
 			{
 				throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);
@@ -102,7 +102,7 @@ namespace Raven.Client.Counters.Operations
 						}
 					}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-					await response.AssertNotFailingResponse();
+					await response.AssertNotFailingResponse().ConfigureAwait(false);
 
 					using (response)
 					{
@@ -127,7 +127,7 @@ namespace Raven.Client.Counters.Operations
 			cts.Cancel();
 			if (batchOperationTask.Status != TaskStatus.Faulted &&
 				batchOperationTask.Status != TaskStatus.Canceled)
-				batchOperationTask.Wait();
+				AsyncHelpers.RunSync(() => batchOperationTask);
 
 			batchOperationTask = StartBatchOperation();
 

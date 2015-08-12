@@ -34,6 +34,7 @@ class statusDebugCurrentlyIndexing extends viewModelBase {
 
         return null;
     }
+
 }
 
 export = statusDebugCurrentlyIndexing;

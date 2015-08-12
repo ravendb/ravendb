@@ -37,6 +37,7 @@ class indexStats extends viewModelBase {
     }
 
     attached() {
+		super.attached();
         $("#indexStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#indexStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();

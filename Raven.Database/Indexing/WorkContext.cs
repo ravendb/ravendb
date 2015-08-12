@@ -32,6 +32,9 @@ namespace Raven.Database.Indexing
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
+	    private long nextIndexingBatchInfoId = 0;
+	    private long nextReducingBatchInfoId = 0;
+
 		private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
 		private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
 		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
@@ -405,7 +408,8 @@ namespace Raven.Database.Indexing
 		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
 		{
 			batchInfo.BatchCompleted();
-			LastActualIndexingBatchInfo.Add(batchInfo);
+		    batchInfo.Id = Interlocked.Increment(ref nextIndexingBatchInfoId);
+            LastActualIndexingBatchInfo.Add(batchInfo);
 		}
 
 		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
@@ -421,7 +425,8 @@ namespace Raven.Database.Indexing
 		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
 		{
 			batchInfo.BatchCompleted();
-			LastActualReducingBatchInfo.Add(batchInfo);
+            batchInfo.Id = Interlocked.Increment(ref nextReducingBatchInfoId);
+            LastActualReducingBatchInfo.Add(batchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats

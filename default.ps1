@@ -207,7 +207,9 @@ task CleanOutputDirectory {
 }
 
 task CopyMonitor {
-	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.??? $build_dir\Output\Monitor
+	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
+	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
+	Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
 }
 
 task CopySmuggler {
@@ -218,12 +220,10 @@ task CopySmuggler {
 task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
 }
 
 task CopyMigration {
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
-	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Migration
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
 }
 

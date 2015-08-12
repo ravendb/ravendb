@@ -124,7 +124,7 @@ namespace Raven.Database.Indexing.Sorting
 			var termEnum = reader.Terms(new Term(field));
 			int t = 0; // current term number
 			var maxDoc = reader.MaxDoc;
-			var documentsIDsSet = new DocumentsIDsSetBuilder(32);
+			var documentsIDsSet = new DocumentsIDsSetBuilder(reader.MaxDoc);
 
 			do
 			{
@@ -194,14 +194,14 @@ namespace Raven.Database.Indexing.Sorting
 		}
 
 		/// <summary>
-		/// Used to calculate existance of fields in an index, where the field doesn't exists
+		/// Used to calculate existence of fields in an index, where the field doesn't exists
 		/// for most of the documents.
 		/// 
 		/// It has 1Kb overhead at all times, with a worst case scenario, takes NumberOfDocuments bits + 1Kb.
 		/// 
 		/// Given a 256K documents in an index, the worst case would be 33Kb set.
 		/// 
-		/// A more common scenrio, where we have much fewer items in the set than the documents (let us say, 4K out of 256K), we 
+		/// A more common scenario, where we have much fewer items in the set than the documents (let us say, 4K out of 256K), we 
 		/// would take 1Kb + 2Kb only.
 		/// </summary>
 		public class SparseDocumentIdSet
@@ -212,7 +212,7 @@ namespace Raven.Database.Indexing.Sorting
 
 			public SparseDocumentIdSet(int size)
 			{
-				_bitArraySize = size/_numOfBitArrays;
+				_bitArraySize = (int)Math.Ceiling((double)size/_numOfBitArrays);
 			}
 
 			public void Set(int docId)
@@ -229,7 +229,7 @@ namespace Raven.Database.Indexing.Sorting
 				var idx = docId/_bitArraySize;
 				if (_bitArrays[idx] == null)
 					return false;
-				return _bitArrays[idx].Get(idx);
+				return _bitArrays[idx].Get(docId % _bitArraySize);
 
 			}
 

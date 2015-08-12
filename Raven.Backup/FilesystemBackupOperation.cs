@@ -1,24 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Net;
 using System.Net.Http;
 
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
-using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Json.Linq;
-using System;
-using System.Net;
-using System.Threading;
-
-using System.Linq;
-
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Backup
 {
-    using Raven.Abstractions.Connection;
-
     public class FilesystemBackupOperation : AbstractBackupOperation
     {
         private FilesStore store;
@@ -91,29 +84,17 @@ namespace Raven.Backup
 
         public override BackupStatus GetStatusDoc()
         {
-			using (var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethod.Get))
-	        {
 		        try
 		        {
-			        var json = (RavenJObject)req.ReadResponseJson();
-			        return json.JsonDeserialization<BackupStatus>();
-		        }
-		        catch (WebException ex)
-		        {
-			        var res = ex.Response as HttpWebResponse;
-			        if (res == null)
-			        {
-				        throw new Exception("Network error");
-			        }
-			        if (res.StatusCode == HttpStatusCode.NotFound)
-			        {
-				        return null;
-			        }
-		        }
+		        var backupStatus = AsyncHelpers.RunSync(() => store.AsyncFilesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey));
 
-		        return null;
-	        }
-        }
+		        return backupStatus;
+		        }
+	        catch (Exception ex)
+		        {
+		        throw new Exception("Network error", ex);
+			        }
+			        }
 
         public override void Dispose()
         {

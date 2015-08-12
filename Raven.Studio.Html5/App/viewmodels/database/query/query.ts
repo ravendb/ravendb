@@ -233,6 +233,7 @@ class query extends viewModelBase {
     }
 
     attached() {
+	    super.attached();
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);

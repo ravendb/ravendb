@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
 	{
 		protected override void SetupDestination(ReplicationDestination replicationDestination)
 		{
-			replicationDestination.TransformScripts = new Dictionary<string, string>
+			replicationDestination.SpecifiedCollections = new Dictionary<string, string>
 			{
 				{
 					"users", @"this.Name = 'patched ' + this.Name;"
@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void replicated_docs_are_patched_according_to_provided_scripts()
+		public void replicated_docs_are_transformed_according_to_provided_collection_specific_scripts()
 		{
 			using (var master = CreateStore())
 			using (var slave = CreateStore())
@@ -34,21 +34,20 @@ namespace Raven.Tests.Issues
 
 				using (var session = master.OpenSession())
 				{
-					session.Store(new User
-					{
-						Name = "Arek"
-					}, "users/1");
-
 					session.Store(new Person
 					{
 						Name = "Arek"
 					}, "people/1");
 
+					session.Store(new User
+					{
+						Name = "Arek"
+					}, "users/1");
+					
 					session.SaveChanges();
 				}
 
 				WaitForReplication(slave, "users/1");
-				WaitForReplication(slave, "people/1");
 
 				using (var session = slave.OpenSession())
 				{
@@ -58,7 +57,7 @@ namespace Raven.Tests.Issues
 
 					var person = session.Load<Person>("people/1");
 
-					Assert.Equal("Arek", person.Name);
+					Assert.Null(person);
 				}
 			}
 		}

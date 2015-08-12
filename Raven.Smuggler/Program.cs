@@ -14,6 +14,8 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
+using Raven.Smuggler.Helpers;
+
 namespace Raven.Smuggler
 {
 	public class Program
@@ -32,6 +34,7 @@ namespace Raven.Smuggler
             var filesOptions = smugglerFilesApi.Options;
 
 	        selectionDispatching = new OptionSet();
+		    selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 		    selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
 																		 {
 																			 bool disableCompression;
@@ -57,6 +60,7 @@ namespace Raven.Smuggler
 		    });
 
 		    databaseOptionSet = new OptionSet();
+			databaseOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			databaseOptionSet.Add("operate-on-types:", OptionCategory.SmugglerDatabase, "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
 		                                               "Default is all items." + Environment.NewLine +
 		                                               "Usage example: Indexes,Documents,Attachments", value =>
@@ -135,6 +139,7 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
 
 		    filesystemOptionSet = new OptionSet();
+			filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
 			filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
 			filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
@@ -171,7 +176,7 @@ namespace Raven.Smuggler
 
 		static void Main(string[] args)
 		{
-			var program = new Program();			
+			var program = new Program();
 			program.Parse(args).Wait();
 		}
 
@@ -306,9 +311,9 @@ namespace Raven.Smuggler
             if (e is AggregateException)
                 message = e.SimplifyError();
 
-            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.Red, message);
 			PrintUsage();
-            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.Red, message);
 			Environment.Exit(-1);
 		}
 
@@ -320,7 +325,7 @@ namespace Raven.Smuggler
 
 		private void PrintUsage()
 		{
-			ConsoleWriteLineWithColor(ConsoleColor.DarkMagenta, @"
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.DarkMagenta, @"
 Smuggler Import/Export utility for RavenDB
 ----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
@@ -363,13 +368,5 @@ Command line options:");
 
 			Console.WriteLine();
 		}
-
-		private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
-		{
-			var previousColor = Console.ForegroundColor;
-			Console.ForegroundColor = color;
-			Console.WriteLine(message, args);
-			Console.ForegroundColor = previousColor;
 		}
 	}
-}

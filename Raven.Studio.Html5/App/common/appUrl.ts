@@ -125,8 +125,8 @@ class appUrl {
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
 
-        timeSeries: ko.computed(() => appUrl.forTimeSeries()),
-        timeSeriesSeries: ko.computed(() => appUrl.forTimeSeriesSeries(null, appUrl.currentTimeSeries())),
+        timeSeriesType: ko.computed(() => appUrl.forTimeSeriesType(null, appUrl.currentTimeSeries())),
+        timeSeriesPoints: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
         timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
         timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
     };
@@ -177,10 +177,22 @@ class appUrl {
         return "#counterstorages/configuration?" + counterStroragePart;
     }
 
-    static forTimeSeriesSeries(name: string, ts: timeSeries) {
-        var part = name ? "name=" + encodeURIComponent(name) : "";
+    static forTimeSeriesType(type: string, ts: timeSeries) {
+        var url = "";
+        if (type) {
+            url = "type=" + encodeURIComponent(type);
+        }
         var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
-        return "#timeseries/series?" + part + timeSeriesPart;
+        return "#timeseries/types?" + url + timeSeriesPart;
+    }
+
+    static forTimeSeriesKey(type: string, key: string, ts: timeSeries) {
+        var url = "";
+        if (type && key) {
+            url = "type=" + encodeURIComponent(type) + "&key=" + encodeURIComponent(key);
+        }
+        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/points?" + url + timeSeriesPart;
     }
 
     static forTimeSeriesStats(ts: timeSeries) {
@@ -282,6 +294,10 @@ class appUrl {
 
     static forIoTest(): string {
         return "#admin/settings/ioTest";
+    }
+
+    static forDiskIoViewer(): string {
+        return "#admin/settings/diskIoViewer";
     }
 
 	static forAdminJsConsole(): string {

@@ -29,14 +29,6 @@
         
     }
 
-    makeExcluded() {
-        this.exclude(true);
-    }
-
-    makeIncluded() {
-        this.exclude(false);
-    }
-
     toDto(): versioningEntryDto {
         var dto = {
             Id: 'Raven/Versioning/DefaultConfiguration',

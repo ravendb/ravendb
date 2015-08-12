@@ -4,7 +4,6 @@ import appUrl = require("common/appUrl");
 import status = require("viewmodels/database/status/status");
 
 class requests extends viewModelBase {
-
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
 

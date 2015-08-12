@@ -130,6 +130,14 @@ class globalConfigVersioning extends viewModelBase {
                 this.syncChanges(true);
             });
     }
+
+    makeExcluded(entry: versioningEntry) {
+        entry.exclude(true);
+    }
+
+    makeIncluded(entry: versioningEntry) {
+        entry.exclude(false);
+    }
 }
 
 export = globalConfigVersioning;

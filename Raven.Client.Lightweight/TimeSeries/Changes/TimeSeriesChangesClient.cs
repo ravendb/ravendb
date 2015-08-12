@@ -13,7 +13,7 @@ namespace Raven.Client.TimeSeries.Changes
 {
 	public class TimeSeriesChangesClient : RemoteChangesClientBase<ITimeSeriesChanges, TimeSeriesConnectionState, TimeSeriesConvention>, ITimeSeriesChanges
 	{
-		private readonly ConcurrentSet<string> watchedKeys = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedKeysChanges = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedBulkOperations = new ConcurrentSet<string>();
 		private bool watchAllTimeSeries;
 
@@ -31,9 +31,9 @@ namespace Raven.Client.TimeSeries.Changes
 			if (watchAllTimeSeries)
 				await Send("watch-time-series", null).ConfigureAwait(false);
 
-			foreach (var matchingKey in watchedKeys)
+			foreach (var matchingKey in watchedKeysChanges)
 			{
-				await Send("watch-time-series-key", matchingKey).ConfigureAwait(false);
+				await Send("watch-time-series-key-changes", matchingKey).ConfigureAwait(false);
 			}
 
 			foreach (var matchingBulkOperation in watchedBulkOperations)
@@ -46,15 +46,15 @@ namespace Raven.Client.TimeSeries.Changes
 		{
 			switch (type)
 			{
-				case "KeyNotification":
-					var changeNotification = value.JsonDeserialization<TimeSeriesKeyNotification>();
+				case "KeyChangeNotification":
+					var changeNotification = value.JsonDeserialization<KeyChangeNotification>();
 					foreach (var timeSeries in connections)
 					{
 						timeSeries.Value.Send(changeNotification);
 					}
 					break;
 				case "BulkOperationNotification":
-					var bulkOperationNotification = value.JsonDeserialization<TimeSeriesBulkOperationNotification>();
+					var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
 					foreach (var timeSeries in connections)
 					{
 						timeSeries.Value.Send(bulkOperationNotification);
@@ -65,14 +65,14 @@ namespace Raven.Client.TimeSeries.Changes
 			}
 		}
 
-		public IObservableWithTask<TimeSeriesKeyNotification> ForAllTimeSeries()
+		public IObservableWithTask<KeyChangeNotification> ForAllTimeSeries()
 		{
-			var timeSeries = GetOrAddConnectionState("all-time-series", "watch-time-series-key", "unwatch-time-series-key",
+			var timeSeries = GetOrAddConnectionState("all-time-series", "watch-time-series-key-change", "unwatch-time-series-key-change",
 				() => watchAllTimeSeries = true,
 				() => watchAllTimeSeries = false,
 				null);
 
-			var taskedObservable = new TaskedObservable<TimeSeriesKeyNotification, TimeSeriesConnectionState>(
+			var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
 				timeSeries,
 				notification => true);
 
@@ -82,26 +82,31 @@ namespace Raven.Client.TimeSeries.Changes
 			return taskedObservable;
 		}
 
-		public IObservableWithTask<TimeSeriesKeyNotification> ForKey(string key)
+		public IObservableWithTask<KeyChangeNotification> ForKey(string type, string key)
 		{
+			if (string.IsNullOrWhiteSpace(type))
+				throw new ArgumentException("Type cannot be empty!");
+
 			if (string.IsNullOrWhiteSpace(key))
 				throw new ArgumentException("Key cannot be empty!");
 
-			var timeSeries = GetOrAddConnectionState("time-series-key/" + key, "watch-time-series-key", "unwatch-time-series-key",
-				() => watchedKeys.TryAdd(key),
-				() => watchedKeys.TryRemove(key),
-				key);
+			var keyWithType = type + "/" + key;
+			var timeSeries = GetOrAddConnectionState("time-series-key-change/" + keyWithType, "watch-time-series-key-change", "unwatch-time-series-key-change",
+				() => watchedKeysChanges.TryAdd(keyWithType),
+				() => watchedKeysChanges.TryRemove(keyWithType),
+				keyWithType);
 
-			var taskedObservable = new TaskedObservable<TimeSeriesKeyNotification, TimeSeriesConnectionState>(
+			var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
 				timeSeries,
-				notification => string.Equals(notification.Key, key, StringComparison.InvariantCulture));
+				notification => string.Equals(notification.Type, type, StringComparison.InvariantCulture) &&
+				                string.Equals(notification.Key, key, StringComparison.InvariantCulture));
 			timeSeries.OnChangeNotification += taskedObservable.Send;
 			timeSeries.OnError += taskedObservable.Error;
 
 			return taskedObservable;
 		}
 
-		public IObservableWithTask<TimeSeriesBulkOperationNotification> ForBulkOperation(Guid? operationId = null)
+		public IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null)
 		{
 			var id = operationId != null ? operationId.ToString() : string.Empty;
 
@@ -141,7 +146,7 @@ namespace Raven.Client.TimeSeries.Changes
 					bulkOperationSubscriptionTask);
 			});
 
-			var taskedObservable = new TaskedObservable<TimeSeriesBulkOperationNotification, TimeSeriesConnectionState>(
+			var taskedObservable = new TaskedObservable<BulkOperationNotification, TimeSeriesConnectionState>(
 				timeSeries,
 				notification => operationId == null || notification.OperationId == operationId);
 

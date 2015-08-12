@@ -74,8 +74,8 @@ namespace Raven.Client.Counters
 
 				parent.AssertInitialized();
 
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-				await defaultBatchOperation.Value.FlushAsync();
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
+				await defaultBatchOperation.Value.FlushAsync().ConfigureAwait(false);
 			}
 
 			public Guid OperationId { get; private set; }

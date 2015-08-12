@@ -45,6 +45,9 @@
     <Compile Include="..\..\raven.server\frommono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="..\..\Raven.Smuggler\Helpers\ConsoleHelper.cs">
+      <Link>Helpers\ConsoleHelper.cs</Link>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TrafficRec.cs" />

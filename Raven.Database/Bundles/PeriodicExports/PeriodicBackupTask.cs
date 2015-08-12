@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics.SymbolStore;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
-using Raven.Client.Linq;
-using Raven.Database.Client;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
@@ -28,10 +27,22 @@ namespace Raven.Database.Bundles.PeriodicExports
 	public class PeriodicExportTask : IStartupTask, IDisposable
 	{
 		public DocumentDatabase Database { get; set; }
+		
+		public TimeSpan FullBackupInterval { get; private set; }
+		public TimeSpan IncrementalInterval { get; private set; }
+
 		private Timer incrementalBackupTimer;
 		private Timer fullBackupTimer;
 
+		private TimeSpan fullBackupIntermediateInterval;
+		private TimeSpan incrementalIntermediateInterval;
+
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
+
+		//interval can be 2^32-2 milliseconds at most
+		//this is the maximum interval acceptable in .Net's threading timer
+		private readonly long maxTimerTimeoutInMilliseconds = (long) (Math.Pow(2, 32) - 2);
+
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 		private string azureStorageAccount, azureStorageKey;
@@ -63,32 +74,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			lock (this)
 			{
-				if (incrementalBackupTimer != null)
-				{
-					try
-					{
-					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
-					}
-					finally
-					{
-						incrementalBackupTimer = null;
-					}
-				}
-
-				if (fullBackupTimer != null)
-				{
-					try
-					{
-					Database.TimerManager.ReleaseTimer(fullBackupTimer);
-					}
-					finally
-					{
-						fullBackupTimer = null;
-					}
-				}
+				ReleaseTimerIfNeeded(incrementalBackupTimer);
+				ReleaseTimerIfNeeded(fullBackupTimer);
 
 				ReadSetupValuesFromDocument();
-		}
+			}
 		}
 
 		private void ReadSetupValuesFromDocument()
@@ -106,9 +96,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 						return;
 					}
 
-					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
-
-					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
+					exportStatus = GetExportStatus();
 					exportConfigs = configurationDocument.MergedDocument;
 
 					if (exportConfigs.Disabled)
@@ -124,28 +112,48 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{
-						var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds.GetValueOrDefault());
-						logger.Info("Incremental periodic export started, will export every" + interval.TotalMinutes + "minutes");
+						IncrementalInterval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds.GetValueOrDefault());
+						incrementalIntermediateInterval = TimeSpan.FromMilliseconds(IncrementalInterval.TotalMilliseconds);
 
-						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
-						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+						logger.Info("Incremental periodic export started, will export every" + IncrementalInterval.TotalMinutes + "minutes");
 
-						incrementalBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(false), nextBackup, interval);
+						if (IsValidTimespanForTimer(IncrementalInterval))
+						{
+							var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
+							var nextBackup = timeSinceLastBackup >= IncrementalInterval ? TimeSpan.Zero : IncrementalInterval - timeSinceLastBackup;
+
+							incrementalBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(false), nextBackup, IncrementalInterval);
+						}
+						else
+						{
+							incrementalBackupTimer = Database.TimerManager.NewTimer(state => LongPeriodTimerCallback(false), 
+								TimeSpan.FromMilliseconds(maxTimerTimeoutInMilliseconds), Timeout.InfiniteTimeSpan);
+						}
 					}
 					else
 					{
 						logger.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
 					}
-
+					
 					if (exportConfigs.FullBackupIntervalMilliseconds.GetValueOrDefault() > 0)
 					{
-						var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds.GetValueOrDefault());
-						logger.Info("Full periodic export started, will export every" + interval.TotalMinutes + "minutes");
+						FullBackupInterval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds.GetValueOrDefault());
+						fullBackupIntermediateInterval = TimeSpan.FromMilliseconds(FullBackupInterval.TotalMilliseconds);
 
-						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
-						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+						logger.Info("Full periodic export started, will export every" + FullBackupInterval.TotalMinutes + "minutes");
 
-						fullBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(true), nextBackup, interval);
+						if (IsValidTimespanForTimer(FullBackupInterval))
+						{
+							var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
+							var nextBackup = timeSinceLastBackup >= FullBackupInterval ? TimeSpan.Zero : FullBackupInterval - timeSinceLastBackup;
+
+							fullBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(true), nextBackup, FullBackupInterval);
+						}
+						else
+						{
+							fullBackupTimer = Database.TimerManager.NewTimer(state => LongPeriodTimerCallback(true),
+								TimeSpan.FromMilliseconds(maxTimerTimeoutInMilliseconds), Timeout.InfiniteTimeSpan);							
+						}
 					}
 					else
 					{
@@ -164,6 +172,81 @@ namespace Raven.Database.Bundles.PeriodicExports
 						Exception = ex.ToString(),
 						UniqueKey = "Periodic Export Config Error"
 					});
+				}
+			}
+		}
+
+		private PeriodicExportStatus GetExportStatus()
+		{
+			var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
+			return status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();			
+		}
+
+		private void LongPeriodTimerCallback(bool fullBackup)
+		{
+			lock (this)
+			{				
+				if (fullBackup)
+				{
+					ReleaseTimerIfNeeded(fullBackupTimer);
+					fullBackupTimer = RescheduleLongTimer(true);
+				}
+				else
+				{
+					ReleaseTimerIfNeeded(incrementalBackupTimer);
+					incrementalBackupTimer = RescheduleLongTimer(false);
+				}
+			}
+		}
+
+		private Timer RescheduleLongTimer(bool isFullbackup)
+		{
+			var intermediateTimespan = isFullbackup ? fullBackupIntermediateInterval : incrementalIntermediateInterval;
+			Timer timer;
+			var remainingInterval = intermediateTimespan.TotalMilliseconds - maxTimerTimeoutInMilliseconds;
+			var shouldResetIntermediateInterval = false;
+			if (remainingInterval <= 0)
+			{
+				TimerCallback(isFullbackup);
+				timer = Database.TimerManager.NewTimer(state => LongPeriodTimerCallback(isFullbackup),
+					TimeSpan.FromMilliseconds(maxTimerTimeoutInMilliseconds), Timeout.InfiniteTimeSpan);
+				
+				shouldResetIntermediateInterval = true;
+			}
+			else
+			{
+				timer = Database.TimerManager.NewTimer(state => LongPeriodTimerCallback(isFullbackup),
+					TimeSpan.FromMilliseconds(remainingInterval), Timeout.InfiniteTimeSpan);
+			}
+
+			if (isFullbackup)
+				fullBackupIntermediateInterval = TimeSpan.FromMilliseconds(shouldResetIntermediateInterval ? 
+					FullBackupInterval.TotalMilliseconds : remainingInterval);
+			else
+				incrementalIntermediateInterval = TimeSpan.FromMilliseconds(shouldResetIntermediateInterval ? 
+					IncrementalInterval.TotalMilliseconds : remainingInterval);
+
+			return timer;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private bool IsValidTimespanForTimer(TimeSpan timespan)
+		{
+			return timespan.TotalMilliseconds < maxTimerTimeoutInMilliseconds;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void ReleaseTimerIfNeeded(Timer timer)
+		{
+			if (timer != null)
+			{
+				try
+				{
+					Database.TimerManager.ReleaseTimer(timer);
+				}
+				finally
+				{
+					timer = null;
 				}
 			}
 		}
@@ -254,7 +337,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-								exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
+							exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
 
 							if (fullBackup == false)
 							{
@@ -282,21 +365,17 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							if (fullBackup)
-							{
-								localBackupStatus.LastFullBackup = SystemTime.UtcNow;
-							}
-							else
-							{
-								localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
-								localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
-								localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
-								localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
-								localBackupStatus.LastBackup = SystemTime.UtcNow;
-							}
+							localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
+							localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+							localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
+							localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
 
+								if (fullBackup)
+									localBackupStatus.LastFullBackup = SystemTime.UtcNow;
+								else
+									localBackupStatus.LastBackup = SystemTime.UtcNow;
 
-							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
+								var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
 							var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
 								new RavenJObject(), null);

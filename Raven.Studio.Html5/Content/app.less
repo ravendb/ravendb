@@ -416,6 +416,7 @@ html, body {
             cursor: pointer;
             border-radius: 2px;
             box-shadow: 0 0 5px 2px silver;
+            border-left: solid 5px silver;
             min-width: 160px;
             min-height: 70px;
             display: inline-block;
@@ -563,6 +564,9 @@ html, body {
             &.selected {
                 box-shadow: 0 0 20px 0 @selectColor;
             }
+            &.isLoaded {
+                border-left: solid 5px @brand-success;
+            }
 
             &.system-database {
                 @systemDbColor: rgba(192, 192, 192, 0.21);
@@ -664,7 +668,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         max-width: 90%;
     }
 
-    li:not(:first-child) {
+    &.has-show-all-items li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.
         padding-left: 15px;
     }
@@ -732,7 +736,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
-
 #watchTrafficContainer {
 
     .logButtons {
@@ -740,7 +743,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 
     .form-group {
-        margin-left: 1%;
+        margin-left: 3px;
     }
 
     .log-table-row {
@@ -1620,6 +1623,69 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     .unread {
         td {
             font-weight: bold;
+        }
+    }
+
+    .logButtons {
+        margin-left: 0;
+    }
+
+    .form-group {
+        margin-left: 1px;
+    }
+
+    .column {
+        display: inline-block;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-word-wrap: break-word;
+        word-wrap: break-word;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #ddd;
+        margin: 0;
+        padding: 5px;
+        height: 30px;
+    }
+
+    .selected .column {
+        background-color: #ffffcc;
+    }
+
+    #logTableContainer {
+        max-height: 80vh;
+        overflow-y: auto;
+        overflow-x: visible;
+
+        .logHeaders {
+            max-width: 80vw;
+            width: 80vw;
+            margin-left: calc(100vw - 100%);
+        }
+
+        .logRecords {
+            max-height: 60vh;
+            max-width: 80vw;
+            width: 80vw;
+            overflow-y: auto;
+        }
+
+        .logRecords-small {
+            max-height: 30vh;
+        }
+
+        .log-details {
+            max-height: 30vh;
+            height: 30vh;
+            overflow-y: auto;
+            border-top-width: 2px;
+            margin-top: 1%;
+            padding-top: 1%;
+            border: thin dashed black;
+            width: 60vw;
+            margin-left: 1%;
         }
     }
 }

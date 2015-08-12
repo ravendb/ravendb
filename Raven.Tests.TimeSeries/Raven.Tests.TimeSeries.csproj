@@ -88,7 +88,6 @@
     <Compile Include="TimeSeriesLoadBalancingTests.cs" />
     <Compile Include="TimeSeriesOperations.cs" />
     <Compile Include="TimeSeriesReplicationTests.cs" />
-    <Compile Include="TimeSeriesBatchTests.cs" />
     <Compile Include="TimeSeriesChangesTests.cs" />
     <Compile Include="TimeSeriesChangeTests.cs" />
     <Compile Include="TimeSeriesStatsTests.cs" />
@@ -99,6 +98,7 @@
     <Compile Include="TimeSeriesTest.cs" />
     <Compile Include="TimeSeriesValueLengthTests.cs" />
     <Compile Include="TimeSeriesTests.cs" />
+    <Compile Include="WikiDataImport.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

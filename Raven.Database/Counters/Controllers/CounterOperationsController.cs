@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -35,8 +36,8 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -127,8 +128,8 @@ namespace Raven.Database.Counters.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								AssertName(change.Group);
-								AssertName(change.Name);
+								VerifyNameCorrect(change.Group);
+								VerifyNameCorrect(change.Name);
 								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
@@ -263,12 +264,12 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset")]
+		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -293,12 +294,12 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete")]
+		[RavenRoute("cs/{counterStorageName}/delete/{groupName}/{counterName}")]
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -320,7 +321,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete-by-group")]
+		[RavenRoute("cs/{counterStorageName}/delete-by-group/{groupName}")]
 		[HttpDelete]
 		public HttpResponseMessage DeleteByGroup(string groupName)
 		{
@@ -381,12 +382,12 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal")]
+		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -396,12 +397,12 @@ namespace Raven.Database.Counters.Controllers
 			}
         }
 
-		[RavenRoute("cs/{counterStorageName}/getCounter")]
+		[RavenRoute("cs/{counterStorageName}/getCounter/{groupName}/{counterName}")]
         [HttpGet]
         public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
-			AssertName(groupName);
-			AssertName(counterName);
+			VerifyNameCorrect(groupName);
+			VerifyNameCorrect(counterName);
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -411,7 +412,9 @@ namespace Raven.Database.Counters.Controllers
             }
 		}
 
-		private static void AssertName(string name)
+// ReSharper disable once UnusedParameter.Local
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void VerifyNameCorrect(string name)
 		{
 			if (string.IsNullOrEmpty(name))
 				throw new ArgumentException("A name can't be null");

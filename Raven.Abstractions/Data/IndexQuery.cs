@@ -254,6 +254,8 @@ namespace Raven.Abstractions.Data
 
 			if (ShowTimings)
 				path.Append("&showTimings=true");
+		    if (SkipDuplicateChecking)
+		        path.Append("&skipDuplicateChecking=true");
 
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
@@ -370,7 +372,8 @@ namespace Raven.Abstractions.Data
 				   Equals(HighlighterKeyName, other.HighlighterKeyName) && 
                    String.Equals(ResultsTransformer, other.ResultsTransformer) && 
 				   ShowTimings == other.ShowTimings &&
-                   DisableCaching.Equals(other.DisableCaching);
+                   DisableCaching.Equals(other.DisableCaching) && 
+                   SkipDuplicateChecking == other.SkipDuplicateChecking;
         }
 
         public override bool Equals(object obj)
@@ -406,6 +409,7 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
+                hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
                 return hashCode;
             }

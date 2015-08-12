@@ -50,16 +50,15 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata));
+            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
             if (replicationDocument == null)
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
-			                                             .Where(x => x.Disabled == false && x.IgnoredClient == false)
+			                                             .Where(x => x.CanBeFailover())
 			                                             .Select(x => new 
 														 {
 															 Url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database),
-															 x.SourceCollections
 			                                             }).ToList();
 
 			if (destinationsToCheck.Count == 0)
@@ -74,14 +73,14 @@ namespace Raven.Client.Document
 
 			var sourceCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database ?? documentStore.DefaultDatabase);
 			var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
-			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
+			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token).ConfigureAwait(false);
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, destination.SourceCollections, cts.Token)).ToArray();
+			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, cts.Token)).ToArray();
 
 		    try
 		    {
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
 		        return tasks.Length;
 		    }
 		    catch (Exception e)
@@ -114,7 +113,7 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, string[] sourceCollections, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
 		{
 			while (true)
 			{
@@ -122,7 +121,7 @@ namespace Raven.Client.Document
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId, sourceCollections);
+					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId).ConfigureAwait(false);
 
 					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
@@ -136,22 +135,22 @@ namespace Raven.Client.Document
 					throw;
 				}
 
-				await Task.Delay(100, cancellationToken);
+				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
 			}
 		}
 
-	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId, string[] sourceCollections = null)
+	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId, sourceCollections),
+				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
 				HttpMethods.Get,
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
 
 		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
 		    {
-			    var json = await request.ReadResponseJsonAsync();
+			    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
 				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
 				

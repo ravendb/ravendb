@@ -4,15 +4,13 @@ namespace Raven.Database.TimeSeries
 {
 	public class RollupRange
 	{
-		public string Prefix { get; set; }
-		
-		public byte FullPrefixLength { get; set; }
+		public string Type { get; set; }
 		
 		public string Key { get; set; }
 
-		public RollupRange(string prefix, string key, DateTime time)
+		public RollupRange(string type, string key, DateTime time)
 		{
-			Prefix = prefix;
+			Type = type;
 			Key = key;
 			Start = End = time;
 		}

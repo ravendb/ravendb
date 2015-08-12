@@ -208,7 +208,7 @@ namespace Raven.Database.Util
 				try
 				{
 					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
-					availableMemory = MemoryStatistics.AvailableMemory;
+					availableMemory = MemoryStatistics.AvailableMemoryInMb;
 
 					using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
 					{
@@ -245,7 +245,7 @@ namespace Raven.Database.Util
 				{
 					jsonSerializer.Serialize(streamWriter, clusterManager.GetTopology());
 					streamWriter.Flush();
-				}
+        }
 
 				var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
 				if (configurationJson == null)
@@ -327,22 +327,23 @@ namespace Raven.Database.Util
 			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-
 			return new
 			{
 				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x => new
+				Indexes = uniqueIndexesBeingProcessed.Select(x =>				
+				new
 				{
 					IndexName = x.PublicName,
 					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount }),
+					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
 					Priority = x.Priority,
 					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
 					{
 						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
+						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
 					})
-				})
+				}
+				)
 			};
 		}
 
