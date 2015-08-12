@@ -15,7 +15,16 @@
 	        <div class="btn-group">
 		        <button type="button" class="btn btn-default" data-bind="click: exportTraffic">Export</button>
 	        </div>
-			<input type="text" class="form-control pull-left" data-bind="value: filter, valueUpdate: 'afterkeydown'" placeholder="Filter results by url">
+	        <div class="row padd-top-10">
+		        <label class="col-sm-2 control-label">Url:</label>
+		        <div class="col-sm-4">
+			        <input type="text" class="form-control pull-left" data-bind="value: filter, valueUpdate: 'afterkeydown'" placeholder="Filter results by url">
+		        </div>
+				<label class="col-sm-2 control-label">Duration:</label>
+		        <div class="col-sm-4">
+			        <input type="number" class="form-control pull-left" data-bind="value: filterDuration, valueUpdate: 'afterkeydown'" placeholder="duration > than">
+		        </div>
+	        </div>
         </div>
         <div class="form-group statsBar">
             <strong class="col-sm-12">Stats:</strong>

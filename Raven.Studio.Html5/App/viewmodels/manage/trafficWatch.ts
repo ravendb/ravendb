@@ -29,6 +29,7 @@ class trafficWatch extends viewModelBase {
     showLogDetails = ko.observable<boolean>(false);
     logRecordsElement: Element;
     filter = ko.observable<string>();
+    filterDuration = ko.observable<string>();
 
     enableTimingsTimer: number;
     
@@ -43,10 +44,13 @@ class trafficWatch extends viewModelBase {
             }
 			return "";
         });
-        this.filter.throttle(250).subscribe((v) => {
-            this.recentEntries().forEach(entry => {
-                entry.Visible(this.isVisible(entry));
-            });
+        this.filter.throttle(250).subscribe(() => this.filterEntries());
+        this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
+    }
+
+    filterEntries() {
+        this.recentEntries().forEach(entry => {
+            entry.Visible(this.isVisible(entry));
         });
     }
 
@@ -209,8 +213,12 @@ class trafficWatch extends viewModelBase {
     }
 
     isVisible(logEntry) {
-        if (this.filter()) {
-            return logEntry.Url.indexOf(this.filter()) !== -1;
+        if (this.filterDuration() && logEntry.Duration < parseInt(this.filterDuration())) {
+            return false;
+        }
+
+        if (this.filter() && logEntry.Url.indexOf(this.filter()) === -1) {
+            return false;
         }
         return true;
     }
