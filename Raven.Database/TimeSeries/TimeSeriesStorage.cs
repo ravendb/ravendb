@@ -289,9 +289,10 @@ namespace Raven.Database.TimeSeries
 							foreach (var range in GetRanges(query, type.Fields.Length))
 							{
 								// seek period tree iterator, if found exact match!!, add and move to the next
-								if (periodTreeIterator.Seek(range.StartAt.Ticks))
+								var startTicks = range.StartAt.ToUniversalTime().Ticks;
+								if (periodTreeIterator.Seek(startTicks))
 								{
-									if (periodTreeIterator.CurrentKey == range.StartAt.Ticks)
+									if (periodTreeIterator.CurrentKey == startTicks)
 									{
 										var valueReader = periodTreeIterator.CreateReaderForCurrent();
 										int used;
@@ -321,7 +322,7 @@ namespace Raven.Database.TimeSeries
 								{
 									
 								}
-								if (rawTreeIterator.Seek(range.StartAt.Ticks))
+								if (rawTreeIterator.Seek(startTicks))
 								{
 									GetAllPointsForRange(rawTreeIterator, range, type.Fields.Length);
 								}
@@ -331,7 +332,7 @@ namespace Raven.Database.TimeSeries
 								{
 								}*/
 
-								periodWriter.Append(range.StartAt, range);
+								periodWriter.Append(startTicks, range);
 								yield return range;
 							}
 						}
@@ -461,12 +462,12 @@ namespace Raven.Database.TimeSeries
 			{
 				using (var it = fixedTree.Iterate())
 				{
-					if (it.Seek(query.Start.Ticks) == false)
+					if (it.Seek(query.Start.ToUniversalTime().Ticks) == false)
 						yield break;
 
 					do
 					{
-						if (it.CurrentKey > query.End.Ticks)
+						if (it.CurrentKey > query.End.ToUniversalTime().Ticks)
 							yield break;
 
 						yield return iteratorFunc(it);
@@ -494,7 +495,7 @@ namespace Raven.Database.TimeSeries
 				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
 				using (var fixedIt = fixedTree.Iterate())
 				{
-					if (fixedIt.Seek(DateTime.MinValue.Ticks) && (skip == 0 || fixedIt.Skip(skip)))
+					if (fixedIt.Seek(DateTime.MinValue.ToUniversalTime().Ticks) && (skip == 0 || fixedIt.Skip(skip)))
 					{
 						do
 						{
@@ -596,7 +597,7 @@ namespace Raven.Database.TimeSeries
 				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
 			}
 
-			public bool Append(string type, string key, DateTime time, params double[] values)
+			public bool Append(string type, string key, DateTimeOffset time, params double[] values)
 			{
 				if (string.IsNullOrWhiteSpace(type))
 					throw new ArgumentOutOfRangeException("type", "Type cannot be empty");
@@ -649,7 +650,7 @@ namespace Raven.Database.TimeSeries
 				{
 					storage.UpdateKeysCount(tx, 1);
 				}
-				var newPointWasAppended = fixedTree.Add(time.Ticks, valBuffer);
+				var newPointWasAppended = fixedTree.Add(time.ToUniversalTime().Ticks, valBuffer);
 				if (newPointWasAppended)
 				{
 					storage.UpdatePointsCount(tx, 1);
@@ -667,7 +668,7 @@ namespace Raven.Database.TimeSeries
 			{
 				foreach (var rollupRange in rollupsToClear.Values)
 				{
-					DeleteRangeInRollups(rollupRange.Type, rollupRange.Key, rollupRange.Start.Ticks, rollupRange.End.Ticks);
+					DeleteRangeInRollups(rollupRange.Type, rollupRange.Key, rollupRange.Start.ToUniversalTime().Ticks, rollupRange.End.ToUniversalTime().Ticks);
 				}
 				tx.Commit();
 			}
@@ -721,11 +722,11 @@ namespace Raven.Database.TimeSeries
 				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
 			}
 
-			public bool Delete(string typeName, string key)
+			public long DeleteKey(string typeName, string key)
 			{
 				tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				if (tree == null)
-					return false;
+					return -1;
 
 				var type = storage.GetType(typeName);
 				if (type == null)
@@ -735,7 +736,7 @@ namespace Raven.Database.TimeSeries
 				storage.UpdatePointsCount(tx, -numberOfEntriesRemoved);
 				storage.UpdateKeysCount(tx, -1);
 				
-				return true;
+				return numberOfEntriesRemoved;
 			}
 
 			public bool DeletePoint(TimeSeriesPointId point)
@@ -749,7 +750,7 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + point.Type);
 
 				var fixedTree = tree.FixedTreeFor(point.Key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.Delete(point.At.Ticks);
+				var result = fixedTree.Delete(point.At.ToUniversalTime().Ticks);
 				if (result.NumberOfEntriesDeleted > 0)
 				{
 					storage.UpdatePointsCount(tx, -1);
@@ -822,7 +823,7 @@ namespace Raven.Database.TimeSeries
 				valBuffer = new byte[numberOfValues * Range.RangeValue.StorageItemsLength * sizeof(double)];
 			}
 
-			public void Append(DateTime time, Range range)
+			public void Append(DateTimeOffset time, Range range)
 			{
 				for (int i = 0; i < numberOfValues; i++)
 				{
@@ -839,7 +840,7 @@ namespace Raven.Database.TimeSeries
 					}
 				}
 
-				tree.Add(time.Ticks, valBuffer);
+				tree.Add(time.ToUniversalTime().Ticks, valBuffer);
 			}
 
 			public void Dispose()

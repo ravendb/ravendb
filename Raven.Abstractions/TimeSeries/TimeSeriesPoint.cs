@@ -6,12 +6,12 @@ namespace Raven.Abstractions.TimeSeries
 	{
 		public string Type { get; set; }
 		public string Key { get; set; }
-		public DateTime At { get; set; }
+		public DateTimeOffset At { get; set; }
 	}
 
 	public class TimeSeriesPoint
 	{
-		public DateTime At { get; set; }
+		public DateTimeOffset At { get; set; }
 
 		public double[] Values { get; set; }
 	}
@@ -22,7 +22,7 @@ namespace Raven.Abstractions.TimeSeries
 
 		public string Key { get; set; }
 
-		public DateTime At { get; set; }
+		public DateTimeOffset At { get; set; }
 
 		public double[] Values { get; set; }
 	}

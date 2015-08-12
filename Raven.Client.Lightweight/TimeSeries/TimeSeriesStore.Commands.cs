@@ -52,16 +52,16 @@ namespace Raven.Client.TimeSeries
 			}, token);
 		}
 
-		public Task AppendAsync(string type, string key, DateTime at, double value, CancellationToken token = new CancellationToken())
+		public Task AppendAsync(string type, string key, DateTimeOffset at, double value, CancellationToken token = new CancellationToken())
 		{
 			return AppendAsync(type, key, at, token, value);
 		}
 
-		public async Task AppendAsync(string type, string key, DateTime at, CancellationToken token, params double[] values)
+		public async Task AppendAsync(string type, string key, DateTimeOffset at, CancellationToken token, params double[] values)
 		{
 			AssertInitialized();
 
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || at < DateTime.MinValue || values == null || values.Length == 0)
+			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || at < DateTimeOffset.MinValue || values == null || values.Length == 0)
 				throw new InvalidOperationException("Append data is invalid");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
@@ -77,12 +77,12 @@ namespace Raven.Client.TimeSeries
 			}, token);
 		}
 
-		public Task AppendAsync(string type, string key, DateTime at, double[] values, CancellationToken token = new CancellationToken())
+		public Task AppendAsync(string type, string key, DateTimeOffset at, double[] values, CancellationToken token = new CancellationToken())
 		{
 			return AppendAsync(type, key, at, token, values);
 		}
 
-		public async Task DeleteAsync(string type, string key, CancellationToken token = new CancellationToken())
+		public async Task DeleteKeyAsync(string type, string key, CancellationToken token = new CancellationToken())
 		{
 			AssertInitialized();
 
@@ -92,7 +92,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
 			{
-				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete/{2}?key={3}",
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}",
 					url, timeSeriesName, type, key);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
@@ -101,7 +101,26 @@ namespace Raven.Client.TimeSeries
 			}, token);
 		}
 
-		public async Task DeleteRangeAsync(string type, string key, DateTime start, DateTime end, CancellationToken token = new CancellationToken())
+		public async Task DeletePointAsync(string type, string key, DateTimeOffset at, CancellationToken token = new CancellationToken())
+		{
+			AssertInitialized();
+
+			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
+				throw new InvalidOperationException("Data is invalid");
+
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			{
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}&at={4}",
+					url, timeSeriesName, type, key, at);
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
+				{
+					return request.ReadResponseJsonAsync().WithCancellation(token);
+				}
+			}, token);
+		}
+
+		public async Task DeleteRangeAsync(string type, string key, DateTimeOffset start, DateTimeOffset end, CancellationToken token = new CancellationToken())
 		{
 			AssertInitialized();
 
@@ -115,7 +134,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-range/{2}?key={3}start={4}&end={5}",
-					url, timeSeriesName, type, key, start.Ticks, end.Ticks);
+					url, timeSeriesName, type, key, start, end);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
 					return request.ReadResponseJsonAsync().WithCancellation(token);

@@ -67,7 +67,7 @@ namespace Raven.Database.TimeSeries
 			throw new NotImplementedException();
 		}
 
-		public DateTime AddToDateTime(DateTime start)
+		public DateTimeOffset AddToDateTime(DateTimeOffset start)
 		{
 			switch (Type)
 			{
@@ -88,7 +88,7 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		public DateTime GetStartOfRangeForDateTime(DateTime pointAt)
+		public DateTimeOffset GetStartOfRangeForDateTime(DateTimeOffset pointAt)
 		{
 			switch (Type)
 			{

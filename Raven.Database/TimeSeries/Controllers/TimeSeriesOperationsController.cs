@@ -276,9 +276,9 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/delete/{type}")]
+		[RavenRoute("ts/{timeSeriesName}/delete-key/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage Delete(string type, string key)
+		public HttpResponseMessage DeleteKey(string type, string key)
 		{
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -289,7 +289,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Delete(type, key);
+				var pointsDeleted = writer.DeleteKey(type, key);
 				writer.DeleteKeyInRollups(type, key);
 				writer.Commit();
 
@@ -301,7 +301,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					Action = TimeSeriesChangeAction.Delete,
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetMessageWithObject(pointsDeleted);
 			}
 		}
 
@@ -338,9 +338,9 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/delete-range/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage DeleteRange(string type, string key, long start, long end)
+		public HttpResponseMessage DeleteRange(string type, string key, DateTimeOffset start, DateTimeOffset end)
 		{
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || start < DateTime.MinValue.Ticks || start > DateTime.MaxValue.Ticks)
+			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			if (start > end)
@@ -352,8 +352,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(type, key, start, end);
-				writer.DeleteRangeInRollups(type, key, start, end);
+				writer.DeleteRange(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
+				writer.DeleteRangeInRollups(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();

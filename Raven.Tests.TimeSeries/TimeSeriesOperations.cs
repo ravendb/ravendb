@@ -90,8 +90,6 @@ namespace Raven.Tests.TimeSeries
 			}
 		}
 
-
-
 		[Fact]
 		public async Task AddAndDeleteType()
 		{
@@ -99,7 +97,7 @@ namespace Raven.Tests.TimeSeries
 			{
 				await store.CreateTypeAsync("Simple", new[] { "Value" });
 				await store.AppendAsync("Simple", "Is", DateTime.Now, 3D);
-				await store.DeleteAsync("Simple", "Is");
+				await store.DeleteKeyAsync("Simple", "Is");
 				await store.DeleteTypeAsync("Simple");
 
 				var stats = await store.GetStatsAsync();
@@ -109,6 +107,32 @@ namespace Raven.Tests.TimeSeries
 			}
 		}
 
+
+		[Fact]
+		public async Task DeletePoints()
+		{
+			using (var store = NewRemoteTimeSeriesStore())
+			{
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				var start = DateTime.Now;
+				for (int i = 0; i < 5; i++)
+				{
+					await store.AppendAsync("Simple", "Is", start.AddMinutes(i), 3D);
+				}
+				var stats = await store.GetStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(1, stats.KeysCount);
+				Assert.Equal(5, stats.PointsCount);
+
+				await store.DeletePointAsync("Simple", "Is", start.AddMinutes(2));
+				await store.DeletePointAsync("Simple", "Is", start.AddMinutes(3));
+
+				stats = await store.GetStatsAsync();
+				Assert.Equal(1, stats.TypesCount);
+				Assert.Equal(1, stats.KeysCount);
+				Assert.Equal(3, stats.PointsCount);
+			}
+		}
 
 		[Fact]
 		public async Task DeleteRange()

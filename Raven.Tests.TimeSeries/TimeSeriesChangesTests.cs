@@ -48,7 +48,7 @@ namespace Raven.Tests.TimeSeries
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.DeleteAsync("Simple", "Time");
+				await store.DeleteKeyAsync("Simple", "Time");
 
 				timeSeriesChange = await notificationTask;
 				Assert.Equal("Simple", timeSeriesChange.Type);
