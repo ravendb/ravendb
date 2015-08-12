@@ -136,7 +136,7 @@ class timeSeriesPoints extends viewModelBase {
     newPoint() {
         var key = this.currentKey();
         var fields = key.Fields;
-        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint("", fields, "", moment().format(), fields.map(x => 0)), true), true);
+        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint(this.type, fields, this.key, moment().format(), fields.map(x => 0)), true), true);
         changeVm.updateTask.done((change: pointChange) => {
             new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
                 .execute()

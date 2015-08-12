@@ -90,7 +90,6 @@ class timeSeriesTypes extends viewModelBase {
         });
     }
 
-
     attached() {
         super.attached();
 

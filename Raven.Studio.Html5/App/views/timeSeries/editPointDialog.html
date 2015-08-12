@@ -8,14 +8,9 @@
             <div class="row">
                 <div data-bind="with: editedPoint">
                     <div class="col-md-12">
-                        <label class="col-md-4" for="type">Type:</label>
+                        <label class="col-md-4">Type:</label>
                         <div class="col-md-7">
-                            <!-- ko if: isNew() -->
-                            <input required type="text" class="form-control" id="type" placeholder="Type" data-bind="value: type, customValidity: typeCustomValidityError, valueUpdate: 'afterkeydown'">
-                            <!-- /ko -->
-                            <!-- ko ifnot: isNew() -->
                             <span data-bind="text: type"></span>
-                            <!-- /ko -->
                         </div>
                     </div>
                     <div class="col-md-12">
@@ -38,7 +33,7 @@
                     <div class="col-md-12" data-bind="foreach: fields">
                         <label class="col-md-4" data-bind="text: $data, for: $data"></label>
                         <div class="col-md-7" style="display: inline-block">
-							<input required type="number" class="form-control" data-bind="placeholder: $data, id: $data, value: $parent.values()[$index()], valueUpdate: 'afterkeydown'">
+                            <input required type="number" class="form-control" data-bind="placeholder: $data, id: $data, value: $parent.values()[$index()], valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                     <div class="col-md-12" data-bind="visible: isNew()">
