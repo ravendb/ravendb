@@ -11,6 +11,7 @@ import getKeyCommand = require("commands/timeSeries/getKeyCommand");
 import putPointCommand = require("commands/timeSeries/putPointCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
+import deleteKey = require("viewmodels/timeSeries/deleteKey");
 import pointChange = require("models/timeSeries/pointChange");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
@@ -206,20 +207,11 @@ class timeSeriesPoints extends viewModelBase {
     }
 
     private deleteKey(key: timeSeriesKey) {
-	  /*  var deleteGroupVm = new deleteGroup(key, this.activeTimeSeries());
-            deleteGroupVm.deletionTask.done(() => {
-				if (!key.isAllPointsGroup) {
-                    this.points.remove(key);
-
-                    var selectedCollection: timeSeriesType = this.selectedPoint();
-                    if (key.name === selectedCollection.name) {
-                        this.selectedPoint(this.allPointsGroup);
-                    }
-                } else {
-                    this.refreshGridAndGroup(key.name);
-                }
-            });
-		app.showDialog(deleteGroupVm);*/
+	    var deleteKeyVm = new deleteKey(key, this.activeTimeSeries());
+        deleteKeyVm.deletionTask.done(() => {
+            this.navigate(appUrl.forTimeSeriesType(this.type, this.activeTimeSeries()));
+        });
+        app.showDialog(deleteKeyVm);
     }
 
     /*private updateTypes(receivedTypes: Array<timeSeriesType>) {

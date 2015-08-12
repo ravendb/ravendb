@@ -77,6 +77,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\deleteKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\deletePointsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTypesCommand.ts" />
@@ -362,6 +363,7 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
+    <Content Include="App\views\timeSeries\deleteKey.html" />
     <Content Include="App\views\timeSeries\editPointDialog.html" />
     <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
@@ -1181,6 +1183,7 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\deleteKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editPointDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesStats.ts" />
