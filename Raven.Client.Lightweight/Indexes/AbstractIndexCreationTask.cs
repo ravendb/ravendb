@@ -252,6 +252,7 @@ namespace Raven.Client.Indexes
             {
                 // since index doesn't exist yet - create it in normal mode
                 databaseCommands.PutIndex(IndexName, indexDefinition);
+				AfterExecute(databaseCommands, documentConvention);
             }
         }
 
@@ -434,6 +435,7 @@ namespace Raven.Client.Indexes
             {
                 // since index doesn't exist yet - create it in normal mode
                 await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, token).ConfigureAwait(false);
+				await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token);
             }
         }
 
