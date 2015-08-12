@@ -332,7 +332,7 @@ namespace Raven.Database.TimeSeries
 								{
 								}*/
 
-								periodWriter.Append(startTicks, range);
+								periodWriter.Append(range.StartAt, range);
 								yield return range;
 							}
 						}

@@ -8,9 +8,9 @@ namespace Raven.Database.TimeSeries
 		
 		public string Key { get; set; }
 
-		public DateTime Start { get; set; }
+		public DateTimeOffset Start { get; set; }
 		
-		public DateTime End { get; set; }
+		public DateTimeOffset End { get; set; }
 	}
 
 	public class TimeSeriesRollupQuery : TimeSeriesQuery
