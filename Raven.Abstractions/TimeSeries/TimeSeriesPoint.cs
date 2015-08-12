@@ -15,4 +15,15 @@ namespace Raven.Abstractions.TimeSeries
 
 		public double[] Values { get; set; }
 	}
+
+	public class TimeSeriesFullPoint
+	{
+		public string Type { get; set; }
+
+		public string Key { get; set; }
+
+		public DateTime At { get; set; }
+
+		public double[] Values { get; set; }
+	}
 }

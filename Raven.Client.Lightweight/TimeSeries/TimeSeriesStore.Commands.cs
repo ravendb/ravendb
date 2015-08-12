@@ -65,11 +65,11 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("Append data is invalid");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Put, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/append/{2}?key={3}",
 					url, timeSeriesName, type, key);
-				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 				{
 					await request.WriteWithObjectAsync(new TimeSeriesPoint{At = at, Values = values});
 					return await request.ReadResponseJsonAsync().WithCancellation(token);

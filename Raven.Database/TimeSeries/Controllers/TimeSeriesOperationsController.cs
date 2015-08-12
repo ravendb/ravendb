@@ -61,28 +61,29 @@ namespace Raven.Database.TimeSeries.Controllers
 		}
 
 		[RavenRoute("ts/{timeSeriesName}/append/{type}")]
-		[HttpPost]
-		public HttpResponseMessage Append(string type, string key, TimeSeriesPoint input)
+		[HttpPut]
+		public async Task<HttpResponseMessage> AppendPoint()
 		{
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || input.Values == null || input.Values.Length == 0)
+			var point = await ReadJsonObjectAsync<TimeSeriesFullPoint>();
+			if (point == null || string.IsNullOrEmpty(point.Type) || string.IsNullOrEmpty(point.Key) || point.Values == null || point.Values.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Append(type, key, input.At, input.Values);
+				var newPointWasAppended = writer.Append(point.Type, point.Key, point.At, point.Values);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
-					Type = type,
-					Key = key,
+					Type = point.Type,
+					Key = point.Key,
 					Action = TimeSeriesChangeAction.Append,
-					At = input.At,
-					Values = input.Values,
+					At = point.At,
+					Values = point.Values,
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetMessageWithObject(newPointWasAppended ? "Created" : "Updated", newPointWasAppended ? HttpStatusCode.Created : HttpStatusCode.OK);
 			}
 		}
 

@@ -596,7 +596,7 @@ namespace Raven.Database.TimeSeries
 				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
 			}
 
-			public void Append(string type, string key, DateTime time, params double[] values)
+			public bool Append(string type, string key, DateTime time, params double[] values)
 			{
 				if (string.IsNullOrWhiteSpace(type))
 					throw new ArgumentOutOfRangeException("type", "Type cannot be empty");
@@ -654,6 +654,7 @@ namespace Raven.Database.TimeSeries
 				{
 					storage.UpdatePointsCount(tx, 1);
 				}
+				return newPointWasAppended;
 			}
 
 			public void Dispose()

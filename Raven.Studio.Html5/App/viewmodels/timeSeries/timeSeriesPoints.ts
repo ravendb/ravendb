@@ -8,8 +8,11 @@ import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import getKeyCommand = require("commands/timeSeries/getKeyCommand");
+import putPointCommand = require("commands/timeSeries/putPointCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-// import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
+import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
+import pointChange = require("models/timeSeries/pointChange");
+import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
 class timeSeriesPoints extends viewModelBase {
 
@@ -132,8 +135,8 @@ class timeSeriesPoints extends viewModelBase {
 
     newPoint() {
         /*var changeVm = new editPointDialog();
-        changeVm.updateTask.done((change: timeSeriesChange) => {
-            var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
+        changeVm.updateTask.done((change: pointChange) => {
+            var timeSeriesCommand = new appendPointCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
             var execute = timeSeriesCommand.execute();
 			execute.done(() => this.refreshGridAndGroup(change.key()));
         });
@@ -141,30 +144,26 @@ class timeSeriesPoints extends viewModelBase {
     }
 
     refresh() {
+                debugger
         this.getPointsGrid().refreshCollectionData();
         this.currentKey().getPoints().invalidateCache();
         this.selectNone();
 	}
 
     changePoint() {
-        /*var grid = this.getPointsGrid();
-        if (grid) {
-            var timeSeriesData = grid.getSelectedItems(1).first();
-            var dto = {
-                CurrentValue: timeSeriesData.Total,
-                Group: timeSeriesData.Group,
-                TimeSeriesName: timeSeriesData.Name,
-                Delta: 0
-            };
-            var change = new timeSeriesChange(dto);
-            var timeSeriesChangeVm = new editTimeSeriesDialog(change);
-            timeSeriesChangeVm.updateTask.done((change: timeSeriesChange, isNew: boolean) => {
-                var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), isNew);
-	            var execute = timeSeriesCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(timeSeriesData.Group));
-            });
-            app.showDialog(timeSeriesChangeVm);
-        }*/
+        var grid = this.getPointsGrid();
+        if (!grid)
+            return;
+
+        var selectedPoint = <timeSeriesPoint>grid.getSelectedItems(1).first();
+        var change = new pointChange(selectedPoint);
+        var pointChangeVM = new editPointDialog(change);
+        pointChangeVM.updateTask.done((change: pointChange, isNew: boolean) => {
+            new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
+                .execute()
+                .done(() => this.refresh());
+        });
+        app.showDialog(pointChangeVM);
     }
 
     toggleSelectAll() {

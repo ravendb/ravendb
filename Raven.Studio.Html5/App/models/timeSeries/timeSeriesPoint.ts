@@ -3,15 +3,17 @@
     fields: string[];
     key: string;
     At: string; 
+    values: number[]; 
 
-    constructor(type: string, fields: string[], key: string, dto: pointDto) {
+    constructor(type: string, fields: string[], key: string, at: string, values: number[]) {
         this.type = type;
         this.fields = fields;
         this.key = key;
-        this.At = dto.At;
+        this.At = at;
+        this.values = values;
 
         for (var i = 0; i < this.fields.length; i++) {
-            this[fields[i]] = dto.Values[i];
+            this[fields[i]] = values[i];
         }
     }
 

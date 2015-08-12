@@ -1,6 +1,7 @@
-﻿/*import dialog = require("plugins/dialog");
+﻿import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import pointChange = require("models/timeSeries/pointChange");
+import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
 class editPointDialog extends dialogViewModelBase {
 
@@ -11,7 +12,7 @@ class editPointDialog extends dialogViewModelBase {
 
     constructor(editedPoint?: pointChange) {
         super();
-        this.editedPoint(!editedPoint ? pointChange.empty() : editedPoint);
+        this.editedPoint(!editedPoint ? new pointChange(new timeSeriesPoint("", ["Field 1", "Todo 2"], "", "", [0, 0]), true) : editedPoint);
         this.isNew = ko.computed(() => !!this.editedPoint() && this.editedPoint().isNew());
     }
 
@@ -34,4 +35,4 @@ class editPointDialog extends dialogViewModelBase {
     }
 }
 
-export = editPointDialog;*/
+export = editPointDialog;

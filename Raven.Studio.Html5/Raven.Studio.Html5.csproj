@@ -91,6 +91,7 @@
     <TypeScriptCompile Include="App\commands\counter\getCounterGroupsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCountersCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\putPointCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\updatePointCommand.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
@@ -137,7 +138,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
-    <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
@@ -145,8 +145,6 @@
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
@@ -203,11 +201,6 @@
     <Content Include="App\views\counter\editCounterDialog.html" />
     <Content Include="App\views\counter\editCounterStorage.html" />
     <Content Include="App\views\counter\editCounter.html" />
-    <Content Include="App\views\counter\deleteCounterStorageConfirm.html" />
-    <Content Include="App\views\counter\deleteGroup.html" />
-    <Content Include="App\views\counter\editCounter.html" />
-    <Content Include="App\views\counter\editCounterDialog.html" />
-    <Content Include="App\views\counter\editCounterStorage.html" />
     <Content Include="App\views\database\conflicts\conflicts.html" />
     <Content Include="App\views\database\documents\copyDocuments.html" />
     <Content Include="App\views\database\documents\deleteCollection.html" />
@@ -368,6 +361,7 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
+    <Content Include="App\views\timeSeries\editPointDialog.html" />
     <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
     <Content Include="App\views\timeSeries\timeSeriesPoints.html" />
@@ -1016,14 +1010,6 @@
     <TypeScriptCompile Include="App\viewmodels\common\showDataDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\viewSystemDatabaseConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counters.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\deleteGroup.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\editCounter.ts" />
-    <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\conflicts\conflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\copyDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\deleteCollection.ts" />

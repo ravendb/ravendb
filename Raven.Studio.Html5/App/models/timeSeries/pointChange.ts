@@ -1,57 +1,54 @@
-﻿/*class pointChange {
+﻿import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
+
+class pointChange {
     type = ko.observable<string>("");
+    typeCustomValidityError: KnockoutComputed<string>;
     key = ko.observable<string>("");
-    at = ko.observable<Moment>();
+    keyCustomValidityError: KnockoutComputed<string>;
+    at = ko.observable<string>();
+    atCustomValidityError: KnockoutComputed<string>;
+    fields = ko.observableArray<string>();
     values = ko.observableArray<number>();
     isNew = ko.observable<boolean>(false);
 
-    constructor(dto: point, isNew: boolean = false) {
-        this.value(dto.CurrentValue);
-        this.group(dto.Group);
-        this.counterName(dto.CounterName);
-        this.delta("0");
+    constructor(point: timeSeriesPoint, isNew: boolean = false) {
+        this.type(point.type);
+        this.key(point.key);
+        this.at(point.At);
+        this.fields(point.fields);
+        this.values(point.values);
         this.isNew(isNew);
 
-        this.counterNameCustomValidityError = ko.computed(() => {
-            var counterName = this.counterName();
-            return this.checkName(counterName, "counter name");
-        });
-
-        this.groupCustomValidityError = ko.computed(() => {
-            var group = this.group();
-            return this.checkName(group, "group name");
-        });
-
-        this.deltaCustomValidityError = ko.computed(() => {
-            var delta = this.delta();
-            if (this.isNew() === false && delta === "0")
-                return "The change must be different than 0!";
-
-            if (this.isNumber(delta) === false)
-                return "Please enter a valid natural number!";
-
+        this.typeCustomValidityError = ko.computed(() => {
+            var type = this.type();
+            if (!$.trim(type))
+                return "'Type' cannot be empty";
+            if (type.length > 255) {
+                return "'Type' length can't exceed 255 characters";
+            }
+            if (type.contains('\\')) {
+                return "'Type' cannot contain '\\' char";
+            }
             return "";
         });
-    }
 
-    static empty(): pointChange {
-        return new pointChange({
-            CurrentValue: 0,
-            Group: "",
-            CounterName: "",
-            Delta: 0
-        }, true);
-    }
-    
-    private checkName(name: string, fieldName): string {
-        var message = "";
-        if (!$.trim(name)) {
-            message = "An empty " + fieldName + " is forbidden for use!";
-        }
-        else if (name.length > this.maxNameLength) {
-            message = "The  " + fieldName + " length can't exceed " + this.maxNameLength + " characters!";
-        }
-        return message;
+        this.keyCustomValidityError = ko.computed(() => {
+            var key = this.key();
+            if (!$.trim(key))
+                return "'key' cannot be empty";
+            if (key.length > 255) {
+                return "'key' length can't exceed 255 characters";
+            }
+            return "";
+        });
+
+        this.atCustomValidityError = ko.computed(() => {
+            var at = this.at();
+            if (!$.trim(at))
+                return "'At' cannot be empty";
+            // Todo: Validate a valid DateTime.ticks value
+            return "";
+        });
     }
 
     private isNumber(num: any): boolean {
@@ -62,10 +59,6 @@
         var n2 = parseInt(num, 10);
         return !isNaN(n1) && n2 === n1 && n1.toString() === num;
     }
-
-	getValue() {
-		return this.value().toLocaleString();
-	}
 } 
 
-export = pointChange; */
+export = pointChange; 
