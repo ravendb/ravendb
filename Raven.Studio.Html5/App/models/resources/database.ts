@@ -5,20 +5,21 @@ import databaseStatistics = require("models/resources/databaseStatistics");
 class database extends resource {
     statistics = ko.observable<databaseStatistics>();
     indexingDisabled = ko.observable<boolean>(false);
-	rejectClientsMode = ko.observable<boolean>(false);
+    rejectClientsMode = ko.observable<boolean>(false);
 	clusterWide = ko.observable<boolean>(false);
     recentQueriesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
     static type = "database";
     iconName: KnockoutComputed<string>;
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, clusterWide = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, isLoaded = false, clusterWide = false) {
         super(name, TenantType.Database, isAdminCurrentTenant);
         this.fullTypeName = "Database";
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);
-		this.rejectClientsMode(isRejectClientsMode);
+        this.rejectClientsMode(isRejectClientsMode);
+        this.isLoaded(isLoaded);
 	    this.clusterWide(clusterWide);
         this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-database" : "fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
@@ -37,6 +38,7 @@ class database extends resource {
     }
 
     activate() {
+        this.isLoaded(true);
         ko.postbox.publish("ActivateDatabase", this);
 	}
 

@@ -14,7 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 
-namespace Raven.Client.Smuggler
+namespace Raven.Smuggler
 {
 	public class SmugglerBetweenOperations
 	{
@@ -28,7 +28,7 @@ namespace Raven.Client.Smuggler
 		public string IncrementalKey { get; set; }
 	}
 
-    public class SmugglerDatabaseBetweenOperation
+    internal class SmugglerDatabaseBetweenOperation
 	{
 		public Action<string> OnShowProgress { get; set; } 
 

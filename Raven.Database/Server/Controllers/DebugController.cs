@@ -50,7 +50,14 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage EnableQueryTiming()
 		{
 			var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
-			Database.WorkContext.ShowTimingByDefaultUntil = time;
+			if (Database.IsSystemDatabase())
+			{
+				DatabasesLandlord.ForAllDatabases(database => database.WorkContext.ShowTimingByDefaultUntil = time);
+			}
+			else
+			{
+				Database.WorkContext.ShowTimingByDefaultUntil = time;
+			}
 			return GetMessageWithObject(new { Enabled = true, Until = time });
 		}
 
@@ -59,7 +66,14 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/disable-query-timing")]
 		public HttpResponseMessage DisableQueryTiming()
 		{
-			Database.WorkContext.ShowTimingByDefaultUntil = null;
+			if (Database.IsSystemDatabase())
+			{
+				DatabasesLandlord.ForAllDatabases(database => database.WorkContext.ShowTimingByDefaultUntil = null);
+			}
+			else
+			{
+				Database.WorkContext.ShowTimingByDefaultUntil = null;
+			}
 			return GetMessageWithObject(new { Enabled = false });
 		}
 

@@ -160,7 +160,6 @@ namespace Raven.Database.Actions
 			{
 				get { return database; }
 			}
-
 			public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationTokenSource cancellationTokenSource)
 			{
 				this.database = database;
@@ -170,12 +169,12 @@ namespace Raven.Database.Actions
 				cancellationToken = cancellationTokenSource.Token;
 				queryStat = database.Queries.AddToCurrentlyRunningQueryList(indexName, query, cancellationTokenSource);
 
-				if (query.ShowTimings == false)
-					return;
-
-				executionTimes[QueryTimings.Lucene] = 0;
-				executionTimes[QueryTimings.LoadDocuments] = 0;
-				executionTimes[QueryTimings.TransformResults] = 0;
+				if (query.ShowTimings)
+				{
+					executionTimes[QueryTimings.Lucene] = 0;
+					executionTimes[QueryTimings.LoadDocuments] = 0;
+					executionTimes[QueryTimings.TransformResults] = 0;
+				}
 			}
 
 			public void Init()
@@ -246,12 +245,12 @@ namespace Raven.Database.Actions
 					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
 			    var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults,
                     fieldsToFetch, database.IndexQueryTriggers, cancellationToken, (query.ShowTimings ? (Action<double>)(time => executionTimes[QueryTimings.Parse] = time) : null));
-				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
-			    if (query.ShowTimings)
-			    {
-
-			        indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
-			    }
+                if (query.ShowTimings)
+                {
+                    indexQueryResults = new TimedEnumerable<IndexQueryResult>(indexQueryResults, timeInMilliseconds => executionTimes[QueryTimings.Lucene] += timeInMilliseconds);
+                } 
+                indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
+			   
 
 				var docs = from queryResult in indexQueryResults
 						   let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)

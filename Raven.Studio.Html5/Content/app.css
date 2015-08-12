@@ -6921,6 +6921,7 @@ body {
   cursor: pointer;
   border-radius: 2px;
   box-shadow: 0 0 5px 2px silver;
+  border-left: solid 5px silver;
   min-width: 160px;
   min-height: 70px;
   display: inline-block;
@@ -7041,6 +7042,9 @@ body {
 }
 #resources-page .resources-container .resource.selected {
   box-shadow: 0 0 20px 0 #f36523;
+}
+#resources-page .resources-container .resource.isLoaded {
+  border-left: solid 5px #38b44a;
 }
 #resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);
@@ -8528,4 +8532,3 @@ a.global_help_link:focus {
   font-weight: bold;
   color: red;
 }
-/*# sourceMappingURL=app.css.map */

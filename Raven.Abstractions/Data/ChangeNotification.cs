@@ -4,6 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -205,6 +208,7 @@ namespace Raven.Abstractions.Data
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
+	    public RavenJObject QueryTimings { get; set; }
     }
 
 	public class DataSubscriptionChangeNotification : EventArgs

@@ -76,12 +76,12 @@
                                 <div class="col-sm-4 control-label">Exclude unless explicit</div>
                                 <div class="col-sm-7">
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            <span data-bind="visible: !excludeUnlessExplicit()">Include</span>
-                                            <span data-bind="visible: excludeUnlessExplicit">Exclude</span>
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal() && localExists()">
+                                            <span data-bind="visible: !mergedDocument().excludeUnlessExplicit()">Include</span>
+                                            <span data-bind="visible: mergedDocument().excludeUnlessExplicit">Exclude</span>
                                             <span class="caret"></span>
                                         </button>
-                                        <ul class="dropdown-menu" role="menu">
+                                        <ul class="dropdown-menu" role="menu" data-bind="with: mergedDocument">
                                             <li><a href="#" data-bind="click: excludeUnlessExplicit.bind($root, false)">Include</a></li>
                                             <li><a href="#" data-bind="click: excludeUnlessExplicit.bind($root, true)">Exclude</a></li>
                                         </ul>
@@ -92,12 +92,12 @@
                                 <div class="col-sm-4 control-label">Purge on delete</div>
                                 <div class="col-sm-7">
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            <span data-bind="visible: !purgeOnDelete()">No</span>
-                                            <span data-bind="visible: purgeOnDelete">Yes</span>
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal() && localExists()">
+                                            <span data-bind="visible: !mergedDocument().purgeOnDelete()">No</span>
+                                            <span data-bind="visible: mergedDocument().purgeOnDelete">Yes</span>
                                             <span class="caret"></span>
                                         </button>
-                                        <ul class="dropdown-menu" role="menu">
+                                        <ul class="dropdown-menu" role="menu" data-bind="with: mergedDocument">
                                             <li><a href="#" data-bind="click: purgeOnDelete.bind($root, false)">No</a></li>
                                             <li><a href="#" data-bind="click: purgeOnDelete.bind($root, true)">Yes</a></li>
                                         </ul>

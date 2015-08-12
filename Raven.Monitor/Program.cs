@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
+using System.Net;
 using System.Threading;
 
 using Microsoft.Diagnostics.Tracing.Session;
@@ -30,6 +32,7 @@ namespace Raven.Monitor
 			program.ParseArguments(args);
 
 			program.AssertOptions();
+		    Console.WriteLine();
 			program.Execute();
 		}
 
@@ -41,8 +44,8 @@ namespace Raven.Monitor
 		{
 			optionSet = new OptionSet();
 			optionSet.Add("disk-io", OptionCategory.None, "Disk IO monitoring", _ => options.Action = MonitorActions.DiskIo);
-			optionSet.Add("processid=", OptionCategory.None, "ProcessID to monitor", processId => options.ProcessId = int.Parse(processId));
-			optionSet.Add("output-path=", OptionCategory.None, "File output path", s => options.OutputPath = s);
+			optionSet.Add("process-id=", OptionCategory.None, "ProcessID to monitor", processId => options.ProcessId = int.Parse(processId));
+			optionSet.Add("server-url=", OptionCategory.None, "ServerUrl to RavenDB server", serverUrl => options.ServerUrl = serverUrl);
 			optionSet.Add("disk-io-duration=", OptionCategory.DiskIOMonitoring, "Disk IO monitoring duration (in minutes)", duration => options.IoOptions.DurationInMinutes = int.Parse(duration));
 			optionSet.Add("h|?|help", OptionCategory.Help, string.Empty, v =>
 			{
@@ -60,17 +63,50 @@ namespace Raven.Monitor
 					Environment.Exit((int)ExitCodes.InvalidArguments);
 					break;
 				case MonitorActions.DiskIo:
-					if (string.IsNullOrEmpty(options.OutputPath))
-					{
-						Console.WriteLine("OutputPath (--output-path) cannot be empty.");
-						Environment.Exit((int)ExitCodes.InvalidArguments);
-					}
-
 					if (options.ProcessId <= 0)
 					{
-						Console.WriteLine("ProcessID (--process-id) cannot be empty.");
-						Environment.Exit((int)ExitCodes.InvalidArguments);
+					    var proc = Process.GetProcessesByName("Raven.Server");
+					    switch (proc.Length)
+					    {
+                            case 0:
+					            Console.WriteLine("ProcessID (--process-id) is empty, and no Raven.Server process was found.");
+					            Environment.Exit((int)ExitCodes.InvalidArguments);
+                                break;
+                            
+                            case 1:
+                                NotifyAssumption(string.Format("--process-id was not specified, assuming you meant Raven.Server process {0}", proc[0].Id));
+					            options.ProcessId = proc[0].Id;
+					            break;
+                            default:
+                                Console.WriteLine("ProcessID (--process-id) is empty, and there is more than a single Raven.Server process in the system, specify which one to use!");
+                                Environment.Exit((int)ExitCodes.InvalidArguments);
+					            break;
+					    }
 					}
+
+			        if (string.IsNullOrEmpty(options.ServerUrl))
+			        {
+			            options.ServerUrl = "http://localhost:8080/";
+			            bool isValid = true;
+			            try
+			            {
+                            WebRequest.Create(options.ServerUrl +"build/version").GetResponse().Close();
+			            }
+			            catch (Exception)
+			            {
+			                isValid = false;
+			            }
+
+			            if (isValid)
+			            {
+			                NotifyAssumption("Asuming server url is " + options.ServerUrl);
+			            }
+			            else
+			            {
+			                Console.WriteLine("ServerUrl (--server-url) cannot be empty.");
+			                Environment.Exit((int) ExitCodes.InvalidArguments);
+			            }
+			        }
 
 					try
 					{
@@ -91,7 +127,15 @@ namespace Raven.Monitor
 			}
 		}
 
-		private void Execute()
+	    private static void NotifyAssumption(string msg)
+	    {
+	        var foregroundColor = Console.ForegroundColor;
+	        Console.ForegroundColor = ConsoleColor.DarkRed;
+	        Console.WriteLine(msg);
+	        Console.ForegroundColor = foregroundColor;
+	    }
+
+	    private void Execute()
 		{
 			switch (options.Action)
 			{

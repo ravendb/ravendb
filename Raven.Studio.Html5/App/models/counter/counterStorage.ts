@@ -24,6 +24,7 @@ class counterStorage extends resource{
     }
 
     activate() {
+        this.isLoaded(true);
         ko.postbox.publish("ActivateCounterStorage", this);
     }
 

@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions;
+﻿using System.Net;
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
@@ -79,7 +81,7 @@ namespace Raven.Database.Smuggler
 
 					try
 					{
-						await ExportCounterData(exportOptions.From, jsonWriter);
+						await ExportCounterData(exportOptions.From, jsonWriter).ConfigureAwait(false);
 					}
 					catch (SmugglerExportException e)
 					{
@@ -127,88 +129,136 @@ namespace Raven.Database.Smuggler
 			foreach (var storageName in counterStorageNames)
 			{
 				var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(storageName);
-				jsonWriter.WriteStartObject();
 					
-					jsonWriter.WritePropertyName("CounterStorageName");
-					jsonWriter.WriteValue(storageName);
-					
-					jsonWriter.WritePropertyName("Counters");					
-					jsonWriter.WriteStartArray();
-						foreach (var counterInfo in counterStorageInfo)
-						{
-							jsonWriter.WriteStartObject();
-								jsonWriter.WritePropertyName("Group");
-								jsonWriter.WriteValue(counterInfo.Group);
+				jsonWriter.WriteStartArray();
+					foreach (var counterInfo in counterStorageInfo)
+					{
+						jsonWriter.WriteStartObject();
+							jsonWriter.WritePropertyName("Group");
+							jsonWriter.WriteValue(counterInfo.Group);
+							
+							jsonWriter.WritePropertyName("Name");
+							jsonWriter.WriteValue(counterInfo.CounterName);
+							jsonWriter.WritePropertyName("Positive");
+							jsonWriter.WriteValue(counterInfo.Increments);
+
+							jsonWriter.WritePropertyName("Negative");
+							jsonWriter.WriteValue(counterInfo.Decrements);
 								
-								jsonWriter.WritePropertyName("Name");
-								jsonWriter.WriteValue(counterInfo.CounterName);
+						jsonWriter.WriteEndObject();
+					}
+				jsonWriter.WriteEndArray();
 
-								jsonWriter.WritePropertyName("Positive");
-								//TODO: jsonWriter.WriteValue(counterInfo.Increments);
+			}
+		}
 
-								jsonWriter.WritePropertyName("Negative");
-								//TODO: jsonWriter.WriteValue(counterInfo.Decrements);
-								
-							jsonWriter.WriteEndObject();
-						}
-					jsonWriter.WriteEndArray();
+		//assumes that the caller has responsibility to handle data stream disposal ("stream" parameter)
+		private async Task ImportData(CounterConnectionStringOptions connectionString, Stream stream)
+		{
+			CountingStream sizeStream;
+			JsonTextReader jsonReader;
+			if (SmugglerHelper.TryGetJsonReaderForStream(stream, out jsonReader, out sizeStream) == false)
+			{
+				throw new InvalidOperationException("Failed to get reader for the data stream.");
+			}
 
-				jsonWriter.WriteEndObject();
+			if(jsonReader.TokenType != JsonToken.StartObject)
+				throw new InvalidDataException("StartObject was expected");
+
+			ICounterStore store = null;
+
+			try
+			{
+				if (jsonReader.Read() == false && jsonReader.TokenType != JsonToken.StartArray)
+					throw new InvalidDataException("StartArray was expected");
+
+				store = new CounterStore
+				{
+					Url = connectionString.Url,
+					Name = connectionString.CounterStoreId,
+					Credentials = new OperationCredentials(connectionString.ApiKey, connectionString.Credentials)
+				};
+				store.Initialize();
+
+				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+				{
+					if (jsonReader.TokenType == JsonToken.StartObject)
+					{
+						var counterInfo = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
+
+						var delta = Math.Abs(counterInfo.Value<long>("Positive")) - Math.Abs(counterInfo.Value<long>("Negative"));
+						store.Batch.ScheduleChange(counterInfo.Value<string>("Group"), counterInfo.Value<string>("Name"), delta);
+					}
+				}
+
+				await store.Batch.FlushAsync().ConfigureAwait(false);
+			}
+			finally
+			{
+				if(store != null)
+					store.Dispose();				
 			}
 		}
 
 		public async Task ImportData(SmugglerImportOptions<CounterConnectionStringOptions> importOptions)
 		{
-			throw new NotImplementedException();
-//			if (Options.Incremental == false)
-//			{
-//				Stream stream = importOptions.FromStream;
-//				bool ownStream = false;
-//				try
-//				{
-//					if (stream == null)
-//					{
-//						stream = File.OpenRead(importOptions.FromFile);
-//						ownStream = true;
-//					}
-//					await ImportData(importOptions, stream);
-//				}
-//				finally
-//				{
-//					if (stream != null && ownStream)
-//						stream.Dispose();
-//				}
-//				return;
-//			}
-//
-//			var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
-//				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
-//				.OrderBy(File.GetLastWriteTimeUtc)
-//				.ToArray();
-//
-//			if (files.Length == 0)
-//				return;
-//
-//			var oldItemType = Options.OperateOnTypes;
-//
-//			Options.OperateOnTypes = Options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers);
-//
-//			for (var i = 0; i < files.Length - 1; i++)
-//			{
-//				using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
-//				{
-//					Operations.ShowProgress("Starting to import file: {0}", files[i]);
-//					await ImportData(importOptions, fileStream);
-//				}
-//			}
-//
-//			Options.OperateOnTypes = oldItemType;
-//
-//			using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
-//			{
-//				Operations.ShowProgress("Starting to import file: {0}", files.Last());
-//				await ImportData(importOptions, fileStream);
-//			}
+			if (String.IsNullOrWhiteSpace(importOptions.FromFile) && importOptions.FromStream == null)
+				throw new ArgumentException("Missing from paramter from import options - be sure to define either FromFile or FromStream property");
+
+			if(importOptions.To == null)
+				throw new ArgumentException("Missing To parameter from importOptions - do not know where to import to.");
+
+			if (String.IsNullOrWhiteSpace(importOptions.To.Url))
+				throw new ArgumentException("Missing Url of the RavenDB server - do not know where to import to");
+
+			if(String.IsNullOrWhiteSpace(importOptions.To.CounterStoreId))
+				throw new ArgumentException("Missing Id of the Counter Store - do not know where to import to");
+
+			if (Options.Incremental == false)
+			{
+				var stream = importOptions.FromStream;
+				var ownStream = false;
+				try
+				{
+					if (stream == null)
+					{
+						stream = File.OpenRead(importOptions.FromFile);
+						ownStream = true;
+					}
+
+					await ImportData(importOptions.To, stream).ConfigureAwait(false);
+				}
+				finally
+				{
+					if (stream != null && ownStream)
+						stream.Dispose();
+				}
+			}
+			else
+			{
+				var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
+					.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
+					.OrderBy(File.GetLastWriteTimeUtc)
+					.ToArray();
+
+				if (files.Length == 0)
+					return;
+
+				for (var i = 0; i < files.Length - 1; i++)
+				{
+					using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
+					{
+						//Operations.ShowProgress("Starting to import file: {0}", files[i]);
+						await ImportData(importOptions.To, fileStream);
+					}
+				}
+
+				using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
+				{
+					//Operations.ShowProgress("Starting to import file: {0}", files.Last());
+					await ImportData(importOptions.To, fileStream).ConfigureAwait(false);
+				}
+			}
 		}
 
 		public Task Between(SmugglerBetweenOptions<CounterConnectionStringOptions> betweenOptions)

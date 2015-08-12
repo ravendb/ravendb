@@ -404,8 +404,41 @@ namespace Raven.Database.Counters
 				{
 					Group = counterDetails.Group,
 					CounterName = counterDetails.Name,
-					Total = CalculateCounterTotal(counterDetails.IdSlice, serverIdBuffer)
+					Increments = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer,ValueSign.Positive),
+					Decrements = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer, ValueSign.Negative)
 				}).ToList();
+			}
+
+			private long CalculateCounterTotalChangeBySign(Slice counterIdSlice, byte[] serverIdBuffer, char signToCalculate)
+			{
+				using (var it = counters.Iterate())
+				{
+					it.RequiredPrefix = counterIdSlice;
+					var seekResult = it.Seek(it.RequiredPrefix);
+					//should always be true
+					Debug.Assert(seekResult == true);
+
+					long totalChangeBySign = 0;
+					do
+					{
+						var reader = it.CurrentKey.CreateReader();
+						reader.Skip(sizeof(long));
+						reader.Read(serverIdBuffer, 0, parent.sizeOfGuid);
+						var serverId = new Guid(serverIdBuffer);
+						//this means that this is a tombstone of a counter
+						if (serverId.Equals(parent.tombstoneId))
+							continue;
+
+						var lastByte = it.CurrentKey[it.CurrentKey.Size - 1];
+						var sign = Convert.ToChar(lastByte);
+						Debug.Assert(sign == ValueSign.Positive || sign == ValueSign.Negative);
+						var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+						if (sign == signToCalculate)
+							totalChangeBySign += value;
+					} while (it.MoveNext());
+
+					return totalChangeBySign;
+				}				
 			}
 
 			private long CalculateCounterTotal(Slice counterIdSlice, byte[] serverIdBuffer)

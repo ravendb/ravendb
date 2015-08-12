@@ -342,6 +342,7 @@
     <Content Include="App\views\manage\infoPackageImport.html" />
     <Content Include="App\views\manage\ioTest.html" />
     <Content Include="App\views\manage\licenseInformation.html" />
+    <Content Include="App\views\manage\diskIoViewer.html" />
     <Content Include="App\views\manage\restore.html" />
     <Content Include="App\views\manage\serverSmuggling.html" />
     <Content Include="App\views\manage\studioConfig.html" />
@@ -797,6 +798,7 @@
     <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\query\enableQueryTimings.ts" />
     <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
@@ -841,6 +843,7 @@
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />
+    <TypeScriptCompile Include="App\commands\maintenance\listDiskPerformanceRunsCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\savePeriodicExportSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\startCompactCommand.ts" />
@@ -1157,6 +1160,7 @@
     <TypeScriptCompile Include="App\viewmodels\manage\infoPackageImport.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\ioTest.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\licenseInformation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\diskIoViewer.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\restore.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\serverSmuggling.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\studioConfig.ts" />

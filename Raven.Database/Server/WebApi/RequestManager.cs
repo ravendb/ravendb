@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -23,6 +24,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using Sparrow.Collections;
 
 namespace Raven.Database.Server.WebApi
@@ -403,7 +405,7 @@ namespace Raven.Database.Server.WebApi
 
 			if (controller.IsInternalRequest == false)
 			{
-				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);
+				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName, response);
 			}
 
 			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
@@ -438,10 +440,21 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
+		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)
 				return;
+
+			RavenJObject timingsJson = null;
+
+			if (controller is IndexController)
+			{
+				var jsonContent = response.Content as JsonContent;
+				if (jsonContent != null && jsonContent.Data != null) 
+				{
+					timingsJson = jsonContent.Data.Value<RavenJObject>("TimingsInMilliseconds");
+				}
+			}
 
 			NotifyTrafficWatch(
 			new TrafficWatchNotification()
@@ -453,7 +466,8 @@ namespace Raven.Database.Server.WebApi
 				ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
 				TenantName = NormalizeTennantName(databaseName),
 				TimeStamp = SystemTime.UtcNow,
-				InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
+				InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
+				QueryTimings = timingsJson
 			}
 			);
 		}

@@ -650,7 +650,7 @@ class resources extends viewModelBase {
         var foundFileSystem = this.fileSystems.first((fs: fileSystem) => fs.name === fileSystemName);
 
         if (!foundFileSystem) {
-            var newFileSystem = new fileSystem(fileSystemName, true, false, bundles);
+            var newFileSystem = new fileSystem(fileSystemName, true, false, false, bundles);
             this.fileSystems.unshift(newFileSystem);
             this.filterResources();
             return newFileSystem;

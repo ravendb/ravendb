@@ -1,13 +1,16 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="OperationType.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="PathInformation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics.Eventing.Reader;
+
 namespace Raven.Monitor.IO.Data
 {
-	internal enum OperationType
+	internal class PathInformation
 	{
-		Read,
-		Write
+		public string Path { get; set; }
+
+		public PathType PathType { get; set; }
 	}
 }
