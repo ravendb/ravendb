@@ -83,7 +83,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					Values = point.Values,
 				});
 
-				return GetMessageWithObject(newPointWasAppended ? "Created" : "Updated", newPointWasAppended ? HttpStatusCode.Created : HttpStatusCode.OK);
+				return GetEmptyMessage(newPointWasAppended ? HttpStatusCode.Created : HttpStatusCode.OK);
 			}
 		}
 
