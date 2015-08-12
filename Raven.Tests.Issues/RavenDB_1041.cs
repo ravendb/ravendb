@@ -168,7 +168,7 @@ namespace Raven.Tests.Issues
 			}
 
 			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
-			Assert.Contains("Confirmed that the specified etag", exception.Message);
+			Assert.Contains("Could only confirm that the specified Etag", exception.Message);
 		}
 
 		[Fact]
