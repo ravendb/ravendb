@@ -275,7 +275,6 @@ namespace Voron.Tests.FixedSize
             }
 
 			var tc = Environment.TickCount;
-			Console.WriteLine("Seed: " + tc);
 			var random = new Random(tc);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
@@ -291,7 +290,6 @@ namespace Voron.Tests.FixedSize
                     {
                         status[j] = false;
                     }
-                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange((long) start, (long) end);
 
                     tx.Commit();
@@ -313,7 +311,6 @@ namespace Voron.Tests.FixedSize
                     {
                         status.Set(j, false);
                     }
-                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
@@ -361,14 +358,12 @@ namespace Voron.Tests.FixedSize
             }
 
 			var tc = Environment.TickCount;
-			Console.WriteLine("Seed: " + tc);
 			var random = new Random(tc);
 			for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
                 var end = random.Next(start, count);
 
-                Console.WriteLine($"{start } -> {end}");
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
@@ -378,7 +373,6 @@ namespace Voron.Tests.FixedSize
                     {
                         status[j] = false;
                     }
-                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
@@ -389,15 +383,7 @@ namespace Voron.Tests.FixedSize
                 var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
-	                try
-	                {
-		                Assert.Equal(status[i], fst.Contains(i));
-	                }
-	                catch
-	                {
-		                Console.WriteLine("Failed at: " + i);
-		                throw;
-	                }
+                    Assert.Equal(status[i], fst.Contains(i));
                 }
             }
         }
@@ -425,7 +411,6 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
             var tc = Environment.TickCount;
-            Console.WriteLine("Seed: " + tc);
             var random = new Random(tc);
             for (var i = 0; i < count/10; i++)
             {
@@ -440,7 +425,6 @@ namespace Voron.Tests.FixedSize
                     {
                         status[j] = false;
                     }
-                    Console.WriteLine($"{start}->{end}");
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
@@ -452,15 +436,7 @@ namespace Voron.Tests.FixedSize
 
                 for (int i = 0; i < count; i++)
                 {
-	                try
-	                {
-						Assert.Equal(status[i * 3], fst.Contains(i * 3));
-					}
-					catch
-	                {
-		                Console.WriteLine("Failed at: " + i);
-		                throw;
-	                }
+                    Assert.Equal(status[i * 3], fst.Contains(i * 3));
                 }
             }
         }
