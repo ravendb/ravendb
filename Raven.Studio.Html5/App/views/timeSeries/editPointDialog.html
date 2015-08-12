@@ -22,7 +22,7 @@
                         <label class="col-md-4" for="key">Key:</label>
                         <div class="col-md-7">
                             <!-- ko if: isNew() -->
-                            <input required type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, customValidity: keyNameCustomValidityError, valueUpdate: 'afterkeydown'">
+                            <input required type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, customValidity: keyCustomValidityError, valueUpdate: 'afterkeydown'">
                             <!-- /ko -->
                             <!-- ko ifnot: isNew() -->
                             <span data-bind="text: key"></span>

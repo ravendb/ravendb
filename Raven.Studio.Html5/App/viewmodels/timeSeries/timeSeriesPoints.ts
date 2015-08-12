@@ -134,17 +134,18 @@ class timeSeriesPoints extends viewModelBase {
     }
 
     newPoint() {
-        /*var changeVm = new editPointDialog();
+        var key = this.currentKey();
+        var fields = key.Fields;
+        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint("", fields, "", moment().format(), fields.map(x => 0)), true), true);
         changeVm.updateTask.done((change: pointChange) => {
-            var timeSeriesCommand = new appendPointCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
-            var execute = timeSeriesCommand.execute();
-			execute.done(() => this.refreshGridAndGroup(change.key()));
+            new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
+                .execute()
+                .done(() => this.refresh());
         });
-        app.showDialog(changeVm);*/
+        app.showDialog(changeVm);
     }
 
     refresh() {
-                debugger
         this.getPointsGrid().refreshCollectionData();
         this.currentKey().getPoints().invalidateCache();
         this.selectNone();
@@ -157,7 +158,7 @@ class timeSeriesPoints extends viewModelBase {
 
         var selectedPoint = <timeSeriesPoint>grid.getSelectedItems(1).first();
         var change = new pointChange(selectedPoint);
-        var pointChangeVM = new editPointDialog(change);
+        var pointChangeVM = new editPointDialog(change, false);
         pointChangeVM.updateTask.done((change: pointChange, isNew: boolean) => {
             new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
                 .execute()
