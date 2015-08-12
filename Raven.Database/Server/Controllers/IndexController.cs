@@ -17,6 +17,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -139,7 +140,7 @@ namespace Raven.Database.Server.Controllers
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 			}
 
-			string[] createdIndexes;
+			IndexActions.SideBySideIndexInfo[] createdIndexes;
 			try
 			{
 				createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes.IndexesToAdd);
@@ -156,7 +157,21 @@ namespace Raven.Database.Server.Controllers
 					Error = ex.ToString()
 				}, HttpStatusCode.BadRequest);
 			}
-			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
+
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var createdIndex in createdIndexes.Where(x => x.IsSideBySide))
+				{
+					Database.Documents.Put(
+						Constants.IndexReplacePrefix + createdIndex.Name,
+						null,
+						RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = createdIndex.OriginalName, MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace, ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc}),
+						new RavenJObject(),
+						null);
+				}
+			});
+
+			return GetMessageWithObject(new { Indexes = createdIndexes.Select(x => x.Name).ToArray() }, HttpStatusCode.Created);
 		}
 
 		[HttpGet]
@@ -191,8 +206,6 @@ namespace Raven.Database.Server.Controllers
             }
 		}
 
-		
-
 		[HttpPost]
 		[RavenRoute("indexes/last-queried")]
 		[RavenRoute("databases/{databaseName}/indexes/last-queried")]
@@ -209,8 +222,6 @@ namespace Raven.Database.Server.Controllers
 			});
 			return GetEmptyMessage();
 		}
-
-
 
 		[HttpPut]
 		[RavenRoute("indexes/{*id}")]

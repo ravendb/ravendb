@@ -326,79 +326,31 @@ namespace Raven.Database.Actions
 			}
 		}
 
-		/*private string PutSideBySideIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
-		{
-			if (name == null)
-				throw new ArgumentNullException("name");
-
-			name = name.Trim();
-			IsIndexNameValid(name);
-
-			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
-			if (existingIndex != null)
-			{
-				switch (existingIndex.LockMode)
-				{
-					case IndexLockMode.LockedIgnore:
-						Log.Info("Index {0} not saved because it was lock (with ignore)", name);
-						return null;
-
-					case IndexLockMode.LockedError:
-						throw new InvalidOperationException("Can not overwrite locked index: " + name);
-				}
-			}
-
-			AssertAnalyzersValid(definition);
-
-			switch (FindIndexCreationOptions(definition, ref name))
-			{
-				case IndexCreationOptions.Noop:
-					return null;
-				case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
-					// ensure that the code can compile
-					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
-					IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
-					return null;
-				case IndexCreationOptions.Update:
-					// ensure that the code can compile
-					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
-					DeleteIndex(name);
-					break;
-			}
-
-			PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
-
-			WorkContext.ClearErrorsFor(name);
-
-			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
-			{
-				Name = name,
-				Type = IndexChangeTypes.IndexAdded,
-			}));
-
-			return name;
-		}*/
-
 		[MethodImpl(MethodImplOptions.Synchronized)]
-		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
+		public SideBySideIndexInfo[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
 		{
-			var createdIndexes = new List<string>();
+			var createdIndexes = new List<SideBySideIndexInfo>();
 			var prioritiesList = new List<IndexingPriority>();
 			try
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
 					var replaceIndexName = "ReplacementOf/" + indexToAdd.Name;
-					var existingSideBySideIndex = IndexDefinitionStorage.GetIndexDefinition(replaceIndexName);
-					var nameToAdd = PutIndexInternal(existingSideBySideIndex != null ? replaceIndexName : indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true, isSideBySide: true);
+					var existingIndexExists = IndexDefinitionStorage.GetIndexDefinition(indexToAdd.Name) != null;
+					var nameToAdd = PutIndexInternal(existingIndexExists ? replaceIndexName : indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true, isSideBySide: true);
 					if (nameToAdd == null)
 						continue;
 
-					createdIndexes.Add(nameToAdd);
+					createdIndexes.Add(new SideBySideIndexInfo
+					{
+						OriginalName = indexToAdd.Name,
+						Name = nameToAdd,
+						IsSideBySide = existingIndexExists
+					});
 					prioritiesList.Add(indexToAdd.Priority);
 				}
 
-				var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
+				var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x.Name).indexId).ToArray();
 				Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
 
 				return createdIndexes.ToArray();
@@ -408,11 +360,20 @@ namespace Raven.Database.Actions
 				Log.WarnException("Could not create index batch", e);
 				foreach (var index in createdIndexes)
 				{
-					DeleteIndex(index);
+					DeleteIndex(index.Name);
 				}
 				throw;
 			}
 		}
+
+	    public class SideBySideIndexInfo
+	    {
+			public string OriginalName { get; set; }
+
+			public string Name { get; set; }
+
+			public bool IsSideBySide { get; set; }
+	    }
 
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
         {
