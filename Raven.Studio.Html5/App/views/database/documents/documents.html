@@ -9,17 +9,17 @@
     <!-- /ko -->
 
     <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0; position: relative">
-	    <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: { data: collections, afterAdd: showCollectionElement, beforeRemove: hideCollectionElement }">
-		    <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
-			    <a href="javascript:void(0)">
-				    <div class="collection-name">
-					    <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-					    <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
-					    <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
-				    </div>
-			    </a>
-		    </li>
-	    </ul>
+        <ul class="nav nav-pills nav-stacked document-collections has-show-all-items" data-bind="foreach: { data: collections, afterAdd: showCollectionElement, beforeRemove: hideCollectionElement }">
+            <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+                <a href="javascript:void(0)">
+                    <div class="collection-name">
+                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+                        <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
+                        <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
+                    </div>
+                </a>
+            </li>
+        </ul>
 		<div class="collection-resize"></div>
     </div>
     <div class="col-md-10" id="documents-page-right-container">

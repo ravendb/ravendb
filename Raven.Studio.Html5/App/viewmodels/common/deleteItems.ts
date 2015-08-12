@@ -1,10 +1,12 @@
 ﻿import document = require("models/database/documents/document");
 import file = require("models/filesystem/file");
 import counterSummary = require("models/counter/counterSummary");
+import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import deleteFilesCommand = require("commands/filesystem/deleteFilesCommand");
 import deleteCountersCommand = require("commands/counter/deleteCountersCommand");
+import deletePointsCommand = require("commands/timeSeries/deletePointsCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
@@ -42,6 +44,15 @@ class deleteItems extends dialogViewModelBase {
 				}
 			});
             deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
+        } else if (this.items()[0] instanceof timeSeriesPoint) {
+            var points = this.items().map((x: timeSeriesPoint) => {
+                return {
+                    Type: x.type,
+                    Key: x.key,
+                    At: x.At
+                };
+            });
+            deleteCommand = new deletePointsCommand(points, appUrl.getTimeSeries());
         }
         var deleteCommandTask = deleteCommand.execute();
 

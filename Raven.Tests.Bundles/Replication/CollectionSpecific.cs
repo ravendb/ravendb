@@ -1,7 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client;
@@ -27,7 +26,7 @@ namespace Raven.Tests.Bundles.Replication
 			
 			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
-			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new[]{ "C1s" }, store2);
+			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new Dictionary<string, string> { { "C1s", null } }, store2);
 
 			using (var store = new DocumentStore
 			{
@@ -76,7 +75,7 @@ namespace Raven.Tests.Bundles.Replication
 			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 			store3.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
-			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new[] { "C1s" }, store2);
+			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new Dictionary<string, string> { { "C1s", null } }, store2);
 			UpdateReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), store3);
 
 			using (var store = new DocumentStore
@@ -125,7 +124,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			var ids = WriteTracers(store1);
 
-			SetupReplication(store1.DatabaseCommands, new[] { "C2s" }, store2, store3);
+			SetupReplication(store1.DatabaseCommands, new Dictionary<string, string> {{ "C2s", null }}, store2, store3);
 			
 
 			Assert.True(WaitForDocument(store2.DatabaseCommands, ids.Item2, 1000));

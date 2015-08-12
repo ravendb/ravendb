@@ -80,7 +80,7 @@ namespace Voron.Tests.Trees
 
 				tx.Commit();
 
-				DebugStuff.RenderAndShow(tx, tx.State.Root.State.RootPageNumber, 1);
+				DebugStuff.RenderAndShow(tx.State.Root);
 
 				Assert.Equal(31, tx.State.Root.AllPages().Count);
 				Assert.Equal(31, tx.State.Root.State.PageCount);

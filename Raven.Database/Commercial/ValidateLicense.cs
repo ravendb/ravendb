@@ -39,6 +39,7 @@ namespace Raven.Database.Commercial
 			{"quotas","false"},
 			{"ravenfs", "false"},
 			{"counters", "false"},
+			{"timeSeries", "false"},
 
 			{"authorization","true"},
 			{"documentExpiration","true"},

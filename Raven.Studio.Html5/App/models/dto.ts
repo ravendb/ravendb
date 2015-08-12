@@ -46,6 +46,7 @@ interface logNotificationDto {
     CustomInfo: string;
     TenantType: TenantType;
     InnerRequestsCount?: number;
+    QueryTimings: any;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
@@ -460,10 +461,9 @@ interface replicationDestinationDto {
     Disabled: boolean;
     ClientVisibleUrl: string;
     SkipIndexReplication: boolean;
-    SourceCollections: string[];
+    SpecifiedCollections: dictionary<string>;
     HasGlobal?: boolean;
     HasLocal?: boolean;
-    TransformScripts: dictionary<string>;
 }
 
 interface configurationDocumentDto<TClass> {
@@ -889,13 +889,6 @@ interface statusDebugChangesFileSystemDto {
     WatchCancellations: boolean;
     WatchConfig: boolean;
     WatchedFolders: Array<string>;
-}
-
-interface statusDebugChangesTimeSeriesDto {
-    WatchedChanges: Array<string>;
-    WatchedLocalChanges: Array<string>;
-    WatchedReplicationChanges: Array<string>;
-    WatchedBulkOperationsChanges: Array<string>;
 }
 
 interface statusDebugMetricsDto {

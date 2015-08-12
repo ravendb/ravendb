@@ -448,7 +448,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag &&
 								destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag &&
-								(destination.CollectionsToReplicate == null || destination.CollectionsToReplicate.Count == 0))
+								(destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count == 0))
 							{
 								DateTime lastSent;
 
@@ -687,10 +687,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
-						  "&dbid=" + docDb.TransactionalStorage.Id;
-				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
-					url += ("&collections=" + String.Join(";", destination.CollectionsToReplicate));
+				var url = GetUrlFor(destination, "/replication/lastEtag");
 
 				if (lastDocEtag != null)
 					url += "&docEtag=" + lastDocEtag;
@@ -716,6 +713,16 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.WarnException("Failed to contact replication destination: " + destination, e);
 			}
+		}
+
+		private string GetUrlFor(ReplicationStrategy destination, string endpoint)
+		{
+			var url = destination.ConnectionStringOptions.Url + endpoint + "?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
+
+			if (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count > 0)
+				return url;
+
+			return url + ("&collections=" + string.Join(";", destination.SpecifiedCollections.Keys));
 		}
 
 		private void RecordFailure(string url, string lastError)
@@ -856,16 +863,10 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var sourceServerUrl = UrlEncodedServerUrl();
-				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
-				{
-					var commaDelimitedCollections = String.Join(";", destination.CollectionsToReplicate);
-					sourceServerUrl += ("&collections=" + commaDelimitedCollections);
-				}
+	
+				var url = GetUrlFor(destination, "/replication/replicateDocs");
 
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + sourceServerUrl
-						  + "&dbid=" + docDb.TransactionalStorage.Id +
-						  "&count=" + jsonDocuments.Length;
+				url += "&count=" + jsonDocuments.Length;
 
 				var sp = Stopwatch.StartNew();
 
@@ -965,7 +966,7 @@ namespace Raven.Bundles.Replication.Tasks
 						foreach (var handler in new IReplicatedDocsHandler[]
 						{
 							new FilterReplicatedDocs(docDb.Documents, destination, prefetchingBehavior, destinationId, result.LastEtag),
-							new TransformReplicatedDocs(docDb, destination)
+							new FilterAndTransformSpecifiedCollections(docDb, destination, destinationId)
 						})
 						{
 							handled = handler.Handle(handled);
@@ -1248,11 +1249,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Etag currentEtag = Etag.Empty;
 				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
-				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
-						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
+				var url = GetUrlFor(destination, "/replication/lastEtag");
 
-				if (destination.CollectionsToReplicate != null && destination.CollectionsToReplicate.Count > 0)
-					url += ("&collections=" + String.Join(";", destination.CollectionsToReplicate));
+				url += "&currentEtag=" + currentEtag;
 
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, destination.ConnectionStringOptions);
 				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
@@ -1390,11 +1389,9 @@ namespace Raven.Bundles.Replication.Tasks
 				ApiKey = destination.ApiKey,
 			};
 
-			replicationStrategy.CollectionsToReplicate = destination.SourceCollections.ToList();
-
-			if (destination.TransformScripts != null)
+			if (destination.SpecifiedCollections != null)
 			{
-				replicationStrategy.TransformScripts = new Dictionary<string, string>(destination.TransformScripts, StringComparer.OrdinalIgnoreCase);
+				replicationStrategy.SpecifiedCollections = new Dictionary<string, string>(destination.SpecifiedCollections, StringComparer.OrdinalIgnoreCase);
 			}
 			
 			if (string.IsNullOrEmpty(destination.Username) == false)

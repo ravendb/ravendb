@@ -189,7 +189,7 @@ class row {
         var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
         if (colParam && colParam.template() !== cell.defaultTemplate && colParam.template() !== cell.counterGroupTemplate && colParam.template() !== cell.counterNameTemplate) {
             return cell.customTemplate;
-        } 
+        }
 
 		// see if this is a counter or counter group
 	    if (this.viewModel.isCounterView()) {
@@ -199,7 +199,14 @@ class row {
 				case "Name":
 					return cell.counterNameTemplate;
 		    }
-	    }
+        }
+        else if (this.viewModel.isTimeSeriesView()) {
+            if (propertyName == "Key") {
+
+                return cell.timeSeriesKeyTemplate;
+            }
+            return cell.defaultTemplate;
+        }
 
         return cell.defaultTemplate;
     }

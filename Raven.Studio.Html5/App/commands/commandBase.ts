@@ -19,9 +19,6 @@ class commandBase {
     static loadingCounter = 0;
     static biggestTimeToAlert = 0;
 
-    constructor() {
-    }
-
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
     }
@@ -96,8 +93,8 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000, responseDataType: string = "json"): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert, responseDataType);
     }
 
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -123,7 +120,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "EVAL", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000, responseDataType: string = "json"): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
         //
@@ -139,7 +136,7 @@ class commandBase {
         var defaultOptions = {
             url: appUrl.forResourceQuery(resource) + relativeUrl,
             data: args,
-            dataType: "json",
+            dataType: responseDataType,
             contentType: contentType, 
             type: method,
             headers: undefined,

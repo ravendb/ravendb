@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.TimeSeries;
+using Raven.Abstractions.Util;
 using Raven.Client.TimeSeries.Operations;
+using Raven.Json.Linq;
 
 namespace Raven.Client.TimeSeries
 {
@@ -23,6 +29,39 @@ namespace Raven.Client.TimeSeries
 				parent.AssertInitialized();
 
 				return new TimeSeriesBatchOperation(parent, parent.Name, options);
+			}
+
+			public async Task<TimeSeriesKey[]> GetKeys(string type, CancellationToken token =  default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
+				{
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/{2}/keys",
+						url, timeSeriesName, type);
+					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+					{
+						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
+						return result.JsonDeserialization<TimeSeriesKey[]>();
+					}
+				}, token);
+			}
+
+			public async Task<TimeSeriesType[]> GetTypes(CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
+				{
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types", url, timeSeriesName);
+					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+					{
+						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
+						return result.JsonDeserialization<TimeSeriesType[]>();
+					}
+				}, token);
 			}
 		}
     }

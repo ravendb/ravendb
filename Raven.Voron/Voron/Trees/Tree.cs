@@ -38,6 +38,10 @@ namespace Voron.Trees
         }
 
         private readonly Transaction _tx;
+        public Transaction Tx
+        {
+            get { return _tx; }
+        }
 
         private Tree(Transaction tx, long root)
         {
@@ -193,9 +197,12 @@ namespace Voron.Trees
 
         internal byte* DirectAdd(MemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
         {
-            Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
+			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
-            if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
+	        if (State.InWriteTransaction)
+				State.IsModified = true;
+
+			if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
 			if (AbstractPager.IsKeySizeValid(key.Size, KeysPrefixing) == false)
@@ -324,7 +331,7 @@ namespace Voron.Trees
                 var p = stack.Pop();
                 if (p.NumberOfEntries == 0 && p != root)
                 {
-                    DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                    DebugStuff.RenderAndShow(_tx, rootPageNumber);
                     throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
                 }
@@ -342,7 +349,7 @@ namespace Voron.Trees
                     var page = p.GetNode(i)->PageNumber;
                     if (pages.Add(page) == false)
                     {
-                        DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                        DebugStuff.RenderAndShow(_tx, rootPageNumber);
                         throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
                     }
                     stack.Push(_tx.GetReadOnlyPage(page));
@@ -825,12 +832,37 @@ namespace Voron.Trees
 		{
 			if (_fixedSizeTrees == null)
 				_fixedSizeTrees= new Dictionary<string, FixedSizeTree>();
-			var fixedSizeTree = new FixedSizeTree(_tx, this, key, valSize);
-			_fixedSizeTrees[key] = fixedSizeTree;
+
+			FixedSizeTree fixedTree;
+			if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
+			{
+				_fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_tx, this, key, valSize);
+			}
 
 			State.Flags |= TreeFlags.FixedSizeTrees;
 
-			return fixedSizeTree;
+			return fixedTree;
+		}
+
+	    public long DeleteFixedTreeFor(string key, byte valSize = 0)
+	    {
+		    var fixedSizeTree = FixedTreeFor(key, valSize);
+		    var numberOfEntries = fixedSizeTree.NumberOfEntries;
+
+		    foreach (var page in fixedSizeTree.AllPages())
+		    {
+			    _tx.FreePage(page);
+		    }
+			_fixedSizeTrees.Remove(key);
+			Delete(key);
+		    
+			return numberOfEntries;
+	    }
+
+		[Conditional("DEBUG")]
+		public void DebugRenderAndShow()
+		{
+			DebugStuff.RenderAndShow(this);
 		}
 	}
 }

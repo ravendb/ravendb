@@ -215,7 +215,7 @@ namespace Voron.Tests.Bugs
 				{
 					var tree = tx.ReadTree("mapped_results_by_view_and_reduce_key");
 
-					DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
+					DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
 				}
 			}
 		}

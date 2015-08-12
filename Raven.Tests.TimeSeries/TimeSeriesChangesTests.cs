@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.TimeSeries.Notifications;
+using Raven.Client.TimeSeries.Changes;
 using Xunit;
 using Xunit.Extensions;
 
@@ -18,39 +19,43 @@ namespace Raven.Tests.TimeSeries
 		{
 			using (var store = NewRemoteTimeSeriesStore())
 			{
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+
 				var changes = store.Changes();
-				var notificationTask = changes.Task.Result
-					.ForKey("Time")
+				var changesTask = await changes.Task;
+				var notificationTask = changesTask
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				var at = DateTime.Now;
-				await store.AppendAsync("Type1", "Time", at, 3d);
+				var at = new DateTime(2015, 1, 1);
+				await store.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(at.Ticks, timeSeriesChange.At);
+				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 				Assert.Equal(3d, timeSeriesChange.Values.Single());
 
-				notificationTask = changes.Task.Result
-					.ForKey("Time")
+				var changesTask2 = changes.Task;
+				notificationTask = changesTask2.Result
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(300))
 					.Take(1)
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				await store.DeleteAsync("Type1", "Time");
+				await store.DeleteAsync("Simple", "Time");
 
 				timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(DateTime.MinValue.Ticks, timeSeriesChange.At);
+				Assert.Equal(DateTime.MinValue, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
-				Assert.Equal(0, timeSeriesChange.Values.Length);
+				Assert.Equal(null, timeSeriesChange.Values);
 			}
 		}
 
@@ -65,37 +70,37 @@ namespace Raven.Tests.TimeSeries
 
 				var changesB = storeB.Changes();
 				var notificationTask = changesB.Task.Result
-					.ForKey("Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(10))
 					.Take(1).ToTask();
 
 				changesB.WaitForAllPendingSubscriptions();
 
 				var at = DateTime.Now;
-				await storeA.AppendAsync("-Simple", "Time", at, 3d);
+				await storeA.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(at.Ticks, timeSeriesChange.At);
+				Assert.Equal(at, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 
 				//now connecting to changes in storeA
 				var changesA = storeA.Changes();
 				notificationTask = changesA.Task.Result
-					.ForKey("Time")
+					.ForKey("Simple", "Time")
 					.Timeout(TimeSpan.FromSeconds(10))
 					.Take(1).ToTask();
 
 				changesA.WaitForAllPendingSubscriptions();
 
 				var at2 = DateTime.Now.AddMinutes(6);
-				await storeB.AppendAsync("-Simple", "Is", at2, 6d);
+				await storeB.AppendAsync("Simple", "Is", at2, 6d);
 
 				timeSeriesChange = await notificationTask;
-				Assert.Equal("-Simple", timeSeriesChange.Prefix);
+				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Is", timeSeriesChange.Key);
-				Assert.Equal(at2.Ticks, timeSeriesChange.At);
+				Assert.Equal(at2, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Append, timeSeriesChange.Action);
 			}
 		}
@@ -106,11 +111,13 @@ namespace Raven.Tests.TimeSeries
 		[InlineData(50, 30)]
 		[InlineData(50, 30)]
 		[InlineData(50, 130)]
-		public void NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
+		public async Task NotificationReceivedWhenBatchOperation(int batchSizeLimit, int actionsCount)
 		{
 			int startCount = 0, endCount = 0;
 			using (var store = NewRemoteTimeSeriesStore())
 			{
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+
 				using (var batchOperation = store.Advanced.NewBatch(new TimeSeriesBatchOptions { BatchSizeLimit = batchSizeLimit }))
 				{
 					store.Changes().Task.Result
@@ -130,7 +137,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("-Simple", "Time", DateTime.Today.AddMinutes(i));
+						batchOperation.ScheduleAppend("Simple", "Time", DateTime.Today.AddMinutes(i), 234D);
 					}
 				}
 
