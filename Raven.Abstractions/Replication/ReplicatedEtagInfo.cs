@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Replication
 
 	    public override string ToString()
 	    {
-	        return string.Format("Url: {0}, Etag: {1}", DestinationUrl, DocumentEtag ?? "null");
+	        return string.Format("Url: {0}, Etag: {1}", DestinationUrl, DocumentEtag == null ? "no etag" : DocumentEtag.ToString());
 	    }
 	}
 }
