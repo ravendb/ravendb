@@ -226,8 +226,8 @@ namespace Raven.Client.Indexes
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
-			
-			var replaceIndexName = "ReplacementOf/" + IndexName;
+
+			var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
 			//check if side by side index exists
 	        var sideBySideDef = databaseCommands.GetIndex(replaceIndexName);
 	        if (sideBySideDef != null)
@@ -411,7 +411,7 @@ namespace Raven.Client.Indexes
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
 
-			var replaceIndexName = "ReplacementOf/" + IndexName;
+			var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
 			//check if side by side index exists
 			var sideBySideDef = await asyncDatabaseCommands.GetIndexAsync(replaceIndexName, token).ConfigureAwait(false);
 			if (sideBySideDef != null)

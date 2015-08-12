@@ -216,9 +216,7 @@ namespace Raven.Database.Actions
 
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
             if (existingIndex == null)
-            {
                 return true;
-            }
 
             var creationOption = FindIndexCreationOptions(definition, ref name);
             return creationOption != IndexCreationOptions.Noop;
@@ -233,7 +231,7 @@ namespace Raven.Database.Actions
 	        return PutIndexInternal(name, definition);
         }
 
-		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isSideBySide = false)
+		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideBySide = false)
 	    {
 		    if (name == null)
 			    throw new ArgumentNullException("name");
@@ -247,7 +245,7 @@ namespace Raven.Database.Actions
 			    switch (existingIndex.LockMode)
 			    {
 				    case IndexLockMode.SideBySide:
-					    if (isSideBySide == false)
+					    if (isUpdateBySideBySide == false)
 					    {
 						    Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
 						    throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
@@ -335,9 +333,16 @@ namespace Raven.Database.Actions
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
-					var replaceIndexName = "ReplacementOf/" + indexToAdd.Name;
-					var existingIndexExists = IndexDefinitionStorage.GetIndexDefinition(indexToAdd.Name) != null;
-					var nameToAdd = PutIndexInternal(existingIndexExists ? replaceIndexName : indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true, isSideBySide: true);
+					var indexName = indexToAdd.Name.Trim();
+					var creationOption = FindIndexCreationOptions(indexToAdd.Definition, ref indexName);
+					if (creationOption == IndexCreationOptions.Noop)
+						continue;
+
+					//if we need to update the index, we should create a side by side one
+					if (creationOption == IndexCreationOptions.Update)
+						indexName = Constants.SideBySideIndexNamePrefix + indexToAdd.Name;
+
+					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideBySide: true);
 					if (nameToAdd == null)
 						continue;
 
@@ -345,7 +350,7 @@ namespace Raven.Database.Actions
 					{
 						OriginalName = indexToAdd.Name,
 						Name = nameToAdd,
-						IsSideBySide = existingIndexExists
+						IsSideBySide = creationOption == IndexCreationOptions.Update
 					});
 					prioritiesList.Add(indexToAdd.Priority);
 				}
