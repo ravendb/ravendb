@@ -20,7 +20,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 2000; i++)
 					{
 						var dateTime = start.AddMinutes(2 * i);
-						writer.Append("-Simple", "Time", dateTime, i);
+						writer.Append("Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -30,7 +30,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -87,7 +87,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("-Simple", "Time", dateTime, i);
+						writer.Append("Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -97,7 +97,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(2),
@@ -169,7 +169,7 @@ namespace Raven.Tests.TimeSeries
 					for (int i = 10; i < 5000; i++)
 					{
 						var dateTime = start.AddHours(6 * i);
-						writer.Append("-Simple", "Time", dateTime, i);
+						writer.Append("Simple", "Time", dateTime, i);
 					}
 					writer.Commit();
 				}
@@ -179,7 +179,7 @@ namespace Raven.Tests.TimeSeries
 					var time = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddYears(-2),
 							End = start.AddYears(6),

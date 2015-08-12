@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Voron.Debugging;
 using Voron.Util;
 
 namespace Voron.Tests.Bugs
@@ -134,13 +135,13 @@ namespace Voron.Tests.Bugs
 				tree.Add(eKey, new MemoryStream(new byte[800]));
 				tree.Add(fKey, new MemoryStream(new byte[10]));
 
-				RenderAndShow(tx, 1, "rebalancing-issue");
+                DebugStuff.RenderAndShow(tx, 1);
 
-				// to expose the bug we need to delete the last item from the left most page
-				// tree rebalance will try to fix the first reference (the implicit ref page node) in the parent page which is almost full 
-				// and will fail because there is no space to put a new node
+                // to expose the bug we need to delete the last item from the left most page
+                // tree rebalance will try to fix the first reference (the implicit ref page node) in the parent page which is almost full 
+                // and will fail because there is no space to put a new node
 
-				tree.Delete(aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
+                tree.Delete(aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
 				tx.Commit();
 
@@ -203,13 +204,14 @@ namespace Voron.Tests.Bugs
 				tree.Add(mKey, new MemoryStream(new byte[100]));
 				tree.Add(nKey, new MemoryStream(new byte[1000]));
 
-				RenderAndShow(tx, 1, "rebalancing-issue");
+                DebugStuff.RenderAndShow(tx,1);
 
-				tree.Delete(nKey);  // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
-				RenderAndShow(tx, 1, "rebalancing-issue");
+                tree.Delete(nKey);  // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
-				tx.Commit();
+                DebugStuff.RenderAndShow(tx, 1);
+
+                tx.Commit();
 
 				using (var iterator = tree.Iterate())
 				{

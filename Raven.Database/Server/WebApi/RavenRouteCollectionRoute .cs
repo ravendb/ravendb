@@ -244,8 +244,6 @@ namespace Raven.Database.Server.WebApi
 				return string.Compare(fullRoute, 0, subRoute.fullRoute, 0, subRouteLength, StringComparison.OrdinalIgnoreCase) == 0;
 			}
 
-
-
 			public override int GetHashCode()
 			{
 				int code = 0;
@@ -261,7 +259,9 @@ namespace Raven.Database.Server.WebApi
 			public void ReduceRouteMatchTemplate(string templateRoute)
 			{
 				var lastIndexOfStar = templateRoute.LastIndexOf("/{*", StringComparison.InvariantCulture);
-				if (lastIndexOfStar == -1) return;
+				if (lastIndexOfStar == -1)
+					return;
+
 				var lastIndexOfDash = Math.Max(templateRoute.LastIndexOf('/', lastIndexOfStar - 1, lastIndexOfStar - 1), 0);
 				while (AtEnd() == false)
 				{

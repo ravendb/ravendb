@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.TimeSeries.Notifications;
-using Raven.Abstractions.Data;
 using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
@@ -10,12 +10,13 @@ namespace Raven.Database.Server.Connections
 	{
 		private readonly Action<object> enqueue;
 
-		private readonly ConcurrentSet<string> matchingKeys = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingKeyChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		// private readonly ConcurrentSet<string> matchingRanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly string changeNotificationType = typeof(TimeSeriesKeyNotification).Name;
+		private readonly string keyChangeNotificationType = typeof(KeyChangeNotification).Name;
 		// private readonly string rangesNotificationType = typeof(TimeSeriesRangeChangeNotification).Name;
-		private readonly string bulkOperationNotificationType = typeof(TimeSeriesBulkOperationNotification).Name;
+		private readonly string bulkOperationNotificationType = typeof(BulkOperationNotification).Name;
+		private int watchAllTimeSeries;
 
 		public object DebugStatus
 		{
@@ -23,7 +24,7 @@ namespace Raven.Database.Server.Connections
 			{
 				return new
 				{
-					WatchedKeys = matchingKeys.ToArray(),
+					WatchedKeyChanges = matchingKeyChanges.ToArray(),
 					// WatchedRanges = matchingRanges.ToArray(),
 					WatchedBulkOperationsChanges = matchingBulkOperations.ToArray()
 				};
@@ -35,25 +36,25 @@ namespace Raven.Database.Server.Connections
 			this.enqueue = enqueue;
 		}
 
-		public void WatchKey(string key)
+		public void WatchAllTimeSeries()
 		{
-			matchingKeys.TryAdd(key);
+			Interlocked.Increment(ref watchAllTimeSeries);
 		}
 
-		public void UnwatchChange(string key)
+		public void UnwatchAllTimeSeries()
 		{
-			matchingKeys.TryRemove(key);
+			Interlocked.Decrement(ref watchAllTimeSeries);
 		}
 
-		/*public void WatchRange(string key)
+		public void WatchKeyChange(string name)
 		{
-			matchingRanges.TryAdd(key);
+			matchingKeyChanges.TryAdd(name);
 		}
 
-		public void UnwatchRange(string name)
+		public void UnwatchKeyChange(string name)
 		{
-			matchingRanges.TryRemove(name);
-		}*/
+			matchingKeyChanges.TryRemove(name);
+		}
 
 		public void WatchTimeSeriesBulkOperation(string operationId)
 		{
@@ -65,11 +66,12 @@ namespace Raven.Database.Server.Connections
 			matchingBulkOperations.TryRemove(operationId);
 		}
 
-		public void Send(TimeSeriesKeyNotification notification)
+		public void Send(KeyChangeNotification notification)
 		{
-			if (matchingKeys.Contains(notification.Key))
+			var timeSeriesPrefix = string.Concat(notification.Type, "/", notification.Key);
+			if (watchAllTimeSeries > 0 || matchingKeyChanges.Contains(timeSeriesPrefix))
 			{
-				var value = new { Value = notification, Type = changeNotificationType };
+				var value = new { Value = notification, Type = keyChangeNotificationType };
 				enqueue(value);
 			}
 
@@ -80,7 +82,7 @@ namespace Raven.Database.Server.Connections
 			}*/
 		}
 
-		public void Send(TimeSeriesBulkOperationNotification notification)
+		public void Send(BulkOperationNotification notification)
 		{
 			if (matchingBulkOperations.Contains(string.Empty) == false &&
 				matchingBulkOperations.Contains(notification.OperationId.ToString()) == false)

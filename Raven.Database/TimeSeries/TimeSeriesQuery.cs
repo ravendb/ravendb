@@ -4,7 +4,7 @@ namespace Raven.Database.TimeSeries
 {
 	public class TimeSeriesQuery
 	{
-		public string Prefix { get; set; }
+		public string Type { get; set; }
 		
 		public string Key { get; set; }
 

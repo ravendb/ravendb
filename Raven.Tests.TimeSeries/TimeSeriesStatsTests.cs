@@ -11,17 +11,17 @@ namespace Raven.Tests.TimeSeries
 	    {
 		    using (var store = NewRemoteTimeSeriesStore())
 		    {
-			    await store.CreatePrefixConfigurationAsync("-Simple", 1);
-				await store.AppendAsync("-Simple", "Time", DateTime.Now, 3d);
-				await store.AppendAsync("-Simple", "Time", DateTime.Now.AddHours(1), 4d);
-				await store.AppendAsync("-Simple", "Is", DateTime.Now, 5d);
-				await store.AppendAsync("-Simple", "Money", DateTime.Now, 6d);
-				await store.AppendAsync("-Simple", "Money", DateTime.Now, 7d);
-				await store.AppendAsync("-Simple", "Money", DateTime.Now, 8d);
+				await store.CreateTypeAsync("Simple", new[] { "Value" });
+				await store.AppendAsync("Simple", "Time", DateTime.Now, 3d);
+				await store.AppendAsync("Simple", "Time", DateTime.Now.AddHours(1), 4d);
+				await store.AppendAsync("Simple", "Is", DateTime.Now, 5d);
+				await store.AppendAsync("Simple", "Money", DateTime.Now, 6d);
+				await store.AppendAsync("Simple", "Money", DateTime.Now, 7d);
+				await store.AppendAsync("Simple", "Money", DateTime.Now, 8d);
 				
-				var stats = await store.GetTimeSeriesStatsAsync();
+				var stats = await store.GetStatsAsync();
 			    Assert.Equal(3, stats.KeysCount);
-			    Assert.Equal(7, stats.ValuesCount);
+			    Assert.Equal(6, stats.PointsCount);
 			}
 	    }
 	}

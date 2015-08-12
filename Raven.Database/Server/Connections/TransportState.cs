@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Connections
 		}
 
 		public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
-		public event Action<object, TimeSeriesKeyNotification> OnTimeSeriesChangeNotification = delegate { };
+		public event Action<object, KeyChangeNotification> OnTimeSeriesChangeNotification = delegate { };
 
 		public void Send(ChangeNotification localChangeNotification)
 		{
@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public void Send(TimeSeriesKeyNotification localKeyNotification)
+		public void Send(KeyChangeNotification localKeyNotification)
 		{
 			OnTimeSeriesChangeNotification(this, localKeyNotification);
 			foreach (var connectionState in connections)
@@ -151,10 +151,10 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public event Action<object, BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
-		public event Action<object, TimeSeriesBulkOperationNotification> OnTimeSeriesBulkOperationNotification = delegate { };
+		public event Action<object, Raven.Abstractions.Counters.Notifications.BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+		public event Action<object, Raven.Abstractions.TimeSeries.Notifications.BulkOperationNotification> OnTimeSeriesBulkOperationNotification = delegate { };
 
-		public void Send(BulkOperationNotification bulkOperationNotification)
+		public void Send(Raven.Abstractions.Counters.Notifications.BulkOperationNotification bulkOperationNotification)
 		{
 			OnCounterBulkOperationNotification(this, bulkOperationNotification);
 			foreach (var connectionState in connections)
@@ -162,8 +162,8 @@ namespace Raven.Database.Server.Connections
 				connectionState.Value.CounterStorage.Send(bulkOperationNotification);
 			}
 		}
-		
-		public void Send(TimeSeriesBulkOperationNotification bulkOperationNotification)
+
+		public void Send(Raven.Abstractions.TimeSeries.Notifications.BulkOperationNotification bulkOperationNotification)
 		{
 			OnTimeSeriesBulkOperationNotification(this, bulkOperationNotification);
 			foreach (var connectionState in connections)

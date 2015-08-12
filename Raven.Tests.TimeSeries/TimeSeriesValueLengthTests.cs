@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions.TimeSeries;
 using Raven.Database.TimeSeries;
 using Voron;
 using Xunit;
@@ -16,7 +17,7 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreatePrefixConfiguration("-3Value", 3);
+				tss.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
 				var data = new[]
 				{
 					new {Key = "Time", At = start, Value = 10},
@@ -36,7 +37,7 @@ namespace Raven.Tests.TimeSeries
 				{
 					foreach (var item in data)
 					{
-						writer.Append("-3Value", item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
+						writer.Append("3Value", item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
 					}
 					writer.Commit();
 				}
@@ -46,14 +47,14 @@ namespace Raven.Tests.TimeSeries
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
-							Prefix = "-3Value",
+							Type = "3Value",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(1),
 						},
 						new TimeSeriesQuery
 						{
-							Prefix = "-3Value",
+							Type = "3Value",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -98,14 +99,14 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreatePrefixConfiguration("-3Val", 3);
+				tss.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
 				using (var writer = tss.CreateWriter())
 				{
 					for (int i = 0; i < 7; i++)
 					{
-						writer.Append("-3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
-						writer.Append("-3Val", "Is", start.AddHours(i), 7000 + i, StringToIndex("Is"), start.AddHours(i).Ticks);
-						writer.Append("-3Val", "Time", start.AddHours(i), 19000 + i, StringToIndex("Time"), start.AddHours(i).Ticks);
+						writer.Append("3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
+						writer.Append("3Val", "Is", start.AddHours(i), 7000 + i, StringToIndex("Is"), start.AddHours(i).Ticks);
+						writer.Append("3Val", "Time", start.AddHours(i), 19000 + i, StringToIndex("Time"), start.AddHours(i).Ticks);
 					}
 					writer.Commit();
 				}
@@ -115,7 +116,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-3Val",
+							Type = "3Val",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -123,7 +124,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-3Val",
+							Type = "3Val",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -222,9 +223,9 @@ namespace Raven.Tests.TimeSeries
 					int value = 6;
 					for (int i = 0; i < 4; i++)
 					{
-						writer.Append("-3Val", "Time", start2.AddHours(2 + i), value++, StringToIndex("Time"), start2.AddHours(2 + i).Ticks);
-						writer.Append("-3Val", "Is", start2.AddHours(2 + i), value++, StringToIndex("Is"), start2.AddHours(2 + i).Ticks);
-						writer.Append("-3Val", "Money", start2.AddHours(2 + i), value++, StringToIndex("Money"), start2.AddHours(2 + i).Ticks);
+						writer.Append("3Val", "Time", start2.AddHours(2 + i), value++, StringToIndex("Time"), start2.AddHours(2 + i).Ticks);
+						writer.Append("3Val", "Is", start2.AddHours(2 + i), value++, StringToIndex("Is"), start2.AddHours(2 + i).Ticks);
+						writer.Append("3Val", "Money", start2.AddHours(2 + i), value++, StringToIndex("Money"), start2.AddHours(2 + i).Ticks);
 					}
 					writer.Commit();
 				}
@@ -235,7 +236,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-3Val",
+							Type = "3Val",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -243,7 +244,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-3Val",
+							Type = "3Val",
 							Key = "Money",
 							Start = start.AddMonths(-2).AddDays(-1),
 							End = start.AddMonths(2),

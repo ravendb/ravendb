@@ -22,14 +22,14 @@ namespace Raven.Tests.TimeSeries
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddYears(-1),
 							End = start.AddYears(1),
 						},
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -74,7 +74,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = DateTime.MinValue,
 							End = DateTime.MaxValue
@@ -104,7 +104,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddDays(-1),
 							End = start.AddDays(2),
@@ -112,7 +112,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddDays(-2),
 							End = start.AddDays(1),
@@ -176,7 +176,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -184,7 +184,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -255,7 +255,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -263,7 +263,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddDays(-1),
 							End = start.AddMonths(1),
@@ -324,9 +324,9 @@ namespace Raven.Tests.TimeSeries
 					int value = 6;
 					for (int i = 0; i < 4; i++)
 					{
-						writer.Append("-Simple", "Time", start2.AddHours(2 + i), value++);
-						writer.Append("-Simple", "Is", start2.AddHours(3 + i), value++);
-						writer.Append("-Simple", "Money", start2.AddHours(3 + i), value++);
+						writer.Append("Simple", "Time", start2.AddHours(2 + i), value++);
+						writer.Append("Simple", "Is", start2.AddHours(3 + i), value++);
+						writer.Append("Simple", "Money", start2.AddHours(3 + i), value++);
 					}
 					writer.Commit();
 				}
@@ -336,7 +336,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddMonths(-1),
 							End = start.AddDays(1),
@@ -344,7 +344,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddMonths(-2).AddDays(-1),
 							End = start.AddMonths(2),
@@ -451,7 +451,7 @@ namespace Raven.Tests.TimeSeries
 					var result = r.QueryRollup(
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddHours(-1),
 							End = start.AddHours(4),
@@ -459,7 +459,7 @@ namespace Raven.Tests.TimeSeries
 						},
 						new TimeSeriesRollupQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddHours(-1),
 							End = start.AddHours(4),
@@ -572,21 +572,21 @@ namespace Raven.Tests.TimeSeries
 					var result = r.Query(
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Time",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
 						},
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Money",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
 						},
 						new TimeSeriesQuery
 						{
-							Prefix = "-Simple",
+							Type = "Simple",
 							Key = "Is",
 							Start = start.AddSeconds(1),
 							End = start.AddMinutes(30),
@@ -625,7 +625,7 @@ namespace Raven.Tests.TimeSeries
 			var writer = tss.CreateWriter();
 			foreach (var item in data)
 			{
-				writer.Append("-Simple", item.Key, item.At, item.Value);
+				writer.Append("Simple", item.Key, item.At, item.Value);
 			}
 
 			writer.Commit();
