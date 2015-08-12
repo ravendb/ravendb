@@ -93,9 +93,6 @@ namespace Raven.Tests.Issues
 				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //now the old index replicated to destination
 
 				var sideBySideIndexReplicated = new ManualResetEventSlim();
-
-				testIndex.SideBySideExecute(source);
-
 				var replaceIndexName = "ReplacementOf/" + testIndex.IndexName;
 				destinationDatabase.Notifications.OnIndexChange += (database, notification) =>
 				{
@@ -103,6 +100,8 @@ namespace Raven.Tests.Issues
 						notification.Name.Equals(replaceIndexName))
 						sideBySideIndexReplicated.Set();
 				};
+
+				testIndex.SideBySideExecute(source);
 
 				sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
 
