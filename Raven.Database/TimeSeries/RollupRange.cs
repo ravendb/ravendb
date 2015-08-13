@@ -8,15 +8,15 @@ namespace Raven.Database.TimeSeries
 		
 		public string Key { get; set; }
 
-		public RollupRange(string type, string key, DateTime time)
+		public RollupRange(string type, string key, DateTimeOffset time)
 		{
 			Type = type;
 			Key = key;
 			Start = End = time;
 		}
 
-		public DateTime Start { get; set; }
+		public DateTimeOffset Start { get; set; }
 
-		public DateTime End { get; set; }
+		public DateTimeOffset End { get; set; }
 	}
 }

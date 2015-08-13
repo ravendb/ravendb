@@ -6,6 +6,7 @@ class timeSeriesStatistics {
     keysCountText = ko.observable<string>("");
     pointsCountText = ko.observable<string>("");
     requestsPerSecondText = ko.observable<string>("");
+    timeSeriesSize = ko.observable<string>("");
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
         var itemCountText = itemCount.toLocaleString() + " " + singularText;
@@ -23,6 +24,7 @@ class timeSeriesStatistics {
         this.keysCountText(this.getItemCountText(dto.KeysCount, "key", "s"));
         this.pointsCountText(this.getItemCountText(dto.PointsCount, "point", "s"));
         this.requestsPerSecondText(dto.RequestsPerSecond + " requests per second");
+        this.timeSeriesSize(dto.TimeSeriesSize);
     }
 }
 

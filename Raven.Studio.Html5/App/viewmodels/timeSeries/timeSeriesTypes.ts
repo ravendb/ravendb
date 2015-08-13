@@ -5,10 +5,16 @@ import changeSubscription = require("common/changeSubscription");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
+import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
+import editTypeDialog = require("viewmodels/timeSeries/editTypeDialog");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
+import pointChange = require("models/timeSeries/pointChange");
+import typeChange = require("models/timeSeries/typeChange");
+import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 import getTypesCommand = require("commands/timeSeries/getTypesCommand");
+import putPointCommand = require("commands/timeSeries/putPointCommand");
+import putTypeCommand = require("commands/timeSeries/putTypeCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
-// import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 
 class timeSeriesTypes extends viewModelBase {
 
@@ -90,7 +96,6 @@ class timeSeriesTypes extends viewModelBase {
         });
     }
 
-
     attached() {
         super.attached();
 
@@ -144,41 +149,31 @@ class timeSeriesTypes extends viewModelBase {
         }
     }
 
-    newKey() {
-        /*var changeVm = new editPointDialog();
-        changeVm.updateTask.done((change: timeSeriesChange) => {
-            var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), change.isNew());
-            var execute = timeSeriesCommand.execute();
-			execute.done(() => this.refreshGridAndGroup(change.key()));
+    newType() {
+        var changeVm = new editTypeDialog(new typeChange(new timeSeriesType("", [""], 0, this.activeTimeSeries()), true), true);
+        changeVm.updateTask.done((change: typeChange) => {
+            new putTypeCommand(change.type(), change.fields(), this.activeTimeSeries())
+                .execute()
+                .done(() => this.refresh());
         });
-        app.showDialog(changeVm);*/
+        app.showDialog(changeVm);
+    }
+
+	newPoint() {
+        var type = this.currentType();
+        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint(type.name, type.fields, "", moment().format(), type.fields.map(x => 0)), true), true);
+        changeVm.updateTask.done((change: pointChange) => {
+            new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
+                .execute()
+                .done(() => this.refresh());
+        });
+        app.showDialog(changeVm);
     }
 
 	refresh() {
 		var selectedKeyName = this.selectedType().name;
 		this.refreshGridAndKey(selectedKeyName);
 	}
-
-    changeKey() {
-        /*var grid = this.getKeysGrid();
-        if (grid) {
-            var timeSeriesData = grid.getSelectedItems(1).first();
-            var dto = {
-                CurrentValue: timeSeriesData.Total,
-                Group: timeSeriesData.Group,
-                TimeSeriesName: timeSeriesData.Name,
-                Delta: 0
-            };
-            var change = new timeSeriesChange(dto);
-            var timeSeriesChangeVm = new editTimeSeriesDialog(change);
-            timeSeriesChangeVm.updateTask.done((change: timeSeriesChange, isNew: boolean) => {
-                var timeSeriesCommand = new updateTimeSeriesCommand(this.activeTimeSeries(), change.key(), change.timeSeriesName(), change.delta(), isNew);
-	            var execute = timeSeriesCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(timeSeriesData.Group));
-            });
-            app.showDialog(timeSeriesChangeVm);
-        }*/
-    }
 
 	refreshGridAndKey(changedKeyName: string) {
 		var type = this.selectedType();
@@ -226,30 +221,13 @@ class timeSeriesTypes extends viewModelBase {
 
     deleteSelectedKeys() {
         if (this.hasAllKeysSelected()) {
-            this.deleteGroupInternal(this.selectedType());
+            // TODO: Deleting all keys is not supported currently
         } else {
             var grid = this.getKeysGrid();
             if (grid) {
                 grid.deleteSelectedItems();
             }
         }
-    }
-
-    private deleteGroupInternal(key: timeSeriesType) {
-	  /*  var deleteGroupVm = new deleteGroup(key, this.activeTimeSeries());
-            deleteGroupVm.deletionTask.done(() => {
-				if (!key.isAllKeysGroup) {
-                    this.types.remove(key);
-
-                    var selectedCollection: timeSeriesType = this.selectedKey();
-                    if (key.name === selectedCollection.name) {
-                        this.selectedKey(this.allKeysGroup);
-                    }
-                } else {
-                    this.refreshGridAndGroup(key.name);
-                }
-            });
-		app.showDialog(deleteGroupVm);*/
     }
 
     private updateTypes(receivedTypes: Array<timeSeriesType>) {

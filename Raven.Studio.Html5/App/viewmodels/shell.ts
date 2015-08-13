@@ -433,15 +433,16 @@ class shell extends viewModelBase {
 
     private activateTimeSeries(ts: timeSeries) {
         var changesSubscriptionArray = () => [
-            //TODO: enable changes api for counter storages, server side
+            changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTsStats(ts)),
+            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTsStats(ts))
         ];
         var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
-        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTimeSeriesStats(ts), changesSubscriptionArray);
+        this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
 
         shell.resources().forEach((r: resource) => r.isSelected(r instanceof timeSeries && r.name === ts.name));
     }
 
-    private fetchTimeSeriesStats(ts: timeSeries) {
+    private fetchTsStats(ts: timeSeries) {
         if (!!ts && !ts.disabled() && ts.isLicensed()) {
             new getTimeSeriesStatsCommand(ts, true)
                 .execute()

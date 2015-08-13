@@ -1,9 +1,47 @@
-﻿<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <title></title>
-</head>
-<body>
-
-</body>
-</html>
+﻿<section>
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#stats">Stats</a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in" id="stats" data-bind="with: activeTimeSeries().statistics">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Types</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: typesCountText"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Keys</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: keysCountText"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Points</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: pointsCountText"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Requests</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: requestsPerSecondText"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Size</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: timeSeriesSize"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

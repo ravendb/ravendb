@@ -8,7 +8,7 @@ namespace Raven.Database.TimeSeries
 		public string DebugKey { get; set; }
 #endif
 
-		public DateTime StartAt { get; set; }
+		public DateTimeOffset StartAt { get; set; }
 		
 		public PeriodDuration Duration { get; set; }
 

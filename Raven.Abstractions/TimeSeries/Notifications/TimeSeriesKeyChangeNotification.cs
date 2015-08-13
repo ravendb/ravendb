@@ -10,13 +10,13 @@ namespace Raven.Abstractions.TimeSeries.Notifications
 
 		public TimeSeriesChangeAction Action { get; set; }
 
-		public DateTime At { get; set; }
+		public DateTimeOffset At { get; set; }
 		
 		public double[] Values { get; set; }
 
-		public long Start { get; set; }
+		public DateTimeOffset Start { get; set; }
 
-		public long End { get; set; }
+		public DateTimeOffset End { get; set; }
 	}
 
 	public class RangeKeyNotification : KeyChangeNotification

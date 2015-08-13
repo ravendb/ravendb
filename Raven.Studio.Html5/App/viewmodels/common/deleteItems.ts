@@ -2,6 +2,7 @@
 import file = require("models/filesystem/file");
 import counterSummary = require("models/counter/counterSummary");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
+import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import deleteFilesCommand = require("commands/filesystem/deleteFilesCommand");
@@ -29,13 +30,14 @@ class deleteItems extends dialogViewModelBase {
     deleteItems() {
         var deleteItemsIds = this.items().map(i => i.getUrl());
         var deleteCommand;
-        if (this.items()[0] instanceof document) {
+        var firstItem = this.items()[0];
+        if (firstItem instanceof document) {
             deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
         }
-        else if (this.items()[0] instanceof file) {
+        else if (firstItem instanceof file) {
             deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
         }
-        else if (this.items()[0] instanceof counterSummary) {
+        else if (firstItem instanceof counterSummary) {
 	        var counters: any = this.items();
 			var groupAndNames: {groupName: string; counterName: string}[] = counters.map((x: counterSummary) => {
 				return {
@@ -44,7 +46,7 @@ class deleteItems extends dialogViewModelBase {
 				}
 			});
             deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
-        } else if (this.items()[0] instanceof timeSeriesPoint) {
+        } else if (firstItem instanceof timeSeriesPoint) {
             var points = this.items().map((x: timeSeriesPoint) => {
                 return {
                     Type: x.type,
@@ -53,6 +55,10 @@ class deleteItems extends dialogViewModelBase {
                 };
             });
             deleteCommand = new deletePointsCommand(points, appUrl.getTimeSeries());
+        } else if (firstItem instanceof timeSeriesKey) {
+            debugger 
+        } else {
+            debugger 
         }
         var deleteCommandTask = deleteCommand.execute();
 
