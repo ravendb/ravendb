@@ -32,24 +32,24 @@ namespace Raven.Client.Counters
 				return new CountersBatchOperation(parent, parent.Name, options);
 			}
 
-			public async Task<List<CounterDelta>> GetCounterDeltaSinceEtag(long etag, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
+			public async Task<List<CounterState>> GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 
 				//TODO : perhaps this call should not be with failover? discuss with Oren
-				var deltas = await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get,async (url, counterStoreName) =>
+				var states = await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get,async (url, counterStoreName) =>
 				{
 					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/sinceEtag/{2}?skip={3}&take={4}", url, counterStoreName, etag, skip, take);
 
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{
 						var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-						return response.ToObject<List<CounterDelta>>();
+						return response.ToObject<List<CounterState>>();
 					}
 				}, token);
 				
-				return deltas;
+				return states;
 			}
 		}
     }

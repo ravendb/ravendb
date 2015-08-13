@@ -56,6 +56,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task SmugglerExport_to_file_should_not_fail()
 		{
+			IOExtensions.DeleteDirectory(CounterDumpFilename);
 			IOExtensions.DeleteFile(CounterDumpFilename);
 
 			using (var counterStore = NewRemoteCountersStore("store"))
@@ -82,6 +83,7 @@ namespace Raven.Tests.Counters
 		public async Task SmugglerExport_incremental_to_file_should_not_fail()
 		{
 			IOExtensions.DeleteDirectory(CounterDumpFilename); //counters incremental export creates folder with incremental dump files
+			IOExtensions.DeleteFile(CounterDumpFilename);
 
 			using (var counterStore = NewRemoteCountersStore("store"))
 			{
@@ -109,7 +111,7 @@ namespace Raven.Tests.Counters
 
 				incrementalFolder.Exists.Should().BeTrue();
 				var dumpFiles = incrementalFolder.GetFiles();
-				dumpFiles.Should().HaveCount(2);
+				dumpFiles.Should().HaveCount(3);
 				dumpFiles.Should().OnlyContain(x => x.Length > 0);
 			}			
 		}
@@ -131,7 +133,7 @@ namespace Raven.Tests.Counters
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename					
 				});
 
 				await counterStore.IncrementAsync("g", "c");
@@ -148,12 +150,17 @@ namespace Raven.Tests.Counters
 				{
 					ToFile = CounterDumpFilename
 				});
+				var aa = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
+
 			}
 
 			using (var counterStore = NewRemoteCountersStore("storeToImportTo"))
 			{
-				var smugglerApi = new SmugglerCounterApi(counterStore);
-				smugglerApi.Options.Incremental = true;
+				var smugglerApi = new SmugglerCounterApi(counterStore)
+				{
+					Options = {Incremental = true}
+				};
+
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromFile = CounterDumpFilename,
@@ -171,63 +178,15 @@ namespace Raven.Tests.Counters
 				summary.Should().ContainSingle(x => x.CounterName == "c" && x.Group == "g");
 
 				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(5);
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(2);
+				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(3);
 				summary.First(x => x.CounterName == "c" && x.Group == "g").Total.Should().Be(-2);
-			}
-		}
-
-		[Fact]
-		public async Task SmugglerImport_from_stream_should_work()
-		{
-			using (var stream = new MemoryStream())
-			{
-				using (var counterStore = NewRemoteCountersStore("storeToExport"))
-				{
-					await counterStore.ChangeAsync("g1", "c1", 5);
-					await counterStore.IncrementAsync("g1", "c1");
-					await counterStore.IncrementAsync("g1", "c2");
-					await counterStore.DecrementAsync("g2", "c1");
-
-					var smugglerApi = new SmugglerCounterApi(counterStore);
-
-					await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
-					{
-						ToStream = stream
-					});
-				}
-
-				using (var counterStore = NewRemoteCountersStore("storeToImportTo"))
-				{
-					var smugglerApi = new SmugglerCounterApi(counterStore);
-
-					await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
-					{
-						FromStream = stream,
-						To = new CounterConnectionStringOptions
-						{
-							Url = counterStore.Url,
-							CounterStoreId = counterStore.Name
-						}
-					});
-
-					var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-
-					summary.Should().HaveCount(3); //sanity check
-					summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-					summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-					summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
-
-					summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(6); //change + inc
-					summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-					summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(-1);
-				}
-				
 			}
 		}
 
 		[Fact]
 		public async Task SmugglerImport_from_file_should_work()
 		{
+			IOExtensions.DeleteFile(CounterDumpFilename);
 			using (var counterStore = NewRemoteCountersStore("storeToExport"))
 			{
 				await counterStore.ChangeAsync("g1", "c1", 5);

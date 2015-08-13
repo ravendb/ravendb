@@ -142,12 +142,12 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private async Task<IEnumerable<CounterDelta>> GetCounterDeltas(long etag)
+		private async Task<IEnumerable<CounterState>> GetCounterDeltas(long etag)
 		{
-			var deltas = new List<CounterDelta>();
+			var deltas = new List<CounterState>();
 			do
 			{				
-				var deltasFromRequest = await counterStore.Advanced.GetCounterDeltaSinceEtag(etag);
+				var deltasFromRequest = await counterStore.Advanced.GetCounterStatesSinceEtag(etag);
 				if (deltasFromRequest.Count == 0)
 					break;
 
@@ -353,10 +353,8 @@ namespace Raven.Database.Smuggler
 				{
 					if (jsonReader.TokenType == JsonToken.StartObject)
 					{
-						var counterDelta = RavenJToken.ReadFrom(jsonReader).ToObject<CounterDelta>();
-						var delta = (counterDelta.Sign == ValueSign.Positive) ? counterDelta.Value : -counterDelta.Value;
-
-						store.Batch.ScheduleChange(counterDelta.GroupName, counterDelta.CounterName, delta);
+						var counterDelta = RavenJToken.ReadFrom(jsonReader).ToObject<CounterState>();
+						store.Batch.ScheduleChange(counterDelta.GroupName, counterDelta.CounterName, counterDelta.Value);
 					}
 				}
 

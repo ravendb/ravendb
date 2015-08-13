@@ -33,7 +33,7 @@ namespace Raven.Tests.Counters
 				await counterStore.IncrementAsync("g1", "c2");
 				await counterStore.IncrementAsync("g", "c");
 
-				var deltas = await counterStore.Advanced.GetCounterDeltaSinceEtag(0);
+				var deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(0);
 				deltas.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
 				deltas.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
 				deltas.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
@@ -44,14 +44,13 @@ namespace Raven.Tests.Counters
 				await counterStore.ChangeAsync("g1", "c2",1);
 				await counterStore.ChangeAsync("g", "c",-2);
 
-				deltas = await counterStore.Advanced.GetCounterDeltaSinceEtag(deltas.Max(x => x.Etag));
+				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
 
 				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-2);
-				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(1);
+				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(2);
 
 				await counterStore.ChangeAsync("g", "c", -3);
-				
-				deltas = await counterStore.Advanced.GetCounterDeltaSinceEtag(deltas.Max(x => x.Etag));
+				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
 				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-3);
 			}
 		}

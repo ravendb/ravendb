@@ -33,9 +33,9 @@ namespace Raven.Database.Counters.Controllers
 	{
 		[RavenRoute("cs/{counterStorageName}/sinceEtag/{etag}")]
 		[HttpGet]
-		public HttpResponseMessage GetCountersDataSinceEtag(long etag, int skip = 0, int take = 1024)
+		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024)
 		{
-			List<CounterDelta> deltas;
+			List<CounterState> deltas;
 			using (var reader = Storage.CreateReader())
 				deltas = reader.GetCountersSinceEtag(etag + 1, skip, take).ToList();
 

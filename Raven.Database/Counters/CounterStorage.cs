@@ -607,7 +607,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public IEnumerable<CounterDelta> GetCountersSinceEtag(long etag, int skip = 0, int take = int.MaxValue)
+			public IEnumerable<CounterState> GetCountersSinceEtag(long etag, int skip = 0, int take = int.MaxValue)
 			{
 				using (var it = etagsToCounters.Iterate())
 				{
@@ -644,7 +644,7 @@ namespace Raven.Database.Counters
 						Debug.Assert(etagResult != null);
 						var counterEtag = etagResult.Reader.ReadBigEndianInt64();
 
-						yield return new CounterDelta
+						yield return new CounterState
 						{
 							GroupName = counterNameAndGroup.GroupName,
 							CounterName = counterNameAndGroup.CounterName,

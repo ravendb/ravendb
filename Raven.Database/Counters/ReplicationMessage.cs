@@ -7,12 +7,12 @@ namespace Raven.Database.Counters
     {
 		public ReplicationMessage()
 		{
-			Counters = new List<CounterDelta>();
+			Counters = new List<CounterState>();
 		}
 
         public string SendingServerName { get; set; }
 
-        public List<CounterDelta> Counters { get; set; }
+        public List<CounterState> Counters { get; set; }
 
 	    public Guid ServerId { get; set; }
     }
