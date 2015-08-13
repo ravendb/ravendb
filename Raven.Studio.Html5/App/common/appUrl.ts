@@ -72,6 +72,7 @@ class appUrl {
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
+		hotSpare: ko.computed(() => appUrl.forHotSpare()),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
@@ -261,6 +262,10 @@ class appUrl {
 
     static forBackup(): string {
         return "#admin/settings/backup";
+    }
+
+	static forHotSpare(): string {
+        return "#admin/settings/hotSpare";
     }
 
     static forCompact(): string {
@@ -539,7 +544,6 @@ class appUrl {
     static forReplications(db: database): string {
         return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
     }
-
     static forVersioning(db: database): string {
         return "#databases/settings/versioning?" + appUrl.getEncodedDbPart(db);
     }

@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
@@ -178,7 +179,7 @@ namespace Raven.Database.Server.Tenancy
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-
+	            documentDatabase.RequestManager = SystemDatabase.RequestManager;
                 return documentDatabase;
             }).ContinueWith(task =>
             {

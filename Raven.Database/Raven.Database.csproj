@@ -251,6 +251,7 @@
     <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
+    <Compile Include="Plugins\Builtins\HotSpareReplicationBehavior.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseBundleScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Bundles\Replication\ReplicationBundleEnabled.cs" />
@@ -1373,7 +1374,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\RAVENDB-MIB.txt" />
-    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\zabbix_ravendb_template.xml" />
+    <Content Include="Plugins\Builtins\Monitoring\Snmp\Templates\zabbix_ravendb_template.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
