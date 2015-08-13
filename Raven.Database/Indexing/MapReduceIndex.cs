@@ -763,7 +763,7 @@ namespace Raven.Database.Indexing
 
                 parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
 
-                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
+                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
 
                 return performance;
             }
