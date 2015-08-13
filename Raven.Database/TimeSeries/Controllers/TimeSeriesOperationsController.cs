@@ -32,7 +32,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	{
 		[RavenRoute("ts/{timeSeriesName}/types/{type}")]
 		[HttpPut]
-		public HttpResponseMessage CreateType(TimeSeriesType type)
+		public HttpResponseMessage PutType(TimeSeriesType type)
 		{
 			if (string.IsNullOrEmpty(type.Type) || type.Fields == null || type.Fields.Length < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -283,10 +283,6 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var fields = Storage.GetType(type);
-			if (fields == null)
-				return GetMessageWithString("Cannot delete from not exist prefix: " + type, HttpStatusCode.BadRequest);
-			
 			using (var writer = Storage.CreateWriter())
 			{
 				var pointsDeleted = writer.DeleteKey(type, key);
@@ -346,10 +342,6 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (start > end)
 				throw new InvalidOperationException("start cannot be greater than end");
 
-			var fields = Storage.GetType(type);
-			if (fields == null)
-				return GetMessageWithString("Cannot delete from not exist prefix: " + type, HttpStatusCode.BadRequest);
-			
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.DeleteRange(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);

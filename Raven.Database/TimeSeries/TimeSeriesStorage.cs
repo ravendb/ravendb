@@ -271,7 +271,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					yield break;
 
-				var type = storage.GetType(query.Type);
+				var type = storage.GetType(tx, query.Type);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 
@@ -429,7 +429,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					return Enumerable.Empty<Point>();
 
-				var type = storage.GetType(query.Type);
+				var type = storage.GetType(tx, query.Type);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 				var numberOfValues = type.Fields.Length;
@@ -487,7 +487,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					yield break;
 
-				var type = storage.GetType(typeName);
+				var type = storage.GetType(tx, typeName);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 				var buffer = new byte[type.Fields.Length * sizeof(double)];
@@ -520,7 +520,7 @@ namespace Raven.Database.TimeSeries
 
 			public TimeSeriesKey GetKey(string typeName, string key)
 			{
-				var type = storage.GetType(typeName);
+				var type = storage.GetType(tx, typeName);
 				if (type == null)
 					return null;
 
@@ -536,11 +536,15 @@ namespace Raven.Database.TimeSeries
 
 			public IEnumerable<TimeSeriesKey> GetKeys(string typeName, int skip)
 			{
-				var type = storage.GetType(typeName);
+				var type = storage.GetType(tx, typeName);
 				if (type == null)
 					yield break;
 
+				// Can happend if the type doesn't have any keys
 				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
+				if (tree == null)
+					yield break;
+
 				using (var it = tree.Iterate())
 				{
 					if (it.Seek(Slice.BeforeAllKeys) && (skip == 0 || it.Skip(skip)))
@@ -562,19 +566,21 @@ namespace Raven.Database.TimeSeries
 
 			public IEnumerable<TimeSeriesType> GetTypes(int skip)
 			{
-				using (var rootIt = tx.State.Root.Iterate())
+				var metadata = tx.ReadTree("$metadata");
+				using (var it = metadata.Iterate())
 				{
-					rootIt.RequiredPrefix = SeriesTreePrefix;
-					if (rootIt.Seek(rootIt.RequiredPrefix) && (skip == 0 || rootIt.Skip(skip)))
+					it.RequiredPrefix = TypesPrefix;
+					if (it.Seek(it.RequiredPrefix) && (skip == 0 || it.Skip(skip)))
 					{
 						do
 						{
-							var typeTreeName = rootIt.CurrentKey.ToString();
-							var type = storage.GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
-							var tree = tx.ReadTree(typeTreeName);
-							type.KeysCount = tree.State.EntriesCount;
+							var typeTreeName = it.CurrentKey.ToString();
+							var typeName = typeTreeName.Replace(TypesPrefix, "");
+                            var type = storage.ReadTypeInternal(it.CreateReaderForCurrent());
+							var tree = tx.ReadTree(SeriesTreePrefix + typeName);
+							type.KeysCount = tree == null ? 0 : tree.State.EntriesCount;
 							yield return type;
-						} while (rootIt.MoveNext());
+						} while (it.MoveNext());
 					}
 				}
 			}
@@ -606,7 +612,7 @@ namespace Raven.Database.TimeSeries
 
 				if (currentType.Type != type)
 				{
-					currentType = storage.GetType(type);
+					currentType = storage.GetType(tx, type);
 					if (currentType == null)
 						throw new InvalidOperationException("There is no type named: " + type);
 
@@ -685,7 +691,7 @@ namespace Raven.Database.TimeSeries
 					if (it.Seek(it.RequiredPrefix) == false)
 						return;
 
-					var type = storage.GetType(typeName);
+					var type = storage.GetType(tx, typeName);
 					if (type == null)
 						throw new InvalidOperationException("There is no type named: " + typeName);
 
@@ -724,12 +730,12 @@ namespace Raven.Database.TimeSeries
 
 			public long DeleteKey(string typeName, string key)
 			{
+				var type = storage.GetType(tx, typeName);
+				if (type == null)
+					throw new InvalidOperationException("There is no type named: " + typeName);
+
 				tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				if (tree == null)
-					return -1;
-
-				var type = storage.GetType(typeName);
-				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var numberOfEntriesRemoved = tree.DeleteFixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
@@ -745,7 +751,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					return false;
 
-				var type = storage.GetType(point.Type);
+				var type = storage.GetType(tx, point.Type);
 				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + point.Type);
 
@@ -794,12 +800,12 @@ namespace Raven.Database.TimeSeries
 
 			public void DeleteRange(string typeName, string key, long start, long end)
 			{
+				var type = storage.GetType(tx, typeName);
+				if (type == null)
+					throw new InvalidOperationException("There is no type named: " + typeName);
+
 				tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				if (tree == null)
-					return;
-
-				var type = storage.GetType(typeName);
-				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
@@ -934,15 +940,16 @@ namespace Raven.Database.TimeSeries
 			if (type.Fields.Length < 1)
 				throw new InvalidOperationException("Fields length should be equal or greater than 1");
 
+			if (type.Fields.Any(string.IsNullOrWhiteSpace))
+				throw new InvalidOperationException("Field name cannot be empty.");
+
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(TypesPrefix + type.Type);
-				if (val != null)
-				{
-					throw new InvalidOperationException(string.Format("Type '{0}' is already created", type.Type));
-				}
+				var existingType = GetType(tx, type.Type);
+				if (existingType != null && existingType.KeysCount > 0)
+					throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwrited", type.Type));
 
+				var metadata = tx.ReadTree("$metadata");
 				using (var ms = new MemoryStream())
 				using (var writer = new StreamWriter(ms))
 				using (var jsonTextWriter = new JsonTextWriter(writer))
@@ -951,7 +958,10 @@ namespace Raven.Database.TimeSeries
 					writer.Flush();
 					ms.Position = 0;
 					metadata.Add(TypesPrefix + type.Type, ms);
-					UpdateTypesCount(tx, 1);
+					if (existingType == null) // A new type, not an overwrited type
+					{
+						UpdateTypesCount(tx, 1);
+					}
 				}
 				tx.Commit();
 			}
@@ -961,51 +971,39 @@ namespace Raven.Database.TimeSeries
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(TypesPrefix + type);
-				if (val == null)
+				var exisitngType = GetType(tx, type);
+				if (exisitngType == null)
 					throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
-				
-				AssertNoExistDataForType(type, tx);
-				
+
+				if (exisitngType.KeysCount > 0)
+					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has assosiated keys.", type, exisitngType.KeysCount, exisitngType.KeysCount == 1 ? "" : "s"));
+
+				var metadata = tx.ReadTree("$metadata");
 				metadata.Delete(TypesPrefix + type);
 				UpdateTypesCount(tx, -1);
 				tx.Commit();
 			}
 		}
 
-		private void AssertNoExistDataForType(string type, Transaction tx)
+		public TimeSeriesType GetType(Transaction tx, string type)
 		{
-			var tree = tx.ReadTree(SeriesTreePrefix + type);
-			if (tree == null)
-				return;
+			var metadata = tx.ReadTree("$metadata");
+			var readResult = metadata.Read(TypesPrefix + type);
+			if (readResult == null)
+				return null;
 
-			using (var it = tree.Iterate())
-			{
-				if (it.Seek(Slice.BeforeAllKeys) == false)
-					return;
-			}
-
-			throw new InvalidOperationException(string.Format("Cannot delete type '{0}' since there is associated data to it", type));
+			return ReadTypeInternal(readResult.Reader);
 		}
 
-		public TimeSeriesType GetType(string type)
+		private TimeSeriesType ReadTypeInternal(ValueReader reader)
 		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+			using (var stream = reader.AsStream())
 			{
-				var metadata = tx.ReadTree("$metadata");
-				var readResult = metadata.Read(TypesPrefix + type);
-				if (readResult == null)
-					return null;
-
-				using (var stream = readResult.Reader.AsStream())
+				stream.Position = 0;
+				using (var streamReader = new StreamReader(stream))
+				using (var jsonTextReader = new JsonTextReader(streamReader))
 				{
-					stream.Position = 0;
-					using (var streamReader = new StreamReader(stream))
-					using (var jsonTextReader = new JsonTextReader(streamReader))
-					{
-						return new JsonSerializer().Deserialize<TimeSeriesType>(jsonTextReader);
-					}
+					return new JsonSerializer().Deserialize<TimeSeriesType>(jsonTextReader);
 				}
 			}
 		}
@@ -1062,7 +1060,7 @@ namespace Raven.Database.TimeSeries
 						do
 						{
 							var typeTreeName = rootIt.CurrentKey.ToString();
-							var type = GetType(typeTreeName.Replace(SeriesTreePrefix, ""));
+							var type = GetType(tx, typeTreeName.Replace(SeriesTreePrefix, ""));
 							var tree = tx.ReadTree(typeTreeName);
 							using (var it = tree.Iterate())
 							{
