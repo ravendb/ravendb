@@ -1529,7 +1529,7 @@ namespace Raven.Database.Indexing
 			if (indexToReplace == null)
 				return true;
 
-			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement:true);
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement: true);
 			return true;
 		}
 	}

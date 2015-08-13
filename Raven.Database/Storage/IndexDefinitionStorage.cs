@@ -433,7 +433,7 @@ namespace Raven.Database.Storage
 				if (result) 
 					return IndexCreationOptions.Noop;
 
-	            // try to compare to find changes which doesn't require removing compixled index
+	            // try to compare to find changes which doesn't require removing compiled index
 	            return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
 					? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
             }

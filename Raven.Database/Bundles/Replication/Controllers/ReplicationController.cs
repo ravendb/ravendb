@@ -24,6 +24,7 @@ using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -637,13 +638,16 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalse -> for better readability
 			if (areIndexesEqual && areSideBySideIndexesEqual == false)
 			{
-				PutSideBySideIndexDocument(sideBySideReplicationInfo);
-				return InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+				var internalPutIndex = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+				if (internalPutIndex.IsSuccessStatusCode)
+					PutSideBySideIndexDocument(sideBySideReplicationInfo);
+				return internalPutIndex;
 			}
 
-			PutSideBySideIndexDocument(sideBySideReplicationInfo);
 			var updateIndexResult = InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
 			var updateSideBySideIndexResult = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+			if (updateSideBySideIndexResult.IsSuccessStatusCode)
+				PutSideBySideIndexDocument(sideBySideReplicationInfo);
 
 			if (updateIndexResult.IsSuccessStatusCode && updateSideBySideIndexResult.IsSuccessStatusCode)
 				return GetMessageWithObject(new

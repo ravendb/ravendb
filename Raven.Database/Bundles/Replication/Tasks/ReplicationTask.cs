@@ -1049,7 +1049,7 @@ namespace Raven.Bundles.Replication.Tasks
 								foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
 								{
 									IndexDefinition sideBySideIndexDefinition;
-									if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
+									if (sideBySideIndexes.TryGetValue(Constants.SideBySideIndexNamePrefix + indexDefinition.Name, out sideBySideIndexDefinition))
 										ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
 									else
 										ReplicateSingleIndex(destination, indexDefinition);
