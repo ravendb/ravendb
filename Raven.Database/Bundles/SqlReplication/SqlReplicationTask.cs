@@ -167,12 +167,18 @@ namespace Raven.Database.Bundles.SqlReplication
 				);
 		}
 
+		private bool IsHotSpare()
+		{
+			if (Database.RequestManager == null) return false;
+			return Database.RequestManager.IsInHotSpareMode;
+		}
+
 		private void BackgroundSqlReplication()
 		{
 			int workCounter = 0;
 			while (Database.WorkContext.DoWork)
 			{
-				IsRunning = !shouldPause;
+				IsRunning = !IsHotSpare() && !shouldPause;
 
 				if (!IsRunning)
 					continue;

@@ -1,0 +1,27 @@
+﻿<form class="form-horizontal" role="form">
+	<div class="panel panel-default">
+		<div class="form-group">
+			<label class="col-sm-2 control-label">Activation Mode:</label>
+			<div class="col-sm-5 input-group text-height-fix" data-bind="text:ActivationMode()"></div>
+		</div>
+		<div class="form-group">
+			<label  class="col-sm-2 control-label">Activation Time:</label>
+			<div class="col-sm-5 input-group text-height-fix" data-bind="text:ActivationTime()"></div>
+		</div>
+		<div class="form-group" data-bind="visible: isTestEnabled">
+			<label  class="col-sm-2 control-label">Remaining Test Activation:</label>
+			<div class="col-sm-5 input-group text-height-fix" data-bind="text:RemainingTestActivation()"></div>
+		</div>
+		<div class="form-group" data-bind="visible: isTestEnabled">
+			<label class="col-sm-2 control-label">Test Hot Spare</label>
+			<button type="button" data-bind="click: Testlicense" class="col-sm-2 btn btn-primary">Test</button>
+		</div>
+		<div class="form-group">
+			<label class="col-sm-2 control-label">Activate Hot Spare</label>
+			<button type="button" data-bind="click: ActivateLicense" class="col-sm-2 btn btn-primary">Activate</button>
+		</div>
+		<div class="form-group" data-bind="visible: isActivationExpired">
+			<a class="col-sm-4 control-label" href="http://ravendb.net/buy">Activation expired please buy a new license</a>
+		</div>
+	</div>
+</form>

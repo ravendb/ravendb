@@ -123,6 +123,12 @@ namespace Raven.Bundles.Replication.Tasks
 			shouldPause = false;
 		}
 
+		private bool IsHotSpare()
+		{
+			if (docDb.RequestManager == null) return false;
+			return docDb.RequestManager.IsInHotSpareMode;
+		}
+
 		private void Execute()
 		{
 			using (LogContext.WithDatabase(docDb.Name))
@@ -137,7 +143,7 @@ namespace Raven.Bundles.Replication.Tasks
 				NotifySiblings();
 				while (context.DoWork)
 				{
-					IsRunning = !shouldPause;
+					IsRunning = !IsHotSpare() && !shouldPause;
 
 					log.Debug("Replication task found work. Running: " + IsRunning);
 

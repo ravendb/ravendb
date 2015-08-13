@@ -50,6 +50,8 @@ Raven.Studio.Html5/App/commands/*.js
 Raven.Studio.Html5/App/commands/*.js.map
 Raven.Studio.Html5/App/commands/auth/*.js
 Raven.Studio.Html5/App/commands/auth/*.js.map
+Raven.Studio.Html5/App/commands/licensing/*.js
+Raven.Studio.Html5/App/commands/licensing/*.js.map
 Raven.Studio.Html5/App/commands/maintenance/*.js
 Raven.Studio.Html5/App/commands/maintenance/*.js.map
 Raven.Studio.Html5/App/commands/operations/*.js
