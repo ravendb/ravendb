@@ -362,7 +362,10 @@ namespace Raven.Database.Indexing
                         data = GetMappedData(doc);
                     }
 
-                    logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
+                    if (logIndexing.IsDebugEnabled)
+                    {
+                        logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
+                    }
 
                     using (StopwatchScope.For(putMappedResultsDuration))
                     {
