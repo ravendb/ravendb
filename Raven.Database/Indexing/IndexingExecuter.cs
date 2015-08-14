@@ -525,7 +525,8 @@ namespace Raven.Database.Indexing
 					};
 				});
 
-			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+            if ( Log.IsDebugEnabled ) 
+                Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 			var results = new IndexingBatchForIndex[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
@@ -568,8 +569,9 @@ namespace Raven.Database.Indexing
 
 				if (batch.Docs.Count == 0)
 				{
-					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
-							  lastEtag, lastModified);
+                    if ( Log.IsDebugEnabled )
+					    Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName, lastEtag, lastModified);
+
 					// we use it this way to batch all the updates together
 					actions[i] = accessor =>
 					{
@@ -581,12 +583,13 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.Index.Flush(lastEtag);
 						};
 					};
+
 					return;
 				}
-				if (Log.IsDebugEnabled)
-				{
+				
+                if (Log.IsDebugEnabled)
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
-				}
+				
 				results[i] = new IndexingBatchForIndex
 				{
 					Batch = batch,
