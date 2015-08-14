@@ -937,16 +937,17 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 				return GetMessageWithObject(connectionState);
 			}
-
+			
 			var watchCatogory = GetQueryStringValues("watch-category");
 			var categoriesToWatch = watchCatogory.Select(
 				x =>
 				{
 					var tokens = x.Split(':');
+				    bool watchStack = tokens.Length == 3 && tokens[2] == "watch-stack";
 					LogLevel level;
 					if (Enum.TryParse(tokens[1], out level))
 					{
-						return Tuple.Create(tokens[0], level);
+                        return Tuple.Create(tokens[0], level, watchStack);
 					}
 					throw new InvalidOperationException("Unable to parse watch-category: " + tokens[1]);
 				}).ToList();
@@ -959,7 +960,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			foreach (var categoryAndLevel in categoriesToWatch)
 			{
-				connectionState.EnableLogging(categoryAndLevel.Item1, categoryAndLevel.Item2);
+				connectionState.EnableLogging(categoryAndLevel.Item1, categoryAndLevel.Item2, categoryAndLevel.Item3);
 			}
 
 			return GetMessageWithObject(connectionState);

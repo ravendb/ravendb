@@ -25,6 +25,7 @@
                     <tr>
                         <th class="col-md-4">Category</th>
                         <th class="col-md-4">Level</th>
+                        <th class="col-md-4">Stack traces?</th>
                         <th class="col-md-2">Options</th>
                     </tr>
                 </thead>
@@ -39,6 +40,9 @@
                                 <option value="Error">Error</option>
                                 <option value="Fatal">Fatal</option>
                             </select>
+                        </td>
+                        <td class="col-md-4">
+                            <input class="form-checkbox-control" type="checkbox" data-bind="checked: includeStackTrace" />
                         </td>
                         <td class="col-md-2">
                             <div class="btn-group">
