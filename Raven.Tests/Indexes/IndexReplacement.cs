@@ -161,7 +161,7 @@ namespace Raven.Tests.Indexes
 			    IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store, replaceTimeUtc: DateTime.Now.AddDays(1));
 
 			    Assert.True(mre.Wait(10000));
-			    Assert.Equal(store.DatabaseCommands.GetStatistics().CountOfIndexes, 3);
+			    Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
 			}
 		}
 
