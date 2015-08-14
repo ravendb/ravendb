@@ -601,8 +601,17 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var action in actions)
 				{
-					if (action != null)
-						action(actionsAccessor);
+				    if (action != null)
+				    {
+				        try
+				        {
+				            action(actionsAccessor);
+				        }
+				        catch (Exception e)
+				        {
+				            Log.WarnException("Failure running post filter index action for index with no docs to execute", e);
+				        }
+				    }
 				}
 			});
 
