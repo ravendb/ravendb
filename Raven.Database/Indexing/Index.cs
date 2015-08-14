@@ -298,8 +298,16 @@ namespace Raven.Database.Indexing
 
 		public void EnsureIndexWriter()
 		{
-			if (indexWriter == null)
-				CreateIndexWriter();
+            try
+            {
+                if (indexWriter == null)
+                    CreateIndexWriter();
+            }
+            catch ( IOException e )
+            {
+                string msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
+                throw new IOException( msg, e );
+            }
 		}
 
 		public void Flush(Etag highestETag)
