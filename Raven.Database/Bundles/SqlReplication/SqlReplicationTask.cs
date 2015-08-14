@@ -180,8 +180,12 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				IsRunning = !IsHotSpare() && !shouldPause;
 
-				if (!IsRunning)
-					continue;
+			    if (!IsRunning)
+			    {
+                    Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+
+                    continue;
+			    }
 
 				var config = GetConfiguredReplicationDestinations();
 				if (config.Count == 0)
