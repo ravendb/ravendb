@@ -27,7 +27,6 @@ namespace Raven.Tests.Bugs
 
 
 		[Fact]
-		//[TimeBombedFact(2013, 12, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
