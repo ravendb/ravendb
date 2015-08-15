@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Voron.Util.Conversion;
 
@@ -35,6 +36,17 @@ namespace Voron
         public Slice CreateSlice()
         {
             return new Slice(_buffer);
+        }
+
+        public void Write(byte[] bytes)
+        {
+            Write(bytes, 0, bytes.Length);
+        }
+
+        private void Write(byte[] bytes, int offset, int count)
+        {
+            Buffer.BlockCopy(bytes, offset, _buffer, _pos, count);
+            _pos += count;
         }
     }
 }
