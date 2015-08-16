@@ -54,7 +54,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceKeyTypes.TableName,
                 tx => new
                 {
-                    reduceKeyTypesByView = tx.ReadTree(Tables.ReduceKeyTypes.Indices.ByView)
+                    reduceKeyTypesByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceKeyTypes.Indices.ByView)
 
                 }, (state, it) =>
                 {
@@ -67,7 +67,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceKeyCounts.TableName,
               tx => new
               {
-                  reduceKeyCountsByView = tx.ReadTree(Tables.ReduceKeyCounts.Indices.ByView)
+                  reduceKeyCountsByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceKeyCounts.Indices.ByView)
               }, (state, it) =>
               {
                   var current = it.ReadStructForCurrent(tableStorage.ReduceKeyTypes.Schema);
@@ -79,10 +79,10 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceResults.TableName,
                 tx => new
                 {
-                    reduceResultsByView = tx.ReadTree(Tables.ReduceResults.Indices.ByView),
-                    reduceResultsByViewAndKeyAndLevel = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel),
-                    reduceResultsByViewAndKeyAndLevelAndBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket),
-                    reduceResultsByViewAndKeyAndLevelAndSourceBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket)
+                    reduceResultsByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByView),
+                    reduceResultsByViewAndKeyAndLevel = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel),
+                    reduceResultsByViewAndKeyAndLevelAndBucket = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket),
+                    reduceResultsByViewAndKeyAndLevelAndSourceBucket = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket)
 
                 }, (state, it) =>
                 {
@@ -102,11 +102,11 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.MappedResults.TableName,
                 tx => new
                 {
-                    mappedResultsByView = tx.ReadTree(Tables.MappedResults.Indices.ByView),
+                    mappedResultsByView = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByView),
                     // we didn't changed this one format, explicitly ignored
-                    // var mappedResultsByViewAndDocumentId = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndDocumentId);
-                    mappedResultsByViewAndReduceKey = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKey),
-                    mappedResultsByViewAndReduceKeyAndSourceBucket = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket)
+                    // var mappedResultsByViewAndDocumentId = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndDocumentId);
+                    mappedResultsByViewAndReduceKey = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKey),
+                    mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket)
 
                 }, (state, it) =>
                 {
@@ -166,8 +166,8 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
                                     break;
                                 }
                             } while (it.MoveNext());
-                            hasMore = false;
                         }
+                        hasMore = false;
                     }
 
                     tx.Commit();
