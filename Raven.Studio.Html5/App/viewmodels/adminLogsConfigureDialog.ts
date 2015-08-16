@@ -79,7 +79,7 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
     }
 
     addCategory() {
-        this.logConfig.entries.push(new adminLogsConfigEntry("", "Info"));
+        this.logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Debug"));
 
         if (!this.isScrollNeeded()) {
             this.alignBoxVertically();

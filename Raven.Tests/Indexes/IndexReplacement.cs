@@ -5,6 +5,7 @@ using Raven.Tests.Common;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using Raven.Database;
 using Xunit;
 
 namespace Raven.Tests.Indexes
@@ -136,26 +137,31 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
+			    IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof (OldIndex))), store);
 
-				WaitForIndexing(store);
+			    WaitForIndexing(store);
 
-				var e = Assert.Throws<InvalidOperationException>(() =>
-				{
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<Person, OldIndex>()
-							.Count(x => x.LastName == "Doe");
-					}
-				});
+			    var e = Assert.Throws<InvalidOperationException>(() =>
+			    {
+			        using (var session = store.OpenSession())
+			        {
+			            var count = session.Query<Person, OldIndex>()
+			                .Count(x => x.LastName == "Doe");
+			        }
+			    });
 
-				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+			    Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-				IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof(NewIndex))), store, replaceTimeUtc: DateTime.Now.AddDays(1));
+			    var mre = new ManualResetEventSlim(false);
+			    var documentDatabase = store.ServerIfEmbedded.Server.GetDatabaseInternal(store.DefaultDatabase).Result;
+			    documentDatabase.IndexReplacer.IndexReplaced += s =>
+			    {
+			        mre.Set();
+			    };
+			    IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store, replaceTimeUtc: DateTime.Now.AddDays(1));
 
-				WaitForIndexing(store);
-
-				Assert.Equal(store.DatabaseCommands.GetStatistics().CountOfIndexes, 3);
+			    Assert.True(mre.Wait(10000));
+			    Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
 			}
 		}
 

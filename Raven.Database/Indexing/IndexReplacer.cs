@@ -207,12 +207,15 @@ namespace Raven.Database.Indexing
 			ReplaceIndexes(new List<int> { indexId });
 		}
 
+	    public event Action<string> IndexReplaced;
+
 		private void InternalReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
 		{
 			if (indexes.Count == 0)
 				return;
 
-			try
+            var onIndexReplaced = IndexReplaced;
+            try
 			{
 				using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
 				{
@@ -223,6 +226,8 @@ namespace Raven.Database.Indexing
 						try
 						{
 							ReplaceSingleIndex(indexReplaceInformation);
+						    if (onIndexReplaced != null)
+						        onIndexReplaced(indexReplaceInformation.IndexToReplace);
 						}
 						catch (Exception e)
 						{

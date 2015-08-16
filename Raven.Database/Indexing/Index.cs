@@ -312,25 +312,33 @@ namespace Raven.Database.Indexing
 
 		public void Flush(Etag highestETag)
 		{
-			lock (writeLock)
-			{
-				if (disposed)
-					return;
-				if (indexWriter == null)
-					return;
+		    try
+		    {
+		        lock (writeLock)
+		        {
+		            if (disposed)
+		                return;
+		            if (indexWriter == null)
+		                return;
 
-				try
-				{
-					waitReason = "Flush";
-					indexWriter.Commit(highestETag);
+		            try
+		            {
+		                waitReason = "Flush";
+		                indexWriter.Commit(highestETag);
 
-					ResetWriteErrors();
-				}
-				finally
-				{
-					waitReason = null;
-				}
-			}
+		                ResetWriteErrors();
+		            }
+		            finally
+		            {
+		                waitReason = null;
+		            }
+		        }
+		    }
+		    catch (Exception e)
+		    {
+		        IncrementWriteErrors(e);
+		        throw new IOException("Error during flush for " + PublicName, e);
+		    }
 		}
 
 		public void MergeSegments()
@@ -684,11 +692,19 @@ namespace Raven.Database.Indexing
 
 		private void CreateIndexWriter()
 		{
-			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-																  ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
-																  : null;
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+		    try
+		    {
+		        snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+		        IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+		            ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
+		            : null;
+		        indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+		    }
+		    catch (Exception e)
+		    {
+		        IncrementWriteErrors(e);
+		        throw new IOException("Failure to create index writer for " + PublicName, e);
+		    }
 		}
 
 		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)

@@ -31,6 +31,10 @@
 define(function(require, exports, module) {
 "use strict";
 
+exports.last = function(a) {
+    return a[a.length - 1];
+};
+
 exports.stringReverse = function(string) {
     return string.split("").reverse().join("");
 };
@@ -77,18 +81,24 @@ exports.copyArray = function(array){
     return copy;
 };
 
-exports.deepCopy = function (obj) {
-    if (typeof obj != "object") {
+exports.deepCopy = function deepCopy(obj) {
+    if (typeof obj !== "object" || !obj)
         return obj;
-    }
-    
-    var copy = obj.constructor();
-    for (var key in obj) {
-        if (typeof obj[key] == "object") {
-            copy[key] = this.deepCopy(obj[key]);
-        } else {
-            copy[key] = obj[key];
+    var copy;
+    if (Array.isArray(obj)) {
+        copy = [];
+        for (var key = 0; key < obj.length; key++) {
+            copy[key] = deepCopy(obj[key]);
         }
+        return copy;
+    }
+    var cons = obj.constructor;
+    if (cons === RegExp)
+        return obj;
+    
+    copy = cons();
+    for (var key in obj) {
+        copy[key] = deepCopy(obj[key]);
     }
     return copy;
 };
@@ -144,7 +154,6 @@ exports.getMatchOffsets = function(string, regExp) {
 
 /* deprecated */
 exports.deferredCall = function(fcn) {
-
     var timer = null;
     var callback = function() {
         timer = null;
@@ -170,6 +179,10 @@ exports.deferredCall = function(fcn) {
         timer = null;
         return deferred;
     };
+    
+    deferred.isPending = function() {
+        return timer;
+    };
 
     return deferred;
 };
@@ -183,15 +196,15 @@ exports.delayedCall = function(fcn, defaultTimeout) {
     };
 
     var _self = function(timeout) {
+        if (timer == null)
+            timer = setTimeout(callback, timeout || defaultTimeout);
+    };
+
+    _self.delay = function(timeout) {
         timer && clearTimeout(timer);
         timer = setTimeout(callback, timeout || defaultTimeout);
     };
-
-    _self.delay = _self;
-    _self.schedule = function(timeout) {
-        if (timer == null)
-            timer = setTimeout(callback, timeout || 0);
-    };
+    _self.schedule = _self;
 
     _self.call = function() {
         this.cancel();

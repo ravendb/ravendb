@@ -197,7 +197,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					IsRunning = !shouldPause;
 
-					log.Debug("Replication task found work. Running: " + IsRunning);
+					log.Debug("Replication task found work. Running: {0}", IsRunning);
 
 					if (IsRunning)
 					{

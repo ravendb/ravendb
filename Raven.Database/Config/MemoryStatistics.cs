@@ -50,6 +50,9 @@ namespace Raven.Database.Config
         [DllImport("Kernel32.dll", SetLastError = true)]
         public static extern bool SetEvent(IntPtr hEvent);
 
+        [DllImport("Kernel32.dll")]
+        public extern static IntPtr GetCurrentProcess();
+
         private static bool failedToGetAvailablePhysicalMemory;
         private static bool failedToGetTotalPhysicalMemory;
         private static int memoryLimit;
@@ -59,7 +62,7 @@ namespace Raven.Database.Config
         private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
 
-        private static IntPtr currentProcessHandle = Process.GetCurrentProcess().Handle;
+        private static readonly IntPtr currentProcessHandle = GetCurrentProcess();
 
 
         static MemoryStatistics()
@@ -317,7 +320,7 @@ namespace Raven.Database.Config
       
         [DllImport("psapi.dll", SetLastError = true)]
         static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS counters, uint size);
-        [StructLayout(LayoutKind.Sequential, Size = 40)]
+        [StructLayout(LayoutKind.Sequential)]
         // ReSharper disable once InconsistentNaming - Win32 API
         public struct PROCESS_MEMORY_COUNTERS
         {
@@ -333,11 +336,12 @@ namespace Raven.Database.Config
             public UIntPtr PeakPagefileUsage;      // The peak value in bytes of the Commit Charge during the lifetime of this process (SIZE_T).
         }
 
-        public static long GetCurrentWorkingSet()
+        public static unsafe long GetCurrentWorkingSet()
         {
-            PROCESS_MEMORY_COUNTERS pr;
+            PROCESS_MEMORY_COUNTERS pr = new PROCESS_MEMORY_COUNTERS();
+            pr.cb = (uint)sizeof (PROCESS_MEMORY_COUNTERS);
 
-            if (GetProcessMemoryInfo(currentProcessHandle, out pr, 40) == false)
+            if (GetProcessMemoryInfo(currentProcessHandle, out pr, pr.cb) == false)
                 throw new Win32Exception();
 
             return (long)pr.WorkingSetSize.ToUInt64();

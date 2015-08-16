@@ -37,7 +37,6 @@ var oop = require("./lib/oop");
 /**
  * @class PlaceHolder
  *
- * 
  **/
 
 /**
@@ -47,7 +46,6 @@ var oop = require("./lib/oop");
  * - others (String):
  * - mainClass (String):
  * - othersClass (String):
- *
  * 
  * @constructor
  **/
@@ -93,6 +91,10 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
         var doc = this.doc;
         var session = this.session;
         var pos = this.$pos;
+        
+        this.selectionBefore = session.selection.toJSON();
+        if (session.selection.inMultiSelectMode)
+            session.selection.toSingleRange();
 
         this.pos = doc.createAnchor(pos.row, pos.column);
         this.markerId = session.addMarker(new Range(pos.row, pos.column, pos.row, pos.column + this.length), this.mainClass, null, false);
@@ -148,28 +150,27 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
      * Emitted when the place holder updates.
      *
      **/
-    this.onUpdate = function(event) {
-        var delta = event.data;
-        var range = delta.range;
+    this.onUpdate = function(delta) {
+        var range = delta;
         if(range.start.row !== range.end.row) return;
         if(range.start.row !== this.pos.row) return;
         if (this.$updating) return;
         this.$updating = true;
-        var lengthDiff = delta.action === "insertText" ? range.end.column - range.start.column : range.start.column - range.end.column;
+        var lengthDiff = delta.action === "insert" ? range.end.column - range.start.column : range.start.column - range.end.column;
         
         if(range.start.column >= this.pos.column && range.start.column <= this.pos.column + this.length + 1) {
             var distanceFromStart = range.start.column - this.pos.column;
             this.length += lengthDiff;
             if(!this.session.$fromUndo) {
-                if(delta.action === "insertText") {
+                if(delta.action === 'insert') {
                     for (var i = this.others.length - 1; i >= 0; i--) {
                         var otherPos = this.others[i];
                         var newPos = {row: otherPos.row, column: otherPos.column + distanceFromStart};
                         if(otherPos.row === range.start.row && range.start.column < otherPos.column)
                             newPos.column += lengthDiff;
-                        this.doc.insert(newPos, delta.text);
+                        this.doc.insertMergedLines(newPos, delta.lines);
                     }
-                } else if(delta.action === "removeText") {
+                } else if(delta.action === 'remove') {
                     for (var i = this.others.length - 1; i >= 0; i--) {
                         var otherPos = this.others[i];
                         var newPos = {row: otherPos.row, column: otherPos.column + distanceFromStart};
@@ -179,7 +180,7 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
                     }
                 }
                 // Special case: insert in beginning
-                if(range.start.column === this.pos.column && delta.action === "insertText") {
+                if(range.start.column === this.pos.column && delta.action === 'insert') {
                     setTimeout(function() {
                         this.pos.setPosition(this.pos.row, this.pos.column - lengthDiff);
                         for (var i = 0; i < this.others.length; i++) {
@@ -191,7 +192,7 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
                         }
                     }.bind(this), 0);
                 }
-                else if(range.start.column === this.pos.column && delta.action === "removeText") {
+                else if(range.start.column === this.pos.column && delta.action === 'remove') {
                     setTimeout(function() {
                         for (var i = 0; i < this.others.length; i++) {
                             var other = this.others[i];
@@ -218,9 +219,9 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
      **/
 
     this.onCursorChange = function(event) {
-        if (this.$updating) return;
+        if (this.$updating || !this.session) return;
         var pos = this.session.selection.getCursor();
-        if(pos.row === this.pos.row && pos.column >= this.pos.column && pos.column <= this.pos.column + this.length) {
+        if (pos.row === this.pos.row && pos.column >= this.pos.column && pos.column <= this.pos.column + this.length) {
             this.showOtherMarkers();
             this._emit("cursorEnter", event);
         } else {
@@ -245,6 +246,7 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
             this.others[i].detach();
         }
         this.session.setUndoSelect(true);
+        this.session = null;
     };
     
     /**
@@ -261,6 +263,8 @@ var PlaceHolder = function(session, length, pos, others, mainClass, othersClass)
         for (var i = 0; i < undosRequired; i++) {
             undoManager.undo(true);
         }
+        if (this.selectionBefore)
+            this.session.selection.fromJSON(this.selectionBefore);
     };
 }).call(PlaceHolder.prototype);
 
