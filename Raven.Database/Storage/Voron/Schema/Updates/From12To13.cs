@@ -33,6 +33,9 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
         {
             using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
             {
+                tableStorage.Environment.DeleteTree(tx, Tables.ScheduledReductions.Indices.ByView);
+                tableStorage.Environment.DeleteTree(tx, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
+
                 tableStorage.Environment.DeleteTree(tx, Tables.ReduceKeyTypes.Indices.ByView);
 
                 tableStorage.Environment.DeleteTree(tx, Tables.ReduceKeyCounts.Indices.ByView);
@@ -63,6 +66,28 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
                     var viewId = current.ReadInt(ReduceKeyTypeFields.IndexId);
                     state.reduceKeyTypesByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
                 });
+
+            MigrateIndexes(tableStorage, output, Tables.ScheduledReductions.TableName,
+               tx => new
+               {
+                   byView = tableStorage.Environment.CreateTree(tx, Tables.ScheduledReductions.Indices.ByView),
+                   byViewAndLevelAndReduceKey = tableStorage.Environment.CreateTree(tx, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey)
+
+               }, (state, it) =>
+               {
+                   var current = it.ReadStructForCurrent(tableStorage.ScheduledReductions.Schema);
+
+                   var view = current.ReadInt(ScheduledReductionFields.IndexId);
+                   var reduceKey = current.ReadString(ScheduledReductionFields.ReduceKey);
+                   var level = current.ReadInt(ScheduledReductionFields.Level);
+                   var bucket = current.ReadInt(ScheduledReductionFields.Bucket);
+                   var bytes = current.ReadBytes(ScheduledReductionFields.Etag);
+
+                   var scheduleReductionKey = CreateScheduleReductionKey(view, level, reduceKey);
+
+                   state.byView.MultiAdd(CreateViewKey(view), it.CurrentKey);
+                   state.byViewAndLevelAndReduceKey.MultiAdd(scheduleReductionKey, CreateBucketAndEtagKey(bucket, Etag.Parse(bytes)));
+               });
 
             MigrateIndexes(tableStorage, output, Tables.ReduceKeyCounts.TableName,
               tx => new
@@ -186,6 +211,13 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
         }
 
 
+        private Slice CreateBucketAndEtagKey(int bucket, Etag id)
+        {
+            var sliceWriter = new SliceWriter(20);
+            sliceWriter.WriteBigEndian(bucket);
+            sliceWriter.Write(id.ToByteArray());
+            return sliceWriter.CreateSlice();
+        }
         private Slice CreateScheduleReductionKey(int view, int level, string reduceKey)
         {
             var sliceWriter = new SliceWriter(16);
