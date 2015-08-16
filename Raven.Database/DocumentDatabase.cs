@@ -990,12 +990,14 @@ namespace Raven.Database
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
-			if (null != disableIndexing)
+			if (disableIndexing != null)
 			{
 				bool disableIndexingStatus;
 				var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
-				if (res && disableIndexingStatus) return; //indexing were set to disable 
+				if (res && disableIndexingStatus)
+					return; //indexing were set to disable 
 			}
+
 			backgroundWorkersSpun = true;
 			indexingWorkersStoppedManually = false;
 

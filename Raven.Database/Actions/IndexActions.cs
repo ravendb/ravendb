@@ -419,7 +419,6 @@ namespace Raven.Database.Actions
 					definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
 	            }
 
-
 	            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
 	            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
@@ -428,8 +427,11 @@ namespace Raven.Database.Actions
 	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
 	            Database.IndexStorage.CreateIndexImplementation(definition);
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
+
 				// If we execute multiple indexes at once and want to activate them all at once we will disable the index from the endpoint
-				if (disableIndex) index.Priority = IndexingPriority.Disabled;
+				if (disableIndex)
+					index.Priority = IndexingPriority.Disabled;
+
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
 	            index.IsMapIndexingInProgress = true;
 	            if (definition.IsTestIndex)
