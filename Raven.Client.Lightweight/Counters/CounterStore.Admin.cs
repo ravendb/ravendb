@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Counters
 {
@@ -20,6 +22,21 @@ namespace Raven.Client.Counters
 			{
 				this.parent = parent;
 			}
+			//admin/cs/{id}/groups-names
+
+			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName, CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				var requestUriString = String.Format("{0}/admin/cs/{1}/groups-names", parent.Url, counterStorageName);
+
+				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.ToObject<CounterNameGroupPair[]>(parent.JsonSerializer);
+				}
+			}
+
 
 			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName, CancellationToken token = default(CancellationToken))
 			{

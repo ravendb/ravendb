@@ -394,7 +394,7 @@ namespace Raven.Database.Counters
 						}
 					} while (isEmptyGroup && it.MoveNext());
 				}
-			}
+			}			
 
 			public List<CounterSummary> GetCountersSummary(string groupName, int skip = 0, int take = int.MaxValue)
 			{
