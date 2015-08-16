@@ -108,6 +108,18 @@ function Folding() {
 
         return foundFolds;
     };
+
+    this.getFoldsInRangeList = function(ranges) {
+        if (Array.isArray(ranges)) {
+            var folds = [];
+            ranges.forEach(function(range) {
+                folds = folds.concat(this.getFoldsInRange(range));
+            }, this);
+        } else {
+            var folds = this.getFoldsInRange(ranges);
+        }
+        return folds;
+    }
     
     /*
      * Returns all folds in the document
@@ -116,13 +128,9 @@ function Folding() {
         var folds = [];
         var foldLines = this.$foldData;
         
-        function addFold(fold) {
-            folds.push(fold);
-        }
-        
         for (var i = 0; i < foldLines.length; i++)
             for (var j = 0; j < foldLines[i].folds.length; j++)
-                addFold(foldLines[i].folds[j]);
+                folds.push(foldLines[i].folds[j]);
 
         return folds;
     };
@@ -281,13 +289,12 @@ function Folding() {
         if (startFold && endFold == startFold)
             return startFold.addSubFold(fold);
 
-        if (
-            (startFold && !startFold.range.isStart(startRow, startColumn))
-            || (endFold && !endFold.range.isEnd(endRow, endColumn))
-        ) {
-            throw new Error("A fold can't intersect already existing fold" + fold.range + startFold.range);
-        }
-
+        if (startFold && !startFold.range.isStart(startRow, startColumn))
+            this.removeFold(startFold);
+        
+        if (endFold && !endFold.range.isEnd(endRow, endColumn))
+            this.removeFold(endFold);
+        
         // Check if there are folds in the range we create the new fold for.
         var folds = this.getFoldsInRange(fold.range);
         if (folds.length > 0) {
@@ -413,7 +420,7 @@ function Folding() {
     };
 
     this.expandFold = function(fold) {
-        this.removeFold(fold);        
+        this.removeFold(fold);
         fold.subFolds.forEach(function(subFold) {
             fold.restoreRange(subFold);
             this.addFold(subFold);
@@ -441,18 +448,21 @@ function Folding() {
             range = Range.fromPoints(location, location);
         else
             range = location;
-
-        folds = this.getFoldsInRange(range);
+        
+        folds = this.getFoldsInRangeList(range);
         if (expandInner) {
             this.removeFolds(folds);
         } else {
-            // TODO: might need to remove and add folds in one go instead of using
+            var subFolds = folds;
+            // TODO: might be better to remove and add folds in one go instead of using
             // expandFolds several times.
-            while (folds.length) {
-                this.expandFolds(folds);
-                folds = this.getFoldsInRange(range);
+            while (subFolds.length) {
+                this.expandFolds(subFolds);
+                subFolds = this.getFoldsInRangeList(range);
             }
         }
+        if (folds.length)
+            return folds;
     };
 
     /*
@@ -474,15 +484,15 @@ function Folding() {
     };
 
     this.getFoldDisplayLine = function(foldLine, endRow, endColumn, startRow, startColumn) {
-        if (startRow == null) {
+        if (startRow == null)
             startRow = foldLine.start.row;
+        if (startColumn == null)
             startColumn = 0;
-        }
-
-        if (endRow == null) {
+        if (endRow == null)
             endRow = foldLine.end.row;
+        if (endColumn == null)
             endColumn = this.getLine(endRow).length;
-        }
+        
 
         // Build the textline using the FoldLine walker.
         var doc = this.doc;
@@ -627,6 +637,8 @@ function Folding() {
         if (depth == undefined)
             depth = 100000; // JSON.stringify doesn't hanle Infinity
         var foldWidgets = this.foldWidgets;
+        if (!foldWidgets)
+            return; // mode doesn't support folding
         endRow = endRow || this.getLength();
         startRow = startRow || 0;
         for (var row = startRow; row < endRow; row++) {
@@ -636,18 +648,20 @@ function Folding() {
                 continue;
 
             var range = this.getFoldWidgetRange(row);
-            var rangeEndRow = range.end.row;
             // sometimes range can be incompatible with existing fold
             // TODO change addFold to return null istead of throwing
             if (range && range.isMultiLine()
-                && rangeEndRow <= endRow
+                && range.end.row <= endRow
                 && range.start.row >= startRow
-            ) try {
-                var fold = this.addFold("...", range);
-                fold.collapseChildren = depth;
-                // addFold can change the range
-                row = rangeEndRow;
-            } catch(e) {}
+            ) {
+                row = range.end.row;
+                try {
+                    // addFold can change the range
+                    var fold = this.addFold("...", range);
+                    if (fold)
+                        fold.collapseChildren = depth;
+                } catch(e) {}
+            }
         }
     };
     
@@ -682,7 +696,8 @@ function Folding() {
             
         this.$foldMode = foldMode;
         
-        this.removeListener('change', this.$updateFoldWidgets);
+        this.off('change', this.$updateFoldWidgets);
+        this.off('tokenizerUpdate', this.$tokenizerUpdateFoldWidgets);
         this._emit("changeAnnotation");
         
         if (!foldMode || this.$foldStyle == "manual") {
@@ -695,8 +710,9 @@ function Folding() {
         this.getFoldWidgetRange = foldMode.getFoldWidgetRange.bind(foldMode, this, this.$foldStyle);
         
         this.$updateFoldWidgets = this.updateFoldWidgets.bind(this);
+        this.$tokenizerUpdateFoldWidgets = this.tokenizerUpdateFoldWidgets.bind(this);
         this.on('change', this.$updateFoldWidgets);
-        
+        this.on('tokenizerUpdate', this.$tokenizerUpdateFoldWidgets);
     };
 
     this.getParentFoldRangeData = function (row, ignoreCurrent) {
@@ -727,25 +743,39 @@ function Folding() {
     }
 
     this.onFoldWidgetClick = function(row, e) {
+        e = e.domEvent;
+        var options = {
+            children: e.shiftKey,
+            all: e.ctrlKey || e.metaKey,
+            siblings: e.altKey
+        };
+        
+        var range = this.$toggleFoldWidget(row, options);
+        if (!range) {
+            var el = (e.target || e.srcElement)
+            if (el && /ace_fold-widget/.test(el.className))
+                el.className += " ace_invalid";
+        }
+    };
+    
+    this.$toggleFoldWidget = function(row, options) {
+        if (!this.getFoldWidget)
+            return;
         var type = this.getFoldWidget(row);
         var line = this.getLine(row);
-        e = e.domEvent;
-        var children = e.shiftKey;
-        var all = e.ctrlKey || e.metaKey;
-        var siblings = e.altKey;
 
         var dir = type === "end" ? -1 : 1;
         var fold = this.getFoldAt(row, dir === -1 ? 0 : line.length, dir);
 
         if (fold) {
-            if (children || all)
+            if (options.children || options.all)
                 this.removeFold(fold);
             else
                 this.expandFold(fold);
             return;
         }
 
-        var range = this.getFoldWidgetRange(row);
+        var range = this.getFoldWidgetRange(row, true);
         // sometimes singleline folds can be missed by the code above
         if (range && !range.isMultiLine()) {
             fold = this.getFoldAt(range.start.row, range.start.column, 1);
@@ -755,35 +785,57 @@ function Folding() {
             }
         }
         
-        if (siblings) {
+        if (options.siblings) {
             var data = this.getParentFoldRangeData(row);
             if (data.range) {
                 var startRow = data.range.start.row + 1;
                 var endRow = data.range.end.row;
             }
-            this.foldAll(startRow, endRow, all ? 10000 : 0);
-        } else if (children) {
-            var endRow = range ? range.end.row : this.getLength();
-            this.foldAll(row + 1, range.end.row, all ? 10000 : 0);
+            this.foldAll(startRow, endRow, options.all ? 10000 : 0);
+        } else if (options.children) {
+            endRow = range ? range.end.row : this.getLength();
+            this.foldAll(row + 1, endRow, options.all ? 10000 : 0);
         } else if (range) {
-            if (all) 
+            if (options.all) 
                 range.collapseChildren = 10000;
             this.addFold("...", range);
         }
         
-        if (!range)
-            (e.target || e.srcElement).className += " ace_invalid"
+        return range;
+    };
+    
+    
+    
+    this.toggleFoldWidget = function(toggleParent) {
+        var row = this.selection.getCursor().row;
+        row = this.getRowFoldStart(row);
+        var range = this.$toggleFoldWidget(row, {});
+        
+        if (range)
+            return;
+        // handle toggleParent
+        var data = this.getParentFoldRangeData(row, true);
+        range = data.range || data.firstRange;
+        
+        if (range) {
+            row = range.start.row;
+            var fold = this.getFoldAt(row, this.getLine(row).length, 1);
+
+            if (fold) {
+                this.removeFold(fold);
+            } else {
+                this.addFold("...", range);
+            }
+        }
     };
 
-    this.updateFoldWidgets = function(e) {
-        var delta = e.data;
-        var range = delta.range;
-        var firstRow = range.start.row;
-        var len = range.end.row - firstRow;
+    this.updateFoldWidgets = function(delta) {
+        var firstRow = delta.start.row;
+        var len = delta.end.row - firstRow;
 
         if (len === 0) {
             this.foldWidgets[firstRow] = null;
-        } else if (delta.action == "removeText" || delta.action == "removeLines") {
+        } else if (delta.action == 'remove') {
             this.foldWidgets.splice(firstRow, len + 1, null);
         } else {
             var args = Array(len + 1);
@@ -791,7 +843,13 @@ function Folding() {
             this.foldWidgets.splice.apply(this.foldWidgets, args);
         }
     };
-
+    this.tokenizerUpdateFoldWidgets = function(e) {
+        var rows = e.data;
+        if (rows.first != rows.last) {
+            if (this.foldWidgets.length > rows.first)
+                this.foldWidgets.splice(rows.first, this.foldWidgets.length);
+        }
+    }
 }
 
 exports.Folding = Folding;
