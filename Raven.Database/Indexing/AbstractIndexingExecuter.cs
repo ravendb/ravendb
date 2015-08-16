@@ -48,7 +48,7 @@ namespace Raven.Database.Indexing
                 var workComment = "WORK BY " + name;
 
                 bool isIdle = false;
-                while (context.RunIndexing)
+                while (context.RunReducing)
                 {
                     bool foundWork;
                     try
