@@ -15,6 +15,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Sparrow;
 using Voron.Trees;
 using VoronIndex = Raven.Database.Storage.Voron.Impl.Index;
 
@@ -705,21 +706,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private Slice CreateScheduleReductionKey(int view, int level, string reduceKey)
 	    {
-            var sliceWriter = new SliceWriter(24);
+            var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
             sliceWriter.WriteBigEndian(level);
-            var bytes = HashReduceKeyCached(reduceKey);
-            sliceWriter.Write(bytes);
+            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
 
             return sliceWriter.CreateSlice();
 	    }
 
         private Slice CreateReduceResultsKey(int view, string reduceKey, int level)
         {
-            var sliceWriter = new SliceWriter(24);
+            var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
-            var bytes = HashReduceKeyCached(reduceKey);
-            sliceWriter.Write(bytes);
+            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
             sliceWriter.WriteBigEndian(level);
 
 
@@ -728,10 +727,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private Slice CreateReduceResultsWithBucketKey(int view, string reduceKey, int level, int bucket)
         {
-            var sliceWriter = new SliceWriter(28);
+            var sliceWriter = new SliceWriter(20);
             sliceWriter.WriteBigEndian(view);
-            var bytes = HashReduceKeyCached(reduceKey);
-            sliceWriter.Write(bytes);
+            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
             sliceWriter.WriteBigEndian(level);
             sliceWriter.WriteBigEndian(bucket);
 
@@ -741,31 +739,29 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private Slice CreateMappedResultKey(int view, string reduceKey)
         {
-            var sliceWriter = new SliceWriter(20);
+            var sliceWriter = new SliceWriter(12);
             sliceWriter.WriteBigEndian(view);
-            var bytes = HashReduceKeyCached(reduceKey);
-            sliceWriter.Write(bytes);
+            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
 
             return sliceWriter.CreateSlice();
         }
 
         private Slice CreateMappedResultWithBucketKey(int view, string reduceKey, int bucket)
         {
-            var sliceWriter = new SliceWriter(24);
+            var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
-            var bytes = HashReduceKeyCached(reduceKey);
-            sliceWriter.Write(bytes);
+            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
             sliceWriter.WriteBigEndian(bucket);
            
             return sliceWriter.CreateSlice();
         }
 
-	    [ThreadStatic] private static Tuple<string, byte[]> lastReduceKeyHashed;
-	    private static byte[] HashReduceKeyCached(string reduceKey)
+	    [ThreadStatic] private static Tuple<string, ulong> lastReduceKeyHashed;
+	    private static ulong HashReduceKeyCached(string reduceKey)
 	    {
 	        if (lastReduceKeyHashed == null || lastReduceKeyHashed.Item1 != reduceKey)
 	        {
-	            var hashReduceKeyCached = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(reduceKey));
+	            var hashReduceKeyCached = Hashing.XXHash64.CalculateRaw(reduceKey);
 	            lastReduceKeyHashed = Tuple.Create(reduceKey, hashReduceKeyCached);
 	        }
 	        return lastReduceKeyHashed.Item2;

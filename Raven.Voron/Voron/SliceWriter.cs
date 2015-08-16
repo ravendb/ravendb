@@ -27,6 +27,12 @@ namespace Voron
             _pos += sizeof(long);
         }
 
+        public void WriteBigEndian(ulong l)
+        {
+            EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
+            _pos += sizeof(ulong);
+        }
+
         public void WriteBigEndian(short s)
         {
             EndianBitConverter.Big.CopyBytes(s, _buffer, _pos);
