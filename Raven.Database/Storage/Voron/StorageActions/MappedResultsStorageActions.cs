@@ -474,7 +474,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var viewKey = CreateViewKey(view);
 
             scheduledReductionsByView.MultiAdd(writeBatch.Value, viewKey, idSlice);
-            scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, CreateScheduleReductionKey(view, level, reduceKeysAndBuckets.ReduceKey), idSlice);
+		    var scheduleReductionKey = CreateScheduleReductionKey(view, level, reduceKeysAndBuckets.ReduceKey);
+		    scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, scheduleReductionKey, idSlice);
 			if (scheduledReductionsPerViewAndLevel != null)
 				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}

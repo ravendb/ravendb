@@ -155,6 +155,12 @@ namespace Sparrow
         {
             public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
             {
+                Console.WriteLine($"len {len}, seed {seed}");
+                for (int i = 0; i < len; i++)
+                {
+                    Console.Write("{0:X}-", buffer[i]);
+                }
+                Console.WriteLine();
                 ulong h64;
 
                 byte* bEnd = buffer + len;
@@ -238,7 +244,7 @@ namespace Sparrow
 
                 if (buffer + 4 <= bEnd)
                 {
-                    h64 ^= (ulong)((uint*)buffer) * PRIME64_1;
+                    h64 ^= *(uint*)buffer * PRIME64_1;
                     h64 = RotateLeft64(h64, 23) * PRIME64_2 + PRIME64_3;
                     buffer += 4;
                 }
