@@ -305,24 +305,31 @@ namespace Raven.Database.Embedded
 			if (disposed)
 				return;
 
-			if (blocks.IsAddingCompleted == false)
-				blocks.CompleteAdding();
+		    try
+		    {
+		        if (blocks.IsAddingCompleted == false)
+		            blocks.CompleteAdding();
 
-			base.Dispose(disposing);
+		        base.Dispose(disposing);
 
-			if (disposing == false || blocks.IsCompleted == false) // do not dispose until the collection of blocks is empty
-				return;
+		        if (disposing == false || blocks.IsCompleted == false) // do not dispose until the collection of blocks is empty
+		            return;
 
-			tryTakeDataLock.Wait();
-			try
-			{
-				blocks.Dispose();
-				disposed = true;
-			}
-			finally
-			{
-				tryTakeDataLock.Release();
-			}
+		        tryTakeDataLock.Wait();
+		        try
+		        {
+		            blocks.Dispose();
+		            disposed = true;
+		        }
+		        finally
+		        {
+		            tryTakeDataLock.Release();
+		        }
+		    }
+		    catch (ObjectDisposedException)
+		    {
+                // we might be getting this if we already disposed, just ignore it
+		    }
 		}
 
 		internal void Abort(Exception exception)

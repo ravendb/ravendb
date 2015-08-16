@@ -1733,6 +1733,8 @@ namespace Raven.Client.Indexes
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
 					case "Reverse":
+                    case "Take":
+                    case "Skip":
 						return true;
 				}
 				return false;

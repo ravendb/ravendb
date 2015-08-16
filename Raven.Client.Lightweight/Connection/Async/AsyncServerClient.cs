@@ -254,10 +254,17 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
+
 		public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
 		}
+
+		public Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutSideBySideIndexesAsync(indexesToAdd, operationMetadata, minimumEtagBeforeReplace, replaceTimeUtc, token), token);
+		}
+
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata, token), token);
@@ -309,14 +316,32 @@ namespace Raven.Client.Connection.Async
 		public async Task<string[]> DirectPutIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes";
+			return await PutIndexes(operationMetadata, token, requestUri, indexesToAdd);
+		}
+
+		public async Task<string[]> DirectPutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token = default(CancellationToken))
+		{
+			var sideBySideIndexes = new SideBySideIndexes
+			{
+				IndexesToAdd = indexesToAdd,
+				MinimumEtagBeforeReplace = minimumEtagBeforeReplace,
+				ReplaceTimeUtc = replaceTimeUtc
+			};
+
+			var requestUri = operationMetadata.Url + "/side-by-side-indexes";
+			return await PutIndexes(operationMetadata, token, requestUri, sideBySideIndexes);
+		}
+
+		private async Task<string[]> PutIndexes(OperationMetadata operationMetadata, CancellationToken token, string requestUri, object obj)
+		{
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 			{
-				var serializeObject = JsonConvert.SerializeObject(indexesToAdd, Default.Converters);
+				var serializeObject = JsonConvert.SerializeObject(obj, Default.Converters);
 
 				ErrorResponseException responseException;
 				try
 				{
-					await request.WriteAsync(serializeObject).ConfigureAwait(false);
+					await request.WriteAsync(serializeObject).WithCancellation(token).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return result
 						.Value<RavenJArray>("Indexes")
@@ -325,13 +350,15 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
+					if (e.StatusCode != HttpStatusCode.BadRequest)
+						throw;
 					responseException = e;
 				}
-				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
-				if (error == null) throw responseException;
+				var error = await responseException.TryReadErrorResponseObject(new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""}).ConfigureAwait(false);
+				if (error == null)
+					throw responseException;
 
-				throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+				throw new IndexCompilationException(error.Message) {IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText};
 			}
 		}
 
@@ -357,12 +384,13 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
-
+					if (e.StatusCode != HttpStatusCode.BadRequest)
+						throw;
 					responseException = e;
 				}
 				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "" }).ConfigureAwait(false);
-				if (error == null) throw responseException;
+				if (error == null)
+					throw responseException;
 
 				throw new TransformCompilationException(error.Message);
 			}
@@ -2104,7 +2132,7 @@ namespace Raven.Client.Connection.Async
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			if (options.ChunkedBulkInsertOptions != null)
-				return new ChunkedRemoteBulkInsertOperation(options,this,changes);
+				return new ChunkedRemoteBulkInsertOperation(options, this, changes);
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 

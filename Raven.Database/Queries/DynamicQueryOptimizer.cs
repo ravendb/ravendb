@@ -118,6 +118,11 @@ namespace Raven.Database.Queries
 						database.TransactionalStorage.Batch(accessor =>
 						{
 							var stats = accessor.Indexing.GetIndexStats(indexDefinitionKvp.Key);
+						    if (stats == null)
+						    {
+						        isInvalidIndex = true;
+						        return;
+						    }
 							isInvalidIndex = stats.IsInvalidIndex;
 							indexingPriority = stats.Priority;
 						});
