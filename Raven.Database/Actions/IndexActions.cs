@@ -231,7 +231,7 @@ namespace Raven.Database.Actions
 	        return PutIndexInternal(name, definition);
         }
 
-		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideBySide = false)
+		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySide = false)
 	    {
 		    if (name == null)
 			    throw new ArgumentNullException("name");
@@ -245,7 +245,7 @@ namespace Raven.Database.Actions
 			    switch (existingIndex.LockMode)
 			    {
 				    case IndexLockMode.SideBySide:
-					    if (isUpdateBySideBySide == false)
+					    if (isUpdateBySide == false)
 					    {
 						    Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
 						    throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
@@ -324,6 +324,59 @@ namespace Raven.Database.Actions
 			}
 		}
 
+
+		private string PutSideBySideIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
+
+			name = name.Trim();
+			IsIndexNameValid(name);
+
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+			if (existingIndex != null)
+			{
+				switch (existingIndex.LockMode)
+				{
+					case IndexLockMode.LockedIgnore:
+						Log.Info("Index {0} not saved because it was lock (with ignore)", name);
+						return null;
+
+					case IndexLockMode.LockedError:
+						throw new InvalidOperationException("Can not overwrite locked index: " + name);
+				}
+			}
+
+			AssertAnalyzersValid(definition);
+
+			switch (FindIndexCreationOptions(definition, ref name))
+			{
+				case IndexCreationOptions.Noop:
+					return null;
+				case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+					return null;
+				case IndexCreationOptions.Update:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
+					DeleteIndex(name);
+					break;
+			}
+
+			PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
+
+			WorkContext.ClearErrorsFor(name);
+
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
+
+			return name;
+		}
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public SideBySideIndexInfo[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
 		{
@@ -333,16 +386,25 @@ namespace Raven.Database.Actions
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
-					var indexName = indexToAdd.Name.Trim();
-					var creationOption = FindIndexCreationOptions(indexToAdd.Definition, ref indexName);
-					if (creationOption == IndexCreationOptions.Noop)
-						continue;
+					var indexName = Constants.SideBySideIndexNamePrefix + indexToAdd.Name;
+					var isSideBySide = true;
 
-					//if we need to update the index, we should create a side by side one
-					if (creationOption == IndexCreationOptions.Update)
-						indexName = Constants.SideBySideIndexNamePrefix + indexToAdd.Name;
+					//if there is no existing side by side index, we might need to update the old index
+					if (IndexDefinitionStorage.GetIndexDefinition(indexName) == null)
+					{
+						var existingIndexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexToAdd.Name);
+						if (existingIndexDefinition == null || 
+							(IndexDefinitionStorage.FindIndexUpdateOptions(existingIndexDefinition, indexToAdd.Definition) != IndexCreationOptions.Update))
+						{
+							//cases in which we don't need to create a side by side index:
+							//1) existing index doesn't exist => need to create a new regular index
+							//2) existing index doesn't exist and we need to update it's definition withoud reindexing
+							indexName = indexToAdd.Name;
+							isSideBySide = false;
+						}
+					}
 
-					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideBySide: true);
+					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySide: true);
 					if (nameToAdd == null)
 						continue;
 
@@ -350,7 +412,7 @@ namespace Raven.Database.Actions
 					{
 						OriginalName = indexToAdd.Name,
 						Name = nameToAdd,
-						IsSideBySide = creationOption == IndexCreationOptions.Update
+						IsSideBySide = isSideBySide
 					});
 					prioritiesList.Add(indexToAdd.Priority);
 				}

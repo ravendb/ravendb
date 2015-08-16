@@ -424,23 +424,28 @@ namespace Raven.Database.Storage
             var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
             if (currentIndexDefinition != null)
             {
-				if (currentIndexDefinition.IsTestIndex) // always update test indexes
-					return IndexCreationOptions.Update;
-
-                newIndexDef.IndexId = currentIndexDefinition.IndexId;
-                bool result = currentIndexDefinition.Equals(newIndexDef);
-
-				if (result) 
-					return IndexCreationOptions.Noop;
-
-	            // try to compare to find changes which doesn't require removing compiled index
-	            return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
-					? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
+				return FindIndexUpdateOptions(newIndexDef, currentIndexDefinition);
             }
             return IndexCreationOptions.Create;
         }
 
-        public bool Contains(string indexName)
+		public static IndexCreationOptions FindIndexUpdateOptions(IndexDefinition newIndexDef, IndexDefinition currentIndexDefinition)
+		{
+			if (currentIndexDefinition.IsTestIndex) // always update test indexes
+				return IndexCreationOptions.Update;
+
+			newIndexDef.IndexId = currentIndexDefinition.IndexId;
+			bool result = currentIndexDefinition.Equals(newIndexDef);
+
+			if (result)
+				return IndexCreationOptions.Noop;
+
+			// try to compare to find changes which doesn't require removing compiled index
+			return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
+				? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
+		}
+
+		public bool Contains(string indexName)
         {
             return indexNameToId.ContainsKey(indexName);
         }
@@ -540,15 +545,14 @@ namespace Raven.Database.Storage
 		internal bool ReplaceIndex(string indexName, string indexToSwapName)
 		{
 			var index = GetIndexDefinition(indexName);
-			var indexToReplace = GetIndexDefinition(indexToSwapName);
-
-			if (index == null) 
+			if (index == null)
 				return false;
 
 			int _;
 			indexNameToId.TryRemove(index.Name, out _);
+			index.IsSideBySideIndex = false;
 
-		    index.IsSideBySideIndex = false;
+			var indexToReplace = GetIndexDefinition(indexToSwapName);
 			index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
 			CreateAndPersistIndex(index);
 			AddIndex(index.IndexId, index);
