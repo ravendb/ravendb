@@ -567,7 +567,24 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.StopIndexingWorkers(true);
 		}
 
-		[HttpGet]
+        [HttpPost]
+        [RavenRoute("admin/startReducing")]
+        [RavenRoute("databases/{databaseName}/admin/startReducing")]
+        public void StartReducing()
+        {
+            Database.SpinReduceWorker();
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/stopReducing")]
+        [RavenRoute("databases/{databaseName}/admin/stopReducing")]
+        public void StopReducing()
+        {
+            Database.StopReduceWorkers();
+        }
+
+
+        [HttpGet]
 		[RavenRoute("admin/stats")]
 		public HttpResponseMessage Stats()
 		{

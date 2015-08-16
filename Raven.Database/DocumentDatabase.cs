@@ -1004,10 +1004,22 @@ namespace Raven.Database
 
 			ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
-			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			SpinReduceWorker();
 		}
 
-		public void StopBackgroundWorkers()
+	    public void SpinReduceWorker()
+	    {
+            if(ReducingExecuter == null)
+                throw new InvalidOperationException("Cannot start reducing when reducing executer is null");
+
+            if (reducingBackgroundTask != null &&
+                reducingBackgroundTask.IsCompleted == false)
+                return;
+
+            reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+        }
+
+        public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
 			if (indexingBackgroundTask != null)
@@ -1023,6 +1035,19 @@ namespace Raven.Database
 		{
 			workContext.StartIndexing();
 		}
+
+	    public void StopReduceWorkers()
+	    {
+            workContext.StopReducing();
+            try
+            {
+                reducingBackgroundTask.Wait();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
+        }
 
 		public void StopIndexingWorkers(bool manualStop)
 		{
