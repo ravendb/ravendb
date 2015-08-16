@@ -475,12 +475,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             scheduledReductionsByView.MultiAdd(writeBatch.Value, viewKey, idSlice);
 		    var scheduleReductionKey = CreateScheduleReductionKey(view, level, reduceKeysAndBuckets.ReduceKey);
-		    scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, scheduleReductionKey, idSlice);
+		    scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, scheduleReductionKey, CreateBucketAndEtagKey(reduceKeysAndBuckets.Bucket, id));
 			if (scheduledReductionsPerViewAndLevel != null)
 				scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
 		}
 
-		public IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
+	    private Slice CreateBucketAndEtagKey(int bucket, Etag id)
+	    {
+	        var sliceWriter = new SliceWriter(20);
+	        sliceWriter.WriteBigEndian(bucket);
+            sliceWriter.Write(id.ToByteArray());
+	        return sliceWriter.CreateSlice();
+	    }
+
+	    public IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete, o =>
@@ -499,14 +507,32 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
                 var mappedResults = new List<MappedResultInfo>();
 
+                var first = true;
                 foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
-                    var viewAndLevelAndReduceKey =CreateScheduleReductionKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKey);
+                    Slice start = Slice.BeforeAllKeys;
+                    bool needToMoveNext = false;
+                    if (first)
+                    {
+                        first = false;
+                        if (getItemsToReduceParams.LastReduceKeyAndBucket != null)
+                        {
+                            if (getItemsToReduceParams.LastReduceKeyAndBucket.ReduceKey != reduceKey)
+                            {
+                                throw new InvalidOperationException("Mismatches last reduce key with the remaining reduce keys in the params");
+                            }
+                            needToMoveNext = true;
+                            start = CreateBucketAndEtagKey(getItemsToReduceParams.LastReduceKeyAndBucket.Bucket, Etag.Empty);
+                        }
+                    }
+                    var viewAndLevelAndReduceKey = CreateScheduleReductionKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKey);
                     using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, viewAndLevelAndReduceKey))
                     {
-                        if (!iterator.Seek(Slice.BeforeAllKeys))
+                        if (!iterator.Seek(start))
+                            continue;
+
+                        if(needToMoveNext && iterator.MoveNext() ==false)
                             continue;
 
                         do
@@ -516,8 +542,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             if (getItemsToReduceParams.Take <= 0)
                                 break;
 
+                            var idValueReader = iterator.CurrentKey.CreateReader();
+                            idValueReader.ReadBigEndianInt32(); // bucket
+                            int _;
+                            var id = new Slice(Etag.Parse(idValueReader.ReadBytes(16, out _)));
+
+
                             ushort version;
-                            var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+                            var value = LoadStruct(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
                             if (value == null) // TODO: Check if this is correct. 
                                 continue;
 
@@ -527,12 +559,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb);
 
                             var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
-                            var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 
-                            if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
+                            if (thisIsNewScheduledReductionRow)
                             {
                                 if (seenLocally.Add(rowKey))
                                 {
+                                    getItemsToReduceParams.LastReduceKeyAndBucket = rowKey;
                                     foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
                                     {
                                         getItemsToReduceParams.Take--;
@@ -696,8 +728,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var view = value.ReadInt(ScheduledReductionFields.IndexId);
 				var level = value.ReadInt(ScheduledReductionFields.Level);
 				var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
+			    var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
 
-				DeleteScheduledReduction(etagAsString, CreateScheduleReductionKey(view, level, reduceKey), CreateViewKey(view));
+                DeleteScheduledReduction(etagAsString, CreateScheduleReductionKey(view, level, reduceKey), CreateViewKey(view), bucket);
 				if (scheduledReductionsPerViewAndLevel != null)
 					scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
 			}
@@ -1098,8 +1131,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					var level = value.ReadInt(ScheduledReductionFields.Level);
 					var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
-
-				    DeleteScheduledReduction(id, CreateScheduleReductionKey(view, level, reduceKey), viewKey);
+                    var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
+                    DeleteScheduledReduction(id, CreateScheduleReductionKey(view, level, reduceKey), viewKey, bucket);
 					storageActionsAccessor.General.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext() && token.IsCancellationRequested == false);
@@ -1121,7 +1154,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private void DeleteScheduledReduction(Slice id, Slice scheduleReductionKey, Slice viewKey)
+		private void DeleteScheduledReduction(Slice id, Slice scheduleReductionKey, Slice viewKey, int bucket)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
@@ -1145,9 +1178,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var viewKey = CreateViewKey(view);
                 do
                 {
-                    var id = iterator.CurrentKey;
+                    var idValueReader = iterator.CurrentKey.CreateReader();
+                    var bucket = idValueReader.ReadBigEndianInt32();
+                    int _;
+                    var id = new Slice(idValueReader.ReadBytes(16, out _));
 
-                    DeleteScheduledReduction(id, scheduleReductionKey, viewKey);
+                    DeleteScheduledReduction(id, scheduleReductionKey, viewKey, bucket);
                     if (scheduledReductionsPerViewAndLevel != null)
                         scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
                 }
