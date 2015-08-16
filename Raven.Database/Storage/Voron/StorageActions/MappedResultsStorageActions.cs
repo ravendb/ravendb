@@ -709,7 +709,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
             sliceWriter.WriteBigEndian(level);
-            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
+            sliceWriter.WriteBigEndian(Hashing.XXHash64.CalculateRaw(reduceKey));
 
             return sliceWriter.CreateSlice();
 	    }
@@ -718,7 +718,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
-            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
+            sliceWriter.WriteBigEndian(Hashing.XXHash64.CalculateRaw(reduceKey));
             sliceWriter.WriteBigEndian(level);
 
 
@@ -729,7 +729,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var sliceWriter = new SliceWriter(20);
             sliceWriter.WriteBigEndian(view);
-            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
+            sliceWriter.WriteBigEndian(Hashing.XXHash64.CalculateRaw(reduceKey));
             sliceWriter.WriteBigEndian(level);
             sliceWriter.WriteBigEndian(bucket);
 
@@ -741,7 +741,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var sliceWriter = new SliceWriter(12);
             sliceWriter.WriteBigEndian(view);
-            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
+            sliceWriter.WriteBigEndian(Hashing.XXHash64.CalculateRaw(reduceKey));
 
             return sliceWriter.CreateSlice();
         }
@@ -750,22 +750,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var sliceWriter = new SliceWriter(16);
             sliceWriter.WriteBigEndian(view);
-            sliceWriter.WriteBigEndian(HashReduceKeyCached(reduceKey));
+            sliceWriter.WriteBigEndian(Hashing.XXHash64.CalculateRaw(reduceKey));
             sliceWriter.WriteBigEndian(bucket);
            
             return sliceWriter.CreateSlice();
         }
-
-	    [ThreadStatic] private static Tuple<string, ulong> lastReduceKeyHashed;
-	    private static ulong HashReduceKeyCached(string reduceKey)
-	    {
-	        if (lastReduceKeyHashed == null || lastReduceKeyHashed.Item1 != reduceKey)
-	        {
-	            var hashReduceKeyCached = Hashing.XXHash64.CalculateRaw(reduceKey);
-	            lastReduceKeyHashed = Tuple.Create(reduceKey, hashReduceKeyCached);
-	        }
-	        return lastReduceKeyHashed.Item2;
-	    }
 
 	    public Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex()
 		{
