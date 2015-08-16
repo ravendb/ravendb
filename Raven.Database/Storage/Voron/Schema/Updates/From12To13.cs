@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -12,6 +13,7 @@ using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Json.Linq;
 using Sparrow;
 using Voron;
+using Voron.Impl;
 using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
@@ -49,114 +51,129 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
                 tx.Commit();
             }
-            using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var reduceKeyTypes = tx.ReadTree(Tables.ReduceKeyTypes.TableName);
-                var reduceKeyTypesByView = tx.ReadTree(Tables.ReduceKeyTypes.Indices.ByView);
-                using (var it = reduceKeyTypes.Iterate())
+            MigrateIndexes(tableStorage, output, Tables.ReduceKeyTypes.TableName,
+                tx => new
                 {
-                    if (it.Seek(Slice.BeforeAllKeys))
-                    {
-                        do
-                        {
-                            var current = it.ReadStructForCurrent(tableStorage.ReduceKeyTypes.Schema);
+                    reduceKeyTypesByView = tx.ReadTree(Tables.ReduceKeyTypes.Indices.ByView)
 
-                            var viewId = current.ReadInt(ReduceKeyTypeFields.IndexId);
-                            reduceKeyTypesByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
-
-                        } while (it.MoveNext());
-                    }
-                }
-
-                tx.Commit();
-            }
-            using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var reduceKeyCounts = tx.ReadTree(Tables.ReduceKeyCounts.TableName);
-                var reduceKeyCountsByView = tx.ReadTree(Tables.ReduceKeyCounts.Indices.ByView);
-                using (var it = reduceKeyCounts.Iterate())
+                }, (state, it) =>
                 {
-                    if (it.Seek(Slice.BeforeAllKeys))
-                    {
-                        do
-                        {
-                            var current = it.ReadStructForCurrent(tableStorage.ReduceKeyCounts.Schema);
+                    var current = it.ReadStructForCurrent(tableStorage.ReduceKeyTypes.Schema);
 
-                            var viewId = current.ReadInt(ReduceKeyCountFields.IndexId);
-                            reduceKeyCountsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
+                    var viewId = current.ReadInt(ReduceKeyTypeFields.IndexId);
+                    state.reduceKeyTypesByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
+                });
 
-                        } while (it.MoveNext());
-                    }
-                }
+            MigrateIndexes(tableStorage, output, Tables.ReduceKeyCounts.TableName,
+              tx => new
+              {
+                  reduceKeyCountsByView = tx.ReadTree(Tables.ReduceKeyCounts.Indices.ByView)
+              }, (state, it) =>
+              {
+                  var current = it.ReadStructForCurrent(tableStorage.ReduceKeyTypes.Schema);
 
-                tx.Commit();
-            }
-            using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var reduceResults = tx.ReadTree(Tables.ReduceResults.TableName);
-                var reduceResultsByView = tx.ReadTree(Tables.ReduceResults.Indices.ByView);
-                var reduceResultsByViewAndKeyAndLevel = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
-                var reduceResultsByViewAndKeyAndLevelAndBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
-                var reduceResultsByViewAndKeyAndLevelAndSourceBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+                  var viewId = current.ReadInt(ReduceKeyTypeFields.IndexId);
+                  state.reduceKeyCountsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
+              });
 
-                using (var it = reduceResults.Iterate())
+            MigrateIndexes(tableStorage, output, Tables.ReduceResults.TableName,
+                tx => new
                 {
-                    if (it.Seek(Slice.BeforeAllKeys))
-                    {
-                        do
-                        {
-                            var current = it.ReadStructForCurrent(tableStorage.ReduceResults.Schema);
+                    reduceResultsByView = tx.ReadTree(Tables.ReduceResults.Indices.ByView),
+                    reduceResultsByViewAndKeyAndLevel = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel),
+                    reduceResultsByViewAndKeyAndLevelAndBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket),
+                    reduceResultsByViewAndKeyAndLevelAndSourceBucket = tx.ReadTree(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket)
 
-                            var viewId = current.ReadInt(ReduceResultFields.IndexId);
-                            var reduceKey = current.ReadString(ReduceResultFields.ReduceKey);
-                            var level = current.ReadInt(ReduceResultFields.Level);
-                            var bucket = current.ReadInt(ReduceResultFields.Bucket);
-                            var sourceBucket = current.ReadInt(ReduceResultFields.SourceBucket);
-                            reduceResultsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
-                            reduceResultsByViewAndKeyAndLevel.MultiAdd(CreateReduceResultsKey(viewId, reduceKey, level), it.CurrentKey);
-                            reduceResultsByViewAndKeyAndLevelAndBucket.MultiAdd(CreateReduceResultsWithBucketKey(viewId, reduceKey, level, bucket), it.CurrentKey);
-                            reduceResultsByViewAndKeyAndLevelAndSourceBucket.MultiAdd(CreateReduceResultsWithBucketKey(viewId, reduceKey, level, sourceBucket), it.CurrentKey);
-
-                        } while (it.MoveNext());
-                    }
-                }
-
-                tx.Commit();
-            }
-
-            using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var mappedResults = tx.ReadTree(Tables.MappedResults.TableName);
-                var mappedResultsByView = tx.ReadTree(Tables.MappedResults.Indices.ByView);
-                // we didn't changed this one format, explicitly ignored
-                // var mappedResultsByViewAndDocumentId = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndDocumentId);
-                var mappedResultsByViewAndReduceKey = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKey);
-                var mappedResultsByViewAndReduceKeyAndSourceBucket = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
-
-                using (var it = mappedResults.Iterate())
+                }, (state, it) =>
                 {
-                    if (it.Seek(Slice.BeforeAllKeys))
-                    {
-                        do
-                        {
-                            var current = it.ReadStructForCurrent(tableStorage.MappedResults.Schema);
+                    var current = it.ReadStructForCurrent(tableStorage.ReduceResults.Schema);
 
-                            var viewId = current.ReadInt(MappedResultFields.IndexId);
-                            var reduceKey = current.ReadString(MappedResultFields.ReduceKey);
-                            var bucket = current.ReadInt(MappedResultFields.Bucket);
+                    var viewId = current.ReadInt(ReduceResultFields.IndexId);
+                    var reduceKey = current.ReadString(ReduceResultFields.ReduceKey);
+                    var level = current.ReadInt(ReduceResultFields.Level);
+                    var bucket = current.ReadInt(ReduceResultFields.Bucket);
+                    var sourceBucket = current.ReadInt(ReduceResultFields.SourceBucket);
+                    state.reduceResultsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
+                    state.reduceResultsByViewAndKeyAndLevel.MultiAdd(CreateReduceResultsKey(viewId, reduceKey, level), it.CurrentKey);
+                    state.reduceResultsByViewAndKeyAndLevelAndBucket.MultiAdd(CreateReduceResultsWithBucketKey(viewId, reduceKey, level, bucket), it.CurrentKey);
+                    state.reduceResultsByViewAndKeyAndLevelAndSourceBucket.MultiAdd(CreateReduceResultsWithBucketKey(viewId, reduceKey, level, sourceBucket), it.CurrentKey);
+                });
 
-                            mappedResultsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
-                            mappedResultsByViewAndReduceKey.MultiAdd(CreateMappedResultKey(viewId, reduceKey), it.CurrentKey);
-                            mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(CreateMappedResultWithBucketKey(viewId, reduceKey, bucket), it.CurrentKey);
+            MigrateIndexes(tableStorage, output, Tables.MappedResults.TableName,
+                tx => new
+                {
+                    mappedResultsByView = tx.ReadTree(Tables.MappedResults.Indices.ByView),
+                    // we didn't changed this one format, explicitly ignored
+                    // var mappedResultsByViewAndDocumentId = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndDocumentId);
+                    mappedResultsByViewAndReduceKey = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKey),
+                    mappedResultsByViewAndReduceKeyAndSourceBucket = tx.ReadTree(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket)
 
-                        } while (it.MoveNext());
-                    }
-                }
+                }, (state, it) =>
+                {
+                    var current = it.ReadStructForCurrent(tableStorage.MappedResults.Schema);
 
-                tx.Commit();
-            }
+                    var viewId = current.ReadInt(MappedResultFields.IndexId);
+                    var reduceKey = current.ReadString(MappedResultFields.ReduceKey);
+                    var bucket = current.ReadInt(MappedResultFields.Bucket);
+
+                    state.mappedResultsByView.MultiAdd(CreateViewKey(viewId), it.CurrentKey);
+                    state.mappedResultsByViewAndReduceKey.MultiAdd(CreateMappedResultKey(viewId, reduceKey), it.CurrentKey);
+                    state.mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(CreateMappedResultWithBucketKey(viewId, reduceKey, bucket), it.CurrentKey);
+                });
 
             UpdateSchemaVersion(tableStorage, output);
+        }
+
+        private void MigrateIndexes<TState>(TableStorage tableStorage, Action<string> output,
+            string tableName,
+            Func<Transaction, TState> initState,
+            Action<TState, TreeIterator> processEntry)
+        {
+            var sp = Stopwatch.StartNew();
+            var lastKey = Slice.BeforeAllKeys;
+            var count = 0;
+            var hasMore = true;
+            while (hasMore)
+            {
+                using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var table = tx.ReadTree(tableName);
+
+                    output("Migrating " + tableName + ", with " + table.State.EntriesCount + " entries");
+
+                    var state = initState(tx);
+
+                    using (var it = table.Iterate())
+                    {
+                        if (it.Seek(lastKey))
+                        {
+                            do
+                            {
+
+                                processEntry(state, it);
+
+                                if (++count > 50000)
+                                {
+                                    output("Migrated 50,000 records from "+ tableName + ", pulsing transaction");
+                                    // now move to the next one and so we'll run with it next time
+                                    if (it.MoveNext())
+                                    {
+                                        lastKey = it.CurrentKey.Clone();
+                                        count = 0;
+                                        break;
+                                    }
+                                    hasMore = false;
+                                    break;
+                                }
+                            } while (it.MoveNext());
+                            hasMore = false;
+                        }
+                    }
+
+                    tx.Commit();
+                }
+                output("Finished migration " + tableName + " in " + sp.Elapsed);
+            }
         }
 
 
