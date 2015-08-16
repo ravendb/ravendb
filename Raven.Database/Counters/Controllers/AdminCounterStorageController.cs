@@ -23,6 +23,9 @@ using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
+using System.Net.Http.Headers;
+using System.Threading;
+using Newtonsoft.Json;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -107,6 +110,53 @@ namespace Raven.Database.Counters.Controllers
         }
 
 	    [HttpGet]
+	    [RavenRoute("admin/cs/{id}/groups-names")]
+	    public async Task<HttpResponseMessage> GetNamesAndGroups(string id)
+	    {
+			MessageWithStatusCode nameFormateErrorMsg;
+			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = nameFormateErrorMsg.Message
+				}, nameFormateErrorMsg.ErrorCode);
+			}
+
+			if (Authentication.IsLicensedForCounters == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Your license does not allow the use of Counters!"
+				}, HttpStatusCode.BadRequest);
+			}
+
+			var counterStorage = await CountersLandlord.GetCounterInternal(id).ConfigureAwait(false);
+			if (counterStorage == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Message = string.Format("Didn't find counter storage (name = {0})", id)
+				}, HttpStatusCode.NotFound);
+			}
+
+			var counterSummaries = new List<CounterNameGroupPair>();
+			using (var reader = counterStorage.CreateReader())
+			{
+				var groupsAndNames = reader.GetCounterGroups()
+					.SelectMany(group => reader.GetCountersSummary(group.Name)
+					.Select(x => new CounterNameGroupPair
+					{
+						Name = x.CounterName,
+						Group = group.Name
+					}));
+
+				counterSummaries.AddRange(groupsAndNames);
+			}
+
+			return GetMessageWithObject(counterSummaries);
+		}
+
+	    [HttpGet]
 	    [RavenRoute("admin/cs/{*id}")]
 	    public async Task<HttpResponseMessage> Get(string id)
 	    {
@@ -127,7 +177,7 @@ namespace Raven.Database.Counters.Controllers
 			    }, HttpStatusCode.BadRequest);
 		    }
 		    
-		    var counterStorage = await CountersLandlord.GetCounterInternal(id);
+		    var counterStorage = await CountersLandlord.GetCounterInternal(id).ConfigureAwait(false);
 		    if (counterStorage == null)
 		    {
 			    return GetMessageWithObject(new
@@ -145,6 +195,62 @@ namespace Raven.Database.Counters.Controllers
 		    }
 
 			return GetMessageWithObject(counterSummaries);
+	    }
+
+		[HttpGet]
+		[RavenRoute("admin/cs/{id}/stream")]
+		public async Task<HttpResponseMessage> GetWithStream(string id)
+		{
+			MessageWithStatusCode nameFormateErrorMsg;
+			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = nameFormateErrorMsg.Message
+				}, nameFormateErrorMsg.ErrorCode);
+			}
+
+			if (Authentication.IsLicensedForCounters == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Your license does not allow the use of Counters!"
+				}, HttpStatusCode.BadRequest);
+			}
+
+			var counterStorage = await CountersLandlord.GetCounterInternal(id).ConfigureAwait(false);
+			if (counterStorage == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Message = string.Format("Didn't find counter storage (name = {0})", id)
+				}, HttpStatusCode.NotFound);
+			}
+
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new PushStreamContent((stream, content, transportContext) => CountersSummaryStreamToClient(stream, counterStorage))
+				{
+					Headers = { ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" } }
+				}				
+			};
+		}
+
+	    private void CountersSummaryStreamToClient(Stream stream, CounterStorage counterStorage)
+	    {
+            using (var cts = new CancellationTokenSource())
+			using (var timeout = cts.TimeoutAfter(CountersLandlord.SystemConfiguration.DatabaseOperationTimeout))
+			using (var reader = counterStorage.CreateReader())
+			{
+				var summaries = reader.GetCounterGroups().SelectMany(x => reader.GetCountersSummary(x.Name));
+				foreach (var summary in summaries)
+				{
+					timeout.Delay();
+					var serializedSummary = RavenJObject.FromObject(summary);
+					serializedSummary.WriteTo(stream);
+				}
+				stream.Flush();
+			}		    
 	    }
 
 	    [HttpDelete]

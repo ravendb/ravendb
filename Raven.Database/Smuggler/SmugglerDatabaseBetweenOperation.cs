@@ -10,9 +10,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
-using Raven.Smuggler;
 
 namespace Raven.Smuggler
 {
@@ -68,25 +66,25 @@ namespace Raven.Smuggler
 
 			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Indexes))
 			{
-				await ExportIndexes(exportOperations, importOperations);
+				await ExportIndexes(exportOperations, importOperations).ConfigureAwait(false);
 			}
 
 			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Transformers))
 			{
-				await ExportTransformers(exportOperations, importOperations);
+				await ExportTransformers(exportOperations, importOperations).ConfigureAwait(false);
 			}
 
 			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Documents))
 			{
-				incremental.LastDocsEtag = await ExportDocuments(exportOperations, importOperations, databaseOptions);
+				incremental.LastDocsEtag = await ExportDocuments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
 			}
 
 			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Attachments))
 			{
-				incremental.LastAttachmentsEtag = await ExportAttachments(exportOperations, importOperations, databaseOptions);
+				incremental.LastAttachmentsEtag = await ExportAttachments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
 			}
 
-			await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes);
+			await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes).ConfigureAwait(false);
 
 			if (databaseOptions.Incremental)
 			{
@@ -105,8 +103,8 @@ namespace Raven.Smuggler
 					{ "@id", SmugglerExportIncremental.RavenDocumentKey }
 				});
 
-				await importOperations.PutDocument(smugglerDoc, (int)DocumentHelpers.GetRoughSize(smugglerDoc));
-				await importOperations.PutDocument(null, -1); // force flush
+				await importOperations.PutDocument(smugglerDoc, (int)DocumentHelpers.GetRoughSize(smugglerDoc)).ConfigureAwait(false);
+				await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush
 			}
 		}
 
@@ -114,7 +112,7 @@ namespace Raven.Smuggler
 		{
 			ShowProgress("Exporting Identities");
 
-			var identities = await exportOperations.GetIdentities();
+			var identities = await exportOperations.GetIdentities().ConfigureAwait(false);
 
 			ShowProgress("Got {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
 
@@ -136,7 +134,7 @@ namespace Raven.Smuggler
 
 			foreach (var identityInfo in filteredIdentities)
 			{
-				await importOperations.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
+				await importOperations.SeedIdentityFor(identityInfo.Key, identityInfo.Value).ConfigureAwait(false);
 
 				ShowProgress("Identity '{0}' exported with value {1}", identityInfo.Key, identityInfo.Value);
 			}
@@ -162,7 +160,7 @@ namespace Raven.Smuggler
 				foreach (var index in indexes)
 				{
 					var indexName = index.Value<string>("name");
-					await importOperations.PutIndex(indexName, index);
+					await importOperations.PutIndex(indexName, index).ConfigureAwait(false);
 					ShowProgress("Successfully PUT index '{0}'", indexName);
 				}
 			}
@@ -187,9 +185,9 @@ namespace Raven.Smuggler
 					if (maxRecords > 0)
 					{
 						var amountToFetchFromServer = Math.Min(databaseOptions.BatchSize, maxRecords);
-						using (var documents = await exportOperations.GetDocuments(lastEtag, amountToFetchFromServer))
+						using (var documents = await exportOperations.GetDocuments(lastEtag, amountToFetchFromServer).ConfigureAwait(false))
 						{
-							while (await documents.MoveNextAsync())
+							while (await documents.MoveNextAsync().ConfigureAwait(false))
 							{
 								hasDocs = true;
 								var document = documents.Current;
@@ -214,7 +212,7 @@ namespace Raven.Smuggler
 
 								document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
 
-								await importOperations.PutDocument(document, (int) DocumentHelpers.GetRoughSize(document));
+								await importOperations.PutDocument(document, (int) DocumentHelpers.GetRoughSize(document)).ConfigureAwait(false);
 								totalCount++;
 
 								if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
@@ -231,7 +229,7 @@ namespace Raven.Smuggler
 						// The server can filter all the results. In this case, we need to try to go over with the next batch.
 						// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 						// (This code provides support for legacy RavenDB version: 1.0)
-						var databaseStatistics = await exportOperations.GetStats();
+						var databaseStatistics = await exportOperations.GetStats().ConfigureAwait(false);
 						var lastEtagComparable = new ComparableByteArray(lastEtag);
 						if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 						{
@@ -274,7 +272,7 @@ namespace Raven.Smuggler
 					}
 				});
 
-				await importOperations.PutDocument(null, -1); // force flush 
+				await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush 
 
 				ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
@@ -293,16 +291,16 @@ namespace Raven.Smuggler
 				{
 					if (databaseOptions.Limit - totalCount <= 0)
 					{
-						await importOperations.PutAttachment(null); // force flush
+						await importOperations.PutAttachment(null).ConfigureAwait(false); // force flush
 
 						ShowProgress("Done with reading attachments, total: {0}", totalCount);
 						return lastEtag;
 					}
 					var maxRecords = Math.Min(databaseOptions.Limit - totalCount, databaseOptions.BatchSize);
-					var attachments = await exportOperations.GetAttachments(totalCount, lastEtag, maxRecords);
+					var attachments = await exportOperations.GetAttachments(totalCount, lastEtag, maxRecords).ConfigureAwait(false);
 					if (attachments.Count == 0)
 					{
-						var databaseStatistics = await exportOperations.GetStats();
+						var databaseStatistics = await exportOperations.GetStats().ConfigureAwait(false);
 						if (lastEtag == null) lastEtag = Etag.Empty;
 						if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 						{
@@ -320,7 +318,7 @@ namespace Raven.Smuggler
 
 					foreach (var attachment in attachments)
 					{
-						var attachmentData = await exportOperations.GetAttachmentData(attachment);
+						var attachmentData = await exportOperations.GetAttachmentData(attachment).ConfigureAwait(false);
 						if (attachmentData == null)
 							continue;
 
@@ -334,7 +332,7 @@ namespace Raven.Smuggler
 						if (databaseOptions.StripReplicationInformation)
 							attachmentToExport.Metadata = StripReplicationInformationFromMetadata(attachmentToExport.Metadata);
 
-						await importOperations.PutAttachment(attachmentToExport);
+						await importOperations.PutAttachment(attachmentToExport).ConfigureAwait(false);
 
 						lastEtag = attachment.Etag;
 					}
@@ -356,7 +354,7 @@ namespace Raven.Smuggler
 			var totalCount = 0;
 			while (true)
 			{
-				var transformers = await exportOperations.GetTransformers(totalCount);
+				var transformers = await exportOperations.GetTransformers(totalCount).ConfigureAwait(false);
 				if (transformers.Length == 0)
 				{
 					ShowProgress("Done with reading transformers, total: {0}", totalCount);
@@ -368,7 +366,7 @@ namespace Raven.Smuggler
 				{
 					var transformerName = transformer.Value<string>("name");
 
-					await importOperations.PutTransformer(transformerName, transformer);
+					await importOperations.PutTransformer(transformerName, transformer).ConfigureAwait(false);
 					ShowProgress("Successfully PUT transformer '{0}'", transformerName);
 				}
 			}

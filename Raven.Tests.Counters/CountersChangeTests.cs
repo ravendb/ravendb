@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Database.Extensions;
+using Raven.Database.Smuggler;
 using Xunit;
 using Xunit.Extensions;
 using Xunit.Sdk;
@@ -14,6 +20,41 @@ namespace Raven.Tests.Counters
 	{
 		private const string CounterStorageName = "FooBarCounterStore";
 		private const string CounterName = "FooBarCounter";
+		private const string CounterDumpFilename = "Counter.Dump";
+
+		[Fact]
+		public async Task SmugglerImport_incremental_from_file_should_work()
+		{
+			IOExtensions.DeleteDirectory(CounterDumpFilename); //counters incremental export creates folder with incremental dump files
+
+			using (var counterStore = NewRemoteCountersStore("storeToExport"))
+			{
+				await counterStore.ChangeAsync("g1", "c1", 5);
+				await counterStore.IncrementAsync("g1", "c2");
+				await counterStore.IncrementAsync("g", "c");
+
+				var deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(0);
+				deltas.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				deltas.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				deltas.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
+
+				deltas.First(x => x.CounterName == "c1" && x.GroupName == "g1").Value.Should().Be(5);
+				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(1);
+
+				await counterStore.ChangeAsync("g1", "c2",1);
+				await counterStore.ChangeAsync("g", "c",-2);
+
+				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
+
+				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-2);
+				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(2);
+
+				await counterStore.ChangeAsync("g", "c", -3);
+				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
+				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-3);
+			}
+		}
+
 
 		[Theory]
 		[InlineData(2)]

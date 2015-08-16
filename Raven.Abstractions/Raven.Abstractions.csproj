@@ -144,6 +144,8 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\CounterNameGroupPair.cs" />
+    <Compile Include="Counters\CounterState.cs" />
     <Compile Include="Counters\CounterBackupRequest.cs" />
     <Compile Include="Counters\CounterRestoreRequest.cs" />
     <Compile Include="Counters\CountersBatchOptions.cs" />
