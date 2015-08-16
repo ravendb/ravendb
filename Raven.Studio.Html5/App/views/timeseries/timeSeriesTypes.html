@@ -22,8 +22,13 @@
                 </button>
             </div>
 	        <div class="btn-group">
-		        <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newKey" title="Create a new key (Alt+N)">
-			        <i class="fa fa-plus"></i> New key
+		        <button type="button" class="btn btn-primary" accesskey="m" data-bind="click: newType" title="Create a new type (Alt+M)">
+			        <i class="fa fa-plus"></i> New Type
+		        </button>
+	        </div>
+	        <div class="btn-group">
+		        <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newPoint" title="Create a new point (Alt+N)">
+			        <i class="fa fa-plus"></i> New Point
 		        </button>
 	        </div>
 			 <div class="btn-group">
@@ -32,9 +37,6 @@
 				</button>
 			</div>
 	        <div class="btn-group" data-bind="visible: hasAnyKeysSelected">
-		        <button type="button" class="btn btn-default" data-bind="click: changeKey, enable: selectedKeysIndices().length == 1" title="Change Key Value">
-			        <i class="fa fa-wrench"></i>
-		        </button>
                 <button type="button" class="btn btn-default" data-bind="click: deleteSelectedKeys, attr: { title: selectedKeysIndices().length == 1 ? 'Delete Key' : 'Delete Keys' }">
                     <i class="fa fa-trash-o"></i>
                 </button>
@@ -58,6 +60,6 @@
             </span>
         </div>
 
-		<div id="keysGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentTypePagedItems, selectedIndices: selectedKeysIndices, gridSelector: '#keysGrid', collections: types, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyKeysAutoSelected, isAllAutoSelected: isAllKeysAutoSelected, contextMenuOptions: ['ChangeValue', 'Delete'], showIds: false, noResultsMessage: 'No time series were found!' }"></div>
+		<div id="keysGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentTypePagedItems, selectedIndices: selectedKeysIndices, gridSelector: '#keysGrid', collections: types, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyKeysAutoSelected, isAllAutoSelected: isAllKeysAutoSelected, contextMenuOptions: ['Delete'], showIds: false, noResultsMessage: 'No keys were found!' }"></div>
     </div>
 </div> 

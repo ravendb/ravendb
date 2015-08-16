@@ -93,8 +93,8 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000, responseDataType: string = "json"): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert, responseDataType);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
     }
 
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
@@ -120,7 +120,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "EVAL", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000, responseDataType: string = "json"): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
         //
@@ -136,7 +136,7 @@ class commandBase {
         var defaultOptions = {
             url: appUrl.forResourceQuery(resource) + relativeUrl,
             data: args,
-            dataType: responseDataType,
+            dataType: "json",
             contentType: contentType, 
             type: method,
             headers: undefined,

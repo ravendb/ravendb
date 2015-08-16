@@ -534,6 +534,11 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage ForceLicenseUpdate()
 		{
 			Database.ForceLicenseUpdate();
+            DatabasesLandlord.ForAllDatabases(database =>
+            {
+                database.WorkContext.ShouldNotifyAboutWork(() => "License update");
+                database.WorkContext.NotifyAboutWork();
+            });
 			return GetEmptyMessage();
 		}
 

@@ -32,7 +32,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	{
 		[RavenRoute("ts/{timeSeriesName}/types/{type}")]
 		[HttpPut]
-		public HttpResponseMessage CreateType(TimeSeriesType type)
+		public HttpResponseMessage PutType(TimeSeriesType type)
 		{
 			if (string.IsNullOrEmpty(type.Type) || type.Fields == null || type.Fields.Length < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -276,20 +276,16 @@ namespace Raven.Database.TimeSeries.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("ts/{timeSeriesName}/delete/{type}")]
+		[RavenRoute("ts/{timeSeriesName}/delete-key/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage Delete(string type, string key)
+		public HttpResponseMessage DeleteKey(string type, string key)
 		{
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var fields = Storage.GetType(type);
-			if (fields == null)
-				return GetMessageWithString("Cannot delete from not exist prefix: " + type, HttpStatusCode.BadRequest);
-			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Delete(type, key);
+				var pointsDeleted = writer.DeleteKey(type, key);
 				writer.DeleteKeyInRollups(type, key);
 				writer.Commit();
 
@@ -301,7 +297,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					Action = TimeSeriesChangeAction.Delete,
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetMessageWithObject(pointsDeleted);
 			}
 		}
 
@@ -338,22 +334,18 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/delete-range/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage DeleteRange(string type, string key, long start, long end)
+		public HttpResponseMessage DeleteRange(string type, string key, DateTimeOffset start, DateTimeOffset end)
 		{
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || start < DateTime.MinValue.Ticks || start > DateTime.MaxValue.Ticks)
+			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			if (start > end)
 				throw new InvalidOperationException("start cannot be greater than end");
 
-			var fields = Storage.GetType(type);
-			if (fields == null)
-				return GetMessageWithString("Cannot delete from not exist prefix: " + type, HttpStatusCode.BadRequest);
-			
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(type, key, start, end);
-				writer.DeleteRangeInRollups(type, key, start, end);
+				writer.DeleteRange(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
+				writer.DeleteRangeInRollups(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
