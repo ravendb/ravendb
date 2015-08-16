@@ -345,6 +345,7 @@
     <Compile Include="Storage\TransactionalStorageHelper.cs" />
     <Compile Include="Storage\StringHelper.cs" />
     <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From12To13.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\DocumentReferencesFields.cs" />
