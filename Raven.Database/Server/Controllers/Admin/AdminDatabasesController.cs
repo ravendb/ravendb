@@ -256,6 +256,15 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(info);
 		}
 
+
+		[HttpGet]
+		[RavenRoute("admin/clear-hotspare-information")]
+		public HttpResponseMessage ClearHotSpareInformation()
+		{			
+			RequestManager.HotSpareValidator.ClearHotSpareData();
+			return GetEmptyMessage();
+		}
+
 		[HttpPost]
 		[RavenRoute("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)

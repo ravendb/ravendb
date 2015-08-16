@@ -79,7 +79,7 @@ namespace Raven.Database.Plugins.Builtins
 			CheckHotSpareLicenseStats();
 		}
 
-		private void ClearHotSpareData()
+		internal void ClearHotSpareData()
 		{
 			landlord.SystemDatabase.TransactionalStorage.Batch(action =>
 			{
