@@ -1181,7 +1181,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var idValueReader = iterator.CurrentKey.CreateReader();
                     var bucket = idValueReader.ReadBigEndianInt32();
                     int _;
-                    var id = new Slice(idValueReader.ReadBytes(16, out _));
+                    var id = new Slice(Etag.Parse(idValueReader.ReadBytes(16, out _)).ToString());
 
                     DeleteScheduledReduction(id, scheduleReductionKey, viewKey, bucket);
                     if (scheduledReductionsPerViewAndLevel != null)
