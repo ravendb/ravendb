@@ -63,7 +63,7 @@ namespace Voron.Tests.Bugs
 				{
 					tx.Root.Add			("items/" + i, new byte[dataSize]);
 
-					DebugStuff.RenderAndShow(tx, tx.Root.State.RootPageNumber, 1);
+					DebugStuff.RenderAndShow(tx, tx.Root.State.RootPageNumber);
 
 					tx.Commit();
 				}

@@ -27,7 +27,7 @@ namespace Voron.Tests.ScratchBuffer
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -45,7 +45,7 @@ namespace Voron.Tests.ScratchBuffer
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			var txr = Env.NewTransaction(TransactionFlags.Read);
@@ -58,7 +58,7 @@ namespace Voron.Tests.ScratchBuffer
 
 					txw.Commit();
 
-					RenderAndShow(txw, tree, 1);
+					RenderAndShow(txw, tree);
 				}
 
 				Env.FlushLogToDataFile();

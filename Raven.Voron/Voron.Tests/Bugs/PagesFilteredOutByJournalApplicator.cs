@@ -25,7 +25,7 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -52,7 +52,7 @@ namespace Voron.Tests.Bugs
 
 					txw.Commit();
 
-					RenderAndShow(txw, tree, 1);
+					RenderAndShow(txw, tree);
 				}
 
 				Env.FlushLogToDataFile();
@@ -77,7 +77,7 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -89,7 +89,7 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -116,7 +116,7 @@ namespace Voron.Tests.Bugs
 
 					txw.Commit();
 
-					RenderAndShow(txw, tree, 1);
+					RenderAndShow(txw, tree);
 				}
 
 				Env.FlushLogToDataFile();

@@ -262,13 +262,13 @@ namespace Voron.Tests.Bugs
 				tree.Add("29", normal);
 				tree.Add("30", normal);
 
-				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
 
 				const int toInsert = 230;
 
 				tree.Add("20", new byte[toInsert]);
 
-				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
 			}
 	    }
 
