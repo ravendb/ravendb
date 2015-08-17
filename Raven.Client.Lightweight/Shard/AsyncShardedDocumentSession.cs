@@ -46,7 +46,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This method requires a synchronous call to the server, which is not supported by the async session");
 		}
 
-		#region Properties to access different interfacess
+		#region Properties to access different interfaces
 
 		IAsyncAdvancedSessionOperations IAsyncDocumentSession.Advanced
 		{
@@ -374,30 +374,30 @@ namespace Raven.Client.Shard
 					token.ThrowIfCancellationRequested();
 					var currentShardIds = shard.Select(x => x.Id).ToArray();
 					var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
-							new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
-							async (dbCmd, i) =>
-							{
-								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-								// With a single Id
-                                var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
-															.Results
-															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-															.Select(values =>
-															{
-																var array = values.Select(y =>
-																{
-																	HandleInternalMetadata(y);
-																	return ConvertToEntity(typeof(T),null, y, new RavenJObject());
-																}).ToArray();
-																var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
-																Array.Copy(array, newArray, array.Length);
-																return newArray;
-															})
-															.Cast<T>()
-															.ToArray();
+						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+						async (dbCmd, i) =>
+						{
+							// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+							// With a single Id
+							var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
+								.Results
+								.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+								.Select(values =>
+								{
+									var array = values.Select(y =>
+									{
+										HandleInternalMetadata(y);
+										return ConvertToEntity(typeof(T),null, y, new RavenJObject());
+									}).ToArray();
+									var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
+									Array.Copy(array, newArray, array.Length);
+									return newArray;
+								})
+								.Cast<T>()
+								.ToArray();
 
-								return arrayOfArrays;
-							}).WithCancellation(token);
+							return arrayOfArrays;
+						}).WithCancellation(token).ConfigureAwait(false);
 
 					return shardResults.SelectMany(x => x).ToArray();
 				}
@@ -644,13 +644,13 @@ namespace Raven.Client.Shard
 
 			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
 			{
-				var jsonDocument = await dbCmd.GetAsync(value.Key, token);
+				var jsonDocument = await dbCmd.GetAsync(value.Key, token).ConfigureAwait(false);
 				if (jsonDocument == null)
 					return false;
 
 				RefreshInternal(entity, jsonDocument, value);
 				return true;
-			}).WithCancellation(token);
+			}).WithCancellation(token).ConfigureAwait(false);
 
 			if (results.All(x => x == false))
 			{
@@ -755,7 +755,7 @@ namespace Raven.Client.Shard
 
 		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
 		{
-			var metadata = await GetDocumentMetadataAsync(instance);
+			var metadata = await GetDocumentMetadataAsync(instance).ConfigureAwait(false);
 			return metadata.Metadata;
 		}
 
@@ -770,7 +770,7 @@ namespace Raven.Client.Shard
 					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
 				{
 					AssertNoNonUniqueInstance(instance, id);
-					var jsonDocument = await GetJsonDocumentAsync(id);
+					var jsonDocument = await GetJsonDocumentAsync(id).ConfigureAwait(false);
 					value = GetDocumentMetadataValue(instance, id, jsonDocument);
 				}
 				else
@@ -794,8 +794,8 @@ namespace Raven.Client.Shard
 			var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
 			var documents = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands,
-																	shardRequestData,
-																	(commands, i) => commands.GetAsync(documentKey));
+				shardRequestData,
+				(commands, i) => commands.GetAsync(documentKey)).ConfigureAwait(false);
 
 			var document = documents.FirstOrDefault(x => x != null);
 			if (document != null)
