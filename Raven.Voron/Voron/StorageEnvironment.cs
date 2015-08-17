@@ -307,15 +307,15 @@ namespace Voron
             if (tree != null)
                 return tree;
 
+            if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return tx.Root;
+            if (name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return tx.FreeSpaceRoot;
+
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot create a new tree with a read only transaction");
+                throw new InvalidOperationException("No such tree: " + name + " and cannot create trees in read transactions");
 
-	        if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
-	            name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
-		        throw new InvalidOperationException("Cannot create a tree with reserved name: " + name);
-
-
-            Slice key = (Slice)name;
+            Slice key = name;
 
             // we are in a write transaction, no need to handle locks
             var header = (TreeRootHeader*)tx.Root.DirectRead(key);
