@@ -25,6 +25,7 @@ namespace Raven.Tests.Common.Attributes
 		{
 			if (DateTime.Today < SkipUntil)
 				return Enumerable.Empty<ITestCommand>();
+		    DisplayName = method.TypeName + "." + method.Name;
 		    return new[] {this};
 		    //return base.EnumerateTestCommands(method);
 		}

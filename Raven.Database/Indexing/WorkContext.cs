@@ -39,7 +39,8 @@ namespace Raven.Database.Indexing
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private volatile bool doIndexing = true;
-		private int workCounter;
+        private volatile bool doReducing = true;
+        private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new ThreadLocal<Stack<List<Func<string>>>>(() =>
@@ -77,8 +78,11 @@ namespace Raven.Database.Indexing
 		{
 			get { return doWork && doIndexing; }
 		}
-
-		public void UpdateFoundWork()
+        public bool RunReducing
+        {
+            get { return doWork && doReducing; }
+        }
+        public void UpdateFoundWork()
 		{
 		    var now = SystemTime.UtcNow;
 		    var lastWorkTime = LastWorkTime;
@@ -265,6 +269,7 @@ namespace Raven.Database.Indexing
 		{
 			doWork = true;
 			doIndexing = true;
+		    doReducing = true;
 		}
 
 		public void StopWork()
@@ -272,6 +277,7 @@ namespace Raven.Database.Indexing
 			log.Debug("Stopping background workers");
 			doWork = false;
 			doIndexing = false;
+		    doReducing = false;
 			lock (waitForWork)
 			{
 				Monitor.PulseAll(waitForWork);
@@ -459,15 +465,27 @@ namespace Raven.Database.Indexing
 		{
 			log.Debug("Stopping indexing workers");
 			doIndexing = false;
+		    doReducing = false;
 			lock (waitForWork)
 			{
 				Monitor.PulseAll(waitForWork);
 			}
 		}
 
-		public void StartIndexing()
+        public void StopReducing()
+        {
+            log.Debug("Stopping reducing workers");
+            doReducing = false;
+            lock (waitForWork)
+            {
+                Monitor.PulseAll(waitForWork);
+            }
+        }
+
+        public void StartIndexing()
 		{
 			doIndexing = true;
+            doReducing = true;
 		}
 
 		public void MarkAsRemovedFromIndex(HashSet<string> keys)

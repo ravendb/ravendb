@@ -17,7 +17,7 @@ class adminLogsConfigureCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var args = {
-            'watch-category': $.map(this.logConfig, item => item.category + ":" + item.level),
+            'watch-category': $.map(this.logConfig, item => item.category + ":" + item.level + ":" + (item.includeStackTrace ? "watch-stack" : "no-watch-stack")),
             id: this.eventsId
         };
 

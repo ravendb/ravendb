@@ -307,8 +307,9 @@ namespace Raven.Database.Indexing
 
 							var reduceTimeWatcher = Stopwatch.StartNew();
 
-                            var results = persistedResults.Where(x => x.Data != null)
-                                                          .GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data));                            
+						    var results = persistedResults.Where(x => x.Data != null)
+						        .GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
+						        .ToList();                            
 
                             var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
@@ -590,7 +591,12 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+	    public override bool ShouldRun
+	    {
+	        get { return context.RunReducing; }
+	    }
+
+	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
 			return null;
 		}
