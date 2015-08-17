@@ -218,32 +218,42 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var nameKey = CreateKey(name);
             var nameKeySlice = (Slice)nameKey;
 
-            using (var iterator = listsByName.MultiRead(Snapshot, nameKeySlice))
-			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return;
+	        var iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
+	        try
+	        {
+	            if (!iterator.Seek(Slice.BeforeAllKeys))
+	                return;
 
-				do
-				{
-					var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
+	            do
+	            {
+	                var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
-				    if (currentEtag.CompareTo(etag) > 0) 
-                        break;
+	                if (currentEtag.CompareTo(etag) > 0)
+	                    break;
 
-				    ushort version;
-				    var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
+	                ushort version;
+	                var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 
-				    var key = value.Value<string>("key");
-				    var etagSlice = (Slice)currentEtag.ToString();
+	                var key = value.Value<string>("key");
+	                var etagSlice = (Slice) currentEtag.ToString();
 
-				    tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
-				    listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
-				    listsByNameAndKey.Delete(writeBatch.Value, (Slice)AppendToKey(nameKey, key));
+	                tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
+	                listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
+	                listsByNameAndKey.Delete(writeBatch.Value, (Slice) AppendToKey(nameKey, key));
 
-				    generalStorageActions.MaybePulseTransaction();
-				}
-				while (iterator.MoveNext());
-			}
+	                if (generalStorageActions.MaybePulseTransaction(iterator))
+	                {
+	                    iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
+	                    if (!iterator.Seek(Slice.BeforeAllKeys))
+	                        return;
+	                }
+	            } while (iterator.MoveNext());
+	        }
+	        finally
+	        {
+	            if(iterator!=null)
+                    iterator.Dispose();
+	        }
 		}
 
 		public void RemoveAllOlderThan(string name, DateTime cutoff)
@@ -254,32 +264,42 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var nameKey = CreateKey(name);
             var nameKeySlice = (Slice)nameKey;
 
-            using (var iterator = listsByName.MultiRead(Snapshot, nameKeySlice))
-			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return;
-				
-				do
-				{
-					ushort version;
-					var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
-					var createdAt = value.Value<DateTime>("createdAt");
-					
-					if(createdAt > cutoff)
-						break;
+		    var iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
+		    try
+		    {
+		        if (!iterator.Seek(Slice.BeforeAllKeys))
+		            return;
 
-					var key = value.Value<string>("key");
-					var etag = Etag.Parse(iterator.CurrentKey.ToString());
-                    var etagSlice = (Slice)etag.ToString();
+		        do
+		        {
+		            ushort version;
+		            var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
+		            var createdAt = value.Value<DateTime>("createdAt");
 
-                    tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
-                    listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
-                    listsByNameAndKey.Delete(writeBatch.Value, AppendToKey(nameKey, key));
+		            if (createdAt > cutoff)
+		                break;
 
-					generalStorageActions.MaybePulseTransaction();
-				}
-				while (iterator.MoveNext());
-			}
+		            var key = value.Value<string>("key");
+		            var etag = Etag.Parse(iterator.CurrentKey.ToString());
+		            var etagSlice = (Slice) etag.ToString();
+
+		            tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
+		            listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
+		            listsByNameAndKey.Delete(writeBatch.Value, AppendToKey(nameKey, key));
+
+		            if (generalStorageActions.MaybePulseTransaction(iterator))
+		            {
+                        iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
+                        if (!iterator.Seek(Slice.BeforeAllKeys))
+                            return;
+		            }
+		        } while (iterator.MoveNext());
+		    }
+		    finally
+		    {
+		        if(iterator!=null)
+                    iterator.Dispose();
+		    }
 		}
 
 		private ListItem ReadInternal(string id)

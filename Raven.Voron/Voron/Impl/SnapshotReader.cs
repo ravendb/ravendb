@@ -18,8 +18,9 @@ namespace Voron.Impl
 		}
 
 		public Transaction Transaction { get; private set; }
+	    public bool HasOpenedIterators { get { return _openedIterators != null && _openedIterators.Count > 0; } }
 
-		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
+	    public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
 		    if (_disposed)
 		        throw new ObjectDisposedException("SnapshotReader");
