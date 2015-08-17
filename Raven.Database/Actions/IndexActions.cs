@@ -231,7 +231,7 @@ namespace Raven.Database.Actions
 	        return PutIndexInternal(name, definition);
         }
 
-		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideSide = false)
+		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
 	    {
 		    if (name == null)
 			    throw new ArgumentNullException("name");
@@ -262,7 +262,7 @@ namespace Raven.Database.Actions
 
 		    AssertAnalyzersValid(definition);
 
-		    switch (FindIndexCreationOptions(definition, ref name))
+			switch (creationOptions ?? FindIndexCreationOptions(definition, ref name))
 		    {
 			    case IndexCreationOptions.Noop:
 					return null;
@@ -333,31 +333,38 @@ namespace Raven.Database.Actions
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
-					var indexName = Constants.SideBySideIndexNamePrefix + indexToAdd.Name;
+					var originalIndexName = indexToAdd.Name.Trim();
+					var indexName = Constants.SideBySideIndexNamePrefix + originalIndexName;
 					var isSideBySide = true;
 
+					IndexCreationOptions? creationOptions = null;
 					//if there is no existing side by side index, we might need to update the old index
 					if (IndexDefinitionStorage.GetIndexDefinition(indexName) == null)
 					{
-						var existingIndexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexToAdd.Name);
-						if (existingIndexDefinition == null || 
-							(IndexDefinitionStorage.FindIndexUpdateOptions(existingIndexDefinition, indexToAdd.Definition) != IndexCreationOptions.Update))
+						var originalIndexCreationOptions = FindIndexCreationOptions(indexToAdd.Definition, ref originalIndexName);
+						switch (originalIndexCreationOptions)
 						{
-							//cases in which we don't need to create a side by side index:
-							//1) existing index doesn't exist => need to create a new regular index
-							//2) existing index doesn't exist and we need to update it's definition withoud reindexing
-							indexName = indexToAdd.Name;
-							isSideBySide = false;
+							case IndexCreationOptions.Noop:
+								continue;
+							case IndexCreationOptions.Create:
+							case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+								//cases in which we don't need to create a side by side index:
+								//1) index doesn't exist => need to create a new regular index
+								//2) there is an existing index and we need to update its definition without reindexing
+								indexName = originalIndexName;
+								isSideBySide = false;
+								creationOptions = originalIndexCreationOptions;
+								break;
 						}
 					}
 
-					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideSide: true);
+					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
 					if (nameToAdd == null)
 						continue;
 
 					createdIndexes.Add(new SideBySideIndexInfo
 					{
-						OriginalName = indexToAdd.Name,
+						OriginalName = originalIndexName,
 						Name = nameToAdd,
 						IsSideBySide = isSideBySide
 					});
