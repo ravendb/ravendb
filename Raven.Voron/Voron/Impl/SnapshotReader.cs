@@ -203,7 +203,7 @@ namespace Voron.Impl
 		{
             if (_disposed)
                 throw new ObjectDisposedException("SnapshotReader");
-			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);
+			var tree = treeName == null ? Transaction.Root : Transaction.ReadTree(treeName);
 			return tree;
 		}
 	}

@@ -43,7 +43,7 @@ namespace Voron.Trees
             _state.RootPageNumber = root;
         }
 
-        private Tree(Transaction tx, TreeMutableState state)
+        public Tree(Transaction tx, TreeMutableState state)
         {
             _tx = tx;
             _state = state;
@@ -802,5 +802,6 @@ namespace Voron.Trees
             if (_recentlyFoundPages != null)
                 _recentlyFoundPages.Clear();
         }
+
     }
 }

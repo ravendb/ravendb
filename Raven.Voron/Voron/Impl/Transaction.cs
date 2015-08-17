@@ -51,11 +51,22 @@ namespace Voron.Impl
 			get { return _id; }
 		}
 
+        public Tree FreeSpaceRoot
+        {
+            get { return _freeSpace; }
+        }
+        public Tree Root
+        {
+            get { return _root; }
+        }
+
 		internal Action<Transaction> AfterCommit = delegate { };
 	    internal Action<Transaction, DebugActionType> RecordTransactionState = delegate { };
 	    internal bool CreatedByJournalApplicator;
 		private readonly StorageEnvironmentState _state;
-		private int _allocatedPagesInTransaction;
+	    private Tree _root, _freeSpace;
+	   
+	    private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
 		private TransactionHeader* _txHeader;
 
@@ -98,29 +109,45 @@ namespace Voron.Impl
 				_pagerStates.Add(scratchPagerState);
 			}
 
-            
+
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
 			{
                 // for read transactions, we need to keep the pager state frozen
                 // for write transactions, we can use the current one (which == null)
 				_scratchPagerStates = scratchPagerStates;
 
-				_state = env.State.Clone(this);
+				_state = env.State.Clone();
 
-                foreach (var snapshot in _journal.GetSnapshots())
+			    InitializeRoots();
+
+			    foreach (var snapshot in _journal.GetSnapshots())
                     AddJournalSnapshot(snapshot);
 
                 return;
 			}
 
-			_state = env.State.Clone(this);
-
+			_state = env.State.Clone();
+            InitializeRoots();
 			InitTransactionHeader();
 
 			MarkTreesForWriteTransaction();
 		}
 
-		internal void WriteDirect(TransactionHeader* transactionHeader, PageFromScratchBuffer pages)
+	    private void InitializeRoots()
+	    {
+	        if (_state.Root != null)
+	        {
+	            _state.Root.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
+	            _root = new Tree(this, _state.Root) {Name = Constants.RootTreeName};
+	        }
+	        if (_state.FreeSpaceRoot != null)
+	        {
+	            _state.FreeSpaceRoot.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
+	            _freeSpace = new Tree(this, _state.FreeSpaceRoot) {Name = Constants.FreeSpaceTreeName};
+	        }
+	    }
+
+	    internal void WriteDirect(TransactionHeader* transactionHeader, PageFromScratchBuffer pages)
 		{
 			for (int i = 0; i < pages.NumberOfPages; i++)
 		    {
@@ -205,9 +232,9 @@ namespace Voron.Impl
 		private void MarkTreesForWriteTransaction()
 		{
 			if (_state.Root != null)
-				_state.Root.State.InWriteTransaction = true;
+				_state.Root.InWriteTransaction = true;
 			if (_state.FreeSpaceRoot != null)
-				_state.FreeSpaceRoot.State.InWriteTransaction = true;
+				_state.FreeSpaceRoot.InWriteTransaction = true;
 			foreach (var tree in Trees)
 			{
 				tree.State.InWriteTransaction = true;
@@ -220,7 +247,7 @@ namespace Voron.Impl
 		    if (_trees.TryGetValue(treeName, out tree))
 		        return tree;
 
-            var header = (TreeRootHeader*)State.Root.DirectRead((Slice)treeName);
+            var header = (TreeRootHeader*)Root.DirectRead((Slice)treeName);
 		    if (header != null)
 		    {
 		        tree = Tree.Open(this, header);
@@ -411,8 +438,8 @@ namespace Voron.Impl
 
 			FlushAllMultiValues();
 
-			State.Root.State.InWriteTransaction = false;
-			State.FreeSpaceRoot.State.InWriteTransaction = false;
+			State.Root.InWriteTransaction = false;
+			State.FreeSpaceRoot.InWriteTransaction = false;
 
 			foreach (var tree in Trees)
 			{
@@ -422,7 +449,7 @@ namespace Voron.Impl
 				var treeState = tree.State;
 				if (treeState.IsModified)
 				{
-					var treePtr = (TreeRootHeader*)State.Root.DirectAdd((Slice) tree.Name, sizeof(TreeRootHeader));
+					var treePtr = (TreeRootHeader*)Root.DirectAdd((Slice) tree.Name, sizeof(TreeRootHeader));
 					treeState.CopyTo(treePtr);
 				}
 			}
@@ -430,15 +457,15 @@ namespace Voron.Impl
 #if DEBUG
 			if (State.Root != null && State.FreeSpaceRoot != null)
 			{
-				Debug.Assert(State.Root.State.RootPageNumber != State.FreeSpaceRoot.State.RootPageNumber);
+				Debug.Assert(State.Root.RootPageNumber != State.FreeSpaceRoot.RootPageNumber);
 			}
 #endif
 
 			_txHeader->LastPageNumber = _state.NextPageNumber - 1;
 			_txHeader->PageCount = _allocatedPagesInTransaction;
 			_txHeader->OverflowPageCount = _overflowPagesInTransaction;
-			_state.Root.State.CopyTo(&_txHeader->Root);
-			_state.FreeSpaceRoot.State.CopyTo(&_txHeader->FreeSpace);
+			_state.Root.CopyTo(&_txHeader->Root);
+			_state.FreeSpaceRoot.CopyTo(&_txHeader->FreeSpace);
 
 			_txHeader->TxMarker |= TransactionMarker.Commit;
 
@@ -565,11 +592,14 @@ namespace Voron.Impl
 		internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
 		{
 			//can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-			if (State.Root == null && State.FreeSpaceRoot == null)
-			{
-				State.Root = root;
-				State.FreeSpaceRoot = freeSpace;
-			}
+		    if (State.Root != null || State.FreeSpaceRoot != null) 
+                return;
+
+		    State.Root = root.State;
+		    State.FreeSpaceRoot = freeSpace.State;
+
+		    _root = root;
+		    _freeSpace = freeSpace;
 		}
 
 		internal void AddPagerState(PagerState state)
