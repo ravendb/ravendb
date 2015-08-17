@@ -14,15 +14,21 @@ import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
 import deleteKey = require("viewmodels/timeSeries/deleteKey");
 import pointChange = require("models/timeSeries/pointChange");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
+import pagedResultSet = require("common/pagedResultSet");
+import getPointsCommand = require("commands/timeSeries/getPointsCommand");
 
 class timeSeriesPoints extends viewModelBase {
 
-    type: string;
-    key: string;
-    types = ko.observableArray<timeSeriesType>([]);
-    currentKey = ko.observable<timeSeriesKey>();
+    type = ko.observable<string>();
+    fields = ko.observableArray<string>();
+    key = ko.observable<string>();
+    pointsCount = ko.observable<number>();
+    minPoint = ko.observable<string>();
+    maxPoint = ko.observable<string>();
 
-    pagedItems = ko.observable<pagedList>();
+    types = ko.observableArray<timeSeriesType>([]);
+
+    pointsList = ko.observable<pagedList>();
     selectedPointsIndices = ko.observableArray<number>();
     selectedPointsText: KnockoutComputed<string>;
     hasPoints: KnockoutComputed<boolean>;
@@ -42,19 +48,15 @@ class timeSeriesPoints extends viewModelBase {
         super();
 
         this.hasPoints = ko.computed(() => {
-            var currentKey= this.currentKey();
-            if (!currentKey)
-                return false;
-            return currentKey.Points > 0;
+            return this.pointsCount() > 0;
         });
 
         this.hasAnyPointsSelected = ko.computed(() => this.selectedPointsIndices().length > 0);
 
         this.hasAllPointsSelected = ko.computed(() => {
             var numOfSelectedPoints = this.selectedPointsIndices().length;
-            var currentKey = this.currentKey();
-            if (!!currentKey && numOfSelectedPoints !== 0) {
-                return numOfSelectedPoints === currentKey.Points;
+            if (!!this.key() && numOfSelectedPoints !== 0) {
+                return numOfSelectedPoints === this.pointsCount();
             }
             return false;
         });
@@ -81,18 +83,33 @@ class timeSeriesPoints extends viewModelBase {
 
         //TODO: update this in documentation
         //this.updateHelpLink('G8CDCP');
-
+    
         // We can optionally pass in a key name to view's URL, e.g. #timeSeries/timeSeries?key=Foo&timeSeriestorage=test
         if (args && args.type && args.key) {
-            this.type = args.type;
-            this.key = args.key;
-
-            this.fetchKey().done(result => {
-                this.currentKey(result);
-                this.pagedItems(this.currentKey().getPoints());
+            this.fetchKey(args.type, args.key).done((result: timeSeriesKeySummaryDto) => {
+                this.type(result.Type.Type);
+                this.fields(result.Type.Fields);
+                this.key(result.Key);
+                this.pointsCount(result.PointsCount);
+                this.minPoint(result.MinPoint);
+                this.maxPoint(result.MaxPoint);
+                if (!this.pointsList()) {
+                    this.pointsList(this.createPointsPagedList());
+                }
                 timeSeriesPoints.isInitialized(true);
             });
         }
+    }
+
+    private createPointsPagedList(): pagedList {
+        var fetcher = (skip: number, take: number) => this.fetchPoints(skip, take);
+        var list = new pagedList(fetcher);
+        list.collectionName = this.key();
+        return list;
+    }
+
+    private fetchPoints(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        return new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), this.pointsCount()).execute();
     }
 
     attached() {
@@ -128,16 +145,14 @@ class timeSeriesPoints extends viewModelBase {
         ];
     }
 
-    private fetchKey(): JQueryPromise<any> {
+    private fetchKey(type: string, key: string): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getKeyCommand(this.activeTimeSeries(), this.type, this.key).execute().done((result: timeSeriesKey) => deferred.resolve(result));
+        new getKeyCommand(this.activeTimeSeries(), type, key).execute().done((result: timeSeriesKeySummaryDto) => deferred.resolve(result));
         return deferred;
     }
 
     newPoint() {
-        var key = this.currentKey();
-        var fields = key.Fields;
-        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint(this.type, fields, this.key, moment().format(), fields.map(x => 0)), true), true);
+        var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint(this.type(), this.fields(), this.key(), moment().format(), this.fields().map(x => 0)), true), true);
         changeVm.updateTask.done((change: pointChange) => {
             new putPointCommand(change.type(), change.key(), change.at(), change.values(), this.activeTimeSeries())
                 .execute()
@@ -148,7 +163,7 @@ class timeSeriesPoints extends viewModelBase {
 
     refresh() {
         this.getPointsGrid().refreshCollectionData();
-        this.currentKey().getPoints().invalidateCache();
+        this.pointsList().invalidateCache();
         this.selectNone();
 	}
 
@@ -182,9 +197,8 @@ class timeSeriesPoints extends viewModelBase {
 
     selectAll() {
         var pointsGrid = this.getPointsGrid();
-        var currentKey = this.currentKey();
-        if (!!pointsGrid && !!currentKey) {
-            pointsGrid.selectAll(currentKey.Points);
+        if (!!pointsGrid && !!this.key()) {
+            pointsGrid.selectAll(this.pointsCount());
         }
     }
 
@@ -197,7 +211,7 @@ class timeSeriesPoints extends viewModelBase {
 
     deleteSelectedPoints() {
         if (this.hasAllPointsSelected()) {
-            this.deleteKey(this.currentKey());
+            this.deleteKey();
         } else {
             var grid = this.getPointsGrid();
             if (grid) {
@@ -206,10 +220,10 @@ class timeSeriesPoints extends viewModelBase {
         }
     }
 
-    private deleteKey(key: timeSeriesKey) {
-	    var deleteKeyVm = new deleteKey(key, this.activeTimeSeries());
+    private deleteKey() {
+        var deleteKeyVm = new deleteKey(this.type(), this.key(), this.activeTimeSeries());
         deleteKeyVm.deletionTask.done(() => {
-            this.navigate(appUrl.forTimeSeriesType(this.type, this.activeTimeSeries()));
+            this.navigate(appUrl.forTimeSeriesType(this.type(), this.activeTimeSeries()));
         });
         app.showDialog(deleteKeyVm);
     }

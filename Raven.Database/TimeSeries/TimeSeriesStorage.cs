@@ -518,7 +518,7 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			public TimeSeriesKey GetKey(string typeName, string key)
+			public TimeSeriesKeySummary GetKey(string typeName, string key)
 			{
 				var type = storage.GetType(tx, typeName);
 				if (type == null)
@@ -526,12 +526,20 @@ namespace Raven.Database.TimeSeries
 
 				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
-				return new TimeSeriesKey
+				var keySummary = new TimeSeriesKeySummary
 				{
 					Type = type,
 					Key = key,
 					PointsCount = fixedTree.NumberOfEntries,
 				};
+				using (var fixedIt = fixedTree.Iterate())
+				{
+					if (fixedIt.Seek(DateTimeOffset.MinValue.Ticks))
+						keySummary.MinPoint = new DateTime(fixedIt.CurrentKey);
+					if (fixedIt.SeekToLast())
+						keySummary.MaxPoint = new DateTime(fixedIt.CurrentKey);
+				}
+				return keySummary;
 			}
 
 			public IEnumerable<TimeSeriesKey> GetKeys(string typeName, int skip)
