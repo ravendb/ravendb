@@ -157,14 +157,16 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             var sp = Stopwatch.StartNew();
             var lastKey = Slice.BeforeAllKeys;
             var count = 0;
+            var totalCount = 0L;
             var hasMore = true;
             while (hasMore)
             {
+                hasMore = false;
                 using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var table = tx.ReadTree(tableName);
 
-                    output("Migrating " + tableName + ", with " + table.State.EntriesCount + " entries");
+                    output(string.Format("Migrating {0}, with {1:#,#;;0} entries", tableName, table.State.EntriesCount));
 
                     var state = initState(tx);
 
@@ -176,7 +178,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
                             {
 
                                 processEntry(state, it);
-
+                                totalCount++;
                                 if (++count > 50000)
                                 {
                                     output("Migrated 50,000 records from "+ tableName + ", pulsing transaction");
@@ -185,20 +187,18 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
                                     {
                                         lastKey = it.CurrentKey.Clone();
                                         count = 0;
-                                        break;
+                                        hasMore = true;
                                     }
-                                    hasMore = false;
                                     break;
                                 }
                             } while (it.MoveNext());
                         }
-                        hasMore = false;
                     }
 
                     tx.Commit();
                 }
-                output("Finished migration " + tableName + " in " + sp.Elapsed);
             }
+            output(string.Format("Finished migration {0} total of {2:#,#;;0} records in {1}", tableName, sp.Elapsed, totalCount));
         }
 
 
