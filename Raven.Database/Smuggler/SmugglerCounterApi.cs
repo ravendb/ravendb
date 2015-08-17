@@ -23,7 +23,6 @@ namespace Raven.Database.Smuggler
 {
 	public class SmugglerCounterApi : ISmugglerApi<CounterConnectionStringOptions, SmugglerCounterOptions, CounterOperationState>
 	{
-		private readonly ICounterStore counterStore;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 		private const string CounterIncrementalDump = ".counter-incremental-dump";
 
@@ -31,10 +30,8 @@ namespace Raven.Database.Smuggler
 
 		private Action<string> showProgress;
 
-		public SmugglerCounterApi(ICounterStore counterStore, CancellationToken cancellationToken = default(CancellationToken), Action<string> showProgress = null)
+		public SmugglerCounterApi(CancellationToken cancellationToken = default(CancellationToken), Action<string> showProgress = null)
 		{
-			if (counterStore == null) throw new ArgumentNullException("counterStore");
-			this.counterStore = counterStore;
 			this.cancellationToken = cancellationToken;
 			ShowProgress = showProgress;
 			Options = new SmugglerCounterOptions();
@@ -68,6 +65,12 @@ namespace Raven.Database.Smuggler
 		/// <exception cref="SmugglerExportException">Encapsulates exception that happens when actually exporting data. See InnerException for details.</exception>
 		public async Task<CounterOperationState> ExportData(SmugglerExportOptions<CounterConnectionStringOptions> exportOptions)
 		{
+			if(exportOptions.From == null)
+				throw new ArgumentNullException("exportOptions.From");
+
+			if(String.IsNullOrWhiteSpace(exportOptions.ToFile) && exportOptions.ToStream == null)
+				throw new ArgumentException("ToFile or ToStream property in options must be non-null");
+
 			var result = new CounterOperationState();
 			var exportFolder = String.Empty;
 			if (Options.Incremental)
@@ -109,28 +112,35 @@ namespace Raven.Database.Smuggler
 				ShowProgress("Export to dump file " + exportOptions.ToFile);
 			try
 			{
+				using (var counterStore = new CounterStore
+				{
+					Url = exportOptions.From.Url,
+					Name = exportOptions.From.CounterStoreId,
+					Credentials = new OperationCredentials(exportOptions.From.ApiKey, exportOptions.From.Credentials)
+				})
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
+					counterStore.Initialize();
 					var jsonWriter = new JsonTextWriter(streamWriter)
 					{
 						Formatting = Formatting.Indented
 					};
-					jsonWriter.WriteStartObject();			
+					jsonWriter.WriteStartObject();
 					jsonWriter.WritePropertyName(Options.Incremental ? "CountersDeltas" : "CounterSnapshots"); //also for human readability
 					jsonWriter.WriteStartArray();
 
 					try
 					{
 						if (Options.Incremental)
-							await ExportIncrementalData(exportFolder, jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
+							await ExportIncrementalData(counterStore, exportFolder, jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
 						else
-							await ExportFullData(jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
+							await ExportFullData(counterStore, jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
 					}
 					catch (SmugglerExportException e)
 					{
 						Debug.Assert(e.Data.Keys.Cast<string>().Contains("LastEtag"));
-						result.LastWrittenEtag = (long)e.Data["LastEtag"];
+						result.LastWrittenEtag = (long) e.Data["LastEtag"];
 						lastException = e;
 					}
 
@@ -143,6 +153,10 @@ namespace Raven.Database.Smuggler
 					throw lastException;
 				return result;
 			}
+			catch (Exception e)
+			{
+				throw;
+			}
 			finally
 			{
 				if (ownedStream && stream != null)
@@ -150,10 +164,10 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private async Task ExportIncrementalData(string exportFilename, JsonTextWriter jsonWriter)
+		private async Task ExportIncrementalData(ICounterStore counterStore, string exportFilename, JsonTextWriter jsonWriter)
 		{
 			var lastEtag = ReadLastEtagFromStateFile(exportFilename);
-			var counterDeltas = (await GetCounterStatesSinceEtag(lastEtag).WithCancellation(cancellationToken).ConfigureAwait(false)).ToList();
+			var counterDeltas = (await GetCounterStatesSinceEtag(counterStore, lastEtag).WithCancellation(cancellationToken).ConfigureAwait(false)).ToList();
 
 			ShowProgress("Incremental export -> starting from etag : " + lastEtag);
 
@@ -184,7 +198,7 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private async Task<IEnumerable<CounterState>> GetCounterStatesSinceEtag(long etag)
+		private async Task<IEnumerable<CounterState>> GetCounterStatesSinceEtag(ICounterStore counterStore, long etag)
 		{
 			var deltas = new List<CounterState>();
 			do
@@ -231,7 +245,7 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private async Task ExportFullData(JsonTextWriter jsonWriter)
+		private async Task ExportFullData(ICounterStore counterStore, JsonTextWriter jsonWriter)
 		{
 			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync(cancellationToken).ConfigureAwait(false);
 			ShowProgress(String.Format("Starting full export, fetched {0} counter storages",counterStorageNames.Length));
