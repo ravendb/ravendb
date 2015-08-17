@@ -493,10 +493,11 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
+
 			if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
 				return;
 
-			foreach (var pageFromScratch in _transactionPages)
+            foreach (var pageFromScratch in _transactionPages)
 			{
 				_env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
 			}
@@ -539,12 +540,13 @@ namespace Voron.Impl
 		{
 		    if (_disposed)
 		        return;
-		    _disposed = true;
 			if (Environment.IsDebugRecording)
 				RecordTransactionState(this, DebugActionType.TransactionDisposing);
 
 			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
 				Rollback();
+
+            _disposed = true;
 
 			_env.TransactionCompleted(this);
 			foreach (var pagerState in _pagerStates)
