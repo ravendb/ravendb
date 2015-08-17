@@ -48,7 +48,7 @@ namespace Raven.Database.Indexing
                 var workComment = "WORK BY " + name;
 
                 bool isIdle = false;
-                while (context.RunReducing)
+                while (ShouldRun)
                 {
                     bool foundWork;
                     try
@@ -141,7 +141,9 @@ namespace Raven.Database.Indexing
             }
         }
 
-	    protected virtual void CleanupPrefetchers()
+        public abstract bool ShouldRun { get; }
+
+        protected virtual void CleanupPrefetchers()
 	    {
 		    
 	    }
