@@ -938,26 +938,15 @@ namespace Raven.Database.Indexing
 				return CreateIndexImplementation(indexDefinition, directory);
 			}, (s, index) => index);
 
-			//prevent corrupted index when creating a map-reduce index and indexing is disabled
-			if (addedIndex.IsMapReduce && IsIndexingDisabled())
+			//prevent corrupted index when creating a map-reduce index
+			//need to do this for every map reduce index, even when indexing is enabled,
+			if (addedIndex.IsMapReduce)
 			{
 				addedIndex.EnsureIndexWriter();
 				addedIndex.Flush(Etag.Empty);
 			}
 				
 			UpdateIndexMappingFile();
-		}
-
-		private bool IsIndexingDisabled()
-		{
-			var disableIndexing = configuration.Settings[Constants.IndexingDisabled];
-			if (disableIndexing != null)
-			{
-				bool disableIndexingStatus;
-				var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
-				return res && disableIndexingStatus;
-			}
-			return false;
 		}
 
 		public Query GetDocumentQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
