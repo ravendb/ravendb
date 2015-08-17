@@ -8,6 +8,7 @@ namespace Voron.Trees
 		private readonly Page _page;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 		private MemorySlice _currentInternalKey;
+	    private bool _disposed;
 
 		public PageIterator(Page page)
 		{
@@ -17,11 +18,16 @@ namespace Voron.Trees
 
 		public void Dispose()
 		{
-			
+		    _disposed = true;
+            var action = OnDispoal;
+            if (action != null)
+                action(this);
 		}
 
 		public bool Seek(Slice key)
 		{
+            if(_disposed)
+                throw new ObjectDisposedException("PageIterator");
 			var current = _page.Search(key);
 			if (current == null)
 				return false;
@@ -35,6 +41,9 @@ namespace Voron.Trees
 		{
 			get
 			{
+
+                if (_disposed)
+                    throw new ObjectDisposedException("PageIterator");
 				if (_page.LastSearchPosition< 0  || _page.LastSearchPosition >= _page.NumberOfEntries)
 					throw new InvalidOperationException("No current page was set");
 				return _page.GetNode(_page.LastSearchPosition);
@@ -46,6 +55,9 @@ namespace Voron.Trees
 		{
 			get
 			{
+
+                if (_disposed)
+                    throw new ObjectDisposedException("PageIterator");
 				if (_page.LastSearchPosition < 0 || _page.LastSearchPosition >= _page.NumberOfEntries)
 					throw new InvalidOperationException("No current page was set");
 				return _currentKey;
@@ -53,6 +65,8 @@ namespace Voron.Trees
 		}
 		public int GetCurrentDataSize()
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("PageIterator");
 			return Current->DataSize;
 		}
 
@@ -83,6 +97,9 @@ namespace Voron.Trees
 
 		private bool TrySetPosition()
 		{
+
+            if (_disposed)
+                throw new ObjectDisposedException("PageIterator");
 			if (_page.LastSearchPosition < 0 || _page.LastSearchPosition >= _page.NumberOfEntries)
 				return false;
 
@@ -106,5 +123,7 @@ namespace Voron.Trees
 		{
 			throw new NotSupportedException("Multi trees do not support reading/writing structures");
 		}
+
+	    public event Action<IIterator> OnDispoal;
 	}
 }

@@ -271,9 +271,12 @@ namespace Voron.Impl
 
         private const int InvalidScratchFile = -1;
         private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
+	    private bool _disposed;
 
-		public Page GetReadOnlyPage(long pageNumber)
-		{			
+	    public Page GetReadOnlyPage(long pageNumber)
+	    {
+	        if (_disposed)
+	            throw new ObjectDisposedException("Transaction");
 			Page p;
 
             PageFromScratchBuffer value;
@@ -308,6 +311,9 @@ namespace Voron.Impl
 
 		internal Page AllocatePage(int numberOfPages, PageFlags flags, long? pageNumber = null)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
 			if (pageNumber == null)
 			{
 				pageNumber = _freeSpaceHandling.TryAllocateFromFreeSpace(this, numberOfPages);
@@ -391,6 +397,9 @@ namespace Voron.Impl
 
 		public void Commit()
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
 			if (Flags != (TransactionFlags.ReadWrite))
 				return; // nothing to do
 
@@ -454,6 +463,9 @@ namespace Voron.Impl
 
 		public void Rollback()
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
 			if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
 				return;
 
@@ -498,6 +510,9 @@ namespace Voron.Impl
 
 		public void Dispose()
 		{
+		    if (_disposed)
+		        return;
+		    _disposed = true;
 			if (Environment.IsDebugRecording)
 				RecordTransactionState(this, DebugActionType.TransactionDisposing);
 
@@ -513,6 +528,9 @@ namespace Voron.Impl
 
 		internal void FreePage(long pageNumber)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
 			Debug.Assert(pageNumber >= 0);
 			_freeSpaceHandling.FreePage(this, pageNumber);
 

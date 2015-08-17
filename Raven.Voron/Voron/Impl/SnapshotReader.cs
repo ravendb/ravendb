@@ -1,4 +1,5 @@
-﻿using Voron.Util;
+﻿using System.Collections.Generic;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -9,7 +10,8 @@ namespace Voron.Impl
 
 	public class SnapshotReader : IDisposable
 	{
-
+	    private bool _disposed;
+	    private LinkedList<IIterator> _openedIterators; 
 		public SnapshotReader(Transaction tx)
 		{
 			Transaction = tx;
@@ -19,6 +21,8 @@ namespace Voron.Impl
 
 		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
+		    if (_disposed)
+		        throw new ObjectDisposedException("SnapshotReader");
 			Tree tree = null;
 
 			if (writeBatch != null && writeBatch.IsEmpty == false)
@@ -50,7 +54,8 @@ namespace Voron.Impl
 
 		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, StructureSchema<T> schema, WriteBatch writeBatch = null)
 		{
-
+            if (_disposed)
+                throw new ObjectDisposedException("SnapshotReader");
 			Tree tree = null;
 
 			if (writeBatch != null && writeBatch.IsEmpty == false)
@@ -79,12 +84,16 @@ namespace Voron.Impl
 
 		public int GetDataSize(string treeName, Slice key)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("SnapshotReader");
 			var tree = GetTree(treeName);
 			return tree.GetDataSize(key);
 		}
 
 		public bool Contains(string treeName, Slice key, out ushort? version, WriteBatch writeBatch = null)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("SnapshotReader");
 			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.InBatchValue result;
@@ -118,6 +127,8 @@ namespace Voron.Impl
 
 		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("SnapshotReader");
 			if (writeBatch != null)
 			{
 				WriteBatch.InBatchValue result;
@@ -140,23 +151,57 @@ namespace Voron.Impl
 		public IIterator Iterate(string treeName)
 		{
 			var tree = GetTree(treeName);
-			return tree.Iterate();
+		    var treeIterator = tree.Iterate();
+		    RegisterOpenedIterator(treeIterator);
+		    return treeIterator;
 		}
 
-		public void Dispose()
+	    private void RegisterOpenedIterator(IIterator it)
+	    {
+	        if (_openedIterators == null)
+	            _openedIterators = new LinkedList<IIterator>();
+	        _openedIterators.AddLast(it);
+	        it.OnDispoal += RemoveFromTrackedIterators;
+	    }
+
+        private void RemoveFromTrackedIterators(IIterator treeIterator)
+	    {
+	        if (_openedIterators == null)
+	            return; // should never happen, except during disposal
+            // this is O(N), but we don't expect to have many concurrent iterators, and the 
+            // memory utilization is important, so we use a linked list.
+	        _openedIterators.Remove(treeIterator);
+	    }
+
+	    public void Dispose()
 		{
+		    _disposed = true;
 			Transaction.Dispose();
+	        
+            if (_openedIterators != null)
+            {
+                var copy = _openedIterators;
+                _openedIterators = null;
+	            foreach (var openedIterator in copy)
+	            {
+	                openedIterator.Dispose();
+	            }
+	        }
 		}
 
 		public IIterator MultiRead(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);
-			return tree.MultiRead(key);
+		    var it = tree.MultiRead(key);
+            RegisterOpenedIterator(it);
+		    return it;
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private Tree GetTree(string treeName)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("SnapshotReader");
 			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);
 			return tree;
 		}

@@ -723,7 +723,13 @@ namespace Raven.Database.Actions
                                                               Payload = indexName
                                                           }, out taskId);
 
-            deleteIndexTask.ContinueWith(_ => Database.Tasks.RemoveTask(taskId));
+            deleteIndexTask.ContinueWith(t =>
+            {
+                if (t.IsFaulted || t.IsCanceled)
+                {
+                    Log.WarnException("Failure when deleting index " + indexName, t.Exception);
+                }
+            });
 
             return deleteIndexTask;
         }
