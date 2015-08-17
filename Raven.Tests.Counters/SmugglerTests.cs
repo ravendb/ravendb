@@ -36,7 +36,7 @@ namespace Raven.Tests.Counters
 				this.Invoking(x => AsyncHelpers.RunSync(() => smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToStream = stream,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				}))).ShouldThrow<FailingStreamException>();
 			}
 		}
@@ -77,7 +77,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 
 				var fileInfo = new FileInfo(CounterDumpFilename);
@@ -101,7 +101,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 				
 				await counterStore.IncrementAsync("g1", "c2");
@@ -110,7 +110,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 
 				var incrementalFolder = new DirectoryInfo(CounterDumpFilename);
@@ -130,7 +130,7 @@ namespace Raven.Tests.Counters
 				await counterStore.ChangeAsync("g1", "c1", 5);
 				await counterStore.IncrementAsync("g1", "c2");
 
-				var smugglerApi = new SmugglerCounterApi()
+				var smugglerApi = new SmugglerCounterApi
 				{
 					Options = { Incremental = true }
 				};
@@ -138,7 +138,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 
 				await counterStore.IncrementAsync("g", "c");
@@ -147,7 +147,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 
 				await counterStore.ChangeAsync("g", "c", -3);
@@ -155,10 +155,8 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
-				var aa = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-
 			}
 
 			using (var counterStore = NewRemoteCountersStore("storeToImportTo"))
@@ -171,11 +169,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromFile = CounterDumpFilename,
-					To = new CounterConnectionStringOptions
-					{
-						Url = counterStore.Url,
-						CounterStoreId = counterStore.Name
-					}
+					To = ConnectionStringTo(counterStore)
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
@@ -205,7 +199,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToFile = CounterDumpFilename,
-					From = ConnectionStringFrom(counterStore)
+					From = ConnectionStringTo(counterStore)
 				});
 			}
 
@@ -216,11 +210,7 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromFile = CounterDumpFilename,
-					To = new CounterConnectionStringOptions
-					{
-						Url = counterStore.Url,
-						CounterStoreId = counterStore.Name
-					}
+					To = ConnectionStringTo(counterStore)
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
@@ -250,8 +240,8 @@ namespace Raven.Tests.Counters
 				var smugglerApi = new SmugglerCounterApi();
 				await smugglerApi.Between(new SmugglerBetweenOptions<CounterConnectionStringOptions>
 				{
-					From = ConnectionStringFrom(source),
-					To = ConnectionStringFrom(target)
+					From = ConnectionStringTo(source),
+					To = ConnectionStringTo(target)
 				});
 
 				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
@@ -267,7 +257,7 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-		private CounterConnectionStringOptions ConnectionStringFrom(ICounterStore counterStore)
+		private CounterConnectionStringOptions ConnectionStringTo(ICounterStore counterStore)
 		{
 			return new CounterConnectionStringOptions
 			{
