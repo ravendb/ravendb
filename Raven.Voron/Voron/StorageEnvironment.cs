@@ -317,16 +317,6 @@ namespace Voron
 
             Slice key = name;
 
-            // we are in a write transaction, no need to handle locks
-            var header = (TreeRootHeader*)tx.Root.DirectRead(key);
-            if (header != null)
-            {
-                tree = Tree.Open(tx, header);
-                tree.Name = name;
-                tx.AddTree(name, tree);
-                return tree;
-            }
-
             tree = Tree.Create(tx, keysPrefixing);
             tree.Name = name;
             var space = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
