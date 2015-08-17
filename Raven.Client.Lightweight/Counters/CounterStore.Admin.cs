@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +7,6 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
-using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Counters
 {
@@ -21,14 +19,13 @@ namespace Raven.Client.Counters
 			internal CounterStoreAdminOperations(CounterStore parent)
 			{
 				this.parent = parent;
-			}
-			//admin/cs/{id}/groups-names
+			}			
 
-			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName, CancellationToken token = default(CancellationToken))
+			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}/groups-names", parent.Url, counterStorageName);
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names", parent.Url, counterStorageName ?? parent.Name);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -37,12 +34,11 @@ namespace Raven.Client.Counters
 				}
 			}
 
-
-			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName, CancellationToken token = default(CancellationToken))
+			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}", parent.Url, counterStorageName);
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary", parent.Url, counterStorageName ?? parent.Name);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -56,6 +52,7 @@ namespace Raven.Client.Counters
 			/// </summary>
 			/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
+			/// <param name="shouldUpateIfExists">If the storage already there, should we update it</param>
 			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
