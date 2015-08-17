@@ -43,7 +43,7 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var tree = tx.Environment.State.GetTree(tx, "foo");
+                var tree = tx.Environment.CreateTree(tx, "foo");
                 for (int index = 0; index < inputData.Count; index++)
                 {
                     var keyString = inputData[index];
@@ -74,7 +74,7 @@ namespace Voron.Tests.Bugs
                     {
                         foreach (var treeName in trees)
                         {
-                            var tree = tx.Environment.State.GetTree(tx, treeName);
+                            var tree = tx.Environment.CreateTree(tx, treeName);
 
                             tree.Add(id, new MemoryStream(testBuffer));
                         }
@@ -107,7 +107,7 @@ namespace Voron.Tests.Bugs
                 {
                     foreach (var treeName in trees)
                     {
-                        var tree = tx.Environment.State.GetTree(tx, treeName);
+                        var tree = tx.Environment.CreateTree(tx, treeName);
 
                         tree.Add(id, new MemoryStream(testBuffer));
 
@@ -146,7 +146,7 @@ namespace Voron.Tests.Bugs
                     {
                         foreach (var treeName in trees)
                         {
-                            var tree = tx.Environment.State.GetTree(tx, treeName);
+                            var tree = tx.Environment.CreateTree(tx, treeName);
                             tree.Add(id, new MemoryStream(testBuffer));
                         }
 
@@ -186,7 +186,7 @@ namespace Voron.Tests.Bugs
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.State.GetTree(snapshot.Transaction, tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.CreateTree(snapshot.Transaction, tree).State.EntriesCount);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

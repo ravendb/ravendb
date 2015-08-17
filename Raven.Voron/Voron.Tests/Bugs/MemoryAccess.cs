@@ -24,8 +24,8 @@ namespace Voron.Tests.Bugs
 				{
 					foreach (var tree in trees)
 					{
-						tx.State.GetTree(tx, tree).Add(string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
-						tx.State.GetTree(tx, tree).Add(string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
+						tx.ReadTree( tree).Add(string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
+						tx.ReadTree( tree).Add(string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
 					}
 
 					tx.Commit();
@@ -36,7 +36,7 @@ namespace Voron.Tests.Bugs
 			{
 				foreach (var tree in trees)
 				{
-					using (var iterator = txr.State.GetTree(txr, tree).Iterate())
+					using (var iterator = txr.ReadTree(tree).Iterate())
 					{
 						if (!iterator.Seek(Slice.BeforeAllKeys))
 							continue;
@@ -45,7 +45,7 @@ namespace Voron.Tests.Bugs
 
 						using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 						{
-							txw.State.GetTree(txw, tree).Add(string.Format("key/{0}/0/0", new string('0', 1000)), new MemoryStream());
+							txw.ReadTree(tree).Add(string.Format("key/{0}/0/0", new string('0', 1000)), new MemoryStream());
 
 							txw.Commit();
 						}

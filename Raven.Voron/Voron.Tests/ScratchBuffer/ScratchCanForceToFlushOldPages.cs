@@ -39,7 +39,7 @@ namespace Voron.Tests.ScratchBuffer
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var tree = Env.State.GetTree(txw, "foo");
+				var tree = Env.CreateTree(txw, "foo");
 
 				tree.Add("bars/1", new string('b', 1000));
 
@@ -52,7 +52,7 @@ namespace Voron.Tests.ScratchBuffer
 			{
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = Env.State.GetTree(txw, "foo");
+					var tree = Env.CreateTree(txw, "foo");
 
 					tree.Add("bars/1", new string('c', 1000));
 
@@ -81,7 +81,7 @@ namespace Voron.Tests.ScratchBuffer
 
 					Assert.True(allocated3 < allocated2);
 
-					var read = Env.State.GetTree(txr2, "foo").Read("bars/1");
+					var read = Env.CreateTree(txr2, "foo").Read("bars/1");
 
 					Assert.NotNull(read);
 					Assert.Equal(new string('c', 1000), read.Reader.AsSlice().ToString());

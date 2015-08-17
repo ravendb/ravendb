@@ -51,7 +51,7 @@ namespace Voron.Tests.Compaction
 						string name = "tree/" + i;
 						treeNames.Add(name);
 
-						var tree = env.State.GetTree(tx, name);
+						var tree = env.CreateTree(tx, name);
 
 						for (int j = 0; j < recordCount; j++)
 						{
@@ -92,7 +92,7 @@ namespace Voron.Tests.Compaction
 				{
 					foreach (var treeName in treeNames)
 					{
-						var tree = compacted.State.GetTree(tx, treeName);
+						var tree = compacted.CreateTree(tx, treeName);
 
 						for (int i = 0; i < recordCount; i++)
 						{
@@ -119,7 +119,7 @@ namespace Voron.Tests.Compaction
 
 					foreach (var treeName in multiValueTreeNames)
 					{
-						var tree = compacted.State.GetTree(tx, treeName);
+						var tree = compacted.CreateTree(tx, treeName);
 
 						for (int i = 0; i < multiValueRecordsCount; i++)
 						{
