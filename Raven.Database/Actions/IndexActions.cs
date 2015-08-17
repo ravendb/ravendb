@@ -697,6 +697,7 @@ namespace Raven.Database.Actions
 
         internal Task StartDeletingIndexDataAsync(int id, string indexName)
         {
+            var sp = Stopwatch.StartNew();
             //remove the header information in a sync process
             TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
             var deleteIndexTask = Task.Run(() =>
@@ -728,6 +729,10 @@ namespace Raven.Database.Actions
                 if (t.IsFaulted || t.IsCanceled)
                 {
                     Log.WarnException("Failure when deleting index " + indexName, t.Exception);
+                }
+                else
+                {
+                    Log.Info("The async deletion of index {0} was completed in {1}", indexName, sp.Elapsed);
                 }
             });
 
