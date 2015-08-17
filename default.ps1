@@ -199,6 +199,8 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 	New-Item $build_dir\Output\Migration -Type directory | Out-Null
+	New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
+	New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
@@ -221,6 +223,17 @@ task CopyBackup {
 task CopyMigration {
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
+}
+
+task CopyRavenTraffic {
+	Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Raven.Traffic
+	Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Raven.Traffic
+}
+
+task CopyStorageExporter {
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\StorageExporter
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.Database.??? $build_dir\Output\Diag\StorageExporter
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.StorageExporter.??? $build_dir\Output\Diag\StorageExporter
 }
 
 task CopyClient {
@@ -386,7 +399,9 @@ task DoReleasePart1 -depends Compile, `
 	CopyServer, `
 	SignServer, `
 	CopyRootFiles, `
-	ZipOutput {	
+	ZipOutput, `
+	CopyRavenTraffic, `
+	CopyStorageExporter {	
 	
 	Write-Host "Done building RavenDB"
 }
