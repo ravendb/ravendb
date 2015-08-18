@@ -1,11 +1,10 @@
-﻿using System.Threading;
+﻿using System;
+using System.ComponentModel.Composition.Hosting;
+using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-using System;
-using System.ComponentModel.Composition.Hosting;
-using System.Linq;
-using Raven.Database;
 using Xunit;
 
 namespace Raven.Tests.Indexes
@@ -117,7 +116,7 @@ namespace Raven.Tests.Indexes
 				IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
 				WaitForIndexing(store);
 
-				Assert.Equal(store.DatabaseCommands.GetStatistics().CountOfIndexes, 2);
+				Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
 
 				e = Assert.Throws<InvalidOperationException>(() =>
 				{
@@ -158,7 +157,8 @@ namespace Raven.Tests.Indexes
 			    {
 			        mre.Set();
 			    };
-			    IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store, replaceTimeUtc: DateTime.Now.AddDays(1));
+			    IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store);
+				WaitForUserToContinueTheTest(store);
 
 			    Assert.True(mre.Wait(10000));
 			    Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
