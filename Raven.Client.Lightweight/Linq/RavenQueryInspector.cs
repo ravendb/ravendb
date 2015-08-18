@@ -177,13 +177,24 @@ namespace Raven.Client.Linq
 		public override string ToString()
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+			string query;
+			if (asyncDatabaseCommands != null)
+			{
+				var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+				query = asyncDocumentQuery.GetIndexQuery(true).ToString();
+			}
+			else
+			{
+				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+				query = documentQuery.ToString();
+			}
+
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
 				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + documentQuery;
+			return fields + query;
 		}
-
+ 
 		public IndexQuery GetIndexQuery(bool isAsync = true)
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();

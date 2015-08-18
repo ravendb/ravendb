@@ -282,6 +282,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		[HttpGet]
+		[RavenRoute("debug/filtered-out-indexes")]
+		[RavenRoute("databases/{databaseName}/debug/filtered-out-indexes")]
+		public HttpResponseMessage FilteredOutIndexes()
+		{
+			return GetMessageWithObject(Database.WorkContext.RecentlyFilteredOutIndexes.ToArray());
+		}
 
 		[HttpGet]
 		[RavenRoute("debug/indexing-batch-stats")]

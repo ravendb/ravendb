@@ -818,6 +818,7 @@ namespace Raven.Database.Indexing
 						};
 						});
 					innerFilteredOutIndexes.Push(indexToWorkOn);
+					context.MarkIndexFilteredOut(indexName);
 					return;
 				}
 				if (Log.IsDebugEnabled)

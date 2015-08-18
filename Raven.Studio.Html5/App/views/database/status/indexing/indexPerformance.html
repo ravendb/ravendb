@@ -47,6 +47,15 @@
         opacity: 0.5;
     }
 
+	.prefetch_op rect {
+		opacity: 0.6;
+		fill: #2ca02c;
+		cursor: pointer;
+	}
+	.prefetch_op rect:hover {
+		opacity: 0.7;
+	}
+
     .LoadDocument { fill: #17becf; background-color: #17becf }
 
 	.Linq_MapExecution { fill: #1f77b4; background-color: #1f77b4 }
@@ -337,6 +346,40 @@
         </table>
     </div>
 </script>
+
+<script type="text/html" id="prefetch-template">
+	<div style="padding: 10px">
+		<form>
+			<div class="handle"><i class="fa fa-arrows"></i> Future batch information
+			</div>
+			<button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+			<div class="clearfix"></div>
+		</form>
+
+		<hr class="tight"/>
+		<table class="table table-condensed table-striped" data-bind="with: data">
+			<tbody>
+			<tr>
+				<td>Started at</td>
+				<td data-bind="text: Timestamp"></td>
+			</tr>
+			<tr>
+				<td>Total duration [ms]</td>
+				<td data-bind="text: DurationMs.toLocaleString(2)"></td>
+			</tr>
+			<tr>
+				<td>Size</td>
+				<td data-bind="text: Size"></td>
+			</tr>
+			<tr>
+				<td>Retries</td>
+				<td data-bind="text: Retries"></td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+</script>
+
 <section id="indexingPerformance" style="position: relative">
     <div>
         <div class="btn-group">

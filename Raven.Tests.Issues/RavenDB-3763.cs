@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Embedded;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
+using Raven.Tests.Helpers;
+using Xunit;
+
+namespace Raven.Tests.Issues
+{
+	public class RavenDB_3736
+	{
+		public class IsInTriggersSyncFromAsync : RavenTestBase
+		{
+			private readonly EmbeddableDocumentStore store;
+
+			public IsInTriggersSyncFromAsync()
+			{
+				store = NewDocumentStore();
+
+
+				new Index().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Entity
+					{
+						Id = "solo",
+						Tokens = new List<string>
+						{
+							"ABC",
+							"DEF"
+						}
+					});
+					session.SaveChanges();
+				}
+
+			}
+
+			[Fact]
+			public async Task IsInTriggersSyncFromAsyncException()
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					var queryToken = "ABC";
+					try
+					{
+						var entity = await session.Query<Entity, Index>()
+							.Customize(q => q.WaitForNonStaleResults())
+							.Where(e => e.Id == "solo" && queryToken.In((e.Tokens)))
+							.FirstOrDefaultAsync();
+					}
+					catch (Exception e)
+					{
+						Assert.NotNull(e);
+					}
+				}
+			}
+			[Fact]
+			public async Task IsInTriggersSyncFromAsyncWorks()
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					var queryToken = "ABC";
+					var entity = await session.Query<Entity, Index>()
+						.Customize(q => q.WaitForNonStaleResults())
+						.Where(e => e.Id == "solo" && e.Tokens.Contains(queryToken))
+						.FirstOrDefaultAsync();
+					Assert.NotNull(entity);
+					Assert.Equal("solo", entity.Id);
+				}
+			}
+			[Fact]
+			public async Task WithoutIsInItWorks()
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					var queryToken = "ABC";
+					var entity = await session.Query<Entity, Index>()
+						.Customize(q => q.WaitForNonStaleResults())
+						.Where(e => e.Id == "solo")
+						.FirstOrDefaultAsync();
+					Assert.NotNull(entity);
+					Assert.Equal("solo", entity.Id);
+				}
+			}
+
+			internal class Entity
+			{
+				public string Id { get; set; }
+				public List<string> Tokens { get; set; }
+			}
+			internal class Index : AbstractIndexCreationTask<Entity>
+			{
+				public Index()
+				{
+					Map = entities => from entity in entities
+									  select new
+									  {
+										  entity.Tokens
+									  };
+				}
+			}
+
+		}
+	}
+}
