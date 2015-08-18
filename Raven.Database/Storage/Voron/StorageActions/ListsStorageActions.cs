@@ -223,10 +223,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	        {
 	            if (!iterator.Seek(Slice.BeforeAllKeys))
 	                return;
-
-	            do
-	            {
-	                var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
+	            bool skipMoveNext;
+                do
+                {
+                    skipMoveNext = false;
+                    var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
 	                if (currentEtag.CompareTo(etag) > 0)
 	                    break;
@@ -245,9 +246,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	                {
 	                    iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
 	                    if (!iterator.Seek(Slice.BeforeAllKeys))
-	                        return;
+	                        break;
+	                    skipMoveNext = true;
 	                }
-	            } while (iterator.MoveNext());
+	            } while (skipMoveNext || iterator.MoveNext());
 	        }
 	        finally
 	        {
@@ -270,9 +272,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		        if (!iterator.Seek(Slice.BeforeAllKeys))
 		            return;
 
-		        do
-		        {
-		            ushort version;
+		        bool skipMoveNext;
+                do
+                {
+                    skipMoveNext = false;
+                    ushort version;
 		            var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 		            var createdAt = value.Value<DateTime>("createdAt");
 
@@ -291,9 +295,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		            {
                         iterator = listsByName.MultiRead(Snapshot, nameKeySlice);
                         if (!iterator.Seek(Slice.BeforeAllKeys))
-                            return;
+                            break;
+		                skipMoveNext = true;
 		            }
-		        } while (iterator.MoveNext());
+		        } while (skipMoveNext || iterator.MoveNext());
 		    }
 		    finally
 		    {

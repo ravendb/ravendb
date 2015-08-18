@@ -538,8 +538,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
                 var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
+                bool skipMoveNext;
                 do
                 {
+                    skipMoveNext = false;
                     // TODO: Check if we can avoid the clone.
                     var id = iterator.CurrentKey.Clone();
 
@@ -565,11 +567,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         {
                             iterator = createIterator();
                             if (iterator.Seek(Slice.BeforeAllKeys) == false)
-                                return;
+                                break;
+                            skipMoveNext = true;
                         }
                     }
                 }
-                while (iterator.MoveNext() && token.IsCancellationRequested == false);
+                while ((skipMoveNext || iterator.MoveNext()) && token.IsCancellationRequested == false);
             }
             finally
             {

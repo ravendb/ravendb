@@ -242,9 +242,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		        if (!iterator.Seek(Slice.BeforeAllKeys))
 		            return;
 
+		        bool skipMoveNext;
 		        do
 		        {
-		            var id = iterator.CurrentKey.Clone();
+		            skipMoveNext = false;
+                    var id = iterator.CurrentKey.Clone();
 
 		            ushort version;
 		            var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
@@ -271,9 +273,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		            {
 		                iterator = mappedResultsByView.MultiRead(Snapshot, viewKey);
                         if (!iterator.Seek(Slice.BeforeAllKeys))
-                            return;
+                            break;
+		                skipMoveNext = true;
 		            }
-		        } while (iterator.MoveNext() && token.IsCancellationRequested == false);
+		        } while ((skipMoveNext || iterator.MoveNext()) && token.IsCancellationRequested == false);
 		    }
 		    finally
 		    {
@@ -1132,9 +1135,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		        if (!iterator.Seek(Slice.BeforeAllKeys))
 		            return;
 
-		        do
-		        {
-		            var id = iterator.CurrentKey.Clone();
+		        bool skipMoveNext;
+                do
+                {
+                    skipMoveNext = false;
+                    var id = iterator.CurrentKey.Clone();
 
 		            ushort version;
 		            var value = LoadStruct(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
@@ -1152,9 +1157,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		            {
 		                iterator = scheduledReductionsByView.MultiRead(Snapshot, viewKey);
 		                if (!iterator.Seek(Slice.BeforeAllKeys))
-		                    return;
+		                    break;
+		                skipMoveNext = true;
 		            }
-		        } while (iterator.MoveNext() && token.IsCancellationRequested == false);
+		        } while ((skipMoveNext || iterator.MoveNext()) && token.IsCancellationRequested == false);
 		    }
 		    finally
 		    {
