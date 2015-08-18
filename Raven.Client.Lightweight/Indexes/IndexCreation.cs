@@ -131,7 +131,7 @@ namespace Raven.Client.Indexes
 				}
 	        }
 
-	        await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions);
+	        await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -236,7 +236,7 @@ namespace Raven.Client.Indexes
 				}
 			}
 
-			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore);
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -348,7 +348,7 @@ namespace Raven.Client.Indexes
 				}
 			}
 
-			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions);
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -453,7 +453,7 @@ namespace Raven.Client.Indexes
 				}
 			}
 
-			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore);
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
