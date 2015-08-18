@@ -26,18 +26,16 @@ namespace Raven.Database.Smuggler
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 		private const string CounterIncrementalDump = ".counter-incremental-dump";
 
-		private readonly CancellationToken cancellationToken;
 
 		private Action<string> showProgress;
 
-		public SmugglerCounterApi(CancellationToken cancellationToken = default(CancellationToken), Action<string> showProgress = null)
+		public SmugglerCounterApi(Action<string> showProgress = null)
 		{
-			this.cancellationToken = cancellationToken;
 			ShowProgress = showProgress;
 			Options = new SmugglerCounterOptions();
 		}
 
-		public SmugglerCounterOptions Options { get; private set; }
+		public SmugglerCounterOptions Options { get; set; }
 
 		public Action<string> ShowProgress
 		{
@@ -53,6 +51,14 @@ namespace Raven.Database.Smuggler
 					showProgress = value;
 			}
 
+		}
+
+		public CancellationToken CancellationToken
+		{
+			get
+			{
+				return (Options == null || Options.CancelToken == null) ? CancellationToken.None : Options.CancelToken.Token;
+			}
 		}
 
 		/// <summary>
@@ -133,9 +139,9 @@ namespace Raven.Database.Smuggler
 					try
 					{
 						if (Options.Incremental)
-							await ExportIncrementalData(counterStore, exportFolder, jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
+							await ExportIncrementalData(counterStore, exportFolder, jsonWriter).WithCancellation(CancellationToken).ConfigureAwait(false);
 						else
-							await ExportFullData(counterStore, jsonWriter).WithCancellation(cancellationToken).ConfigureAwait(false);
+							await ExportFullData(counterStore, jsonWriter).WithCancellation(CancellationToken).ConfigureAwait(false);
 					}
 					catch (SmugglerExportException e)
 					{
@@ -167,7 +173,7 @@ namespace Raven.Database.Smuggler
 		private async Task ExportIncrementalData(ICounterStore counterStore, string exportFilename, JsonTextWriter jsonWriter)
 		{
 			var lastEtag = ReadLastEtagFromStateFile(exportFilename);
-			var counterDeltas = (await GetCounterStatesSinceEtag(counterStore, lastEtag).WithCancellation(cancellationToken).ConfigureAwait(false)).ToList();
+			var counterDeltas = (await GetCounterStatesSinceEtag(counterStore, lastEtag).WithCancellation(CancellationToken).ConfigureAwait(false)).ToList();
 
 			ShowProgress("Incremental export -> starting from etag : " + lastEtag);
 
@@ -203,7 +209,7 @@ namespace Raven.Database.Smuggler
 			var deltas = new List<CounterState>();
 			do
 			{
-				var deltasFromRequest = await counterStore.Advanced.GetCounterStatesSinceEtag(etag, token: cancellationToken).ConfigureAwait(false);
+				var deltasFromRequest = await counterStore.Advanced.GetCounterStatesSinceEtag(etag, token: CancellationToken).ConfigureAwait(false);
 				if (deltasFromRequest.Count == 0)
 					break;
 
@@ -247,12 +253,12 @@ namespace Raven.Database.Smuggler
 
 		private async Task ExportFullData(ICounterStore counterStore, JsonTextWriter jsonWriter)
 		{
-			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync(cancellationToken).ConfigureAwait(false);
+			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync(CancellationToken).ConfigureAwait(false);
 			ShowProgress(String.Format("Starting full export, fetched {0} counter storages",counterStorageNames.Length));
 			foreach (var storageName in counterStorageNames)
 			{
 				ShowProgress("Exporting " + storageName);
-				var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(storageName, cancellationToken).ConfigureAwait(false);
+				var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(storageName, CancellationToken).ConfigureAwait(false);
 					
 				jsonWriter.WriteStartArray();
 					foreach (var counterInfo in counterStorageInfo)
@@ -304,8 +310,8 @@ namespace Raven.Database.Smuggler
 				store.Initialize();
 
 				ShowProgress(String.Format("Initialized connection to counter store (name = {0})",store.Name));
-				var existingCounterGroupsAndNames = await store.Admin.GetCounterStorageNameAndGroups(token: cancellationToken)
-																	 .WithCancellation(cancellationToken)
+				var existingCounterGroupsAndNames = await store.Admin.GetCounterStorageNameAndGroups(token: CancellationToken)
+																	 .WithCancellation(CancellationToken)
 																	 .ConfigureAwait(false);
 
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
@@ -322,7 +328,7 @@ namespace Raven.Database.Smuggler
 					if (existingCounterGroupsAndNames.Any(x => x.Group == groupName && x.Name == counterName))
 					{
 						ShowProgress(String.Format("Counter {0} -> {1} is already there. Reset is performed", groupName, counterName));
-						await store.ResetAsync(groupName, counterName, cancellationToken).ConfigureAwait(false); //since it is a full import, the values are overwritten
+						await store.ResetAsync(groupName, counterName, CancellationToken).ConfigureAwait(false); //since it is a full import, the values are overwritten
 					}
 
 					ShowProgress(String.Format("Importing counter {0} -> {1}",groupName,counterName));
@@ -376,7 +382,7 @@ namespace Raven.Database.Smuggler
 						ShowProgress("Starting full import from stream");
 					}
 
-					await ImportFullData(importOptions.To, stream).WithCancellation(cancellationToken).ConfigureAwait(false);
+					await ImportFullData(importOptions.To, stream).WithCancellation(CancellationToken).ConfigureAwait(false);
 				}
 				finally
 				{
@@ -401,7 +407,7 @@ namespace Raven.Database.Smuggler
 					using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, file)))
 					{
 						ShowProgress(String.Format("Starting incremental import from file: {0}", file));
-						await ImportIncrementalData(importOptions.To, fileStream).WithCancellation(cancellationToken).ConfigureAwait(false);
+						await ImportIncrementalData(importOptions.To, fileStream).WithCancellation(CancellationToken).ConfigureAwait(false);
 					}
 				}
 			}
@@ -446,7 +452,7 @@ namespace Raven.Database.Smuggler
 				}
 
 				ShowProgress("Finished import of the current file.");
-				await store.Batch.FlushAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
+				await store.Batch.FlushAsync().WithCancellation(CancellationToken).ConfigureAwait(false);
 			}
 			finally
 			{
@@ -477,8 +483,8 @@ namespace Raven.Database.Smuggler
 				target.Initialize();
 				ShowProgress(String.Format("Initialized connection to target counter store (name = {0})", target.Name));
 
-				var existingCounterGroupsAndNames = await target.Admin.GetCounterStorageNameAndGroups(token: cancellationToken).ConfigureAwait(false);
-				var counterSummaries = await source.Admin.GetCounterStorageSummary(token: cancellationToken).ConfigureAwait(false);
+				var existingCounterGroupsAndNames = await target.Admin.GetCounterStorageNameAndGroups(token: CancellationToken).ConfigureAwait(false);
+				var counterSummaries = await source.Admin.GetCounterStorageSummary(token: CancellationToken).ConfigureAwait(false);
 				ShowProgress(String.Format("Fetched counter data from source (data about {0} counters available)",counterSummaries.Length));
 
 				foreach (var summary in counterSummaries)
@@ -486,8 +492,8 @@ namespace Raven.Database.Smuggler
 					if (existingCounterGroupsAndNames.Any(x => x.Group == summary.Group && x.Name == summary.CounterName))
 					{
 						ShowProgress(String.Format("Counter {0} -> {1} is already there. Reset is performed", summary.Group, summary.CounterName));
-						await target.ResetAsync(summary.Group, summary.CounterName, cancellationToken)
-							.WithCancellation(cancellationToken)
+						await target.ResetAsync(summary.Group, summary.CounterName, CancellationToken)
+							.WithCancellation(CancellationToken)
 							.ConfigureAwait(false); //since it is a full import, the values are overwritten
 					}
 
@@ -496,7 +502,7 @@ namespace Raven.Database.Smuggler
 				}
 
 				ShowProgress("Finished import...");
-				await target.Batch.FlushAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
+				await target.Batch.FlushAsync().WithCancellation(CancellationToken).ConfigureAwait(false);
 			}
 		}
 	}
