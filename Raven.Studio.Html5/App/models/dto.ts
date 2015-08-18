@@ -91,10 +91,18 @@ interface databaseStatisticsDto {
     Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
-    Prefetches: any[];
+    Prefetches: futureBatchStatsDto[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
 	Is64Bit: boolean;
+}
+
+interface futureBatchStatsDto {
+    Timestamp: string;
+    Duration: string;
+    Size: number;
+    Retries: number;
+    PrefetchingUser: string;
 }
 
 interface indexStatisticsDto {
@@ -1445,4 +1453,11 @@ interface diskIoPerformanceRunIoResultDto extends documentDto {
 interface performanceRunItemDto {
     displayName: string;
     documentId: string;
+}
+
+
+interface filteredOutIndexStatDto {
+    Timestamp: string;
+    TimestampParsed?: Date;
+    IndexName: string;
 }
