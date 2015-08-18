@@ -160,13 +160,17 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("start cannot be greater than end");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
-				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-range/{2}?key={3}start={4}&end={5}",
-					url, timeSeriesName, type, key, start, end);
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-range/{2}?key={3}",
+					url, timeSeriesName, type, key);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
-					return request.ReadResponseJsonAsync().WithCancellation(token);
+					await request.WriteWithObjectAsync(new TimeSeriesDeleteRange
+					{
+						Type = type, Key = key, Start = start, End = end
+					});
+					return await request.ReadResponseJsonAsync().WithCancellation(token);
 				}
 			}, token);
 		}

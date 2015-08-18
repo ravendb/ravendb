@@ -339,28 +339,29 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/delete-range/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage DeleteRange(string type, string key, DateTimeOffset start, DateTimeOffset end)
+		public async Task<HttpResponseMessage> DeleteRange()
 		{
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
+			var range = await ReadJsonObjectAsync<TimeSeriesDeleteRange>();
+            if (range == null || string.IsNullOrEmpty(range.Type) || string.IsNullOrEmpty(range.Key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			if (start > end)
+			if (range.Start > range.End)
 				throw new InvalidOperationException("start cannot be greater than end");
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(type, key, start, end);
-				writer.DeleteRangeInRollups(type, key, start, end);
+				writer.DeleteRange(range.Type, range.Key, range.Start, range.End);
+				writer.DeleteRangeInRollups(range.Type, range.Key, range.Start, range.End);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
-					Type = type,
-					Key = key,
+					Type = range.Type,
+					Key = range.Key,
 					Action = TimeSeriesChangeAction.DeleteInRange,
-					Start = start,
-					End = end,
+					Start = range.Start,
+					End = range.End,
 				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);

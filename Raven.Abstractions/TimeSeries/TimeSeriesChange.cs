@@ -23,6 +23,7 @@ namespace Raven.Abstractions.TimeSeries
 
 	public class TimeSeriesDelete
 	{
+		public string Type { get; set; }
 		public string Key { get; set; }
 
 		[JsonIgnore]
@@ -31,6 +32,7 @@ namespace Raven.Abstractions.TimeSeries
 
 	public class TimeSeriesDeleteRange
 	{
+		public string Type { get; set; }
 		public string Key { get; set; }
 		public DateTimeOffset Start { get; set; }
 		public DateTimeOffset End { get; set; }
