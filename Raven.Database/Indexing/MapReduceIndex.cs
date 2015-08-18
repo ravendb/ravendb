@@ -362,7 +362,10 @@ namespace Raven.Database.Indexing
                         data = GetMappedData(doc);
                     }
 
-                    logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
+                    if (logIndexing.IsDebugEnabled)
+                    {
+                        logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
+                    }
 
                     using (StopwatchScope.For(putMappedResultsDuration))
                     {
@@ -676,15 +679,14 @@ namespace Raven.Database.Indexing
                 parent.Write((indexWriter, analyzer, stats) =>
                 {
                     stats.Operation = IndexingWorkStats.Status.Reduce;
-                    try
-                    {
-                        performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, MappedResultsByBucket.Sum(x => x.Count()));
 
+                    try
+                    {                                                
                         if (Level == 2)
                         {
                             RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
                         }
-
+                        
                         foreach (var mappedResults in MappedResultsByBucket)
                         {
                             var input = mappedResults.Select(x =>
@@ -715,7 +717,7 @@ namespace Raven.Database.Indexing
 
                                 stats.ReduceSuccesses++;
                             }
-                        }
+                        }                        
                     }
                     catch (Exception e)
                     {
@@ -743,6 +745,9 @@ namespace Raven.Database.Indexing
                                 },
                                 x => x.Dispose());
                         }
+
+                        // TODO: Check if we need to report "Bucket Counts" or "Total Input Elements"?
+                        performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount);
                     }
 
                     return new IndexedItemsInfo(null)
@@ -761,7 +766,7 @@ namespace Raven.Database.Indexing
 
                 parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
 
-                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
+                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
 
                 return performance;
             }

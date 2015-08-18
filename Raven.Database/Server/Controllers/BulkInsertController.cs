@@ -23,6 +23,7 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 
 namespace Raven.Database.Server.Controllers
 {

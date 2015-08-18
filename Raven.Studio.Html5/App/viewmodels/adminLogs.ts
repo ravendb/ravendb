@@ -37,7 +37,12 @@ class adminLogs extends viewModelBase {
             this.pendingLogs = [];
             var logsAsText = "";
             pendingCopy.forEach(log => {
-                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" +  log.Database + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
+                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" + log.Database + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
+
+                if (log.StackTrace != null) {
+                    line += log.StackTrace + "\n\n";
+                }
+
                 logsAsText += line;
             });
             // text: allows us to escape values
@@ -61,7 +66,7 @@ class adminLogs extends viewModelBase {
     defaultLogsConfig() {
         var logConfig = new adminLogsConfig();
         logConfig.maxEntries(10000);
-        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Info"));
+        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Debug", false));
         return logConfig;
     }
 
@@ -142,6 +147,7 @@ class adminLogs extends viewModelBase {
     }
 
     attached() {
+	    super.attached();
         this.logsContainer = document.getElementById("rawLogsContainer");
     }
 

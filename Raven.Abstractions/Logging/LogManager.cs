@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging.LogProviders;
+using Sparrow.Collections;
 
 namespace Raven.Abstractions.Logging
 {
 	public static class LogManager
 	{
-		private static readonly HashSet<Target> targets = new HashSet<Target>();
+        private static readonly ConcurrentSet<Target> Targets = new ConcurrentSet<Target>();
 
 		public static void EnsureValidLogger()
 		{
@@ -34,15 +35,17 @@ namespace Raven.Abstractions.Logging
 			return GetLogger(type.FullName);
 		}
 
+        public static bool EnableDebugLogForTargets { get; set; }
+
 		public static ILog GetLogger(string name)
 		{
 			ILogManager logManager = CurrentLogManager;
 			if (logManager == null)
-				return new LoggerExecutionWrapper(new NoOpLogger(), name, targets.ToArray());
+				return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
 			
 			// This can throw in a case of invalid NLog.config file.
 			var log = logManager.GetLogger(name);
-			return new LoggerExecutionWrapper(log, name, targets.ToArray());
+			return new LoggerExecutionWrapper(log, name, Targets);
 		}
 
 		private static ILogManager ResolveExternalLogManager()
@@ -60,21 +63,15 @@ namespace Raven.Abstractions.Logging
 
 		public static void RegisterTarget<T>() where T: Target, new()
 		{
-			if (targets.OfType<T>().Any())
+			if (Targets.OfType<T>().Any())
 				return;
 
-		    lock (targets)
-		    {
-                if (targets.OfType<T>().Any())
-                    return;
-
-                targets.Add(new T());
-		    }
+            Targets.Add(new T());
 		}
 
 		public static T GetTarget<T>() where T: Target
 		{
-			return targets.ToArray().OfType<T>().FirstOrDefault();
+			return Targets.OfType<T>().FirstOrDefault();
 		}
 
 		public class NoOpLogger : ILog
@@ -89,6 +86,11 @@ namespace Raven.Abstractions.Logging
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
 				where TException : Exception
 			{}
+
+		    public bool ShouldLog(LogLevel logLevel)
+		    {
+		        return false;
+		    }
 		}
 
 		public static IDisposable OpenNestedConext(string context)
@@ -105,10 +107,10 @@ namespace Raven.Abstractions.Logging
 
 		public static void ClearTargets()
 		{
-			targets.Clear();
+		    Targets.Clear();
 		}
 
-        public static bool ShouldLogToTargets(LogLevel logLevel, ILog logger)
+	    public static bool ShouldLogToTargets(LogLevel logLevel, ILog logger)
         {
             switch (logLevel)
             {
@@ -145,6 +147,7 @@ namespace Raven.Abstractions.Logging
 		public string FormattedMessage { get; set; }
 		public string LoggerName { get; set; }
 		public Exception Exception { get; set; }
+	    public StackTrace StackTrace { get; set; }
 	}
 
     public class LogEventInfoFormatted
@@ -155,6 +158,7 @@ namespace Raven.Abstractions.Logging
 		public string Message { get; set; }
 		public string LoggerName { get; set; }
 		public string Exception { get; set; }
+        public string StackTrace { get; set; }
 
         public LogEventInfoFormatted(LogEventInfo eventInfo)
         {
@@ -164,6 +168,7 @@ namespace Raven.Abstractions.Logging
             Level = eventInfo.Level.ToString();
             Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
             Database = eventInfo.Database;
+            StackTrace = eventInfo.StackTrace == null ? null : eventInfo.StackTrace.ToString();
         }
     }
 }

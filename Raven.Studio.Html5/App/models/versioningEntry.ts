@@ -30,7 +30,18 @@ class versioningEntry {
         }
 
         this.fromDatabase(fromDatabse);
-        this.collection(dto.Id);
+
+        var id = dto.Id;
+        if (!id) {
+            // pre 3.0 backward compatibility
+            var prefix = "Raven/Versioning/";
+            id = this.__metadata.id;
+            if (id && id.startsWith(prefix)) {
+                id = id.substring(prefix.length);
+            } 
+        }
+        
+        this.collection(id);
         this.maxRevisions(dto.MaxRevisions);
         this.exclude(dto.Exclude);
         this.excludeUnlessExplicit(dto.ExcludeUnlessExplicit);

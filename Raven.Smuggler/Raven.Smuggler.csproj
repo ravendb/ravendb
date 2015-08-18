@@ -71,6 +71,7 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Helpers\ConsoleHelper.cs" />
     <Compile Include="SmugglerAbstractOperation.cs" />
     <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="SmugglerFilesOperationDispatcher.cs" />
@@ -95,6 +96,9 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="app.config" />
+    <None Include="NLog.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

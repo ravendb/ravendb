@@ -15,7 +15,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Connection;
@@ -25,13 +24,11 @@ using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Database.FileSystem;
+using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
-
-using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Helpers
@@ -56,9 +53,9 @@ namespace Raven.Tests.Helpers
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-        public static readonly int[] Ports = { 8079, 8078, 8077 };
+		protected static readonly int[] Ports = { 8079, 8078, 8077 };
 
-        public TimeSpan SynchronizationInterval { get; protected set; }
+	    protected TimeSpan SynchronizationInterval { get; set; }
 		
 	    private static bool checkedAsyncVoid;
         protected RavenFilesTestBase()
@@ -123,8 +120,9 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true,                
-            };
+	            UseEmbeddedHttpServer = true,          
+            };			
+
 	        ravenDbServer.Initialize();
 
             servers.Add(ravenDbServer);
@@ -141,7 +139,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null)
+                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -160,10 +158,13 @@ namespace Raven.Tests.Helpers
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
-                ApiKey = apiKey,                 
+                ApiKey = apiKey,
+				ConnectionStringName = connectionStringName
             };
 
-            store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
+			ModifyStore(store);
+
+            store.Initialize(ensureFileSystemExists: true);
 
             this.filesStores.Add(store);
 
@@ -184,11 +185,11 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-	        var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
+			var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
 				dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
-            var store = new FilesStore()
+            var store = new FilesStore
             {
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
@@ -196,6 +197,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,
             };
 
+			ModifyStore(store);
             store.Initialize(true);
 
             filesStores.Add(store);
@@ -276,7 +278,7 @@ namespace Raven.Tests.Helpers
             return defaultStorageType;
         }
 
-        public static string StreamToString(Stream stream)
+	    protected static string StreamToString(Stream stream)
         {
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
@@ -284,7 +286,7 @@ namespace Raven.Tests.Helpers
             }
         }
 
-		public static Stream StringToStream(string src)
+	    protected static Stream StringToStream(string src)
 		{
 			byte[] byteArray = Encoding.UTF8.GetBytes(src);
 			return new MemoryStream(byteArray);
@@ -300,7 +302,7 @@ namespace Raven.Tests.Helpers
             database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
         }
 
-        public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+	    private static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
         {
 			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
 			var initializer = field.GetValue(database);
@@ -327,8 +329,19 @@ namespace Raven.Tests.Helpers
                     errors.Add(e);
                 }
             }
-
             asyncCommandClients.Clear();
+
+			foreach (var fileStore in filesStores)
+			{
+				try
+				{
+					fileStore.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
             filesStores.Clear();
 
             foreach (var server in servers)
@@ -491,6 +504,10 @@ namespace Raven.Tests.Helpers
 				return exception;
 			}
 			return null;
+		}
+
+		protected virtual void ModifyStore(FilesStore store)
+		{
 		}
     }
 }

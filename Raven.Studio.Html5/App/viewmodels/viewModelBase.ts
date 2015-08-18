@@ -31,7 +31,9 @@ class viewModelBase {
     notifications: Array<changeSubscription> = [];
 	appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-    public static isConfirmedUsingSystemDatabase: boolean = false;
+	static isConfirmedUsingSystemDatabase: boolean = false;
+	static showSplash = ko.observable<boolean>(false);
+	private isAttached = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
@@ -52,8 +54,9 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var resource = appUrl.getResource();
+	    setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
 
+		var resource = appUrl.getResource();
         if (resource instanceof filesystem) {
             var fs = this.activeFilesystem();
 
@@ -120,6 +123,11 @@ class viewModelBase {
         this.updateHelpLink(null); // clean link
     }
 
+	attached() {
+		this.isAttached = true;
+		viewModelBase.showSplash(false);
+	}
+
     /*
      * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
      */
@@ -158,6 +166,9 @@ class viewModelBase {
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
+
+		this.isAttached = true;
+		viewModelBase.showSplash(false);
     }
 
     /*
@@ -166,6 +177,9 @@ class viewModelBase {
     deactivate() {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+
+		this.isAttached = true;
+		viewModelBase.showSplash(false);
     }
 
     createNotifications(): Array<changeSubscription> {

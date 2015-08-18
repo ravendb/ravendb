@@ -128,10 +128,13 @@
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Document\ShardedBulkInsertOperation.cs" />
+    <Compile Include="Document\SortOptionsEqualityProvider.cs" />
     <Compile Include="Document\Subscription.cs" />
     <Compile Include="Document\DocumentSubscriptions.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
+    <Compile Include="Extensions\SecurityExtensions.cs" />
     <Compile Include="FileSystem\AbstractFilesQuery.cs" />
+    <Compile Include="FileSystem\Extensions\AsyncFilesServerClientExtension.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
@@ -168,6 +171,7 @@
     <Compile Include="FileSystem\OpenFilesSessionOptions.cs" />
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="FileSystem\SynchronizationServerClient.cs" />
     <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
     <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />

@@ -83,6 +83,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.4.1\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.4.1\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
@@ -229,6 +236,10 @@
     <ProjectReference Include="..\Raven.SlowTests\Raven.SlowTests.csproj">
       <Project>{46152256-7443-426C-A20D-B2F354B51810}</Project>
       <Name>Raven.SlowTests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
+      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>

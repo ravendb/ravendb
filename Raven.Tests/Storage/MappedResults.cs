@@ -10,6 +10,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using System.Threading;
 
 namespace Raven.Tests.Storage
 {
@@ -48,7 +49,7 @@ namespace Raven.Tests.Storage
 			using (var tx = NewTransactionalStorage())
 			{
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult(test, "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForView(test));
+				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForView(test,CancellationToken.None));
 
 				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug(test, "ayende", 0, 100)));
 			}

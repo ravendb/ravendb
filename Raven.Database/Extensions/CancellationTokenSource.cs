@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Raven.Database.Extensions
@@ -23,6 +24,7 @@ namespace Raven.Database.Extensions
         private readonly long dueTime;
 		private readonly object locker = new object();
         private volatile bool isTimerDisposed;
+        private Stopwatch sp  = Stopwatch.StartNew();
 
         public void ThrowIfCancellationRequested()
         {
@@ -65,12 +67,18 @@ namespace Raven.Database.Extensions
 			if (isTimerDisposed)
 				return;
 
+	        if (sp.ElapsedMilliseconds < 500)
+	            return;
+
 	        lock (locker)
 	        {
 		        if (isTimerDisposed) 
 					return;
+                if (sp.ElapsedMilliseconds < 500)
+                    return;
 
-				timer.Change(dueTime, -1);
+                sp.Restart();
+                timer.Change(dueTime, -1);
 	        }
         }
 

@@ -288,6 +288,7 @@ interface logDto {
     LoggerName: string;
     Level: string;
     Exception: string;
+    StackTrace: string;
 }
 
 interface queryResultDto {
@@ -500,6 +501,7 @@ interface transformerDto {
     definition: {
         TransformResults: string;
         Name: string;
+		LockMode: string;
     }
 }
 
@@ -524,6 +526,7 @@ interface savedTransformerDto {
     {
         "TransformResults": string;
         "Name": string;
+		"LockMode": string;
     }
 }
 
@@ -881,6 +884,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
+	RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;
@@ -1186,6 +1190,7 @@ interface runningTaskDto {
 interface adminLogsConfigEntryDto {
     category: string;
     level: string;
+    includeStackTrace: boolean;
 }
 
 interface fileSystemSettingsDto {

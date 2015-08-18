@@ -1,8 +1,6 @@
 ﻿using System;
-
-using System.Linq;
-
 using Raven.Abstractions.Data;
+using Sparrow.Collections;
 
 namespace Raven.Abstractions.Logging
 {
@@ -11,9 +9,9 @@ namespace Raven.Abstractions.Logging
 		public const string FailedToGenerateLogMessage = "Failed to generate log message";
 		private readonly ILog logger;
 		private readonly string loggerName;
-		private readonly Target[] targets;
+		private readonly ConcurrentSet<Target> targets;
 
-		public LoggerExecutionWrapper(ILog logger, string loggerName, Target[] targets)
+		public LoggerExecutionWrapper(ILog logger, string loggerName, ConcurrentSet<Target> targets)
 		{
 			this.logger = logger;
 			this.loggerName = loggerName;
@@ -29,34 +27,54 @@ namespace Raven.Abstractions.Logging
 
 		public bool IsDebugEnabled
 		{
-			get { return logger.IsDebugEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
 		}
 
 		public bool IsWarnEnabled
 		{
-			get { return logger.IsWarnEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || logger.IsWarnEnabled; }
 		}
 
 		public void Log(LogLevel logLevel, Func<string> messageFunc)
 		{
-			Func<string> wrappedMessageFunc = () =>
-			{
-				try
-				{
-					return messageFunc();
-				}
-				catch (Exception ex)
-				{
-					Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
-				}
-				return null;
-			};
-			logger.Log(logLevel, wrappedMessageFunc);
+		    if (logger.ShouldLog(logLevel))
+		    {
+                Func<string> wrappedMessageFunc = () =>
+                {
+                    try
+                    {
+                        return messageFunc();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
+                    }
+                    return null;
+                };
+                logger.Log(logLevel, wrappedMessageFunc);
+            }
 
-			if (targets.Length == 0 || targets.All(t => !t.ShouldLog(logger, logLevel)))
+			if (targets.Count == 0)
 				return;
-			var formattedMessage = wrappedMessageFunc();
-            string databaseName = LogContext.DatabaseName.Value;
+		    var shouldLog = false;
+		    // ReSharper disable once LoopCanBeConvertedToQuery - perf
+		    foreach (var target in targets)
+		    {
+                shouldLog |= target.ShouldLog(logger, logLevel);
+		    }
+		    if (shouldLog == false)
+		        return;
+			string formattedMessage;
+		    try
+		    {
+		        formattedMessage = messageFunc();
+		    }
+		    catch (Exception)
+		    {
+		        // nothing to be done here
+		        return;
+		    }
+		    string databaseName = LogContext.DatabaseName.Value;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
@@ -103,6 +121,11 @@ namespace Raven.Abstractions.Logging
 			}
 		}
 
-		#endregion
+	    public bool ShouldLog(LogLevel logLevel)
+	    {
+	        return logger.ShouldLog(logLevel);
+	    }
+
+	    #endregion
 	}
 }

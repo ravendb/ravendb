@@ -77,7 +77,7 @@
       <Publish Dialog="LicenseFileChooser" Control="Back" Event="NewDialog" Value="TargetEnvironment">1</Publish>
       <Publish Dialog="LicenseFileChooser" Control="Cancel" Event="SpawnDialog" Value="CancelDlg" Order="1">1</Publish>
 
-      <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetInstallationTypeToService" Order="1"><![CDATA[NOT IISMAJORVERSION OR IISMAJORVERSION <= "#5"]]></Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetInstallationTypeToService" Order="1"><![CDATA[NOT IISMAJORVERSION OR (IISMAJORVERSION <= "#5" AND IISMAJORVERSION <> "#10")]]></Publish>
 			<Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetDefaultWorkingDirForIIS" Order="1"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
 			<Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetDefaultWorkingDirForService" Order="1"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="AddLocal" Value="All" Order="2">1</Publish>
@@ -109,10 +109,13 @@
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedWebSite" Order="1">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="SetApplicationPoolIdentityType" Order="2"><![CDATA[CUSTOM_APPLICATION_POOL AND NOT APPLICATION_POOL_IDENTITY_TYPE_INITIALIZED]]></Publish>
+			<Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="TryRevokePortReservation" Order="2"><![CDATA[REVOKE_PORT_RESERVATION AND WEBSITE_TYPE = "NEW"]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="CustomInstallDirDlg" Order="3"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
-      <Publish Dialog="WebSiteSettingsDlg" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
+			<Publish Dialog="WebSiteSettingsDlg" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+			<Publish Dialog="WebSiteSettingsDlg" Control="checkPort" Event="DoAction" Value="CheckPortAvailability" Order="1">1</Publish>
+			<Publish Dialog="WebSiteSettingsDlg" Control="checkPort" Property="PORT_AVAILABILITY" Value="[PORT_AVAILABILITY]" Order="2">1</Publish>
 
       
       <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedAppPool" Order="1">1</Publish>

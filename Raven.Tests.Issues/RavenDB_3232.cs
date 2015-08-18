@@ -190,7 +190,7 @@ namespace Raven.Tests.Issues
 
 				new TestIndex().SideBySideExecute(store);
 
-				Assert.Null(store.DatabaseCommands.GetIndex("ReplacementOf/" + indexName));
+				Assert.Null(store.DatabaseCommands.GetIndex(Constants.SideBySideIndexNamePrefix + indexName));
 			}
 		}
 	}

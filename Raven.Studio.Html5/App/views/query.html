@@ -74,7 +74,7 @@
                     <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
-            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasEditableIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>

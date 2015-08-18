@@ -304,25 +304,33 @@ namespace Raven.Database.Indexing
 
 		public void Flush(Etag highestETag)
 		{
-			lock (writeLock)
-			{
-				if (disposed)
-					return;
-				if (indexWriter == null)
-					return;
+		    try
+		    {
+		        lock (writeLock)
+		        {
+		            if (disposed)
+		                return;
+		            if (indexWriter == null)
+		                return;
 
-				try
-				{
-					waitReason = "Flush";
-					indexWriter.Commit(highestETag);
+		            try
+		            {
+		                waitReason = "Flush";
+		                indexWriter.Commit(highestETag);
 
-					ResetWriteErrors();
-				}
-				finally
-				{
-					waitReason = null;
-				}
-			}
+		                ResetWriteErrors();
+		            }
+		            finally
+		            {
+		                waitReason = null;
+		            }
+		        }
+		    }
+		    catch (Exception e)
+		    {
+		        IncrementWriteErrors(e);
+		        throw new IOException("Error during flush for " + PublicName, e);
+		    }
 		}
 
 		public void MergeSegments()
@@ -676,11 +684,19 @@ namespace Raven.Database.Indexing
 
 		private void CreateIndexWriter()
 		{
-			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-																  ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
-																  : null;
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+		    try
+		    {
+		        snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+		        IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+		            ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
+		            : null;
+		        indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+		    }
+		    catch (Exception e)
+		    {
+		        IncrementWriteErrors(e);
+		        throw new IOException("Failure to create index writer for " + PublicName, e);
+		    }
 		}
 
 		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
@@ -1118,11 +1134,12 @@ namespace Raven.Database.Indexing
 
 		#region Nested type: IndexQueryOperation
 
-		internal class IndexQueryOperation
+	    public class IndexQueryOperation
 		{
 			FastVectorHighlighter highlighter;
 			FieldQuery fieldQuery;
 
+            private readonly Stopwatch _queryParseDuration = new Stopwatch();
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
@@ -1133,6 +1150,11 @@ namespace Raven.Database.Indexing
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
 			private int alreadyScannedForDuplicates;
+
+		    public TimeSpan QueryParseDuration
+		    {
+                get { return _queryParseDuration.Elapsed; }
+		    }
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1535,7 +1557,8 @@ namespace Raven.Database.Indexing
 
 			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query documentQuery;
+                _queryParseDuration.Start();
+                Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
@@ -1565,7 +1588,9 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(documentQuery);
+			    var afterTriggers = ApplyIndexTriggers(documentQuery);
+                _queryParseDuration.Stop();
+			    return afterTriggers;
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)

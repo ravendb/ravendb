@@ -90,7 +90,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Formatting, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -139,10 +141,12 @@
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
     <Compile Include="RavenDB-3179.cs" />
+    <Compile Include="RavenDB-3758.cs" />
     <Compile Include="RavenDB-3302.cs" />
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
     <Compile Include="RavenDB-3420.cs" />
+    <Compile Include="RavenDB-3460.cs" />
     <Compile Include="RavenDB-3465.cs" />
     <Compile Include="RavenDB-3472.cs" />
     <Compile Include="RavenDB-3383.cs" />
@@ -154,7 +158,9 @@
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB-3632.cs" />
     <Compile Include="RavenDB_3230.cs" />
-    <Compile Include="RavenDB_3460.cs" />
+    <Compile Include="RavenDB_3400.cs" />
+    <Compile Include="RavenDB_3543.cs" />
+    <Compile Include="RavenDB_3570.cs" />
     <Compile Include="RavenDB_3573.cs" />
     <Compile Include="RavenDB_3365.cs" />
     <Compile Include="RavenDB_3580.cs" />
@@ -430,8 +436,11 @@
     <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
     <Compile Include="RavenDB_3612.cs" />
+    <Compile Include="RavenDB_3628.cs" />
     <Compile Include="RavenDB_3629.cs" />
     <Compile Include="RavenDB_3625.cs" />
+    <Compile Include="RavenDB_3647.cs" />
+    <Compile Include="RavenDB_3658.cs" />
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_381.cs" />
     <Compile Include="RavenDB_384.cs" />
@@ -488,6 +497,7 @@
     <Compile Include="RDBQA_4.cs" />
     <Compile Include="RDBQA_7.cs" />
     <Compile Include="RDBQA_9.cs" />
+    <Compile Include="RDoc_391.cs" />
     <Compile Include="RDoc_56.cs" />
     <Compile Include="RDoc_60.cs" />
     <Compile Include="RDoc_76.cs" />

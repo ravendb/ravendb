@@ -49,6 +49,7 @@ class query extends viewModelBase {
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
     hasSelectedIndex: KnockoutComputed<boolean>;
+    hasEditableIndex: KnockoutComputed<boolean>;
     queryText = ko.observable("");
     queryResults = ko.observable<pagedList>();
     selectedResultIndices = ko.observableArray<number>();
@@ -103,6 +104,7 @@ class query extends viewModelBase {
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
+        this.hasEditableIndex = ko.computed(() => this.selectedIndex() != null && this.selectedIndex().indexOf("dynamic/") !== 0);
         this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
         this.containsAsterixQuery = ko.computed(() => this.queryText().contains("*.*"));
@@ -230,6 +232,7 @@ class query extends viewModelBase {
     }
 
     attached() {
+	    super.attached();
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
@@ -355,7 +358,9 @@ class query extends viewModelBase {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
             if (matchingQuery) {
-                this.runRecentQuery(matchingQuery);
+	            this.runRecentQuery(matchingQuery);
+            } else {
+	            this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
         }
     }
@@ -641,6 +646,7 @@ class query extends viewModelBase {
 
         return null;
     }
+
 
 
     selectColumns() {

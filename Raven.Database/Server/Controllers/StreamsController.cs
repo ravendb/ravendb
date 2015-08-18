@@ -26,46 +26,47 @@ using System.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StreamsController : RavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("streams/docs")]
-		[RavenRoute("databases/{databaseName}/streams/docs")]
-		public HttpResponseMessage StreamDocsGet()
-		{
-			var start = GetStart();
-			var etag = GetEtagFromQueryString();
-			var startsWith = GetQueryStringValue("startsWith");
-			var pageSize = GetPageSize(int.MaxValue);
-			var matches = GetQueryStringValue("matches");
-			var nextPageStart = GetNextPageStart();
-			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-				pageSize = int.MaxValue;
+    public class StreamsController : RavenDbApiController
+    {
+        [HttpGet]
+        [RavenRoute("streams/docs")]
+        [RavenRoute("databases/{databaseName}/streams/docs")]
+        public HttpResponseMessage StreamDocsGet()
+        {
+            var start = GetStart();
+            var etag = GetEtagFromQueryString();
+            var startsWith = GetQueryStringValue("startsWith");
+            var pageSize = GetPageSize(int.MaxValue);
+            var matches = GetQueryStringValue("matches");
+            var nextPageStart = GetNextPageStart();
+            if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
+                pageSize = int.MaxValue;
 
-			var skipAfter = GetQueryStringValue("skipAfter");
+            var skipAfter = GetQueryStringValue("skipAfter");
 
-			return new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new PushStreamContent((stream, content, transportContext) =>
-					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
-				{
-					Headers =
-					{
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new PushStreamContent((stream, content, transportContext) =>
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
+                {
+                    Headers =
+                    {
                         ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
-					}
-				}
-			};
-		}
+                    }
+                }
+            };
+        }
 
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
-		{
-			using (var cts = new CancellationTokenSource())
-			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
-			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
-			{
-				writer.WriteStartObject();
-				writer.WritePropertyName("Results");
-				writer.WriteStartArray();
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
+        {
+            var bufferStream = new BufferedStream(stream, 1024 * 64);
+            using (var cts = new CancellationTokenSource())
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
 
                 Action<JsonDocument> addDocument = doc =>
                 {
@@ -74,207 +75,219 @@ namespace Raven.Database.Server.Controllers
                     writer.WriteRaw(Environment.NewLine);
                 };
 
-				Database.TransactionalStorage.Batch(accessor =>
-				{
-					// we may be sending a LOT of documents to the user, and most 
-					// of them aren't going to be relevant for other ops, so we are going to skip
-					// the cache for that, to avoid filling it up very quickly
-					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-					{
-						if (string.IsNullOrEmpty(startsWith))
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    // we may be sending a LOT of documents to the user, and most 
+                    // of them aren't going to be relevant for other ops, so we are going to skip
+                    // the cache for that, to avoid filling it up very quickly
+                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                    {
+                        if (string.IsNullOrEmpty(startsWith))
                         {
                             Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
                         }
-						else
-						{
-							var nextPageStartInternal = nextPageStart;
+                        else
+                        {
+                            var nextPageStartInternal = nextPageStart;
 
-							Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
+                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
 
-							nextPageStart = nextPageStartInternal;
-						}
-					}
-				});
+                            nextPageStart = nextPageStartInternal;
+                        }
+                    }
+                });
 
-				writer.WriteEndArray();
-				writer.WritePropertyName("NextPageStart");
-				writer.WriteValue(nextPageStart);
-				writer.WriteEndObject();
-				writer.Flush();
-			}
-		}
+                writer.WriteEndArray();
+                writer.WritePropertyName("NextPageStart");
+                writer.WriteValue(nextPageStart);
+                writer.WriteEndObject();
+                writer.Flush();
+                bufferStream.Flush();
+            }
+        }
 
-		[HttpGet]
-		[RavenRoute("streams/query/{*id}")]
-		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
-		public HttpResponseMessage SteamQueryGet(string id)
-		{
-			var cts = new CancellationTokenSource();
-			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
-			var msg = GetEmptyMessage();
+        [HttpGet]
+        [RavenRoute("streams/query/{*id}")]
+        [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
+        public HttpResponseMessage SteamQueryGet(string id)
+        {
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var msg = GetEmptyMessage();
 
-			var index = id;
-			var query = GetIndexQuery(int.MaxValue);
-			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
-			if (isHeadRequest) query.PageSize = 0;
+            var index = id;
+            var query = GetIndexQuery(int.MaxValue);
+            if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
+            var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+            if (isHeadRequest) query.PageSize = 0;
 
-			var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+            var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
 
-			try
-			{
-				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);                  
-				queryOp.Init();
+            try
+            {
+                var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
+                queryOp.Init();
 
-                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
-				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
-				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
-				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
-				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
+                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
+                msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+                msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+                msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+                msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+                msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+                msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
 
                 if (IsCsvDownloadRequest(InnerRequest))
-				{
-					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
-				}
-			}
-			catch (Exception)
-			{
-				accessor.Dispose();
-				throw;
-			}
+                {
+                    msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                accessor.Dispose();
+                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+            }
+            catch (Exception)
+            {
+                accessor.Dispose();
+                throw;
+            }
 
-			return msg;
-		}
+            return msg;
+        }
 
-		[HttpPost]
-		[RavenRoute("streams/query/{*id}")]
-		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
-		public async Task<HttpResponseMessage> SteamQueryPost(string id)
-		{
-			var postedQuery = await ReadStringAsync();
+        [HttpPost]
+        [RavenRoute("streams/query/{*id}")]
+        [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
+        public async Task<HttpResponseMessage> SteamQueryPost(string id)
+        {
+            var postedQuery = await ReadStringAsync();
 
-			SetPostRequestQuery(postedQuery);
+            SetPostRequestQuery(postedQuery);
 
-			return SteamQueryGet(id);
-		}
+            return SteamQueryGet(id);
+        }
 
-		public class StreamQueryContent : HttpContent
-		{
-			private readonly HttpRequestMessage req;
-			private readonly QueryActions.DatabaseQueryOperation queryOp;
-			private readonly IStorageActionsAccessor accessor;
-		    private readonly CancellationTimeout _timeout;
-		    private readonly Action<string> outputContentTypeSetter;
+        public class StreamQueryContent : HttpContent
+        {
+            private readonly HttpRequestMessage req;
+            private readonly QueryActions.DatabaseQueryOperation queryOp;
+            private readonly IStorageActionsAccessor accessor;
+            private readonly CancellationTimeout _timeout;
+            private readonly Action<string> outputContentTypeSetter;
 
-			[CLSCompliant(false)]
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
-			{
-				this.req = req;
-				this.queryOp = queryOp;
-				this.accessor = accessor;
-			    _timeout = timeout;
-			    outputContentTypeSetter = contentTypeSetter;
-			}
+            [CLSCompliant(false)]
+            public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
+            {
+                this.req = req;
+                this.queryOp = queryOp;
+                this.accessor = accessor;
+                _timeout = timeout;
+                outputContentTypeSetter = contentTypeSetter;
+            }
 
-			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{							
-				using(queryOp)
-				using(accessor)
-				using(_timeout)
-				using (var writer = GetOutputWriter(req, stream))
-				{
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
+                using (var bufferedStream = new BufferedStream(stream, bufferSize))
+                using (queryOp)
+                using (accessor)
+                using (_timeout)
+                using (var writer = GetOutputWriter(req, bufferedStream))
+                // we may be sending a LOT of documents to the user, and most 
+                // of them aren't going to be relevant for other ops, so we are going to skip
+                // the cache for that, to avoid filling it up very quickly
+                using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                {
                     outputContentTypeSetter(writer.ContentType);
 
                     writer.WriteHeader();
-				    try
-				    {
-				        queryOp.Execute(o =>
-				        {
-				            _timeout.Delay();
-				            writer.Write(o);
-				        });
-				    }
-				    catch (Exception e)
-				    {
-				        writer.WriteError(e);
-				    }
-				}
+                    try
+                    {
+                        queryOp.Execute(o =>
+                        {
+                            _timeout.Delay();
+                            writer.Write(o);
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        writer.WriteError(e);
+                    }
+                }
+                return Task.FromResult(true);
+            }
 
-				return Task.FromResult(true);
-			}
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+                return false;
+            }
+        }
 
-			protected override bool TryComputeLength(out long length)
-			{
-				length = -1;
-				return false;
-			}
-		}
-
-		private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
-		{
-			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-			return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
-		}
+        private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
+        {
+            var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
+            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
+        }
 
         private static Boolean IsCsvDownloadRequest(HttpRequestMessage req)
         {
-            return "true".Equals(GetQueryStringValue(req, "download"), StringComparison.InvariantCultureIgnoreCase) 
+            return "true".Equals(GetQueryStringValue(req, "download"), StringComparison.InvariantCultureIgnoreCase)
                 && "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
         }
 
 
-		public interface IOutputWriter : IDisposable
-		{
-			string ContentType { get; }
+        public interface IOutputWriter : IDisposable
+        {
+            string ContentType { get; }
 
-			void WriteHeader();
-			void Write(RavenJObject result);
-		    void WriteError(Exception exception);
-		}
+            void WriteHeader();
+            void Write(RavenJObject result);
+            void WriteError(Exception exception);
+        }
 
-		private class ExcelOutputWriter : IOutputWriter
-		{
-			private const string CsvContentType = "text/csv";
+        private class ExcelOutputWriter : IOutputWriter
+        {
+            private const string CsvContentType = "text/csv";
 
-			private readonly Stream stream;
-			private StreamWriter writer;
+            private readonly Stream stream;
+            private StreamWriter writer;
             private bool doIncludeId;
 
-			public ExcelOutputWriter(Stream stream)
-			{
-				this.stream = stream;
-			}
+            public ExcelOutputWriter(Stream stream)
+            {
+                this.stream = stream;
+            }
 
-			public string ContentType
-			{
-				get { return CsvContentType; }
-			}
+            public string ContentType
+            {
+                get { return CsvContentType; }
+            }
 
-			public void Dispose()
-			{
-				if (writer == null)
-					return;
+            public void Dispose()
+            {
+                if (writer == null)
+                    return;
 
-				writer.Flush();
-				writer.Close();
-			}
+                writer.Flush();
+                stream.Flush();
+                writer.Close();
+            }
 
-			public void WriteHeader()
-			{
-				writer = new StreamWriter(stream, Encoding.UTF8);
-			}
+            public void WriteHeader()
+            {
+                writer = new StreamWriter(stream, Encoding.UTF8);
+            }
 
-			public void Write(RavenJObject result)
-			{
-				if (properties == null)
-				{
-					GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
-					Debug.Assert(properties != null);
-				}
+            public void Write(RavenJObject result)
+            {
+                if (properties == null)
+                {
+                    GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
+                    Debug.Assert(properties != null);
+                }
 
-                if ( doIncludeId )
+                if (doIncludeId)
                 {
                     RavenJToken token;
                     if (result.TryGetValue("@metadata", out token))
@@ -284,55 +297,55 @@ namespace Raven.Database.Server.Controllers
                         {
                             if (metadata.TryGetValue("@id", out token))
                             {
-                                OutputCsvValue(token.Value<string>());                               
+                                OutputCsvValue(token.Value<string>());
                             }
                             writer.Write(',');
                         }
                     }
                 }
 
-				foreach (var property in properties)
-				{
-					var token = result.SelectToken(property);
-					if (token != null)
-					{
-						switch (token.Type)
-						{
-							case JTokenType.Null:
-								break;
+                foreach (var property in properties)
+                {
+                    var token = result.SelectToken(property);
+                    if (token != null)
+                    {
+                        switch (token.Type)
+                        {
+                            case JTokenType.Null:
+                                break;
 
-							case JTokenType.Array:
-							case JTokenType.Object:
+                            case JTokenType.Array:
+                            case JTokenType.Object:
                                 OutputCsvValue(token.ToString(Formatting.None));
-								break;
+                                break;
 
-							default:
+                            default:
                                 OutputCsvValue(token.Value<string>());
-								break;
-						}
-					}
+                                break;
+                        }
+                    }
 
-					writer.Write(',');
-				}
+                    writer.Write(',');
+                }
 
-				writer.WriteLine();
-			}
-
-		    public void WriteError(Exception exception)
-		    {
-		        writer.WriteLine();
                 writer.WriteLine();
-		        writer.WriteLine(exception.ToString());
-		    }
+            }
+
+            public void WriteError(Exception exception)
+            {
+                writer.WriteLine();
+                writer.WriteLine();
+                writer.WriteLine(exception.ToString());
+            }
 
             private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
-			{
+            {
                 includeId = false;
-				properties = DocumentHelpers.GetPropertiesFromJObject(result,
-					parentPropertyPath: "",
-					includeNestedProperties: true,
-					includeMetadata: false,
-					excludeParentPropertyNames: true).ToList();
+                properties = DocumentHelpers.GetPropertiesFromJObject(result,
+                    parentPropertyPath: "",
+                    includeNestedProperties: true,
+                    includeMetadata: false,
+                    excludeParentPropertyNames: true).ToList();
 
                 RavenJToken token;
                 if (result.TryGetValue("@metadata", out token))
@@ -350,80 +363,81 @@ namespace Raven.Database.Server.Controllers
                     }
                 }
 
-				foreach (var property in properties)
-				{
+                foreach (var property in properties)
+                {
                     OutputCsvValue(property);
                     writer.Write(',');
-				}
-				writer.WriteLine();
-			}
+                }
+                writer.WriteLine();
+            }
 
-			private static readonly char[] RequireQuotesChars = { ',', '\r', '\n', '"' };
-			private IEnumerable<string> properties;
+            private static readonly char[] RequireQuotesChars = { ',', '\r', '\n', '"' };
+            private IEnumerable<string> properties;
 
-			private void OutputCsvValue(string val)
-			{
-				var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
-				if (needsQuoutes)
-					writer.Write('"');
+            private void OutputCsvValue(string val)
+            {
+                var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
+                if (needsQuoutes)
+                    writer.Write('"');
 
-				writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
-				if (needsQuoutes)
-					writer.Write('"');
-			}
+                writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
+                if (needsQuoutes)
+                    writer.Write('"');
+            }
 
-		}
+        }
 
-		public class JsonOutputWriter : IOutputWriter
-		{
-			private const string JsonContentType = "application/json";
-			private readonly Stream stream;
-			private JsonWriter writer;
-		    private bool closedArray = false;
+        public class JsonOutputWriter : IOutputWriter
+        {
+            private const string JsonContentType = "application/json";
+            private readonly Stream stream;
+            private JsonWriter writer;
+            private bool closedArray = false;
 
-			public JsonOutputWriter(Stream stream)
-			{
-				this.stream = stream;
-			}
+            public JsonOutputWriter(Stream stream)
+            {
+                this.stream = stream;
+            }
 
-			public string ContentType
-			{
-				get { return JsonContentType; }
-			}
+            public string ContentType
+            {
+                get { return JsonContentType; }
+            }
 
-			public void WriteHeader()
-			{
-				writer = new JsonTextWriter(new StreamWriter(stream));
-				writer.WriteStartObject();
-				writer.WritePropertyName("Results");
-				writer.WriteStartArray();
-			}
+            public void WriteHeader()
+            {
+                writer = new JsonTextWriter(new StreamWriter(stream));
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
+            }
 
-			public void Dispose()
-			{
-				if (writer == null)
-					return;
-			    if (closedArray == false)
-			        writer.WriteEndArray();
-				writer.WriteEndObject();
+            public void Dispose()
+            {
+                if (writer == null)
+                    return;
+                if (closedArray == false)
+                    writer.WriteEndArray();
+                writer.WriteEndObject();
 
-				writer.Flush();
-				writer.Close();
-			}
+                writer.Flush();
+                stream.Flush();
+                writer.Close();
+            }
 
-			public void Write(RavenJObject result)
-			{
-				result.WriteTo(writer, Default.Converters);
+            public void Write(RavenJObject result)
+            {
+                result.WriteTo(writer, Default.Converters);
                 writer.WriteRaw(Environment.NewLine);
-			}
+            }
 
-		    public void WriteError(Exception exception)
-		    {
-		        closedArray = true;
-		        writer.WriteEndArray();
+            public void WriteError(Exception exception)
+            {
+                closedArray = true;
+                writer.WriteEndArray();
                 writer.WritePropertyName("Error");
                 writer.WriteValue(exception.ToString());
-		    }
-		}
-	}
+            }
+        }
+    }
 }

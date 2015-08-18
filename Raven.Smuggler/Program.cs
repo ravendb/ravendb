@@ -16,6 +16,8 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
+using Raven.Smuggler.Helpers;
+
 namespace Raven.Smuggler
 {
 	public class Program
@@ -34,6 +36,7 @@ namespace Raven.Smuggler
             var filesOptions = smugglerFilesApi.Options;
 
 	        selectionDispatching = new OptionSet();
+		    selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 		    selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
 		    {
 			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
@@ -48,6 +51,7 @@ namespace Raven.Smuggler
 		    });
 
 		    databaseOptionSet = new OptionSet();
+			databaseOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			databaseOptionSet.Add("operate-on-types:", OptionCategory.SmugglerDatabase, "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
 		                                               "Default is all items." + Environment.NewLine +
 		                                               "Usage example: Indexes,Documents,Attachments", value =>
@@ -95,6 +99,11 @@ namespace Raven.Smuggler
 				                                                 ShouldMatch = false,
 				                                                 Values = FilterSetting.ParseValues(val)
 			                                                 }));
+
+			databaseOptionSet.Add("ignore-errors-and-continue", OptionCategory.SmugglerDatabase, "If this option is enabled, smuggler will not halt its operation on errors. Errors still will be displayed to the user.", value =>
+			{
+				databaseOptions.IgnoreErrorsAndContinue = true;
+			});
 			databaseOptionSet.Add("transform:", OptionCategory.SmugglerDatabase, "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script);
 			databaseOptionSet.Add("transform-file:", OptionCategory.SmugglerDatabase, "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script));
 			databaseOptionSet.Add("max-steps-for-transform-script:", OptionCategory.SmugglerDatabase, "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s));
@@ -104,7 +113,7 @@ namespace Raven.Smuggler
 			databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
 			databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
 			databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
-			databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerImportDatabaseFileSystem, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
+            databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
 			databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents/attachments.", s => databaseOptions.Limit = int.Parse(s));
 			databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
 			databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
@@ -121,6 +130,7 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
 
 		    filesystemOptionSet = new OptionSet();
+			filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
 			filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
 			filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
@@ -288,9 +298,9 @@ namespace Raven.Smuggler
             if (e is AggregateException)
                 message = e.SimplifyError();
 
-            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.Red, message);
 			PrintUsage();
-            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.Red, message);
 			Environment.Exit(-1);
 		}
 
@@ -302,7 +312,7 @@ namespace Raven.Smuggler
 
 		private void PrintUsage()
 		{
-			ConsoleWriteLineWithColor(ConsoleColor.DarkMagenta, @"
+			ConsoleHelper.WriteLineWithColor(ConsoleColor.DarkMagenta, @"
 Smuggler Import/Export utility for RavenDB
 ----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
@@ -344,14 +354,6 @@ Command line options:");
 			}
 
 			Console.WriteLine();
-		}
-
-		private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
-		{
-			var previousColor = Console.ForegroundColor;
-			Console.ForegroundColor = color;
-			Console.WriteLine(message, args);
-			Console.ForegroundColor = previousColor;
 		}
 	}
 }

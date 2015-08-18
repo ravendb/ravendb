@@ -523,6 +523,8 @@ namespace NDesk.Options
 		{
 		}
 
+		public Action<string> OnWarning = delegate { };
+
 		public OptionSet(Converter<string, string> localizer)
 		{
 			this.localizer = localizer;
@@ -852,7 +854,8 @@ namespace NDesk.Options
 			{
 				var category = currentCategory;
 				category &= ~OptionCategory.None;
-				throw new InvalidOperationException(string.Format("Cannot use options from different category. Current category: '{0}'. Invalid option: '{1}' from category '{2}'.", category, f + n, p.Category));
+
+				OnWarning(string.Format("Cannot use options from different category. Current category: '{0}'. Invalid option: '{1}' from category '{2}'. Using option from different category might cause unpredictable actions.", category, f + n, p.Category));
 			}
 		}
 
@@ -1258,6 +1261,9 @@ namespace NDesk.Options
 
 		[Description("Import Database/FileSystem")]
 		SmugglerImportDatabaseFileSystem = 1 << 13,
+
+		[Description("Record/Replay Options")]
+		TrafficRecordReplay = 1 << 14,
 	}
 }
 

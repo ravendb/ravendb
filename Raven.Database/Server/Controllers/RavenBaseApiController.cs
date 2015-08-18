@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,7 +17,6 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-using Mono.Unix.Native;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -29,12 +27,12 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -67,7 +65,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			get
 			{
-			    var message = InnerRequest;
+			    HttpRequestMessage message = InnerRequest;
 			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
 			}
 		}
@@ -242,13 +240,14 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(InnerRequest, key);
 		}
 
-	/*	public static string GetQueryStringValue(HttpRequestMessage req, string key)
-		{
-			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
-			if (value != null)
-				value = Uri.UnescapeDataString(value);
-			return value;
-		}*/	 
+//		public static string GetQueryStringValue(HttpRequestMessage req, string key)
+//		{
+//			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+//			if (value != null)
+//				value = Uri.UnescapeDataString(value);
+//			return value;
+//		}
+
 
 	    public static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
@@ -260,9 +259,9 @@ namespace Raven.Database.Server.Controllers
                 return nvc[key];
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-	        
-			foreach (var queryKey in nvc.AllKeys)
-				nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+
+		    foreach (var _key in nvc.AllKeys)
+				nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
 
 	        req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
@@ -399,15 +398,7 @@ namespace Raven.Database.Server.Controllers
 				return Uri.EscapeDataString(str);
 			}
 
-			//because the string can be encoded multiple times, try to decode with loop
-			var tmp = String.Empty;
-			while (tmp.Equals(str) == false)
-			{
-				tmp = str;
-				str = HttpUtility.UrlDecode(str);
-			}
-			
-			return HttpUtility.UrlDecode(str);
+			return str;
 		}
 
 		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)

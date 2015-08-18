@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Xunit;
@@ -82,10 +83,12 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
+				WaitForIndexing(storeA);
 
-				using (var session = storeB.OpenSession())
+                WaitForReplication(storeB, session => session.Load<Foo>("foo/1").Data == "ChangedFooData");
+                WaitForReplication(storeB, session => session.Load<Bar>("bar/1").Data == "ChangedBarData");
+
+                using (var session = storeB.OpenSession())
 				{
 					var foo = session.Load<Foo>("foo/1");
 					Assert.Equal("ChangedFooData", foo.Data);
@@ -140,10 +143,11 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForReplication(storeB, "foo/1");
-				WaitForReplication(storeB, "bar/1");
+				WaitForIndexing(storeA);
 
-				using (var session = storeB.OpenSession())
+                WaitForReplication(storeB, session => session.Load<Foo>("foo/1").Data == "ChangedFooData");
+                WaitForReplication(storeB, session => session.Load<Bar>("bar/1").Data == "ChangedBarData");
+                using (var session = storeB.OpenSession())
 				{
 					var foo = session.Load<Foo>("foo/1");
 					Assert.Equal("ChangedFooData", foo.Data);

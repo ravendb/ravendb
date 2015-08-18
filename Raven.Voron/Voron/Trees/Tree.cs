@@ -261,11 +261,13 @@ namespace Voron.Trees
             byte* dataPos;
             if (page.HasSpaceFor(_tx, keyToInsert, len) == false)
             {
-                var cursor = lazy.Value;
-                cursor.Update(cursor.Pages.First, page);
+                using ( var cursor = lazy.Value )
+                {
+                    cursor.Update(cursor.Pages.First, page);
 
-                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
-                dataPos = pageSplitter.Execute();
+                    var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+                    dataPos = pageSplitter.Execute();
+                }
 
                 DebugValidateTree(State.RootPageNumber);
             }
@@ -581,11 +583,15 @@ namespace Voron.Trees
 
             CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-            var treeRebalancer = new TreeRebalancer(_tx, this, lazy.Value);
-            var changedPage = page;
-            while (changedPage != null)
+            using ( var cursor = lazy.Value )
             {
-                changedPage = treeRebalancer.Execute(changedPage);
+                var treeRebalancer = new TreeRebalancer(_tx, this, cursor);
+                var changedPage = page;
+                while (changedPage != null)
+                {
+                    changedPage = treeRebalancer.Execute(changedPage);
+                }
+
             }
 
             page.DebugValidate(_tx, State.RootPageNumber);

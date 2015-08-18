@@ -96,7 +96,8 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                         return {
                             "Transformer": {
                                 'Name': transformer.name,
-                                'TransformResults': transformer.definition.TransformResults
+                                'TransformResults': transformer.definition.TransformResults,
+								'LockMode':transformer.definition.LockMode
                             }
                         }
                     }));

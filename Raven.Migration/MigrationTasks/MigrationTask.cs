@@ -103,7 +103,7 @@ namespace Raven.Migration.MigrationTasks
 					throw new InvalidOperationException(
 						string.Format(
 							"Migration tool does not support file system creation (file system '{0}' on server '{1}' must exist before running this tool).",
-							fsClient.FileSystem,
+							fsClient.FileSystemName,
                             fsClient.ServerUrl), e);
 
 				if (e.InnerException != null)

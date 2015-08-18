@@ -6,7 +6,6 @@
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -227,38 +226,65 @@ namespace Raven.Client.Indexes
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+
+			var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
+			//check if side by side index exists
+	        var sideBySideDef = databaseCommands.GetIndex(replaceIndexName);
+	        if (sideBySideDef != null)
+	        {
+				if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, sideBySideDef, indexDefinition))
+					return;
+
+				UpdateSideBySideIndex(databaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, replaceIndexName, indexDefinition, documentConvention);
+		        return;
+	        }
+
+			//check if "regular" index exists
             var serverDef = databaseCommands.GetIndex(IndexName);
             if (serverDef != null)
             {
-                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+	            if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+					return;
 
-                var replaceIndexName = "ReplacementOf/" + IndexName;
-                databaseCommands.PutIndex(replaceIndexName, indexDefinition);
-
-                databaseCommands
-                    .Put(Constants.IndexReplacePrefix + replaceIndexName,
-                        null,
-                        RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = serverDef.Name, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc }),
-                        new RavenJObject());
+				UpdateSideBySideIndex(databaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, replaceIndexName, indexDefinition, documentConvention);
             }
             else
             {
                 // since index doesn't exist yet - create it in normal mode
                 databaseCommands.PutIndex(IndexName, indexDefinition);
+				AfterExecute(databaseCommands, documentConvention);
             }
         }
 
-        /// <summary>
+		private void UpdateSideBySideIndex(IDatabaseCommands databaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
+	    {
+		    databaseCommands.PutIndex(replaceIndexName, indexDefinition, true);
+
+		    databaseCommands
+			    .Put(Constants.IndexReplacePrefix + replaceIndexName,
+				    null,
+					RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = IndexName, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc }),
+				    new RavenJObject());
+
+			AfterExecute(databaseCommands, documentConvention);
+	    }
+
+	    /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
         public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
                 var serverDef = databaseCommands.GetIndex(IndexName);
-                if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+	            if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+	            {
+		            AfterExecute(databaseCommands, documentConvention);
+					return;
+	            }
             }
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
@@ -266,14 +292,25 @@ namespace Raven.Client.Indexes
             // the new definition.
             databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
-			if(Priority != null)
+			if (Priority != null)
 				databaseCommands.SetIndexPriority(IndexName, Priority.Value);
 
-            if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-                ReplicateIndexesIfNeeded(databaseCommands);
+			AfterExecute(databaseCommands, documentConvention);
         }
 
-        private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
+		public virtual void AfterExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+	    {
+			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				ReplicateIndexesIfNeeded(databaseCommands);
+	    }
+
+		public virtual async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+		{
+			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
+		}
+
+	    private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
         {
            
 			var oldIndexId = serverDef.IndexId;
@@ -287,8 +324,8 @@ namespace Raven.Client.Indexes
 
 				// now we need to check if this is a legacy index...
 				var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
-        
-            return serverDef.Equals(legacyIndexDefinition, false);
+
+			    return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutput: true);
 			}
 			finally
 			{
@@ -326,7 +363,7 @@ namespace Raven.Client.Indexes
             {
                 try
                 {
-                    await replicateIndexRequest.ExecuteRawResponseAsync();
+                    await replicateIndexRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
@@ -373,29 +410,50 @@ namespace Raven.Client.Indexes
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+
+			var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
+			//check if side by side index exists
+			var sideBySideDef = await asyncDatabaseCommands.GetIndexAsync(replaceIndexName, token).ConfigureAwait(false);
+			if (sideBySideDef != null)
+			{
+				if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, sideBySideDef, indexDefinition))
+					return;
+
+				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention);
+				return;
+			}
+
             var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
             if (serverDef != null)
             {
-                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+	            if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+					return;
 
-                var replaceIndexName = "ReplacementOf/" + IndexName;
-                await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, token).ConfigureAwait(false);
-
-                await asyncDatabaseCommands
-                    .PutAsync(Constants.IndexReplacePrefix + replaceIndexName,
-                        null,
-                        RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = serverDef.Name, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc }),
-                        new RavenJObject(),
-                        token).ConfigureAwait(false);
+				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention);
             }
             else
             {
                 // since index doesn't exist yet - create it in normal mode
                 await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, token).ConfigureAwait(false);
+				await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token);
             }
         }
 
-        /// <summary>
+	    private async Task UpdateSideBySideIndexAsync(IAsyncDatabaseCommands asyncDatabaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
+	    {
+		    await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, true, token).ConfigureAwait(false);
+
+		    await asyncDatabaseCommands
+			    .PutAsync(Constants.IndexReplacePrefix + replaceIndexName,
+				    null,
+				    RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = IndexName, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc}),
+				    new RavenJObject(),
+				    token).ConfigureAwait(false);
+
+		    await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token);
+	    }
+
+	    /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
         public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default (CancellationToken))
@@ -404,19 +462,22 @@ namespace Raven.Client.Indexes
             var indexDefinition = CreateIndexDefinition();
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
-                var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token);
-                if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition)) return;
+                var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
+	            if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+	            {
+		            await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
+		            return;
+	            }
             }
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
-            await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token);
+            await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token).ConfigureAwait(false);
 	        if (Priority != null)
-		        await asyncDatabaseCommands.SetIndexPriorityAsync(IndexName, Priority.Value, token);
+		        await asyncDatabaseCommands.SetIndexPriorityAsync(IndexName, Priority.Value, token).ConfigureAwait(false);
 
-            if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-                await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands);
+			await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
         }
     }
 
@@ -454,7 +515,7 @@ namespace Raven.Client.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConvention();
 
-            var indexDefinition = new IndexDefinitionBuilder<TDocument, TReduceResult>()
+            var indexDefinition = new IndexDefinitionBuilder<TDocument, TReduceResult>(IndexName)
             {
                 Indexes = Indexes,
                 IndexesStrings = IndexesStrings,

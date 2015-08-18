@@ -59,7 +59,7 @@ namespace Raven.Database.Util
 		private static void ReleaseMemoryBeforeGC()
 		{
 
-			if (MemoryStatistics.AvailableMemory < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
+			if (MemoryStatistics.AvailableMemoryInMb < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemoryInMb)/10)
 			{
 				if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < fiveSecondsInTicks)
 					return;
@@ -115,7 +115,6 @@ namespace Raven.Database.Util
 			memoryDifferenceLastGc = DifferenceAsDecimalPercents(MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
 
 			log.Info("Finished GC, before was {0:#,#}kb, after is {1:#,#}kb", MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC);
-
 
 			// -> reset last time, increase delay threshold and disallow GC (too early!)
 			lastForcedGCTime = SystemTime.UtcNow;
@@ -198,5 +197,18 @@ namespace Raven.Database.Util
 			return lambda.Compile();
 		});
 		private static double memoryDifferenceLastGc;
+
+	    public static void ConsiderRunningGC()
+	    {
+	        var availableMemoryInMb = MemoryStatistics.AvailableMemoryInMb;
+	        if (availableMemoryInMb >= 1536 ||
+                availableMemoryInMb > (MemoryStatistics.TotalPhysicalMemory*0.2))
+	        {
+                // there is no point in even running this if we have more than 1.5GB of memory or more than 20% of 
+                // memory free, it is better to let the system run in, then inducing GC manually
+	            return;
+	        }
+            CollectGarbage(1, GCCollectionMode.Optimized);
+        }
 	}
 }

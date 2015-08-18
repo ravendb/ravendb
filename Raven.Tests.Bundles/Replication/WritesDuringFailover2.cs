@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-
+			var dest = serverClient.ReplicationInformer.ReplicationDestinations;
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new Company { Name = "Hibernating Rhinos" });
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bundles.Replication
 			WaitForReplication(store2, "companies/1");
 
 			servers[0].Dispose();
-
+			dest = serverClient.ReplicationInformer.ReplicationDestinations;
 			using (var session = store1.OpenSession())
 			{
 				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));

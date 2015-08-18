@@ -58,7 +58,8 @@ var Gutter = function(parentEl) {
         if (this.session)
             this.session.removeEventListener("change", this.$updateAnnotations);
         this.session = session;
-        session.on("change", this.$updateAnnotations);
+        if (session)
+            session.on("change", this.$updateAnnotations);
     };
 
     this.addGutterDecoration = function(row, className){
@@ -75,8 +76,7 @@ var Gutter = function(parentEl) {
 
     this.setAnnotations = function(annotations) {
         // iterate over sparse array
-        this.$annotations = []
-        var rowInfo, row;
+        this.$annotations = [];
         for (var i = 0; i < annotations.length; i++) {
             var annotation = annotations[i];
             var row = annotation.row;
@@ -100,34 +100,36 @@ var Gutter = function(parentEl) {
         }
     };
 
-    this.$updateAnnotations = function (e) {
+    this.$updateAnnotations = function (delta) {
         if (!this.$annotations.length)
             return;
-        var delta = e.data;
-        var range = delta.range;
-        var firstRow = range.start.row;
-        var len = range.end.row - firstRow;
+        var firstRow = delta.start.row;
+        var len = delta.end.row - firstRow;
         if (len === 0) {
             // do nothing
-        } else if (delta.action == "removeText" || delta.action == "removeLines") {
+        } else if (delta.action == 'remove') {
             this.$annotations.splice(firstRow, len + 1, null);
         } else {
-            var args = Array(len + 1);
+            var args = new Array(len + 1);
             args.unshift(firstRow, 1);
             this.$annotations.splice.apply(this.$annotations, args);
         }
     };
 
     this.update = function(config) {
+        var session = this.session;
         var firstRow = config.firstRow;
-        var lastRow = config.lastRow;
-        var fold = this.session.getNextFoldLine(firstRow);
+        var lastRow = Math.min(config.lastRow + config.gutterOffset,  // needed to compensate for hor scollbar
+            session.getLength() - 1);
+        var fold = session.getNextFoldLine(firstRow);
         var foldStart = fold ? fold.start.row : Infinity;
-        var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
-        var breakpoints = this.session.$breakpoints;
-        var decorations = this.session.$decorations;
-        var firstLineNumber = this.session.$firstLineNumber;
+        var foldWidgets = this.$showFoldWidgets && session.foldWidgets;
+        var breakpoints = session.$breakpoints;
+        var decorations = session.$decorations;
+        var firstLineNumber = session.$firstLineNumber;
         var lastLineNumber = 0;
+        
+        var gutterRenderer = session.gutterRenderer || this.$renderer;
 
         var cell = null;
         var index = -1;
@@ -135,7 +137,7 @@ var Gutter = function(parentEl) {
         while (true) {
             if (row > foldStart) {
                 row = fold.end.row + 1;
-                fold = this.session.getNextFoldLine(row, fold);
+                fold = session.getNextFoldLine(row, fold);
                 foldStart = fold ? fold.start.row : Infinity;
             }
             if (row > lastRow) {
@@ -166,19 +168,15 @@ var Gutter = function(parentEl) {
             if (cell.element.className != className)
                 cell.element.className = className;
 
-            var height = this.session.getRowLength(row) * config.lineHeight + "px";
+            var height = session.getRowLength(row) * config.lineHeight + "px";
             if (height != cell.element.style.height)
                 cell.element.style.height = height;
-
-            var text = lastLineNumber = row + firstLineNumber;
-            if (text != cell.textNode.data)
-                cell.textNode.data  = text;
 
             if (foldWidgets) {
                 var c = foldWidgets[row];
                 // check if cached value is invalidated and we need to recompute
                 if (c == null)
-                    c = foldWidgets[row] = this.session.getFoldWidget(row);
+                    c = foldWidgets[row] = session.getFoldWidget(row);
             }
 
             if (c) {
@@ -198,21 +196,30 @@ var Gutter = function(parentEl) {
                 if (cell.foldWidget.style.height != height)
                     cell.foldWidget.style.height = height;
             } else {
-                if (cell.foldWidget != null) {
+                if (cell.foldWidget) {
                     cell.element.removeChild(cell.foldWidget);
                     cell.foldWidget = null;
                 }
             }
+            
+            var text = lastLineNumber = gutterRenderer
+                ? gutterRenderer.getText(session, row)
+                : row + firstLineNumber;
+            if (text != cell.textNode.data)
+                cell.textNode.data = text;
 
             row++;
         }
 
         this.element.style.height = config.minHeight + "px";
 
-        if (this.$fixedWidth || this.session.$useWrapMode)
-            lastLineNumber = this.session.getLength();
+        if (this.$fixedWidth || session.$useWrapMode)
+            lastLineNumber = session.getLength() + firstLineNumber;
 
-        var gutterWidth = lastLineNumber.toString().length * config.characterWidth;
+        var gutterWidth = gutterRenderer 
+            ? gutterRenderer.getWidth(session, lastLineNumber, config)
+            : lastLineNumber.toString().length * config.characterWidth;
+        
         var padding = this.$padding || this.$computePadding();
         gutterWidth += padding.left + padding.right;
         if (gutterWidth !== this.gutterWidth && !isNaN(gutterWidth)) {
@@ -223,6 +230,19 @@ var Gutter = function(parentEl) {
     };
 
     this.$fixedWidth = false;
+    
+    this.$showLineNumbers = true;
+    this.$renderer = "";
+    this.setShowLineNumbers = function(show) {
+        this.$renderer = !show && {
+            getWidth: function() {return ""},
+            getText: function() {return ""}
+        };
+    };
+    
+    this.getShowLineNumbers = function() {
+        return this.$showLineNumbers;
+    };
     
     this.$showFoldWidgets = true;
     this.setShowFoldWidgets = function(show) {

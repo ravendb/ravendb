@@ -93,7 +93,7 @@
                     <div class="documents-links-container" data-bind="foreach: topRecentDocuments">
                         <a class="document-link" data-bind="attr: { href: docUrl }">
                             <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.docId)">&nbsp;</span>
-                            <span data-bind="text: docId"></span>
+                            <span data-bind="text: docId, attr : {title : fullDocId }"></span>
                         </a>
                     </div>
                 </div>

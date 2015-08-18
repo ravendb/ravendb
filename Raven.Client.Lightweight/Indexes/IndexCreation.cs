@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -23,6 +23,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
+	    private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
 		/// </summary>
@@ -42,13 +44,25 @@ namespace Raven.Client.Indexes
 			var indexCompilationExceptions = new List<IndexCompilationException>();
 			try
 			{
-				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				databaseCommands.PutIndexes(indexesNames, definitions, priorities);
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				databaseCommands.PutIndexes(indexesToAdd);
+
+				foreach (var task in tasks)
+					task.AfterExecute(databaseCommands, conventions);
 			}
-			// For old servers that don't have the new entrypoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception)
 			{
 				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
@@ -61,40 +75,43 @@ namespace Raven.Client.Indexes
 					{
 						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 					}
-
 				}
 			}
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				task.Execute(databaseCommands, conventions);
-			}
 
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                task.Execute(databaseCommands);
-            }
+			CreateTransformers(catalogToGetnIndexingTasksFrom, databaseCommands, conventions);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
-        /// <summary>
+		/// <summary>
         /// Creates the indexes found in the specified catalog
         /// </summary>
         public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
-			bool failed = false;
+			var failed = false;
 	        try
 	        {
-		        var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				await databaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
+		        var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await databaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+		        foreach (var task in tasks)
+					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
 	        }
-			
-		        // For old servers that don't have the new entrypoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 	        catch (Exception)
 	        {
 		        failed = true;		        
@@ -105,24 +122,16 @@ namespace Raven.Client.Indexes
 				{
 					try
 					{
-						await task.ExecuteAsync(databaseCommands, conventions);
+						await task.ExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
 					}
 					catch (IndexCompilationException e)
 					{
 						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 					}
-
 				}
 	        }
-	        foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-            {
-                await task.ExecuteAsync(databaseCommands, conventions);
-            }
 
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                await task.ExecuteAsync(databaseCommands);
-            }
+	        await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -138,15 +147,16 @@ namespace Raven.Client.Indexes
 			var indexCompilationExceptions = new List<IndexCompilationException>();
 			try
 			{
-				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				documentStore.DatabaseCommands.PutIndexes(indexesNames, definitions, priorities);
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				documentStore.ExecuteIndexes(tasks);
 			}
-				// For old servers that don't have the new entrypoint for executing multiple indexes
-			catch (Exception)
+			// Old servers that don't have the new endpoint for executing multiple indexes
+			catch (Exception ex)
 			{
+			    Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
 				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
 					try
@@ -159,15 +169,8 @@ namespace Raven.Client.Indexes
 					}
 				}
 			}
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				task.Execute(documentStore);
-			}
 
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                task.Execute(documentStore);
-            }
+			CreateTransformers(catalogToGetnIndexingTasksFrom, documentStore);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -192,17 +195,28 @@ namespace Raven.Client.Indexes
 		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			bool failed = false;
+			var failed = false;
 			try
 			{
-				var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-				var indexesNames = tasks.Select(x => x.IndexName).ToArray();
-				var definitions = tasks.Select(x => x.CreateIndexDefinition()).ToArray();
-				var priorities = tasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
-				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
-			}
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
 
-				// For old servers that don't have the new entrypoint for executing multiple indexes
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+				foreach (var task in tasks)
+					await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
+			}
+			// For old servers that don't have the new entrypoint for executing multiple indexes
 			catch (Exception)
 			{
 				failed = true;
@@ -219,17 +233,10 @@ namespace Raven.Client.Indexes
 					{
 						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 					}
-
 				}
 			}
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				await task.ExecuteAsync(documentStore);
-			}
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                await task.ExecuteAsync(documentStore);
-            }
+
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
@@ -252,31 +259,46 @@ namespace Raven.Client.Indexes
 		public static void SideBySideCreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			try
 			{
-				try
-				{
-					task.SideBySideExecute(databaseCommands, conventions, minimumEtagBeforeReplace, replaceTimeUtc);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-				}
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
 
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				databaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
+
+				foreach (var task in tasks)
+					task.AfterExecute(databaseCommands, conventions);
+			}
+			// For old servers that don't have the new endpoint for executing multiple indexes
+			catch (Exception)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+				{
+					try
+					{
+						task.SideBySideExecute(databaseCommands, conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+					}
+				}
 			}
 
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				task.Execute(databaseCommands, conventions);
-			}
-
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                task.Execute(databaseCommands);
-            }
+			CreateTransformers(catalogToGetnIndexingTasksFrom, databaseCommands, conventions);
 
 			if (indexCompilationExceptions.Any())
-				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+				throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
 		/// <summary>
@@ -285,31 +307,51 @@ namespace Raven.Client.Indexes
 		public static async Task SideBySideCreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			var failed = false;
+			try
 			{
-				try
-				{
-					await task.SideBySideExecuteAsync(databaseCommands, conventions, minimumEtagBeforeReplace, replaceTimeUtc);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-				}
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
 
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await databaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+
+				foreach (var task in tasks)
+					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
+			}
+			// For old servers that don't have the new endpoint for executing multiple indexes
+			catch (Exception)
+			{
+				failed = true;
+			}
+			if (failed)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+				{
+					try
+					{
+						await task.SideBySideExecuteAsync(databaseCommands, conventions, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+					}
+				}
 			}
 
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				await task.ExecuteAsync(databaseCommands, conventions);
-			}
-
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                await task.ExecuteAsync(databaseCommands);
-            }
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
-				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+				throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
 		/// <summary>
@@ -320,30 +362,35 @@ namespace Raven.Client.Indexes
 		public static void SideBySideCreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			try
 			{
-				try
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				documentStore.SideBySideExecuteIndexes(tasks, minimumEtagBeforeReplace, replaceTimeUtc);
+			}
+			// Old servers that don't have the new endpoint for executing multiple indexes
+			catch (Exception ex)
+			{
+				Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
-					task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+					try
+					{
+						task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+					}
 				}
 			}
 
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-			{
-				task.Execute(documentStore);
-			}
-
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                task.Execute(documentStore);
-            }
+			CreateTransformers(catalogToGetnIndexingTasksFrom, documentStore);
 
 			if (indexCompilationExceptions.Any())
-				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+				throw new AggregateException("Failed to create one or more side by indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
 		/// <summary>
@@ -365,29 +412,83 @@ namespace Raven.Client.Indexes
 		public static async Task SideBySideCreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+			var failed = false;
+			try
 			{
-				try
-				{
-					await task.SideBySideExecuteAsync(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
-				}
-				catch (IndexCompilationException e)
-				{
-					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-				}
+				var tasks = catalogToGetnIndexingTasksFrom
+					.GetExportedValues<AbstractIndexCreationTask>()
+					.ToList();
+
+				var indexesToAdd = tasks
+					.Select(x => new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					})
+					.ToArray();
+
+				await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+				foreach (var task in tasks)
+					await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
 			}
-			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			// For old servers that don't have the new entrypoint for executing multiple indexes
+			catch (Exception)
 			{
-				await task.ExecuteAsync(documentStore);
+				failed = true;
+			}
+			if (failed)
+			{
+				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+				{
+					try
+					{
+						await task.SideBySideExecuteAsync(documentStore, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+					}
+					catch (IndexCompilationException e)
+					{
+						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+					}
+				}
 			}
 
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractScriptedIndexCreationTask>())
-            {
-                await task.ExecuteAsync(documentStore);
-            }
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, documentStore).ConfigureAwait(false);
 
 			if (indexCompilationExceptions.Any())
-				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+				throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+		}
+
+		private static void CreateTransformers(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
+		{
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				task.Execute(documentStore);
+			}
+		}
+
+		private static void CreateTransformers(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
+		{
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				task.Execute(databaseCommands, conventions);
+			}
+		}
+
+		private static async Task CreateTransformersAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
+		{
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				await task.ExecuteAsync(documentStore).ConfigureAwait(false);
+			}
+		}
+
+		private static async Task CreateTransformersAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
+		{
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				await task.ExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
+			}
 		}
 	}
 }

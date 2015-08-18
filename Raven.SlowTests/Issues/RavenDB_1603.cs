@@ -458,7 +458,7 @@ namespace Raven.SlowTests.Issues
                     }
                 }
 
-                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocumentsAsJson(0, int.MaxValue, null, CancellationToken.None).Count()));
             }
             finally 
             {
@@ -490,7 +490,7 @@ namespace Raven.SlowTests.Issues
                         });
                 }
 
-                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocumentsAsJson(0,int.MaxValue, null, CancellationToken.None).Count()));
             }
             finally
             {

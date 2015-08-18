@@ -34,6 +34,8 @@ namespace Voron
 			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
 
+		public Action<long> OnScratchBufferSizeChanged = delegate { };
+
 		public long? InitialFileSize { get; set; }
 
 		public long MaxLogFileSize
@@ -101,7 +103,6 @@ namespace Voron
 			ScratchBufferOverflowTimeout = 5000;
 
 			MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
-
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
@@ -472,6 +473,5 @@ namespace Voron
 				}
 			}
 		}
-
 	}
 }

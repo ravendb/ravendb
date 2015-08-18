@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -149,16 +150,24 @@ namespace Raven.Client
 		/// </summary>
 		Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
+		void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+
+		Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
+
+		void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks);
 
         /// <summary>
         /// Executes the index creation.
         /// </summary>
         /// <param name="indexCreationTask"></param>
         Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask);
+
+		Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks);
 
 		/// <summary>
 		/// Executes the transformer creation

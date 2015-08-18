@@ -12,6 +12,7 @@ class importDatabase extends viewModelBase {
     private filePickerTag = "#importFilesystemFilePicker";
 
     attached() {
+		super.attached();
         this.updateHelpLink("YD9M1R");
 
         var fs: filesystem = this.activeFilesystem();

@@ -61,7 +61,6 @@ namespace Raven.Bundles.Replication.Tasks
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private bool wrongReplicationSourceAlertSent = false;
 		private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
-		private readonly TaskCompletionSource<object> tcsReplicationOnce = new TaskCompletionSource<object>();
 		private TimeSpan _replicationFrequency;
 		private TimeSpan _lastQueriedFrequency;
 		private Timer _indexReplicationTaskTimer;
@@ -198,7 +197,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					IsRunning = !shouldPause;
 
-					log.Debug("Replication task found work. Running: " + IsRunning);
+					log.Debug("Replication task found work. Running: {0}", IsRunning);
 
 					if (IsRunning)
 					{
@@ -232,8 +231,7 @@ namespace Raven.Bundles.Replication.Tasks
 				if (destinations.Length == 0)
 				{
 					WarnIfNoReplicationTargetsWereFound();
-					tcsReplicationOnce.SetResult(null);
-					return tcsReplicationOnce.Task;
+				    return completedTask;
 				}
 				
 				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
@@ -654,7 +652,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			replicatedDocuments = 0;
 			JsonDocumentsToReplicate documentsToReplicate = null;
-			Stopwatch sp = Stopwatch.StartNew();
+			var sp = Stopwatch.StartNew();
 			IDisposable removeBatch = null;
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
@@ -1012,7 +1010,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 	
-		public bool ReplicateIndexesAndTransformersTask(object state)
+		public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null, bool replicateIndexes = true, bool replicateTransformers = true)
 		{
 			if (docDb.Disposed)
 				return false;
@@ -1024,7 +1022,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				using (CultureHelper.EnsureInvariantCulture())
 				{
-					var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+					shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
+					var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
+
 					foreach (var destination in replicationDestinations)
 					{
 						try
@@ -1032,14 +1032,16 @@ namespace Raven.Bundles.Replication.Tasks
 							var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
 							var replicatedIndexTombstones = new Dictionary<string, int>();
 
-							ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
+							if(replicateIndexes)
+								ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
 							var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
 							var replicatedTransformerTombstones = new Dictionary<string, int>();
 
-							ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
+							if(replicateTransformers)
+								ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
 							
-							if (docDb.Indexes.Definitions.Length > 0)
+							if (docDb.Indexes.Definitions.Length > 0 && replicateIndexes)
 							{
 								var sideBySideIndexes = docDb.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
 																				 .ToDictionary(x => x.Name, x=> x);
@@ -1047,14 +1049,14 @@ namespace Raven.Bundles.Replication.Tasks
 								foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
 								{
 									IndexDefinition sideBySideIndexDefinition;
-									if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
+									if (sideBySideIndexes.TryGetValue(Constants.SideBySideIndexNamePrefix + indexDefinition.Name, out sideBySideIndexDefinition))
 										ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
 									else
 										ReplicateSingleIndex(destination, indexDefinition);
 								}
 							}
 
-							if (docDb.Transformers.Definitions.Length > 0)
+							if (docDb.Transformers.Definitions.Length > 0 && replicateTransformers)
 							{
 								foreach (var definition in docDb.Transformers.Definitions)
 									ReplicateSingleTransformer(destination, definition);
@@ -1062,18 +1064,28 @@ namespace Raven.Bundles.Replication.Tasks
 
 							docDb.TransactionalStorage.Batch(actions =>
 							{
-								foreach (var indexTombstone in replicatedIndexTombstones)
+								if (replicateIndexes)
 								{
-									if (indexTombstone.Value != replicationDestinations.Length) 
-										continue;
-									actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+									foreach (var indexTombstone in replicatedIndexTombstones)
+									{
+										if (indexTombstone.Value != replicationDestinations.Length &&
+										    docDb.IndexStorage.HasIndex(indexTombstone.Key) == false)
+											continue;
+										actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
+									}
 								}
 
-								foreach (var transformerTombstone in replicatedTransformerTombstones)
+								if (replicateTransformers)
 								{
-									if (transformerTombstone.Value != replicationDestinations.Length) 
-										continue;
-									actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+									foreach (var transformerTombstone in replicatedTransformerTombstones)
+									{
+										var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+										if (transformerTombstone.Value != replicationDestinations.Length &&
+										    transfomerExists == false)
+											continue;
+
+										actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+									}
 								}
 							});
 						}
@@ -1133,7 +1145,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var clonedTransformer = definition.Clone();
 				clonedTransformer.TransfomerId = 0;
 
-				string url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
+				var url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInfomration();
 				var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
 				replicationRequest.ExecuteRequest();
@@ -1175,7 +1187,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
-		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, ReplicationStrategy destination, Dictionary<string, int> replicatedIndexTombstones)
+		private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, 
+			ReplicationStrategy destination, 
+			Dictionary<string, int> replicatedIndexTombstones)
 		{
 			if (indexTombstones.Count == 0)
 				return;
@@ -1184,12 +1198,20 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				try
 				{
+					int value;
+					if (docDb.IndexStorage.HasIndex(tombstone.Key)) //if in the meantime the index was recreated under the same name
+					{
+						replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
+						replicatedIndexTombstones[tombstone.Key] = value + 1;
+						continue;
+					}
+
 					var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
 					var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
-				    int value;
+				    
 				    replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
 				    replicatedIndexTombstones[tombstone.Key] = value + 1;
 				}
@@ -1202,7 +1224,8 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, ReplicationStrategy destination,
+		private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, 
+			ReplicationStrategy destination,
             Dictionary<string, int> replicatedTransformerTombstones)
 		{
 			if (transformerTombstones.Count == 0)
@@ -1212,12 +1235,19 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				try
 				{
+					int value;
+					if (docDb.Transformers.GetTransformerDefinition(tombstone.Key) != null) //if in the meantime the transformer was recreated under the same name
+					{
+						replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
+						replicatedTransformerTombstones[tombstone.Key] = value + 1;
+						continue;
+					}
+
 					var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInfomration());
 					var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
 					replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
 					replicationRequest.ExecuteRequest();
 					log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
-                    int value;
                     replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
                     replicatedTransformerTombstones[tombstone.Key] = value + 1;
 				}
@@ -1786,8 +1816,9 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+	    private readonly Task completedTask = new CompletedTask();
 
-		internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
+	    internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
 		{
 			Debug.Assert(database != null);
 

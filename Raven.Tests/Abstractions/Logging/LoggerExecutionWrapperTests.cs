@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Abstractions.Logging;
 using Raven.Tests.Common;
-
+using Sparrow.Collections;
 using Xunit;
 
 namespace Raven.Tests.Abstractions.Logging
@@ -14,7 +14,7 @@ namespace Raven.Tests.Abstractions.Logging
 		public LoggerExecutionWrapperTests()
 		{
 			fakeLogger = new FakeLogger();
-			sut = new LoggerExecutionWrapper(fakeLogger, "name", new Target[0]);
+			sut = new LoggerExecutionWrapper(fakeLogger, "name", new ConcurrentSet<Target>());
 		}
 
 		[Fact]
@@ -77,6 +77,11 @@ namespace Raven.Tests.Abstractions.Logging
 					this.exception = exception;
 				}
 			}
+
+		    public bool ShouldLog(LogLevel logLevel)
+		    {
+		        return true;
+		    }
 		}
 	}
 }

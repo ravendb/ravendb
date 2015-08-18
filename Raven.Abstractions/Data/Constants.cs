@@ -14,8 +14,6 @@ namespace Raven.Abstractions.Data
 			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
-		public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
-
 	    public const string IsIndexReplicatedUrlParamName = "is-replicated";
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -78,6 +76,7 @@ namespace Raven.Abstractions.Data
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
 		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
+		public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
@@ -258,7 +257,8 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
 	        public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
-        }
+			public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
+		}
 
 	    public static class Smuggler
 	    {
@@ -277,6 +277,7 @@ namespace Raven.Abstractions.Data
 	    public class Indexing
 	    {
 			public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
+		    public const string DisableMapReduceInMemoryTracking = "Raven/Indexing/DisableMapReduceInMemoryTracking";
 	    }
 	}
 }
