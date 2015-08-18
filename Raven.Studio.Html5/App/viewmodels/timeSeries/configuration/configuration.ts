@@ -14,7 +14,7 @@ class configuration extends viewModelBase {
 
         this.appUrls = appUrl.forCurrentDatabase();
 
-        var typesRoute = { route: 'timeSeries/configuration/types', moduleId: 'viewmodels/timeSeries/configuration/types', title: 'Types Configuration', nav: true, hash: this.appUrls.timeSeriesConfigurationTypes };
+        var typesRoute = { route: ['timeSeries/configuration', 'timeSeries/configuration/types'], moduleId: 'viewmodels/timeSeries/configuration/types', title: 'Types Configuration', nav: true, hash: this.appUrls.timeSeriesConfigurationTypes };
 
         this.router = durandalRouter.createChildRouter()
             .map([
