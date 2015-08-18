@@ -11,6 +11,7 @@ import resource = require("models/resource");
 import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/dismissAlertCommand");
 import filesystem = require("models/filesystem/filesystem");
+import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
@@ -206,6 +207,7 @@ class resources extends viewModelBase {
 
             if (!!databaseInArray) {
                 this.databases.remove(databaseInArray);
+	            recentQueriesStorage.removeRecentQueries(databaseInArray);
             }
         } else if (rs.type == filesystem.type) {
             var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
