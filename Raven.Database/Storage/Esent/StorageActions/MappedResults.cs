@@ -261,16 +261,35 @@ namespace Raven.Database.Storage.Esent.StorageActions
             
             try
             {
+                var first = true;
 			    foreach (var reduceKey in getItemsToReduceParams.ReduceKeys)
 			    {
 				    cancellationToken.ThrowIfCancellationRequested();
+			        int initialBucket = 0;
+			        bool needToMoveNext = false;
+			        if (first)
+			        {
+			            first = false;
+			            if (getItemsToReduceParams.LastReduceKeyAndBucket != null)
+			            {
+			                if (getItemsToReduceParams.LastReduceKeyAndBucket.ReduceKey != reduceKey)
+			                {
+			                    throw new InvalidOperationException("Mismatches last reduce key with the remaining reduce keys in the params");
+			                }
+			                needToMoveNext = true;
+                            initialBucket = getItemsToReduceParams.LastReduceKeyAndBucket.Bucket;
+			            }
+			        }
 
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				    Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
-				    Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.None);
+				    Api.MakeKey(session, ScheduledReductions, initialBucket, MakeKeyGrbit.None);
 				    if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 					    continue;
+
+			        if (needToMoveNext && Api.TryMoveNext(session, ScheduledReductions) == false)
+			            continue;
 
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
@@ -318,12 +337,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         var rowKey = new ReduceKeyAndBucket(bucket, reduceKeyFromDb); 
 					    var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions, getItemsToReduceParams.Level);
 
-					    var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
-					    if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
+
+					    if (thisIsNewScheduledReductionRow)
 					    {
 						    if (seenLocally.Add(rowKey))
 						    {
-							    foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
+						        getItemsToReduceParams.LastReduceKeyAndBucket = rowKey;
+                                foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData, cancellationToken))
 							    {
 								    getItemsToReduceParams.Take--;
 

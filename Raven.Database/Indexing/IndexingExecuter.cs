@@ -289,7 +289,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override void CleanupPrefetchers()
+	    public override bool ShouldRun
+	    {
+	        get { return context.RunIndexing; }
+	    }
+
+	    protected override void CleanupPrefetchers()
 		{
 			RemoveUnusedPrefetchers(Enumerable.Empty<PrefetchingBehavior>());
 		}

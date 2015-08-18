@@ -8,8 +8,15 @@ class getIndexingStatusCommand extends commandBase {
     }
 
     execute(): JQueryPromise<string> {
-        var url = '/admin/indexingStatus';
-        var result = this.query(url, null, this.db);
+		var result = $.Deferred();
+
+        var url = "/admin/indexingStatus";
+	    this.query(url, null, this.db)
+			.done((indexingStatus) => result.resolve(indexingStatus))
+		    .fail((response: JQueryXHR) => {
+			    this.reportError("Failed to create backup!", response.responseText, response.statusText);
+			    result.reject();
+		    });
         return result;
     }
 

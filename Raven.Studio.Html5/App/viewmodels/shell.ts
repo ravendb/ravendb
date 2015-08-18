@@ -52,6 +52,7 @@ import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import environmentColor = require("models/environmentColor");
+import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class shell extends viewModelBase {
     private router = router;
@@ -561,6 +562,8 @@ class shell extends viewModelBase {
                     resourceObservableArray.remove(resourceToDelete);
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+					if (resourceType == logTenantType.Database)
+						recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();

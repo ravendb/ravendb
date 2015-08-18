@@ -43,13 +43,14 @@ namespace Voron.Trees
             _state.RootPageNumber = root;
         }
 
-        private Tree(Transaction tx, TreeMutableState state)
+        public Tree(Transaction tx, TreeMutableState state)
         {
             _tx = tx;
             _state = state;
         }
 
         public bool KeysPrefixing { get { return _state.KeysPrefixing; } }
+        public Transaction Tx { get { return _tx; } }
 
         public static Tree Open(Transaction tx, TreeRootHeader* header)
         {
@@ -337,7 +338,7 @@ namespace Voron.Trees
                 var p = stack.Pop();
                 if (p.NumberOfEntries == 0 && p != root)
                 {
-                    DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                    DebugStuff.RenderAndShow(_tx, rootPageNumber);
                     throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
                 }
@@ -355,7 +356,7 @@ namespace Voron.Trees
                     var page = p.GetNode(i)->PageNumber;
                     if (pages.Add(page) == false)
                     {
-                        DebugStuff.RenderAndShow(_tx, rootPageNumber, 1);
+                        DebugStuff.RenderAndShow(_tx, rootPageNumber);
                         throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
                     }
                     stack.Push(_tx.GetReadOnlyPage(page));
@@ -802,5 +803,6 @@ namespace Voron.Trees
             if (_recentlyFoundPages != null)
                 _recentlyFoundPages.Clear();
         }
+
     }
 }

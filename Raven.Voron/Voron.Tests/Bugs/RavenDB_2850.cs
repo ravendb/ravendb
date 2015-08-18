@@ -41,7 +41,7 @@ namespace Voron.Tests.Bugs
 
 					random.NextBytes(value);
 
-					txw.State.Root.Add("items/", value);
+					txw.Root.Add("items/", value);
 
 					txw.Commit();
 				}
