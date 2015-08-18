@@ -983,7 +983,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					.Set(ReduceKeyTypeFields.ReduceKey, reduceKey),
 				expectedVersion);
 
-            reduceKeyTypesByView.MultiAdd(writeBatch.Value, (Slice)CreateKey(view), key);
+            reduceKeyTypesByView.MultiAdd(writeBatch.Value, CreateViewKey(view), key);
 		}
 
 		public ReduceType GetLastPerformedReduceType(int view, string reduceKey)
@@ -1105,7 +1105,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take)
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
-            using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, (Slice)CreateKey(view)))
+            using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, CreateViewKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
