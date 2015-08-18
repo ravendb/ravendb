@@ -1710,39 +1710,51 @@ namespace Raven.Database.Indexing
 						TryDelete(neededFilePath);
 						return;
 					}
-					var commit = snapshotter.Snapshot();
-					hasSnapshot = true;
-					foreach (var fileName in commit.FileNames)
-					{
-						var fullPath = Path.Combine(path, indexId.ToString(), fileName);
+					IndexCommit commit;
+				    try
+				    {
+                        commit = snapshotter.Snapshot();
+                        hasSnapshot = true;
+                    }
+				    catch (Exception)
+				    {
+				        hasSnapshot = false;
+				        commit = null;
+				    }
+				    if (hasSnapshot)
+				    {
+                        foreach (var fileName in commit.FileNames)
+                        {
+                            var fullPath = Path.Combine(path, indexId.ToString(), fileName);
 
-						if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
-							continue;
+                            if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
+                                continue;
 
-						if (File.Exists(fullPath) == false)
-							continue;
+                            if (File.Exists(fullPath) == false)
+                                continue;
 
-						if (existingFiles.Contains(fileName) == false)
-						{
-							var destFileName = Path.Combine(saveToFolder, fileName);
-							try
-							{
-								File.Copy(fullPath, destFileName);
-							}
-							catch (Exception e)
-							{
-								var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
-									". Skipping the index, will force index reset on restore";
-								LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
-								neededFilesWriter.Dispose();
-								TryDelete(neededFilePath);
-								return;
+                            if (existingFiles.Contains(fileName) == false)
+                            {
+                                var destFileName = Path.Combine(saveToFolder, fileName);
+                                try
+                                {
+                                    File.Copy(fullPath, destFileName);
+                                }
+                                catch (Exception e)
+                                {
+                                    var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
+                                        ". Skipping the index, will force index reset on restore";
+                                    LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+                                    neededFilesWriter.Dispose();
+                                    TryDelete(neededFilePath);
+                                    return;
 
-							}
-							allFilesWriter.WriteLine(fileName);
-						}
-						neededFilesWriter.WriteLine(fileName);
-					}
+                                }
+                                allFilesWriter.WriteLine(fileName);
+                            }
+                            neededFilesWriter.WriteLine(fileName);
+                        }
+                    }
 					allFilesWriter.Flush();
 					neededFilesWriter.Flush();
 				}
