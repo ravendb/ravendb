@@ -9,59 +9,59 @@ using Xunit;
 
 namespace Voron.Tests.Optimizations
 {
-	public class Writes : StorageTest
-	{
-		[PrefixesFact]
-		public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
-		{
-		    var keySize = 1024;
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(new string('9', keySize), new MemoryStream(new byte[3]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('1', keySize), new MemoryStream(new byte[3]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('4', 1000), new MemoryStream(new byte[2]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('5', keySize), new MemoryStream(new byte[2]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('8', keySize), new MemoryStream(new byte[3]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('2', keySize), new MemoryStream(new byte[2]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('6', keySize), new MemoryStream(new byte[2]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('0', keySize), new MemoryStream(new byte[4]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('3', 1000), new MemoryStream(new byte[1]));
-				RenderAndShow(tx, tx.State.Root, 1);
-				tx.State.Root.Add(new string('7', keySize), new MemoryStream(new byte[1]));
-				
-				tx.Commit();
-			}
+    public class Writes : StorageTest
+    {
+        [PrefixesFact]
+        public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
+        {
+            var keySize = 1024;
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.Root.Add(new string('9', keySize), new MemoryStream(new byte[3]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('1', keySize), new MemoryStream(new byte[3]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('4', 1000), new MemoryStream(new byte[2]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('5', keySize), new MemoryStream(new byte[2]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('8', keySize), new MemoryStream(new byte[3]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('2', keySize), new MemoryStream(new byte[2]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('6', keySize), new MemoryStream(new byte[2]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('0', keySize), new MemoryStream(new byte[4]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('3', 1000), new MemoryStream(new byte[1]));
+                RenderAndShow(tx, tx.Root);
+                tx.Root.Add(new string('7', keySize), new MemoryStream(new byte[1]));
 
-			var afterAdds = Env.NextPageNumber;
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Delete(new string('0', keySize));
+            var afterAdds = Env.NextPageNumber;
 
-				tx.State.Root.Add(new string('4', 1000), new MemoryStream(new byte[21]));
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.Root.Delete(new string('0', keySize));
 
-				tx.Commit();
-			}
+                tx.Root.Add(new string('4', 1000), new MemoryStream(new byte[21]));
 
-			Assert.Equal(afterAdds, Env.NextPageNumber);
+                tx.Commit();
+            }
 
-			// ensure changes were applied
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				Assert.Null(tx.State.Root.Read(new string('0', keySize)));
+            Assert.Equal(afterAdds, Env.NextPageNumber);
 
-				var readResult = tx.State.Root.Read(new string('4', 1000));
+            // ensure changes were applied
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                Assert.Null(tx.Root.Read(new string('0', keySize)));
 
-				Assert.Equal(21, readResult.Reader.Length);
-			}
-		}
-	}
+                var readResult = tx.Root.Read(new string('4', 1000));
+
+                Assert.Equal(21, readResult.Reader.Length);
+            }
+        }
+    }
 }

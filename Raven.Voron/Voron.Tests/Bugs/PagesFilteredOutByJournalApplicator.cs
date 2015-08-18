@@ -25,7 +25,7 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -46,18 +46,18 @@ namespace Voron.Tests.Bugs
 			{
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = Env.State.GetTree(txw, "foo");
+					var tree = Env.CreateTree(txw, "foo");
 
 					tree.Add("bars/1", new MemoryStream());
 
 					txw.Commit();
 
-					RenderAndShow(txw, tree, 1);
+					RenderAndShow(txw, tree);
 				}
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("bars/1"));
+				Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/1"));
 			}
 		} 
 
@@ -77,19 +77,19 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var tree = Env.State.GetTree(txw, "foo");
+				var tree = Env.CreateTree(txw, "foo");
 
 				tree.Add("bars/0", new MemoryStream());
 				tree.Add("bars/5", new MemoryStream());
 
 				txw.Commit();
 
-				RenderAndShow(txw, tree, 1);
+				RenderAndShow(txw, tree);
 			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -110,18 +110,18 @@ namespace Voron.Tests.Bugs
 			{
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = Env.State.GetTree(txw, "foo");
+					var tree = Env.CreateTree(txw, "foo");
 
 					tree.Add("bars/4", new MemoryStream());
 
 					txw.Commit();
 
-					RenderAndShow(txw, tree, 1);
+					RenderAndShow(txw, tree);
 				}
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("bars/5"));
+				Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/5"));
 			}
 		}
 	}

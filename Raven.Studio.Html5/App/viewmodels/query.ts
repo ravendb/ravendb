@@ -358,7 +358,9 @@ class query extends viewModelBase {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
             if (matchingQuery) {
-                this.runRecentQuery(matchingQuery);
+	            this.runRecentQuery(matchingQuery);
+            } else {
+	            this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
         }
     }
