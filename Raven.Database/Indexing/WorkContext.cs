@@ -28,6 +28,8 @@ namespace Raven.Database.Indexing
 {
 	public class WorkContext : IDisposable
 	{
+		private readonly SizeLimitedConcurrentSet<FilteredOutIndexStat> recentlyFilteredOutIndexes = new SizeLimitedConcurrentSet<FilteredOutIndexStat>(200);
+
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
@@ -434,6 +436,11 @@ namespace Raven.Database.Indexing
 			get { return futureBatchStats; }
 		}
 
+		public SizeLimitedConcurrentSet<FilteredOutIndexStat> RecentlyFilteredOutIndexes
+		{
+			get { return recentlyFilteredOutIndexes; }
+		}
+
 		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
 			get
@@ -510,6 +517,15 @@ namespace Raven.Database.Indexing
         public int GetNextQueryId()
         {
             return Interlocked.Increment(ref nextQueryId);
+        }
+
+		public void MarkIndexFilteredOut(string indexName)
+		{
+			recentlyFilteredOutIndexes.Add(new FilteredOutIndexStat()
+			{
+				IndexName = indexName,
+				Timestamp = SystemTime.UtcNow
+			});
         }
 	}
 }
