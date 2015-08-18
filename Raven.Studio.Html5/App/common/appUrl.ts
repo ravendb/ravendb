@@ -128,7 +128,8 @@ class appUrl {
         timeSeriesType: ko.computed(() => appUrl.forTimeSeriesType(null, appUrl.currentTimeSeries())),
         timeSeriesPoints: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
         timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
-        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
+        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries())),
+        timeSeriesConfigurationTypes: ko.computed(() => appUrl.forTimeSeriesConfigurationTypes(appUrl.currentTimeSeries()))
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -203,6 +204,11 @@ class appUrl {
     static forTimeSeriesConfiguration(ts: timeSeries) {
         var part = appUrl.getEncodedTimeSeriesPart(ts);
         return "#timeseries/configuration?" + part;
+    }
+
+    static forTimeSeriesConfigurationTypes(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration/types?" + part;
     }
 
     static getEncodedTimeSeriesPart(ts: timeSeries): string {

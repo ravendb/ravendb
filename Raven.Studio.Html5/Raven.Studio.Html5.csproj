@@ -317,10 +317,11 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
+    <Content Include="App\views\timeSeries\configuration\types.html" />
     <Content Include="App\views\timeSeries\deleteKey.html" />
     <Content Include="App\views\timeSeries\editTypeDialog.html" />
     <Content Include="App\views\timeSeries\editPointDialog.html" />
-    <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
+    <Content Include="App\views\timeSeries\configuration\configuration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
     <Content Include="App\views\timeSeries\timeSeriesPoints.html" />
     <Content Include="App\views\timeSeries\timeSeriesTypes.html" />
@@ -1108,9 +1109,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\transformers\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\transformers\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\transformers\transformersShell.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\configuration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\createConfigurationKey.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\createConfigurationKey.ts" />
@@ -1183,10 +1181,11 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\configuration\types.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\deleteKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editTypeDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editPointDialog.ts" />
-    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\configuration\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesPoints.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
