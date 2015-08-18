@@ -314,6 +314,11 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				foreach (var point in points)
 				{
+					if (string.IsNullOrEmpty(point.Type))
+						throw new InvalidOperationException("Point type cannot be empty");
+					if (string.IsNullOrEmpty(point.Key))
+						throw new InvalidOperationException("Point key cannot be empty");
+
 					if (writer.DeletePoint(point))
 						deletedCount++;
 					writer.DeletePointInRollups(point);
@@ -344,8 +349,8 @@ namespace Raven.Database.TimeSeries.Controllers
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
-				writer.DeleteRangeInRollups(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
+				writer.DeleteRange(type, key, start, end);
+				writer.DeleteRangeInRollups(type, key, start, end);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();

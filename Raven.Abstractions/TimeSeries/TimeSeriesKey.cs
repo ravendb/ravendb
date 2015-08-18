@@ -7,8 +7,8 @@ namespace Raven.Abstractions.TimeSeries
 		public TimeSeriesType Type { get; set; }
 		public string Key { get; set; }
 		public long PointsCount { get; set; }
-		public DateTime MinPoint { get; set; }
-		public DateTime MaxPoint { get; set; }
+		public DateTimeOffset MinPoint { get; set; }
+		public DateTimeOffset MaxPoint { get; set; }
 	}
 
 	public class TimeSeriesKey
@@ -16,7 +16,5 @@ namespace Raven.Abstractions.TimeSeries
 		public TimeSeriesType Type { get; set; }
 		public string Key { get; set; }
 		public long PointsCount { get; set; }
-		public DateTime MinPoint { get; set; }
-		public DateTime MaxPoint { get; set; }
 	}
 }

@@ -13,7 +13,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryData_With3Values()
 		{
-			var start = new DateTime(2015, 4, 1, 0, 0, 0);
+			var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.FromHours(2));
 
 			using (var tss = GetStorage())
 			{
@@ -56,8 +56,8 @@ namespace Raven.Tests.TimeSeries
 						{
 							Type = "3Value",
 							Key = "Money",
-							Start = DateTime.MinValue,
-							End = DateTime.MaxValue
+							Start = DateTimeOffset.MinValue,
+							End = DateTimeOffset.MaxValue
 						}).ToArray();
 
 					Assert.Equal(2, result.Length);
@@ -74,12 +74,12 @@ namespace Raven.Tests.TimeSeries
 						Assert.Equal("Money", money[i].DebugKey);
 #endif
 
-						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), time[i].At);
-						Assert.Equal(time[i].At.Ticks, time[i].Values[2]);
+						Assert.Equal(new DateTimeOffset(2015, 4, 1, i, 0, 0, TimeSpan.FromHours(2)).ToUniversalTime().DateTime, time[i].At);
+						Assert.Equal(new DateTimeOffset(new DateTime(time[i].At.Ticks, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(2)).Ticks, time[i].Values[2]);
 						Assert.Equal(1, time[i].Values[1]);
 
-						Assert.Equal(new DateTime(2015, 4, 1, i, 0, 0), money[i].At);
-						Assert.Equal(money[i].At.Ticks, money[i].Values[2]);
+						Assert.Equal(new DateTimeOffset(2015, 4, 1, i, 0, 0, TimeSpan.FromHours(2)).ToUniversalTime().DateTime, money[i].At);
+						Assert.Equal(new DateTimeOffset(new DateTime(money[i].At.Ticks, DateTimeKind.Utc)).ToOffset(TimeSpan.FromHours(2)).Ticks, money[i].Values[2]);
 						Assert.Equal(3, money[i].Values[1]);
 					}
 					Assert.Equal(10, time[0].Values[0]);
@@ -95,7 +95,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public void CanQueryData_With3Values_Rollups()
 		{
-			var start = new DateTime(2015, 4, 1, 0, 0, 0);
+			var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.FromHours(2));
 
 			using (var tss = GetStorage())
 			{

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,6 +58,18 @@ namespace Raven.Client.TimeSeries
 			return AppendAsync(type, key, at, token, value);
 		}
 
+		[Obsolete("You must use DateTimeOffset", true)]
+		public Task AppendAsync(string type, string key, DateTime at, double value, CancellationToken token = new CancellationToken())
+		{
+			throw new InvalidOperationException("Must use DateTimeOffset");
+		}
+
+		[Obsolete("You must use DateTimeOffset", true)]
+		public Task AppendAsync(string type, string key, DateTime at, CancellationToken token, params double[] values)
+		{
+			throw new InvalidOperationException("Must use DateTimeOffset");
+		}
+
 		public async Task AppendAsync(string type, string key, DateTimeOffset at, CancellationToken token, params double[] values)
 		{
 			AssertInitialized();
@@ -71,10 +84,22 @@ namespace Raven.Client.TimeSeries
 					url, timeSeriesName, type, key);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 				{
-					await request.WriteWithObjectAsync(new TimeSeriesPoint{At = at, Values = values});
+					await request.WriteWithObjectAsync(new TimeSeriesFullPoint
+					{
+						Type = type,
+						Key = key,
+						At = at,
+						Values = values
+					});
 					return await request.ReadResponseJsonAsync().WithCancellation(token);
 				}
 			}, token);
+		}
+
+		[Obsolete("You must use DateTimeOffset", true)]
+		public Task AppendAsync(string type, string key, DateTime at, double[] values, CancellationToken token = new CancellationToken())
+		{
+			throw new InvalidOperationException("Must use DateTimeOffset");
 		}
 
 		public Task AppendAsync(string type, string key, DateTimeOffset at, double[] values, CancellationToken token = new CancellationToken())
@@ -101,21 +126,25 @@ namespace Raven.Client.TimeSeries
 			}, token);
 		}
 
-		public async Task DeletePointAsync(string type, string key, DateTimeOffset at, CancellationToken token = new CancellationToken())
+		public Task DeletePointAsync(string type, string key, DateTimeOffset at, CancellationToken token = new CancellationToken())
+		{
+			var point = new TimeSeriesPointId {Type = type, Key = key, At = at};
+			return DeletePointsAsync(new[] {point}, token);
+		}
+
+		public async Task DeletePointsAsync(IEnumerable<TimeSeriesPointId> points, CancellationToken token = new CancellationToken())
 		{
 			AssertInitialized();
 
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
-				throw new InvalidOperationException("Data is invalid");
-
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
-				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}&at={4}",
-					url, timeSeriesName, type, key, at);
+				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-points",
+					url, timeSeriesName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
-					return request.ReadResponseJsonAsync().WithCancellation(token);
+					await request.WriteWithObjectAsync(points);
+					return await request.ReadResponseJsonAsync().WithCancellation(token);
 				}
 			}, token);
 		}

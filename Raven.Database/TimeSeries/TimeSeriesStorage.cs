@@ -139,7 +139,7 @@ namespace Raven.Database.TimeSeries
 #if DEBUG
 			public string DebugKey { get; set; }
 #endif
-			public DateTime At { get; set; }
+			public DateTimeOffset At { get; set; }
 
 			public double[] Values { get; set; }
 			
@@ -358,7 +358,7 @@ namespace Raven.Database.TimeSeries
 #if DEBUG
 						DebugKey = range.DebugKey,
 #endif
-						At = new DateTime(ticks),
+						At = new DateTimeOffset(ticks, TimeSpan.Zero),
 						Values = new double[valueLength],
 					};
 
@@ -444,7 +444,7 @@ namespace Raven.Database.TimeSeries
 #if DEBUG
 						DebugKey = fixedTree.Name.ToString(),
 #endif
-						At = new DateTime(it.CurrentKey),
+						At = new DateTimeOffset(it.CurrentKey, TimeSpan.Zero),
 						Values = new double[numberOfValues],
 					};
 					
@@ -495,13 +495,13 @@ namespace Raven.Database.TimeSeries
 				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
 				using (var fixedIt = fixedTree.Iterate())
 				{
-					if (fixedIt.Seek(DateTime.MinValue.ToUniversalTime().Ticks) && (skip == 0 || fixedIt.Skip(skip)))
+					if (fixedIt.Seek(DateTimeOffset.MinValue.Ticks) && (skip == 0 || fixedIt.Skip(skip)))
 					{
 						do
 						{
 							var point = new TimeSeriesPoint
 							{
-								At = new DateTime(fixedIt.CurrentKey),
+								At = new DateTimeOffset(fixedIt.CurrentKey, TimeSpan.Zero),
 								Values = new double[type.Fields.Length],
 							};
 
@@ -535,9 +535,9 @@ namespace Raven.Database.TimeSeries
 				using (var fixedIt = fixedTree.Iterate())
 				{
 					if (fixedIt.Seek(DateTimeOffset.MinValue.Ticks))
-						keySummary.MinPoint = new DateTime(fixedIt.CurrentKey);
+						keySummary.MinPoint = new DateTimeOffset(fixedIt.CurrentKey, TimeSpan.Zero);
 					if (fixedIt.SeekToLast())
-						keySummary.MaxPoint = new DateTime(fixedIt.CurrentKey);
+						keySummary.MaxPoint = new DateTimeOffset(fixedIt.CurrentKey, TimeSpan.Zero);
 				}
 				return keySummary;
 			}
@@ -682,12 +682,12 @@ namespace Raven.Database.TimeSeries
 			{
 				foreach (var rollupRange in rollupsToClear.Values)
 				{
-					DeleteRangeInRollups(rollupRange.Type, rollupRange.Key, rollupRange.Start.ToUniversalTime().Ticks, rollupRange.End.ToUniversalTime().Ticks);
+					DeleteRangeInRollups(rollupRange.Type, rollupRange.Key, rollupRange.Start, rollupRange.End);
 				}
 				tx.Commit();
 			}
 
-			public void DeleteRangeInRollups(string typeName, string key, long start, long end)
+			public void DeleteRangeInRollups(string typeName, string key, DateTimeOffset start, DateTimeOffset end)
 			{
 				var periodTree = tx.ReadTree(PeriodTreePrefix + typeName);
 				if (periodTree == null)
@@ -705,7 +705,6 @@ namespace Raven.Database.TimeSeries
 
 					do
 					{
-						
 						var periodTreeName = it.CurrentKey.ToString();
 						var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (type.Fields.Length*Range.RangeValue.StorageItemsLength*sizeof (double)));
 						if (periodFixedTree == null)
@@ -716,8 +715,8 @@ namespace Raven.Database.TimeSeries
 						{
 							Type = typeName,
 							Key = key,
-							Start = duration.GetStartOfRangeForDateTime(new DateTime(start)),
-							End = duration.GetStartOfRangeForDateTime(new DateTime(end)),
+							Start = duration.GetStartOfRangeForDateTime(start),
+							End = duration.GetStartOfRangeForDateTime(end),
 						}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
 
 						foreach (var keyToDelete in keysToDelete)
@@ -806,7 +805,7 @@ namespace Raven.Database.TimeSeries
 				throw new NotImplementedException();
 			}
 
-			public void DeleteRange(string typeName, string key, long start, long end)
+			public void DeleteRange(string typeName, string key, DateTimeOffset start, DateTimeOffset end)
 			{
 				var type = storage.GetType(tx, typeName);
 				if (type == null)
@@ -817,7 +816,7 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.DeleteRange(start, end);
+				var result = fixedTree.DeleteRange(start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
 				storage.UpdatePointsCount(tx, -result.NumberOfEntriesDeleted);
 				if (result.TreeRemoved)
 					storage.UpdateKeysCount(tx, -1);
@@ -954,8 +953,18 @@ namespace Raven.Database.TimeSeries
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var existingType = GetType(tx, type.Type);
-				if (existingType != null && existingType.KeysCount > 0)
-					throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwrited", type.Type));
+				if (existingType != null)
+				{
+					var tree = tx.ReadTree(SeriesTreePrefix + type.Type);
+					if (tree != null)
+					{
+						existingType.KeysCount = tree.State.EntriesCount;
+						if (existingType.KeysCount > 0)
+						{
+							throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwritten", type.Type));
+						}
+					}
+				}
 
 				var metadata = tx.ReadTree("$metadata");
 				using (var ms = new MemoryStream())
@@ -979,12 +988,14 @@ namespace Raven.Database.TimeSeries
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var exisitngType = GetType(tx, type);
-				if (exisitngType == null)
+				var existingType = GetType(tx, type);
+				if (existingType == null)
 					throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
 
-				if (exisitngType.KeysCount > 0)
-					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has assosiated keys.", type, exisitngType.KeysCount, exisitngType.KeysCount == 1 ? "" : "s"));
+				var tree = tx.ReadTree(SeriesTreePrefix + type);
+				existingType.KeysCount = tree.State.EntriesCount;
+				if (existingType.KeysCount > 0)
+					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has associated keys.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
 
 				var metadata = tx.ReadTree("$metadata");
 				metadata.Delete(TypesPrefix + type);

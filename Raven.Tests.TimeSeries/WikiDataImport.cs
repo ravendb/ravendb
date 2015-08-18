@@ -19,7 +19,7 @@ namespace Raven.Tests.TimeSeries
 {
 	public class WikiDataImport
 	{
-		[Fact]
+		[Fact(Skip = "Run only when needed")]
 		public void Import()
 		{
 			var storage = new TimeSeriesStorage("http://localhost:8080/", "TimeSeriesTest", new RavenConfiguration
