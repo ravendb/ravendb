@@ -13,10 +13,10 @@ namespace Voron.Impl.FreeSpace
 			if (tx.State.FreeSpaceRoot == null)
 				return null; // initial setup
 
-		    if (tx.State.FreeSpaceRoot.State.EntriesCount == 0)
+		    if (tx.FreeSpaceRoot.State.EntriesCount == 0)
 		        return null;
 
-			using (var it = tx.State.FreeSpaceRoot.Iterate())
+			using (var it = tx.FreeSpaceRoot.Iterate())
 			{
 				if (it.Seek(Slice.BeforeAllKeys) == false)
 					return null;
@@ -76,7 +76,7 @@ namespace Voron.Impl.FreeSpace
 					{
 						foreach (var section in sections)
 						{
-							tx.State.FreeSpaceRoot.Delete(section);
+							tx.FreeSpaceRoot.Delete(section);
 						}
 
 						return startSectionId * NumberOfPagesInSection;
@@ -84,7 +84,7 @@ namespace Voron.Impl.FreeSpace
 
 					var nextSectionId = currentSectionId + 1;
 					var nextId = new Slice(EndianBitConverter.Big.GetBytes(nextSectionId));
-					var read = tx.State.FreeSpaceRoot.Read(nextId);
+					var read = tx.FreeSpaceRoot.Read(nextId);
 					if (read == null)
 					{
 						//not a following next section
@@ -104,7 +104,7 @@ namespace Voron.Impl.FreeSpace
 					//mark selected bits to false
 					if (next.SetCount == numberOfExtraBitsNeeded)
 					{
-						tx.State.FreeSpaceRoot.Delete(nextId);
+						tx.FreeSpaceRoot.Delete(nextId);
 					}
 					else
 					{
@@ -112,12 +112,12 @@ namespace Voron.Impl.FreeSpace
 						{
 							next.Set(i, false);
 						}
-						tx.State.FreeSpaceRoot.Add(nextId, next.ToStream());
+						tx.FreeSpaceRoot.Add(nextId, next.ToStream());
 					}
 
 					foreach (var section in sections)
 					{
-						tx.State.FreeSpaceRoot.Delete(section);
+						tx.FreeSpaceRoot.Delete(section);
 					}
 
 					return startSectionId * NumberOfPagesInSection;
@@ -194,7 +194,7 @@ namespace Voron.Impl.FreeSpace
 
 			if (current.SetCount == num)
 			{
-				tx.State.FreeSpaceRoot.Delete(it.CurrentKey);
+				tx.FreeSpaceRoot.Delete(it.CurrentKey);
 			}
 			else
 			{
@@ -203,7 +203,7 @@ namespace Voron.Impl.FreeSpace
 					current.Set(i + start, false);
 				}
 
-				tx.State.FreeSpaceRoot.Add(it.CurrentKey, current.ToStream());
+				tx.FreeSpaceRoot.Add(it.CurrentKey, current.ToStream());
 			}
 
 			return true;
@@ -219,7 +219,7 @@ namespace Voron.Impl.FreeSpace
 			var nextSectionId = currentSectionId + 1;
 
 			var nextId = new Slice(EndianBitConverter.Big.GetBytes(nextSectionId));
-			var read = tx.State.FreeSpaceRoot.Read(nextId);
+			var read = tx.FreeSpaceRoot.Read(nextId);
 			if (read == null)
 				return false;
 
@@ -231,7 +231,7 @@ namespace Voron.Impl.FreeSpace
 
 			if (next.SetCount == nextRange)
 			{
-				tx.State.FreeSpaceRoot.Delete(nextId);
+				tx.FreeSpaceRoot.Delete(nextId);
 			}
 			else
 			{
@@ -239,12 +239,12 @@ namespace Voron.Impl.FreeSpace
 				{
 					next.Set(i, false);
 				}
-				tx.State.FreeSpaceRoot.Add(nextId, next.ToStream());
+				tx.FreeSpaceRoot.Add(nextId, next.ToStream());
 			}
 
 			if (current.SetCount == currentEndRange)
 			{
-				tx.State.FreeSpaceRoot.Delete(currentSectionIdSlice);
+				tx.FreeSpaceRoot.Delete(currentSectionIdSlice);
 			}
 			else
 			{
@@ -252,7 +252,7 @@ namespace Voron.Impl.FreeSpace
 				{
 					current.Set(NumberOfPagesInSection - 1 - i, false);
 				}
-				tx.State.FreeSpaceRoot.Add(currentSectionIdSlice, current.ToStream());
+				tx.FreeSpaceRoot.Add(currentSectionIdSlice, current.ToStream());
 			}
 
 
@@ -262,17 +262,17 @@ namespace Voron.Impl.FreeSpace
 
 		public List<long> AllPages(Transaction tx)
 		{
-			return tx.State.FreeSpaceRoot.AllPages();
+			return tx.FreeSpaceRoot.AllPages();
 		}
 
 		public void FreePage(Transaction tx, long pageNumber)
 		{
 			var section = pageNumber / NumberOfPagesInSection;
 			var sectionKey = new Slice(EndianBitConverter.Big.GetBytes(section));
-			var result = tx.State.FreeSpaceRoot.Read(sectionKey);
+			var result = tx.FreeSpaceRoot.Read(sectionKey);
 			var sba = result == null ? new StreamBitArray() : new StreamBitArray(result.Reader);
 			sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
-			tx.State.FreeSpaceRoot.Add(sectionKey, sba.ToStream());
+			tx.FreeSpaceRoot.Add(sectionKey, sba.ToStream());
 		}
 	}
 }

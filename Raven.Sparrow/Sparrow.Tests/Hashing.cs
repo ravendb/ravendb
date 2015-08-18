@@ -1,16 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sparrow;
+﻿using System.Text;
 using Xunit;
 
 namespace Sparrow.Tests
 {
     public class HashingTests
     {
+        [Fact]
+        public void HashRawUseActualValues()
+        {
+            var r1 = Hashing.XXHash64.CalculateRaw("Public");
+            var r2 = Hashing.XXHash64.CalculateRaw(new string("Public".ToCharArray()));
 
+            Assert.Equal(r1, r2);
+
+        }
+
+        [Fact]
+        public void HashRaw32UseActualValues()
+        {
+            var r1 = Hashing.XXHash32.CalculateRaw("Public");
+            var r2 = Hashing.XXHash32.CalculateRaw(new string("Public".ToCharArray()));
+
+            Assert.Equal(r1, r2);
+
+        }
+
+        [Fact]
         public void XXHash32()
         {
             string value = "abcd";
@@ -40,7 +55,7 @@ namespace Sparrow.Tests
             Assert.Equal(expected, result);
         }
 
-
+        [Fact]
         public void NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";

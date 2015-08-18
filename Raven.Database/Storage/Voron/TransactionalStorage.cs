@@ -229,8 +229,8 @@ namespace Raven.Storage.Voron
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
-					if (Environment.StackTrace.Contains(".Finalize()") == false)
-						throw e;
+					if (System.Environment.StackTrace.Contains(".Finalize()") == false)
+						throw;
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
@@ -590,7 +590,12 @@ namespace Raven.Storage.Voron
             throw new NotSupportedException("Not valid for Voron storage");
         }
 
-		[CLSCompliant(false)]
+	    public StorageEnvironment Environment
+	    {
+	        get { return tableStorage.Environment; }
+	    }
+
+	    [CLSCompliant(false)]
 		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
 		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);

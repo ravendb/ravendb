@@ -178,7 +178,7 @@ namespace Voron.Impl
 			{
 				token.ThrowIfCancellationRequested();
 
-                var tree = tx.State.GetTree(tx, treeName);
+                var tree = _env.CreateTree(tx, treeName);
 				foreach (var write in writes)
 				{
 					foreach (var operation in write.GetOperations(treeName))

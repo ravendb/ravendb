@@ -28,7 +28,7 @@ namespace Voron.Tests.Bugs
 
                 using (var tx = env.NewTransaction(TransactionFlags.Read))
                 {
-                    var tree = tx.State.GetTree(tx, "data");
+                    var tree = tx.ReadTree("data");
                     using (var it = tree.Iterate())
                     {
                         Assert.True(it.Seek("users-7"));

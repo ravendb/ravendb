@@ -60,7 +60,6 @@ namespace Raven.Database.Storage
 			Level = level;
 			LoadData = loadData;
 			ItemsToDelete = itemsToDelete;
-            ItemsAlreadySeen = new HashSet<ReduceKeyAndBucket>();
 			ReduceKeys = reduceKeys;
 		}
 
@@ -69,7 +68,7 @@ namespace Raven.Database.Storage
 		public bool LoadData { get; private set; }
 		public int Take { get; set; }
 		public ConcurrentSet<object> ItemsToDelete { get; private set; }
-        public HashSet<ReduceKeyAndBucket> ItemsAlreadySeen { get; private set; }
+        public ReduceKeyAndBucket LastReduceKeyAndBucket { get; set; }
 		public HashSet<string> ReduceKeys { get; private set; }
 	}
 
