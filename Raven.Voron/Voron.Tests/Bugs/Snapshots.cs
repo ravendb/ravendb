@@ -41,7 +41,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-			    var t1 = tx.Environment.State.GetTree(tx,"tree1");
+			    var t1 = tx.Environment.CreateTree(tx,"tree1");
 				for (var i = 0; i < DocumentCount; i++)
 				{
 					t1.Add("docs/" + i, new MemoryStream(testBuffer));
@@ -54,7 +54,7 @@ namespace Voron.Tests.Bugs
 			{
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-				    var t1 = tx.Environment.State.GetTree(tx,"tree1");
+				    var t1 = tx.Environment.CreateTree(tx,"tree1");
 					for (var i = 0; i < DocumentCount; i++)
 					{
 						t1.Delete("docs/" + i);
@@ -95,7 +95,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var t1 = tx.Environment.State.GetTree(tx, "tree1");
+				var t1 = tx.Environment.CreateTree(tx, "tree1");
 				for (var i = 0; i < DocumentCount; i++)
 				{
 					t1.Add("docs/" + i, new MemoryStream(testBuffer));
@@ -110,7 +110,7 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var t1 = tx.Environment.State.GetTree(tx, "tree1");
+					var t1 = tx.Environment.CreateTree(tx, "tree1");
 					for (var i = 0; i < DocumentCount; i++)
 					{
 						t1.Delete("docs/" + i);

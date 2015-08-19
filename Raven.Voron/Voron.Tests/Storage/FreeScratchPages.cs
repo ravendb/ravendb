@@ -28,7 +28,7 @@ namespace Voron.Tests.Storage
 			{
 				for (int i = 0; i < 10; i++)
 				{
-					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+					tx.Root.Add			("items/" + i, new MemoryStream(buffer));
 				}
 
                 // For optimization purposes the used scratch pages now do not include the transaction header, therefore we need to include it.
@@ -45,7 +45,7 @@ namespace Voron.Tests.Storage
 				// let's do exactly the same, it should reuse the same scratch pages
 				for (int i = 0; i < 10; i++)
 				{
-					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+					tx.Root.Add			("items/" + i, new MemoryStream(buffer));
 				}
 
                 // For optimization purposes the used scratch pages now do not include the transaction header, therefore we need to include it.

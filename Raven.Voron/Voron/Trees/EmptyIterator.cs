@@ -35,7 +35,9 @@ namespace Voron.Trees
 			throw new InvalidOperationException("No current page");
 		}
 
-		public IEnumerable<string> DumpValues()
+	    public event Action<IIterator> OnDispoal;
+
+	    public IEnumerable<string> DumpValues()
 		{
 			yield break;
 		}
@@ -68,6 +70,9 @@ namespace Voron.Trees
 
 		public void Dispose()
 		{
+		    var action = OnDispoal;
+		    if (action != null)
+		        action(this);
 		}
 	}
 }

@@ -8,6 +8,7 @@ using Raven.Database.Storage.Voron.Impl;
 
 using Voron;
 using Voron.Impl;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -15,7 +16,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
     {
 	    private const int PulseTreshold = 16 * 1024 * 1024; // 16 MB
 
-		private readonly object maybePulseLock = new object();
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
         private readonly Reference<SnapshotReader> snapshot;
@@ -102,10 +102,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		        storage.Write(writeBatch.Value);
 
-		        snapshot.Value.Dispose();
 		        writeBatch.Value.Dispose();
 
-		        snapshot.Value = storage.CreateSnapshot();
+	            var hasOpenedIterators = snapshot.Value.HasOpenedIterators;
+
+                snapshot.Value.Dispose();
+	            if (hasOpenedIterators)
+	            {
+	                throw new InvalidOperationException("Cannot pulse transaction when we have iterators opened");
+	            }                
+                
+                snapshot.Value = storage.CreateSnapshot();
+
 		        writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
 	        }
 	        finally
@@ -114,19 +122,24 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	        }
 		}
 
-		public bool MaybePulseTransaction()
-		{
-			if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
-				return false;
+        public bool MaybePulseTransaction(IIterator before)
+        {
+            if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
+                return false;
 
-			lock (maybePulseLock)
-			{
-				if (writeBatch.Value.Size() >= PulseTreshold)
-				{
-					PulseTransaction();
-				}
-				return true;
-			}
-		}
+            if (writeBatch.Value.Size() >= PulseTreshold)
+            {
+                if (before != null)
+                    before.Dispose();
+                PulseTransaction();
+                return true;
+            }
+            return false;
+        }
+
+        public bool MaybePulseTransaction()
+        {
+            return MaybePulseTransaction(null);
+        }
     }
 }

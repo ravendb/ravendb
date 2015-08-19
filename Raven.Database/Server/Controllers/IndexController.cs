@@ -410,7 +410,6 @@ namespace Raven.Database.Server.Controllers
 		    return GetMessageWithObject(text);
 		}
 
-	
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
 			var indexDefinition = Database.Indexes.GetIndexDefinition(index);
@@ -424,7 +423,6 @@ namespace Raven.Database.Server.Controllers
 				Index = indexDefinition,
 			});
 		}
-
 
 		private HttpResponseMessage GetIndexSource(string index)
 		{

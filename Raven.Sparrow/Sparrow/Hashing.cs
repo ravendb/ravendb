@@ -238,7 +238,7 @@ namespace Sparrow
 
                 if (buffer + 4 <= bEnd)
                 {
-                    h64 ^= (ulong)((uint*)buffer) * PRIME64_1;
+                    h64 ^= *(uint*)buffer * PRIME64_1;
                     h64 = RotateLeft64(h64, 23) * PRIME64_2 + PRIME64_3;
                     buffer += 4;
                 }

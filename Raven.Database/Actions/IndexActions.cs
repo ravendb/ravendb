@@ -231,7 +231,7 @@ namespace Raven.Database.Actions
 	        return PutIndexInternal(name, definition);
         }
 
-		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideBySide = false)
+		private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
 	    {
 		    if (name == null)
 			    throw new ArgumentNullException("name");
@@ -245,7 +245,7 @@ namespace Raven.Database.Actions
 			    switch (existingIndex.LockMode)
 			    {
 				    case IndexLockMode.SideBySide:
-					    if (isUpdateBySideBySide == false)
+					    if (isUpdateBySideSide == false)
 					    {
 						    Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
 						    throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
@@ -262,7 +262,7 @@ namespace Raven.Database.Actions
 
 		    AssertAnalyzersValid(definition);
 
-		    switch (FindIndexCreationOptions(definition, ref name))
+			switch (creationOptions ?? FindIndexCreationOptions(definition, ref name))
 		    {
 			    case IndexCreationOptions.Noop:
 					return null;
@@ -333,24 +333,40 @@ namespace Raven.Database.Actions
 			{
 				foreach (var indexToAdd in indexesToAdd)
 				{
-					var indexName = indexToAdd.Name.Trim();
-					var creationOption = FindIndexCreationOptions(indexToAdd.Definition, ref indexName);
-					if (creationOption == IndexCreationOptions.Noop)
-						continue;
+					var originalIndexName = indexToAdd.Name.Trim();
+					var indexName = Constants.SideBySideIndexNamePrefix + originalIndexName;
+					var isSideBySide = true;
 
-					//if we need to update the index, we should create a side by side one
-					if (creationOption == IndexCreationOptions.Update)
-						indexName = Constants.SideBySideIndexNamePrefix + indexToAdd.Name;
+					IndexCreationOptions? creationOptions = null;
+					//if there is no existing side by side index, we might need to update the old index
+					if (IndexDefinitionStorage.GetIndexDefinition(indexName) == null)
+					{
+						var originalIndexCreationOptions = FindIndexCreationOptions(indexToAdd.Definition, ref originalIndexName);
+						switch (originalIndexCreationOptions)
+						{
+							case IndexCreationOptions.Noop:
+								continue;
+							case IndexCreationOptions.Create:
+							case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+								//cases in which we don't need to create a side by side index:
+								//1) index doesn't exist => need to create a new regular index
+								//2) there is an existing index and we need to update its definition without reindexing
+								indexName = originalIndexName;
+								isSideBySide = false;
+								creationOptions = originalIndexCreationOptions;
+								break;
+						}
+					}
 
-					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideBySide: true);
+					var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
 					if (nameToAdd == null)
 						continue;
 
 					createdIndexes.Add(new SideBySideIndexInfo
 					{
-						OriginalName = indexToAdd.Name,
+						OriginalName = originalIndexName,
 						Name = nameToAdd,
-						IsSideBySide = creationOption == IndexCreationOptions.Update
+						IsSideBySide = isSideBySide
 					});
 					prioritiesList.Add(indexToAdd.Priority);
 				}
@@ -410,7 +426,6 @@ namespace Raven.Database.Actions
 					definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
 	            }
 
-
 	            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
 	            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
@@ -419,8 +434,11 @@ namespace Raven.Database.Actions
 	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
 	            Database.IndexStorage.CreateIndexImplementation(definition);
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
+
 				// If we execute multiple indexes at once and want to activate them all at once we will disable the index from the endpoint
-				if (disableIndex) index.Priority = IndexingPriority.Disabled;
+				if (disableIndex)
+					index.Priority = IndexingPriority.Disabled;
+
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
 	            index.IsMapIndexingInProgress = true;
 	            if (definition.IsTestIndex)
@@ -697,6 +715,7 @@ namespace Raven.Database.Actions
 
         internal Task StartDeletingIndexDataAsync(int id, string indexName)
         {
+            var sp = Stopwatch.StartNew();
             //remove the header information in a sync process
             TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
             var deleteIndexTask = Task.Run(() =>
@@ -723,7 +742,17 @@ namespace Raven.Database.Actions
                                                               Payload = indexName
                                                           }, out taskId);
 
-            deleteIndexTask.ContinueWith(_ => Database.Tasks.RemoveTask(taskId));
+            deleteIndexTask.ContinueWith(t =>
+            {
+                if (t.IsFaulted || t.IsCanceled)
+                {
+                    Log.WarnException("Failure when deleting index " + indexName, t.Exception);
+                }
+                else
+                {
+                    Log.Info("The async deletion of index {0} was completed in {1}", indexName, sp.Elapsed);
+                }
+            });
 
             return deleteIndexTask;
         }
