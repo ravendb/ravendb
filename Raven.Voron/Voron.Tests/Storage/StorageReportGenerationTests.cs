@@ -223,6 +223,40 @@ namespace Voron.Tests.Storage
 			}
 		}
 
+		[Theory]
+		[InlineData(new[] { "key" }, 1000)]
+		[InlineData(new[] { "key1", "key2" }, 1000)]
+		[InlineData(new[] { "key" }, 1)]
+		[InlineData(new[] { "key1", "key2" }, 2)]
+		[InlineData(new[] { "key" }, 30)]
+		[InlineData(new[] { "key1", "key2" }, 30)]
+		public void TreeReportContainsInformationAboutMultiValueEntries(string[] keys, int numberOfValuesPerKey)
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				foreach (var key in keys)
+				{
+					for (int i = 0; i < numberOfValuesPerKey; i++)
+					{
+						tree.MultiAdd(key, "items/" + i + "/" + new string('p', i));
+					}
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.Equal(keys.Length, report.Trees[0].EntriesCount);
+
+				Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.EntriesCount);
+			}
+		}
+
 		private List<string> AddEntries(Tree tree, int treeNumber)
 		{
 			var entriesAdded = new List<string>();

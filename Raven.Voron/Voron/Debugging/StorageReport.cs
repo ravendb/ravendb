@@ -37,5 +37,11 @@ namespace Voron.Debugging
 		public long OverflowPages { get; set; }
 		public int Depth { get; set; }
 		public double Density { get; set; }
+		public MultiValuesReport MultiValues { get; set; }
+	}
+
+	public class MultiValuesReport
+	{
+		public long EntriesCount { get; set; }
 	}
 }

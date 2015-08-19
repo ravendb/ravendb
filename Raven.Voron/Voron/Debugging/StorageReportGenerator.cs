@@ -4,8 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using Voron.Impl;
+using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -23,7 +26,7 @@ namespace Voron.Debugging
 		public bool IsLightReport { get; set; }
 	}
 
-	public class StorageReportGenerator
+	public unsafe class StorageReportGenerator
 	{
 		public class TreeDensityInput
 		{
@@ -53,37 +56,19 @@ namespace Voron.Debugging
 			foreach (var tree in input.Trees)
 			{
 				List<double> densities = null;
-				if (!input.IsLightReport)
+
+				if (input.IsLightReport == false)
 				{
-					densities = new List<double>();				
-					var allPages = tree.AllPages();
-
-					for (var i = 0; i < allPages.Count; i++)
-					{
-						var page = _tx.GetReadOnlyPage(allPages[i]);
-
-						if (page.IsOverflow)
-						{
-							var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-
-							densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
-
-							i += (numberOfPages - 1);
-						}
-						else
-						{
-							if (page.IsFixedSize)
-							{
-								var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
-								densities.Add(((double) sizeUsed)/AbstractPager.PageSize);
-							}
-							else
-							{
-								densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
-							}
-						}
-					}
+					densities = GetPageDensities(tree);
 				}
+
+				MultiValuesReport multiValues = null;
+
+				if (tree.State.Flags == TreeFlags.MultiValueTrees)
+				{
+					multiValues = CreateMultiValuesReport(tree);
+				}
+
 				var state = tree.State;
 				var treeReport = new TreeReport
 				{
@@ -94,7 +79,8 @@ namespace Voron.Debugging
 					LeafPages = state.LeafPages,
 					OverflowPages = state.OverflowPages,
 					PageCount = state.PageCount,
-					Density = input.IsLightReport?0:CalculateTreeDensity(densities)
+					Density = densities == null ? 0 : CalculateTreeDensity(densities),
+					MultiValues = multiValues
 				};
 
 				trees.Add(treeReport);
@@ -112,6 +98,97 @@ namespace Voron.Debugging
 				Trees = trees,
 				Journals = journals
 			};
+		}
+
+		private MultiValuesReport CreateMultiValuesReport(Tree tree)
+		{
+			var multiValues = new MultiValuesReport();
+
+			using (var multiTreeIterator = tree.Iterate())
+			{
+				if (multiTreeIterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var currentNode = multiTreeIterator.Current;
+						long numberOfEntries;
+
+						switch (currentNode->Flags)
+						{
+							case NodeFlags.MultiValuePageRef:
+							{
+								var multiValueTreeHeader = (TreeRootHeader*) ((byte*) currentNode + currentNode->KeySize + Constants.NodeHeaderSize);
+
+								Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
+
+								numberOfEntries = multiValueTreeHeader->EntriesCount;
+								break;
+							}
+							case NodeFlags.Data:
+							{
+								var nestedPage = GetNestedMultiValuePage(NodeHeader.DirectAccess(_tx, currentNode), currentNode);
+
+								numberOfEntries = nestedPage.NumberOfEntries;
+								break;
+							}
+							case NodeFlags.PageRef:
+							{
+								var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
+								var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
+
+								numberOfEntries = nestedPage.NumberOfEntries;
+								break;
+							}
+							default:
+								throw new InvalidEnumArgumentException("currentNode->Flags", (int) currentNode->Flags, typeof (NodeFlags));
+						}
+
+						multiValues.EntriesCount += numberOfEntries;
+					} while (multiTreeIterator.MoveNext());
+				}
+			}
+			return multiValues;
+		}
+
+		private List<double> GetPageDensities(Tree tree)
+		{
+			var densities = new List<double>();
+			var allPages = tree.AllPages();
+
+			for (var i = 0; i < allPages.Count; i++)
+			{
+				var page = _tx.GetReadOnlyPage(allPages[i]);
+
+				if (page.IsOverflow)
+				{
+					var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+
+					densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
+
+					i += (numberOfPages - 1);
+				}
+				else
+				{
+					if (page.IsFixedSize)
+					{
+						var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
+						densities.Add(((double) sizeUsed)/AbstractPager.PageSize);
+					}
+					else
+					{
+						densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
+					}
+				}
+			}
+			return densities;
+		}
+
+		private Page GetNestedMultiValuePage(byte* nestedPagePtr, NodeHeader* currentNode)
+		{
+			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort) NodeHeader.GetDataSize(_tx, currentNode));
+
+			Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
+			return nestedPage;
 		}
 
 		private static long PagesToBytes(long pageCount)
