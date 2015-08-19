@@ -547,7 +547,7 @@ namespace Raven.Tests.FileSystem
 	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
 	            Assert.NotNull(stats2);
 
-                Assert.Equal(2, stats1.Metrics.Requests.Count);
+                Assert.Equal(3, stats1.Metrics.Requests.Count);
                 Assert.Equal(1, stats2.Metrics.Requests.Count);
 
                 Assert.Equal(0, stats1.ActiveSyncs.Count);
