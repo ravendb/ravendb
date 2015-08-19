@@ -140,6 +140,12 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugRoutes.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugTasks.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\filteredOutIndexInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\prefetchInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceStatsInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapStatsInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
@@ -190,6 +196,12 @@
     <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
     <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\reduceStatsInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\mapStatsInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\mapBatchInfo.html" />
     <Content Include="App\views\filesystem\search\fieldRangeFilter.html" />
     <Content Include="App\views\filesystem\search\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
@@ -1123,7 +1135,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexBatchSize.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexing.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPrefetches.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\logs.ts" />
