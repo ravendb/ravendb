@@ -87,7 +87,7 @@
     <Compile Include="CountersChangesTests.cs" />
     <Compile Include="CounterStatsTests.cs" />
     <Compile Include="RavenBaseCountersTest.cs" />
-    <Compile Include="CountersChangeTests.cs" />
+    <Compile Include="CountersBasicClientTests.cs" />
     <Compile Include="CountersBatchTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SmugglerTests.cs" />

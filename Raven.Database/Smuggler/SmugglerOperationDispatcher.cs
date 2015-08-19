@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
@@ -47,7 +44,7 @@ namespace Raven.Smuggler
                 {
                     if (e.Status == WebExceptionStatus.ConnectFailure)
                     {
-                        Console.WriteLine("Error: {0} {1}", e.Message, this.Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
+                        Console.WriteLine("Error: {0} {1}", e.Message, Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
                         var socketException = e.InnerException as SocketException;
                         if (socketException != null)
                         {

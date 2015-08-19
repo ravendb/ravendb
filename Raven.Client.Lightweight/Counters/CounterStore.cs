@@ -48,18 +48,24 @@ namespace Raven.Client.Counters
 			isInitialized = true;
 			InitializeSecurity();
 
-			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(Name))
+			if (ensureDefaultCounterExists)
 			{
 				if (String.IsNullOrWhiteSpace(Name))
 					throw new InvalidOperationException("Name is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
 
-				Admin.CreateCounterStorageAsync(new CounterStorageDocument
+				var existingCounterStorageNames = AsyncHelpers.RunSync(() => Admin.GetCounterStoragesNamesAsync());
+				if (!existingCounterStorageNames.Contains(Name, StringComparer.InvariantCultureIgnoreCase)) 
 				{
-					Settings = new Dictionary<string, string>
+					//this statement will essentially overwrite the counter storage, therefore it should not be called if the storage is already there
+					Admin.CreateCounterStorageAsync(new CounterStorageDocument
 					{
-						{"Raven/Counters/DataDir", @"~\Counters\" + Name}
-					},
-				}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
+						StoreName = Name,
+						Settings = new Dictionary<string, string>
+						{
+							{"Raven/Counters/DataDir", @"~\Counters\" + Name}
+						},
+					}, Name).ConfigureAwait(false).GetAwaiter().GetResult();
+				}
 			}			
 
 			replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, CountersConvention); // make sure it is initialized

@@ -1261,6 +1261,9 @@ namespace NDesk.Options
 		[Description("Import Database/FileSystem")]
 		SmugglerImportDatabaseFileSystem = 1 << 13,
 
+		[Description("Import/Export Counter")]
+		SmugglerCounter = 1 << 16,
+
 		[Description("Disk IO Monitoring")]
 		DiskIOMonitoring = 1 << 14,
 
