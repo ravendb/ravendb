@@ -1,0 +1,258 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Stats.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Voron.Debugging;
+using Voron.Impl;
+using Voron.Impl.Paging;
+using Voron.Trees;
+using Xunit;
+using Xunit.Extensions;
+
+namespace Voron.Tests.Storage
+{
+	public class StorageReportGenerationTests : StorageTest
+	{
+		[Fact]
+		public void AllocatedSpaceOfDataFileEqualsToSumOfSpaceInUseAndFreeSpace()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx);
+
+				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+			}
+		}
+
+		[PrefixesTheory]
+		[InlineData(0)]
+		[InlineData(1)]
+		[InlineData(13)]
+		public void TreeReportsContainCompleteInformationAboutAllExistingTrees(int numberOfTrees)
+		{
+			var r = new Random();
+			var numberOfOverflowPages = new Dictionary<string, long>();
+			var numberOfEntries = new Dictionary<string, long>();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < numberOfTrees; i++)
+				{
+					var tree = Env.CreateTree(tx, "tree_" + i);
+
+					var entries = AddEntries(tree, i).Count;
+					var overflows = AddOverflows(tx, tree, i, r);
+
+					numberOfEntries.Add(tree.Name, entries + overflows.AddedEntries.Count);
+					numberOfOverflowPages.Add(tree.Name, overflows.NumberOfOverflowPages);
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes:true);
+
+				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+				Assert.Equal(numberOfTrees, report.Trees.Count);
+
+				foreach (var treeReport in report.Trees)
+				{
+					Assert.True(treeReport.PageCount > 0);
+					Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages + treeReport.OverflowPages);
+
+					Assert.Equal(numberOfOverflowPages[treeReport.Name], treeReport.OverflowPages);
+					
+					Assert.Equal(numberOfEntries[treeReport.Name], treeReport.EntriesCount);
+
+					Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0);
+				}
+			}
+		}
+
+		[PrefixesTheory]
+		[InlineData(0)]
+		[InlineData(7)]
+		[InlineData(14)]
+		public void TreeReportsAreEmptyAfterRemovingAllEntries(int numberOfTrees)
+		{
+			var addedEntries = new Dictionary<string, List<string>>();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var r = new Random();
+
+				for (int i = 0; i < numberOfTrees; i++)
+				{
+					var tree = Env.CreateTree(tx, "tree_" + i);
+
+					var entries = AddEntries(tree, i);
+					var overflows = AddOverflows(tx, tree, i, r);
+
+					addedEntries.Add(tree.Name, entries.Union(overflows.AddedEntries).ToList());
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				foreach (var entries in addedEntries)
+				{
+					var tree = tx.ReadTree(entries.Key);
+
+					foreach (var key in entries.Value)
+					{
+						tree.Delete(key);
+					}
+				}
+				
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+                var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+				Assert.Equal(numberOfTrees, report.Trees.Count);
+
+				foreach (var treeReport in report.Trees)
+				{
+					Assert.Equal(1, treeReport.PageCount); // root
+					Assert.Equal(0, treeReport.BranchPages);
+					Assert.Equal(1, treeReport.LeafPages); // root
+					Assert.Equal(0, treeReport.OverflowPages);
+					Assert.Equal(0, treeReport.EntriesCount);
+					Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0); // just the header of page root
+					Assert.Equal(1, treeReport.Depth);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData(new []{1.0, 1.0, 1.0}, 1.0)]
+		[InlineData(new [] { 1.0, 0.0 }, 0.5)]
+		[InlineData(new[] { 0.8, 0.7, 0.9, 0.8 }, 0.8)]
+		[InlineData(new[] { 0.3, 0.5, 0.1, 0.3 }, 0.3)]
+		public void ReportGeneratorCalculatesCorrectDensity(double[] pageDensities, double expectedDensity)
+		{
+			Assert.Equal(expectedDensity, StorageReportGenerator.CalculateTreeDensity(pageDensities.ToList()));
+		}
+
+		[PrefixesTheory]
+		[InlineData(0)]
+		[InlineData(7)]
+		[InlineData(14)]
+		public void JournalReportsArePresent(int numberOfTrees)
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < numberOfTrees; i++)
+				{
+					var tree = Env.CreateTree(tx, "tree_" + i);
+
+					AddEntries(tree, i);
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx);
+
+				Assert.NotEmpty(report.Journals);
+
+				foreach (var journalReport in report.Journals)
+				{
+					Assert.True(journalReport.Number >=0);
+					Assert.True(journalReport.AllocatedSpaceInBytes > 0);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData(new[] { "key" }, 1000)]
+		[InlineData(new[] { "key1", "key2" }, 1000)]
+		[InlineData(new[] { "key" }, 1)]
+		[InlineData(new[] { "key1", "key2" }, 2)]
+		[InlineData(new[] { "key" }, 30)]
+		[InlineData(new[] { "key1", "key2" }, 30)]
+		public void TreeReportContainsInformationAboutMultiValueEntries(string[] keys, int numberOfValuesPerKey)
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				foreach (var key in keys)
+				{
+					for (int i = 0; i < numberOfValuesPerKey; i++)
+					{
+						tree.MultiAdd(key, "items/" + i + "/" + new string('p', i));
+					}
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.Equal(keys.Length, report.Trees[0].EntriesCount);
+
+				Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.EntriesCount);
+			}
+		}
+
+		private List<string> AddEntries(Tree tree, int treeNumber)
+		{
+			var entriesAdded = new List<string>();
+
+			for (int j = 0; j < treeNumber; j++)
+			{
+				string key = "value_" + j;
+				tree.Add(key, new MemoryStream(new byte[128]));
+				entriesAdded.Add(key);
+			}
+
+			return entriesAdded;
+		}
+
+		class OverflowsAddResult
+		{
+			public List<string> AddedEntries;
+			public long NumberOfOverflowPages;
+		}
+
+		private OverflowsAddResult AddOverflows(Transaction tx, Tree tree, int treeNumber, Random r)
+		{
+			var minOverflowSize = AbstractPager.NodeMaxSize - Constants.PageHeaderSize + 1;
+			var entriesAdded = new List<string>();
+			var overflowsAdded = 0;
+
+			for (int j = 0; j < treeNumber; j++)
+			{
+				var overflowSize = r.Next(minOverflowSize, 10000);
+				string key = "overflow_" + j;
+				tree.Add(key, new MemoryStream(new byte[overflowSize]));
+
+				entriesAdded.Add(key);
+				overflowsAdded += tx.DataPager.GetNumberOfOverflowPages(overflowSize);
+			}
+
+			return new OverflowsAddResult
+			{
+				AddedEntries = entriesAdded,
+				NumberOfOverflowPages = overflowsAdded
+			};
+		} 
+	}
+}

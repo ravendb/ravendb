@@ -49,6 +49,7 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot add empty value to child tree");
 
 			State.IsModified = true;
+			State.Flags |= TreeFlags.MultiValueTrees;
 
 			Lazy<Cursor> lazy;
 			NodeHeader* node;
