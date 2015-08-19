@@ -53,11 +53,19 @@ namespace Raven.Client.Counters
 			/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
 			/// <param name="shouldUpateIfExists">If the storage already there, should we update it</param>
-			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
+			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, 
+				string counterStorageName, 
+				bool shouldUpateIfExists = false,
+				OperationCredentials credentials = null, 
+				CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
 					throw new ArgumentNullException("counterStorageDocument");
+
 				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
+
+				if (String.IsNullOrWhiteSpace(counterStorageDocument.StoreName))
+					counterStorageDocument.StoreName = counterStorageName;
 
 				parent.AssertInitialized();
 
@@ -76,7 +84,7 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
+							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
 
 						throw;
 					}

@@ -5,5 +5,6 @@ namespace Raven.Abstractions.Smuggler
         Unknown = 0,
         Database,
         Filesystem,
+		Counter
     }
 }

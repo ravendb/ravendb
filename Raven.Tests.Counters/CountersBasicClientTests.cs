@@ -8,6 +8,7 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Xunit;
@@ -16,7 +17,7 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {
-	public class CountersChangeTests : RavenBaseCountersTest
+	public class CountersBasicClientTests : RavenBaseCountersTest
 	{
 		private const string CounterStorageName = "FooBarCounterStore";
 		private const string CounterName = "FooBarCounter";
@@ -55,6 +56,37 @@ namespace Raven.Tests.Counters
 			}
 		}
 
+		[Fact]
+		public async Task CountersInitialize_with_EnsureDefaultCounterCreation_should_not_overwrite_existing_counters()
+		{
+			using (var server = GetNewServer(port:8091))
+			{
+				using (var counterStore = new CounterStore
+				{
+					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Name = DefaultCounterStorageName					
+				})
+				{
+					counterStore.Initialize(true);
+
+					await counterStore.IncrementAsync("G", "C");
+					await counterStore.DecrementAsync("G", "C2");
+				}
+
+				using (var counterStore = new CounterStore
+				{
+					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Name = DefaultCounterStorageName
+				})
+				{
+					counterStore.Initialize(true);
+					var summary = await counterStore.Admin.GetCounterStorageSummary(DefaultCounterStorageName);
+					summary.Should().HaveCount(2);
+					summary.Should().ContainSingle(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C");
+					summary.Should().ContainSingle(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2");
+				}
+			}
+		}
 
 		[Theory]
 		[InlineData(2)]

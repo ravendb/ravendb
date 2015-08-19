@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -31,11 +30,12 @@ namespace Raven.Tests.Counters
 			using (var counterStore = NewRemoteCountersStore("store"))
 			using (var stream = new FailingStream())
 			{
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 
 				this.Invoking(x => AsyncHelpers.RunSync(() => smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToStream = stream
+					ToStream = stream,
+					From = ConnectionStringTo(counterStore)
 				}))).ShouldThrow<FailingStreamException>();
 			}
 		}
@@ -47,7 +47,7 @@ namespace Raven.Tests.Counters
 			using (var counterStore = NewRemoteCountersStore("store"))
 			using (var stream = new FailingStream())
 			{
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 
 				this.Invoking(x => AsyncHelpers.RunSync(() => smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
@@ -71,11 +71,12 @@ namespace Raven.Tests.Counters
 				await counterStore.IncrementAsync("g1", "c2");
 				await counterStore.IncrementAsync("g2", "c1");
 
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 				
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 
 				var fileInfo = new FileInfo(CounterDumpFilename);
@@ -94,11 +95,12 @@ namespace Raven.Tests.Counters
 				await counterStore.IncrementAsync("g1", "c2");
 				await counterStore.IncrementAsync("g2", "c1");
 
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 				smugglerApi.Options.Incremental = true;
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 				
 				await counterStore.IncrementAsync("g1", "c2");
@@ -106,7 +108,8 @@ namespace Raven.Tests.Counters
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 
 				var incrementalFolder = new DirectoryInfo(CounterDumpFilename);
@@ -126,14 +129,15 @@ namespace Raven.Tests.Counters
 				await counterStore.ChangeAsync("g1", "c1", 5);
 				await counterStore.IncrementAsync("g1", "c2");
 
-				var smugglerApi = new SmugglerCounterApi(counterStore)
+				var smugglerApi = new SmugglerCounterApi
 				{
 					Options = { Incremental = true }
 				};
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename					
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 
 				await counterStore.IncrementAsync("g", "c");
@@ -141,22 +145,22 @@ namespace Raven.Tests.Counters
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 
 				await counterStore.ChangeAsync("g", "c", -3);
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
-				var aa = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-
 			}
 
 			using (var counterStore = NewRemoteCountersStore("storeToImportTo"))
 			{
-				var smugglerApi = new SmugglerCounterApi(counterStore)
+				var smugglerApi = new SmugglerCounterApi()
 				{
 					Options = {Incremental = true}
 				};
@@ -164,22 +168,20 @@ namespace Raven.Tests.Counters
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromFile = CounterDumpFilename,
-					To = new CounterConnectionStringOptions
-					{
-						Url = counterStore.Url,
-						CounterStoreId = counterStore.Name
-					}
+					To = ConnectionStringTo(counterStore)
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
 
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c" && x.Group == "g");
+				summary.Should().HaveCount(3); //sanity check
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(5);
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(3);
-				summary.First(x => x.CounterName == "c" && x.Group == "g").Total.Should().Be(-2);
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
+
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(5);
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(3);
+				summary.First(x => x.CounterName == "c" && x.GroupName == "g").Total.Should().Be(-2);
 			}
 		}
 
@@ -193,38 +195,35 @@ namespace Raven.Tests.Counters
 				await counterStore.IncrementAsync("g1", "c2");
 				await counterStore.DecrementAsync("g2", "c1");
 
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 
 				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
-					ToFile = CounterDumpFilename
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStore)
 				});
 			}
 
 			using (var counterStore = NewRemoteCountersStore("storeToImportTo"))
 			{
-				var smugglerApi = new SmugglerCounterApi(counterStore);
+				var smugglerApi = new SmugglerCounterApi();
 
 				await smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromFile = CounterDumpFilename,
-					To = new CounterConnectionStringOptions
-					{
-						Url = counterStore.Url,
-						CounterStoreId = counterStore.Name
-					}
+					To = ConnectionStringTo(counterStore)
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
 
 				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(6); //change + inc
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(-1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(6); //change + inc
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(-1);
 			}
 		}
 
@@ -239,27 +238,27 @@ namespace Raven.Tests.Counters
 				await source.IncrementAsync("g1", "c2");
 				await source.ChangeAsync("g2", "c1",4);
 
-				var smugglerApi = new SmugglerCounterApi(source);
+				var smugglerApi = new SmugglerCounterApi();
 				await smugglerApi.Between(new SmugglerBetweenOptions<CounterConnectionStringOptions>
 				{
-					From = ConnectionStringFrom(source),
-					To = ConnectionStringFrom(target)
+					From = ConnectionStringTo(source),
+					To = ConnectionStringTo(target)
 				});
 
 				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
 
 				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(2); 
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(4);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(2); 
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(4);
 			}
 		}
 
-		private CounterConnectionStringOptions ConnectionStringFrom(ICounterStore counterStore)
+		private CounterConnectionStringOptions ConnectionStringTo(ICounterStore counterStore)
 		{
 			return new CounterConnectionStringOptions
 			{

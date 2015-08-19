@@ -3,11 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Counters;
@@ -22,6 +25,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Database.Server.Security;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -263,11 +267,11 @@ namespace Raven.Database.Server.Tenancy
 		{
 			Task<CounterStorage> cs;
 			if (TryGetOrCreateResourceStore(name, out cs))
-				return await cs;
+				return await cs.ConfigureAwait(false);
 			return null;
 		}
 
-		public void ForAllCounters(Action<CounterStorage> action)
+		public void ForAllCountersInCacheOnly(Action<CounterStorage> action)
 		{
 			foreach (var value in ResourcesStoresCache
 				.Select(cs => cs.Value)
@@ -276,6 +280,25 @@ namespace Raven.Database.Server.Tenancy
 				action(value.Result);
 			}
 		}
+
+		public void ForAllCounters(Action<CounterStorage> action)
+		{
+			using (systemDatabase.DisableAllTriggersForCurrentThread())
+			{
+				int nextPageStart = 0;
+				var counterDocs = systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null,
+					0,int.MaxValue, CancellationToken.None, ref nextPageStart).ToList();
+
+				foreach (var doc in counterDocs)
+				{
+					Debug.Assert(((IEnumerable<KeyValuePair<string, RavenJToken>>)doc).Any(x => x.Key == "StoreName"));
+
+					var counter = AsyncHelpers.RunSync(() => GetCounterInternal(doc.Value<string>("StoreName")));
+					action(counter);
+				}
+			}
+		}
+
 
 		protected override DateTime LastWork(CounterStorage resource)
 		{
