@@ -375,7 +375,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 							{
 								Tuple<int, int> range;
 								if (!ranges.TryDequeue(out range)) return;
-								action(YieldFromRange(range, src));
+								action(YieldFromRange(ranges, range, src));
 							}
 							finally
 							{
@@ -407,12 +407,15 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 			WaitForBatchToCompletion(totalTasks);
 		}
 
-		private IEnumerator<T> YieldFromRange<T>(Tuple<int, int> boundaries, IList<T> input)
+		private IEnumerator<T> YieldFromRange<T>(ConcurrentQueue<Tuple<int, int>> ranges, Tuple<int, int> boundaries, IList<T> input)
 		{
-			for (int i = boundaries.Item1; i <= boundaries.Item2; i++)
-			{
-				yield return input[i];
-			}
+		    do
+		    {
+		        for (int i = boundaries.Item1; i <= boundaries.Item2; i++)
+		        {
+		            yield return input[i];
+		        }
+		    } while (ranges.TryDequeue(out boundaries));
 		}
 		
 		public void ExecuteBatch<T>(IList<T> src, Action<T> action, string description = null,
