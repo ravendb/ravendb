@@ -43,5 +43,9 @@ namespace Voron.Debugging
 	public class MultiValuesReport
 	{
 		public long EntriesCount { get; set; }
+		public long PageCount { get; set; }
+		public long BranchPages { get; set; }
+		public long LeafPages { get; set; }
+		public long OverflowPages { get; set; }
 	}
 }
