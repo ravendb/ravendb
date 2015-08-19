@@ -826,7 +826,6 @@
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
-    <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
