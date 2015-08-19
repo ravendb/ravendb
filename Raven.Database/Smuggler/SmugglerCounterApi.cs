@@ -159,14 +159,18 @@ namespace Raven.Database.Smuggler
 					throw lastException;
 				return result;
 			}
-			catch (Exception e)
-			{
-				throw;
-			}
 			finally
 			{
 				if (ownedStream && stream != null)
+				{
+					stream.Flush();
 					stream.Dispose();
+					ShowProgress("Finished export and closed file...");
+				}
+				else
+				{
+					ShowProgress("Finished export...");
+				}
 			}
 		}
 
@@ -179,7 +183,7 @@ namespace Raven.Database.Smuggler
 
 			foreach (var delta in counterDeltas)
 			{
-				ShowProgress(String.Format("Exporting {0} -> {1}", delta.GroupName, delta.CounterName));
+				ShowProgress(String.Format("Exporting counter {0} - {1}", delta.GroupName, delta.CounterName));
 
 				jsonWriter.WriteStartObject();
 				jsonWriter.WritePropertyName("CounterName");
@@ -253,33 +257,29 @@ namespace Raven.Database.Smuggler
 
 		private async Task ExportFullData(ICounterStore counterStore, JsonTextWriter jsonWriter)
 		{
-			var counterStorageNames = await counterStore.Admin.GetCounterStoragesNamesAsync(CancellationToken).ConfigureAwait(false);
-			ShowProgress(String.Format("Starting full export, fetched {0} counter storages",counterStorageNames.Length));
-			foreach (var storageName in counterStorageNames)
+			ShowProgress("Starting full export...");
+			ShowProgress("Exporting from counter storage " + counterStore.Name);
+			var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name, CancellationToken).WithCancellation(CancellationToken).ConfigureAwait(false);
+
+			jsonWriter.WriteStartArray();
+			foreach (var counterInfo in counterStorageInfo)
 			{
-				ShowProgress("Exporting " + storageName);
-				var counterStorageInfo = await counterStore.Admin.GetCounterStorageSummary(storageName, CancellationToken).ConfigureAwait(false);
-					
-				jsonWriter.WriteStartArray();
-					foreach (var counterInfo in counterStorageInfo)
-					{
-						ShowProgress(String.Format("Exporting {0} -> {1}",counterInfo.Group, counterInfo.CounterName));
-						jsonWriter.WriteStartObject();
-						jsonWriter.WritePropertyName("Group");
-						jsonWriter.WriteValue(counterInfo.Group);
+				ShowProgress(String.Format("Exporting counter {0} - {1}", counterInfo.GroupName, counterInfo.CounterName));
+				jsonWriter.WriteStartObject();
+				jsonWriter.WritePropertyName("Group");
+				jsonWriter.WriteValue(counterInfo.GroupName);
 
-						jsonWriter.WritePropertyName("Name");
-						jsonWriter.WriteValue(counterInfo.CounterName);
-						jsonWriter.WritePropertyName("Positive");
-						jsonWriter.WriteValue(counterInfo.Increments);
+				jsonWriter.WritePropertyName("Name");
+				jsonWriter.WriteValue(counterInfo.CounterName);
+				jsonWriter.WritePropertyName("Positive");
+				jsonWriter.WriteValue(counterInfo.Increments);
 
-						jsonWriter.WritePropertyName("Negative");
-						jsonWriter.WriteValue(counterInfo.Decrements);
+				jsonWriter.WritePropertyName("Negative");
+				jsonWriter.WriteValue(counterInfo.Decrements);
 
-						jsonWriter.WriteEndObject();
-					}
-				jsonWriter.WriteEndArray();
+				jsonWriter.WriteEndObject();
 			}
+			jsonWriter.WriteEndArray();
 		}
 
 		//assumes that the caller has responsibility to handle data stream disposal ("stream" parameter)
@@ -307,7 +307,7 @@ namespace Raven.Database.Smuggler
 					Name = connectionString.CounterStoreId,
 					Credentials = new OperationCredentials(connectionString.ApiKey, connectionString.Credentials)
 				};
-				store.Initialize();
+				store.Initialize(true);
 
 				ShowProgress(String.Format("Initialized connection to counter store (name = {0})",store.Name));
 				var existingCounterGroupsAndNames = await store.Admin.GetCounterStorageNameAndGroups(token: CancellationToken)
@@ -327,16 +327,16 @@ namespace Raven.Database.Smuggler
 
 					if (existingCounterGroupsAndNames.Any(x => x.Group == groupName && x.Name == counterName))
 					{
-						ShowProgress(String.Format("Counter {0} -> {1} is already there. Reset is performed", groupName, counterName));
+						ShowProgress(String.Format("Counter {0} - {1} is already there. Reset is performed", groupName, counterName));
 						await store.ResetAsync(groupName, counterName, CancellationToken).ConfigureAwait(false); //since it is a full import, the values are overwritten
 					}
 
-					ShowProgress(String.Format("Importing counter {0} -> {1}",groupName,counterName));
+					ShowProgress(String.Format("Importing counter {0} - {1}",groupName,counterName));
 					store.Batch.ScheduleChange(groupName, counterName, delta);
 				}
 
 				ShowProgress("Finished import...");
-				await store.Batch.FlushAsync().ConfigureAwait(false);
+				await store.Batch.FlushAsync().WithCancellation(CancellationToken).ConfigureAwait(false);
 			}
 			finally
 			{
@@ -438,7 +438,7 @@ namespace Raven.Database.Smuggler
 					Name = connectionString.CounterStoreId,
 					Credentials = new OperationCredentials(connectionString.ApiKey, connectionString.Credentials)
 				};
-				store.Initialize();
+				store.Initialize(true);
 				ShowProgress(String.Format("Initialized connection to counter store (name = {0})", store.Name));
 
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
@@ -446,7 +446,7 @@ namespace Raven.Database.Smuggler
 					if (jsonReader.TokenType == JsonToken.StartObject)
 					{
 						var counterDelta = RavenJToken.ReadFrom(jsonReader).ToObject<CounterState>();
-						ShowProgress(String.Format("Importing counter {0} -> {1}", counterDelta.GroupName, counterDelta.CounterName));
+						ShowProgress(String.Format("Importing counter {0} - {1}", counterDelta.GroupName, counterDelta.CounterName));
 						store.Batch.ScheduleChange(counterDelta.GroupName, counterDelta.CounterName, counterDelta.Value);
 					}
 				}
@@ -489,16 +489,16 @@ namespace Raven.Database.Smuggler
 
 				foreach (var summary in counterSummaries)
 				{
-					if (existingCounterGroupsAndNames.Any(x => x.Group == summary.Group && x.Name == summary.CounterName))
+					if (existingCounterGroupsAndNames.Any(x => x.Group == summary.GroupName && x.Name == summary.CounterName))
 					{
-						ShowProgress(String.Format("Counter {0} -> {1} is already there. Reset is performed", summary.Group, summary.CounterName));
-						await target.ResetAsync(summary.Group, summary.CounterName, CancellationToken)
+						ShowProgress(String.Format("Counter {0} -> {1} is already there. Reset is performed", summary.GroupName, summary.CounterName));
+						await target.ResetAsync(summary.GroupName, summary.CounterName, CancellationToken)
 							.WithCancellation(CancellationToken)
 							.ConfigureAwait(false); //since it is a full import, the values are overwritten
 					}
 
-					ShowProgress(String.Format("Importing counter {0} -> {1}", summary.Group, summary.CounterName));
-					target.Batch.ScheduleChange(summary.Group, summary.CounterName, summary.Total);
+					ShowProgress(String.Format("Importing counter {0} - {1}", summary.GroupName, summary.CounterName));
+					target.Batch.ScheduleChange(summary.GroupName, summary.CounterName, summary.Total);
 				}
 
 				ShowProgress("Finished import...");

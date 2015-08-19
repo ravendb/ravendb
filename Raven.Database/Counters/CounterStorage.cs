@@ -402,7 +402,7 @@ namespace Raven.Database.Counters
 				var serverIdBuffer = new byte[parent.sizeOfGuid];
 				return countersDetails.Select(counterDetails => new CounterSummary
 				{
-					Group = counterDetails.Group,
+					GroupName = counterDetails.Group,
 					CounterName = counterDetails.Name,
 					Increments = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer,ValueSign.Positive),
 					Decrements = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer, ValueSign.Negative)

@@ -21,40 +21,40 @@ namespace Raven.Smuggler
 {
 	public class Program
 	{
-        private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
-        private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
+		private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
+		private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
 		private readonly SmugglerCounterApi smugglerCounterApi = new SmugglerCounterApi();
 
-        private OptionSet databaseOptionSet;
-        private OptionSet filesystemOptionSet;
+		private OptionSet databaseOptionSet;
+		private OptionSet filesystemOptionSet;
 		private OptionSet counterOptionSet;
-        private readonly OptionSet selectionDispatching;
-	    private bool allowImplicitDatabase = false;
+		private readonly OptionSet selectionDispatching;
+		private bool allowImplicitDatabase = false;
 
-	    private Program()
-	    {
-            var databaseOptions = smugglerApi.Options;
-            var filesOptions = smugglerFilesApi.Options;
-		    var counterOptions = smugglerCounterApi.Options;
+		private Program()
+		{
+			var databaseOptions = smugglerApi.Options;
+			var filesOptions = smugglerFilesApi.Options;
+			var counterOptions = smugglerCounterApi.Options;
 
-	        selectionDispatching = new OptionSet();
-		    selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
-		    selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
-																		 {
-																			 bool disableCompression;
-																			 if (String.IsNullOrWhiteSpace(value) == false &&
-																			     Boolean.TryParse(value, out disableCompression))
-																				 databaseOptions.DisableCompressionOnImport = disableCompression;
-																			 else
-																				 PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
-																		 });
+			selectionDispatching = new OptionSet();
+			selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+			selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
+			{
+				bool disableCompression;
+				if (String.IsNullOrWhiteSpace(value) == false &&
+				    Boolean.TryParse(value, out disableCompression))
+					databaseOptions.DisableCompressionOnImport = disableCompression;
+				else
+					PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
+			});
 
-		    selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
-		    {
-			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
-				    mode = SmugglerMode.Database;
+			selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
+			{
+				if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
+					mode = SmugglerMode.Database;
 				else PrintUsageAndExit(new ArgumentException("Parameters for Database and for other storage types are mixed. You cannot use multiple in the same request."));
-		    });
+			});
 
 			selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
 			{
@@ -70,10 +70,13 @@ namespace Raven.Smuggler
 				else PrintUsageAndExit(new ArgumentException("Parameters for Counter and for other storage types are mixed. You cannot use multiple in the same request."));
 			});
 
-		    DefineDatabaseOptionsSet(databaseOptions);
-		    DefineFilesystemOptionSet(filesOptions);
-		    DefineCounterOptionSet(counterOptions);
-	    }
+			DefineDatabaseOptionsSet(databaseOptions);
+			DefineFilesystemOptionSet(filesOptions);
+			DefineCounterOptionSet(counterOptions);
+		}
+
+		private string counterStorageName;
+		private string counterStorageName2;
 
 		private void DefineCounterOptionSet(SmugglerCounterOptions counterOptions)
 		{
@@ -89,8 +92,8 @@ namespace Raven.Smuggler
 			counterOptionSet.Add("domain2:", OptionCategory.SmugglerCounter, "The domain to use when the counter storage requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(counterOptions.Destination).Domain = value);
 			counterOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerCounter, "The API-key to use, when using OAuth.", value => counterOptions.Source.ApiKey = value);
 			counterOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerCounter, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => counterOptions.Destination.ApiKey = value);
-			counterOptionSet.Add("c|counter:", OptionCategory.SmugglerCounter, "The counter storage to operate on. If no specified, the operations will be on the default counter storage.", value => counterOptions.Source.CounterStoreId = value);
-			counterOptionSet.Add("c2|counter2:", OptionCategory.SmugglerCounter, "The counter storage to export to. If no specified, the operations will be on the default counter storage. This parameter is used only in the between operation.", value => counterOptions.Destination.CounterStoreId = value);
+			counterOptionSet.Add("c|counter:", OptionCategory.SmugglerCounter, "The counter storage to operate on. If no specified, the operations will be on the default counter storage.", value => counterStorageName = value);
+			counterOptionSet.Add("c2|counter2:", OptionCategory.SmugglerCounter, "The counter storage to export to. If no specified, the operations will be on the default counter storage. This parameter is used only in the between operation.", value => counterStorageName2 = value);
 		}
 
 		private void DefineFilesystemOptionSet(SmugglerFilesOptions filesOptions)
@@ -223,157 +226,178 @@ namespace Raven.Smuggler
 			return cred;
 		}
 
-		static void Main(string[] args)
+		private static void Main(string[] args)
 		{
 			var program = new Program();
 			AsyncHelpers.RunSync(() => program.Parse(args));
 		}
 
-        private SmugglerMode mode = SmugglerMode.Unknown;
+		private SmugglerMode mode = SmugglerMode.Unknown;
 
-        private async Task Parse(string[] args)
+		private async Task Parse(string[] args)
 		{
-            var options = smugglerApi.Options;
-            var filesOptions = smugglerFilesApi.Options;
+			var options = smugglerApi.Options;
+			var filesOptions = smugglerFilesApi.Options;
 
 			// Do these arguments the traditional way to maintain compatibility
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
 
-            try
-            {
-                selectionDispatching.Parse(args);
-            }
-            catch (Exception e)
-            {
-                PrintUsageAndExit(e);
-            }
+			try
+			{
+				selectionDispatching.Parse(args);
+			}
+			catch (Exception e)
+			{
+				PrintUsageAndExit(e);
+			}
 
-            var url = args[1];
-            if (url == null || args[2] == null )
-                PrintUsageAndExit(-1);
+			var url = args[1];
+			if (url == null || args[2] == null)
+				PrintUsageAndExit(-1);
 
 			SmugglerAction action;
-		    if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
-		    {
-		        action = SmugglerAction.Import;
-		    }
+			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
+			{
+				action = SmugglerAction.Import;
+			}
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
 			{
-			    action = SmugglerAction.Export;
+				action = SmugglerAction.Export;
 			}
-            else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
-            {
-                action = SmugglerAction.Between;
-            }
-            else
-            {
-                PrintUsageAndExit(-1);
-                return;
-            }
+			else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
+			{
+				action = SmugglerAction.Between;
+			}
+			else
+			{
+				PrintUsageAndExit(-1);
+				return;
+			}
 
-            try
-            {
-                switch (mode)
-                {
-                    case SmugglerMode.Database:
-                        {
-							CallContext.LogicalSetData(Constants.Smuggler.CallContext, true);
+			try
+			{
+				switch (mode)
+				{
+					case SmugglerMode.Database:
+					{
+						CallContext.LogicalSetData(Constants.Smuggler.CallContext, true);
 
-                            try
-                            {
-                                databaseOptionSet.Parse(args);
-                            }
-                            catch (Exception e)
-                            {
-                                PrintUsageAndExit(e);
-                            }
+						try
+						{
+							databaseOptionSet.Parse(args);
+						}
+						catch (Exception e)
+						{
+							PrintUsageAndExit(e);
+						}
 
-                            options.Source.Url = url;
-                            options.BackupPath = args[2];
+						options.Source.Url = url;
+						options.BackupPath = args[2];
 
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerApi.Options.Incremental = true;
+						if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+							smugglerApi.Options.Incremental = true;
 
-							if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
-								NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
-								smugglerApi.Options.DisableCompressionOnImport = true;
+						if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
+						    NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
+							smugglerApi.Options.DisableCompressionOnImport = true;
 
-                            ValidateDatabaseParameters(smugglerApi, action);
-                            var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                            await databaseDispatcher.Execute(action);
-                        }
-                        break;
-                    case SmugglerMode.Filesystem:
-                        {
-                            try
-                            {
-                                filesystemOptionSet.Parse(args);
-                            }
-                            catch (Exception e)
-                            {
-                                PrintUsageAndExit(e);
-                            }
+						ValidateDatabaseParameters(smugglerApi, action);
+						var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+						await databaseDispatcher.Execute(action);
+					}
+						break;
+					case SmugglerMode.Filesystem:
+					{
+						try
+						{
+							filesystemOptionSet.Parse(args);
+						}
+						catch (Exception e)
+						{
+							PrintUsageAndExit(e);
+						}
 
-                            filesOptions.Source.Url = url;
-                            filesOptions.BackupPath = args[2];
+						filesOptions.Source.Url = url;
+						filesOptions.BackupPath = args[2];
 
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerFilesApi.Options.Incremental = true;
+						if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+							smugglerFilesApi.Options.Incremental = true;
 
-                            var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                            await filesDispatcher.Execute(action);
-                        }
-                        break;
+						var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+						await filesDispatcher.Execute(action);
+					}
+						break;
 					case SmugglerMode.Counter:
-	                {
-		                try
-		                {
-			                counterOptionSet.Parse(args);
-		                }
-		                catch (Exception e)
-		                {
-			                PrintUsageAndExit(e);
-		                }
+					{
+						try
+						{
+							counterOptionSet.Parse(args);
+						}
+						catch (Exception e)
+						{
+							PrintUsageAndExit(e);
+						}
 
-		                var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
-		                await countersDispatcher.Execute(action);
-	                }
-		            break;
-                }
-            }
-            catch (Exception e)
-            {
-                if (e is AggregateException)
-                    Console.WriteLine(e.SimplifyError());
-                else
-                    Console.WriteLine(e.Message);
-			
-                Environment.Exit(-1);
-            }            
-        }
 
-        private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
-        {
-            if (allowImplicitDatabase == false)
-            {
-                if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
-                {
-                    throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
-                }
+						switch (action)
+						{
+							case SmugglerAction.Export:
+								smugglerCounterApi.Options.Source.Url = url;
+								smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
+								break;
+							case SmugglerAction.Import:
+								smugglerCounterApi.Options.Destination.Url = url;
+								smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName;
+								break;
+							case SmugglerAction.Between:
+								smugglerCounterApi.Options.Source.Url = url;
+								smugglerCounterApi.Options.Destination.Url = url;
+								smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
+								smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName2;
+								break;
+						}
 
-                if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
-                {
-                    throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
-                }
-            }
-        }
+						smugglerCounterApi.Options.BackupPath = args[2];
+						
+						var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
+						await countersDispatcher.Execute(action);
+					}
+						break;
+				}
+			}
+			catch (Exception e)
+			{
+				if (e is AggregateException)
+					Console.WriteLine(e.SimplifyError());
+				else
+					Console.WriteLine(e.Message);
+
+				Environment.Exit(-1);
+			}
+		}
+
+		private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
+		{
+			if (allowImplicitDatabase == false)
+			{
+				if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
+				{
+					throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+				}
+
+				if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
+				{
+					throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
+				}
+			}
+		}
 
 		private void PrintUsageAndExit(Exception e)
 		{
-            string message = e.Message;
-            if (e is AggregateException)
-                message = e.SimplifyError();
+			string message = e.Message;
+			if (e is AggregateException)
+				message = e.SimplifyError();
 
 			ConsoleHelper.WriteLineWithColor(ConsoleColor.Red, message);
 			PrintUsage();
@@ -437,5 +461,5 @@ Command line options:");
 
 			Console.WriteLine();
 		}
-		}
 	}
+}

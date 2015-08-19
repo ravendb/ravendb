@@ -13,7 +13,8 @@ namespace Raven.Database.Smuggler
 		{
 			api = new SmugglerCounterApi
 			{
-				Options = options
+				Options = options,
+				ShowProgress = Console.WriteLine
 			};
 		}
 

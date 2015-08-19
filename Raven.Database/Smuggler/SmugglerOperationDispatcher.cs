@@ -44,7 +44,7 @@ namespace Raven.Smuggler
                 {
                     if (e.Status == WebExceptionStatus.ConnectFailure)
                     {
-                        Console.WriteLine("Error: {0} {1}", e.Message, this.Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
+                        Console.WriteLine("Error: {0} {1}", e.Message, Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
                         var socketException = e.InnerException as SocketException;
                         if (socketException != null)
                         {

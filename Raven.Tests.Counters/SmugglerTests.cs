@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -174,13 +173,15 @@ namespace Raven.Tests.Counters
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
 
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c" && x.Group == "g");
+				summary.Should().HaveCount(3); //sanity check
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(5);
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(3);
-				summary.First(x => x.CounterName == "c" && x.Group == "g").Total.Should().Be(-2);
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
+
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(5);
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(3);
+				summary.First(x => x.CounterName == "c" && x.GroupName == "g").Total.Should().Be(-2);
 			}
 		}
 
@@ -216,13 +217,13 @@ namespace Raven.Tests.Counters
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
 
 				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(6); //change + inc
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(-1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(6); //change + inc
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(-1);
 			}
 		}
 
@@ -247,13 +248,13 @@ namespace Raven.Tests.Counters
 				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
 
 				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.Group == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.Group == "g2");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
+				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
 
-				summary.First(x => x.CounterName == "c1" && x.Group == "g1").Total.Should().Be(2); 
-				summary.First(x => x.CounterName == "c2" && x.Group == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.Group == "g2").Total.Should().Be(4);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(2); 
+				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
+				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(4);
 			}
 		}
 
