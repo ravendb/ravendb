@@ -110,7 +110,6 @@ namespace Voron.Debugging
 					do
 					{
 						var currentNode = multiTreeIterator.Current;
-						long numberOfEntries;
 
 						switch (currentNode->Flags)
 						{
@@ -120,14 +119,17 @@ namespace Voron.Debugging
 
 								Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
 
-								numberOfEntries = multiValueTreeHeader->EntriesCount;
+								multiValues.EntriesCount += multiValueTreeHeader->EntriesCount;
+								multiValues.BranchPages += multiValueTreeHeader->BranchPages;
+								multiValues.LeafPages += multiValueTreeHeader->LeafPages;
+								multiValues.PageCount += multiValueTreeHeader->PageCount;
 								break;
 							}
 							case NodeFlags.Data:
 							{
 								var nestedPage = GetNestedMultiValuePage(NodeHeader.DirectAccess(_tx, currentNode), currentNode);
 
-								numberOfEntries = nestedPage.NumberOfEntries;
+								multiValues.EntriesCount += nestedPage.NumberOfEntries;
 								break;
 							}
 							case NodeFlags.PageRef:
@@ -135,14 +137,12 @@ namespace Voron.Debugging
 								var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
 								var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
 
-								numberOfEntries = nestedPage.NumberOfEntries;
+								multiValues.EntriesCount += nestedPage.NumberOfEntries;
 								break;
 							}
 							default:
 								throw new InvalidEnumArgumentException("currentNode->Flags", (int) currentNode->Flags, typeof (NodeFlags));
 						}
-
-						multiValues.EntriesCount += numberOfEntries;
 					} while (multiTreeIterator.MoveNext());
 				}
 			}

@@ -212,6 +212,30 @@ namespace Voron.Tests.Storage
 			}
 		}
 
+		[Fact]
+		public void TreeReportContainsInformationAboutPagesOfChildMultiTrees()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 1000; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.True(report.Trees[0].MultiValues.PageCount > 0);
+                Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+			}
+		}
+
 		private List<string> AddEntries(Tree tree, int treeNumber)
 		{
 			var entriesAdded = new List<string>();
