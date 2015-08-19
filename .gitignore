@@ -154,6 +154,8 @@ Raven.Studio.Html5/App/viewmodels/database/status/debug/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/debug/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/indexing/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/indexing/*.js.map
+Raven.Studio.Html5/App/viewmodels/database/status/indexing/perfDialogs/*.js
+Raven.Studio.Html5/App/viewmodels/database/status/indexing/perfDialogs/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/requests/*.js
 Raven.Studio.Html5/App/viewmodels/database/status/requests/*.js.map
 Raven.Studio.Html5/App/viewmodels/database/status/storage/*.js
