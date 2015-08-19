@@ -8,7 +8,14 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import getFilteredOutIndexStatsCommand = require("commands/database/debug/getFilteredOutIndexStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
+import app = require("durandal/app");
 import changeSubscription = require('common/changeSubscription');
+import mapBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/mapBatchInfo");
+import reduceBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceBatchInfo");
+import mapStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/mapStatsInfo");
+import reduceStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceStatsInfo");
+import prefetchInfo = require("viewmodels/database/status/indexing/perfDialogs/prefetchInfo");
+import filteredOutIndexInfo = require("viewmodels/database/status/indexing/perfDialogs/filteredOutIndexInfo");
 
 class dateRange {
     constructor(public start: Date, public end: Date) {
@@ -1182,7 +1189,7 @@ class metrics extends viewModelBase {
             .attr('cx', d => self.xScale(d.TimestampParsed))
             .attr('cy', d => self.yMapScale(d.IndexName) + self.yBarHeight / 2 + radius / 2 + self.yBarMargin)
             .style('stroke', 'black')
-            .style('fill', 'none')
+            .on('click', self.filterOutIndexClicked.bind(self))
             .transition()
             .attr('r', radius);
     }
@@ -1298,28 +1305,31 @@ class metrics extends viewModelBase {
 
     }
 
+    private filterOutIndexClicked(data: filteredOutIndexStatDto) {
+        app.showDialog(new filteredOutIndexInfo(data));
+    }
+
     private indexStatClicked(data: indexNameAndMapPerformanceStats) {
         data.CacheThreadCount = this.findMaxThreadCountInMap(data);
-        this.showTooltip(data, 'index-stat-template');
+        app.showDialog(new mapStatsInfo(data));
     }
 
     private reduceStatClicked(data: reduceLevelPeformanceStatsDto) {
         data.CacheThreadCount = this.findMaxThreadCountInReduce(data);
-        this.showTooltip(data, 'reduce-stat-template');
+        app.showDialog(new reduceStatsInfo(data));
     }
 
     private mapBatchInfoClicked(data: indexingBatchInfoDto) {
-        this.showTooltip(data, 'map-batch-info-template');
+        app.showDialog(new mapBatchInfo(data));
     }
 
     private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
-        this.showTooltip(data, 'reduce-batch-info-template');
+        app.showDialog(new reduceBatchInfo(data));
     }
 
     private prefetchStatClicked(data: futureBatchStatsDto) {
-        this.showTooltip(data, 'prefetch-template');
+        app.showDialog(new prefetchInfo(data));
     }
-
 
     onWindowHeightChanged() {
         nv.tooltip.cleanup();

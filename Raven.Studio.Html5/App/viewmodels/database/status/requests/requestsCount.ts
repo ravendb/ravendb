@@ -45,14 +45,13 @@ class requestsCount extends viewModelBase {
 	    return deferred;
     }
 
-    attached() {
-		super.attached();
+    compositionComplete() {
         this.modelPolling();
     }
 
-    detached() {
-        super.detached();
+    canDeactivate() {
         window.onresize = null; // FIX nvd3 event attached globally
+        return true;
     }
 
     appendData() {
