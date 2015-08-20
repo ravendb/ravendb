@@ -9,11 +9,11 @@
                             <span data-bind="text: indexName"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu scrollable-menu" role="menu">
-                            <!-- ko foreach: onRamIndexes -->
-                            <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
-                            <!-- /ko -->
-                        </ul>
+					 	<ul class="dropdown-menu scrollable-resource-menu" role="menu">
+					 		<!-- ko foreach: onRamIndexes -->
+					 		<li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+					 		<!-- /ko -->
+					 	</ul>
                     </div>
                 </div>
             </div>
