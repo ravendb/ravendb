@@ -21,13 +21,13 @@
                             <label for="databaseName" class="col-sm-2 control-label">Database to compact</label>
                             <div class="col-sm-3">
                                 <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to compact">
-                                <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 300px; display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
-                                    <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
+								<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
+									<li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
+										<a role="menuitem" tabindex="-1" href="#">
+											<span data-bind="text: $data"></span>
+										</a>
+									</li>
+								</ul>
                             </div>
                         </div>
                         <div class="progress progress-striped active" data-bind="visible: $parent.isBusy">
@@ -63,14 +63,14 @@
                         <div class="form-group">
                             <label for="filesystemName" class="col-sm-2 control-label">Filesystem to compact</label>
                             <div class="col-sm-3">
-                                <input tabindex="2" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to compact">
-                                <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 300px; display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
-                                    <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
+                                <input tabindex="2" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="File System name to compact">
+								<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
+									<li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
+										<a role="menuitem" tabindex="-1" href="#">
+											<span data-bind="text: $data"></span>
+										</a>
+									</li>
+								</ul>
                             </div>
                         </div>
                         <div class="progress progress-striped active" data-bind="visible: $parent.isBusy">
@@ -78,7 +78,7 @@
                         </div>
 
                         <p>
-                            <i class="fa fa-warning text-warning"></i><span class="text-muted">Compaction takes filesystem offline.</span>
+                            <i class="fa fa-warning text-warning"></i><span class="text-muted">Compaction takes file system offline.</span>
                         </p>
                     </div>
                 </div>
