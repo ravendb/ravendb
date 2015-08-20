@@ -22,7 +22,7 @@
                         <label for="databaseName" class="col-sm-2 control-label">Database to backup</label>
                         <div class="col-sm-3">
                             <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to backup">
-							<ul class="dropdown-menu scrollable-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
+							<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
 								<li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
 									<a role="menuitem" tabindex="-1" href="#">
 										<span data-bind="text: $data"></span>
