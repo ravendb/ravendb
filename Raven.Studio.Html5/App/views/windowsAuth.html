@@ -74,13 +74,13 @@
                                                     <td>
                                                         <div class="btn-group">
                                                             <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
-                                                            <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 150px; display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
-                                                                <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                                    <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                        <span data-bind="text: $data"></span>
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
+															<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+																<li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+																	<a role="menuitem" tabindex="-1" href="#" class="nounderline">
+																		<span data-bind="text: $data"></span>
+																	</a>
+																</li>
+															</ul>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -168,13 +168,13 @@
                                                     <td>
                                                         <div class="btn-group">
                                                             <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
-                                                            <ul class="dropdown-menu scrollable-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
-                                                                <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                                    <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                        <span data-bind="text: $data"></span>
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
+															<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+																<li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+																	<a role="menuitem" tabindex="-1" href="#" class="nounderline" data-bind="attr : { 'title': $data }">
+																		<span data-bind="text: $data"></span>
+																	</a>
+																</li>
+															</ul>
                                                         </div>
                                                     </td>
                                                     <td>
