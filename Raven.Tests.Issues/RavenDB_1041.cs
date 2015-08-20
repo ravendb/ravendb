@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -126,7 +128,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public async Task ShouldThrowTimeoutException()
+		public void ShouldThrowTimeoutException()
 		{
 			ShowLogs = true;
 
@@ -141,19 +143,9 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			TimeoutException timeoutException = null;
-
-			try
-			{
-				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
-			}
-			catch (TimeoutException ex)
-			{
-				timeoutException = ex;
-			}
-
-			Assert.NotNull(timeoutException);
-			Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+		    Assert.Throws<TimeoutException>(() => 
+			    // ReSharper disable once RedundantArgumentDefaultValue
+				AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
 		}
 
 		[Fact]
