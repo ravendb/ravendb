@@ -5,7 +5,6 @@
 /// <amd-dependency path="ace/mode/json" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
-import aceLang = require("ace/ext/language_tools");
 
 /*
  * A custom Knockout binding handler transforms the target element (usually a <pre>) into a code editor, powered by Ace. http://ace.c9.io
