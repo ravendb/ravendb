@@ -59,13 +59,10 @@ class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
+    static originalEnviromentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
     selectedColor = shell.selectedEnvironmentColorStatic;
-
-    selectedEnviromentText = ko.computed(() => {
-        return this.selectedColor().name + " Enviroment";
-    });
+    selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
     canShowEnviromentText = ko.computed(() => this.selectedColor().name != "Default");
-    
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
@@ -348,7 +345,21 @@ class shell extends viewModelBase {
         viewLocator.locateView("views/recentErrors");
     }
 
+    private fecthStudioConfigForDatabase(db: database) {
+        new getStudioConfig(db)
+            .execute()
+            .done((doc: documentClass) => {
+                var envColor = doc["EnvironmentColor"];
+                if (envColor != null) {
+                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
+                }
+            })
+            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
+    }
+
     private activateDatabase(db: database) {
+        this.fecthStudioConfigForDatabase(db);
+
         var changeSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
@@ -358,16 +369,6 @@ class shell extends viewModelBase {
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
 
         shell.resources().forEach((r: resource) => r.isSelected(r instanceof database && r.name === db.name));
-
-        new getStudioConfig(db)
-            .execute()
-            .done((doc: documentClass) => {
-                var envColor = doc["EnvironmentColor"];
-                if (envColor != null) {
-                    //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
-                }
-            });
     }
 
     private fetchDbStats(db: database) {
@@ -379,6 +380,8 @@ class shell extends viewModelBase {
     }
 
     private activateFileSystem(fs: fileSystem) {
+        this.fecthStudioConfigForDatabase(new database(fs.name));
+
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
@@ -766,8 +769,9 @@ class shell extends viewModelBase {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
-                    //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
+                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
+                    shell.selectedEnvironmentColorStatic(color);
+                    shell.originalEnviromentColor(color);
                 }
             });
     }
