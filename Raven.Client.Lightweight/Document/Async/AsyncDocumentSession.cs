@@ -371,9 +371,8 @@ namespace Raven.Client.Document.Async
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0]);
+			return LoadAsyncInternal<T>(ids.ToArray());
 		}
-
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
@@ -478,16 +477,50 @@ namespace Raven.Client.Document.Async
 
 			multiLoadOperation.LogOperation();
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+
 			MultiLoadResult result;
 			do
 			{
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-                    result = await AsyncDatabaseCommands.GetAsync(ids, includePaths).ConfigureAwait(false);
+					result = await AsyncDatabaseCommands.GetAsync(ids, includePaths).ConfigureAwait(false);
 				}
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();
+		}
+
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
+											.Distinct(StringComparer.OrdinalIgnoreCase)
+											.ToArray();
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, null);
+
+				MultiLoadResult result;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						result = await AsyncDatabaseCommands.GetAsync(ids, null).ConfigureAwait(false);
+					}
+				} while (multiLoadOperation.SetResult(result));
+				return multiLoadOperation.Complete<T>();
+			}
+			return ids.Select(id =>
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
 		}
 
 		/// <summary>
