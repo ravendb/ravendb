@@ -21,7 +21,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -48,7 +48,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -75,7 +75,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -104,7 +104,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -130,7 +130,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -163,7 +163,7 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -190,14 +190,14 @@ namespace Voron.Tests.Storage
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Environment.State.GetTree(tx,"tree").Add("foo1", StreamFor("updated foo1"));
+                tx.Environment.CreateTree(tx,"tree").Add("foo1", StreamFor("updated foo1"));
 
                 tx.Commit();
             }
@@ -226,7 +226,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var stream = tx.State.Root.Read("key/1");
+                var stream = tx.Root.Read("key/1");
                 Assert.Equal("123", stream.Reader.ToStringValue());
             }
         }
@@ -249,7 +249,7 @@ namespace Voron.Tests.Storage
                 for (int i = 0; i < numberOfItems; i++)
                 {
                     {
-                        var result = tx.State.Root.Read("key/" + i).Reader.ToStringValue();
+                        var result = tx.Root.Read("key/" + i).Reader.ToStringValue();
                         Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
                     }
                 }
@@ -275,10 +275,10 @@ namespace Voron.Tests.Storage
             {
                 for (int i = 0; i < numberOfItems; i++)
                 {
-                    var result = tx.State.Root.Read("key/" + i).Reader.ToStringValue();
+                    var result = tx.Root.Read("key/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 
-                    result = tx.State.Root.Read("yek/" + i).Reader.ToStringValue();
+                    result = tx.Root.Read("yek/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 
                 }
@@ -313,9 +313,9 @@ namespace Voron.Tests.Storage
             {
                 for (int i = 0; i < numberOfItems; i++)
                 {
-                    var result = tx.Environment.State.GetTree(tx,"tree1").Read("key/" + i).Reader.ToStringValue();
+                    var result = tx.Environment.CreateTree(tx,"tree1").Read("key/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
-                    result = tx.Environment.State.GetTree(tx,"tree2").Read("yek/" + i).Reader.ToStringValue();
+                    result = tx.Environment.CreateTree(tx,"tree2").Read("yek/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
                 }
             }
@@ -341,9 +341,9 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var result = tx.Environment.State.GetTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
+                var result = tx.Environment.CreateTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
                 Assert.Equal("tree1", result);
-                result = tx.Environment.State.GetTree(tx,"tree2").Read("key/1").Reader.ToStringValue();
+                result = tx.Environment.CreateTree(tx,"tree2").Read("key/1").Reader.ToStringValue();
                 Assert.Equal("tree2", result);
             }
         }
@@ -380,9 +380,9 @@ namespace Voron.Tests.Storage
 
                 using (var tx = Env.NewTransaction(TransactionFlags.Read))
                 {
-                    var result = tx.Environment.State.GetTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
+                    var result = tx.Environment.CreateTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
                     Assert.Equal("tree1", result);
-                    result = tx.Environment.State.GetTree(tx,"tree3").Read("key/1").Reader.ToStringValue();
+                    result = tx.Environment.CreateTree(tx,"tree3").Read("key/1").Reader.ToStringValue();
                     Assert.Equal("tree3", result);
                 }
             }
@@ -431,10 +431,10 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var result = tx.Environment.State.GetTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
+                var result = tx.Environment.CreateTree(tx,"tree1").Read("key/1").Reader.ToStringValue();
                 Assert.Equal("tree1", result);
 
-                result = tx.Environment.State.GetTree(tx,"tree3").Read("key/1").Reader.ToStringValue();
+                result = tx.Environment.CreateTree(tx,"tree3").Read("key/1").Reader.ToStringValue();
                 Assert.Equal("tree3", result);
             }
         }

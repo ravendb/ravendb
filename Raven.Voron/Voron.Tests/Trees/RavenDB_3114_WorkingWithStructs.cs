@@ -599,7 +599,7 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+				tx.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
 					.Set(MappedResults.View, 1)
 					.Set(MappedResults.ReduceKey, "reduce")
 					.Set(MappedResults.DocId, "doc"));
@@ -609,12 +609,12 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var ex = Assert.Throws<InvalidOperationException>(() => tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+				var ex = Assert.Throws<InvalidOperationException>(() => tx.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
 					.Set(MappedResults.View, 2)));
 
 				Assert.Equal("Your structure schema defines variable size fields but you haven't set any. If you really want to skip those fields set AllowToSkipVariableSizeFields = true.", ex.Message);
 
-				Assert.DoesNotThrow(() => tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+				Assert.DoesNotThrow(() => tx.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
 				{
 					AllowToSkipVariableSizeFields = true
 				}.Set(MappedResults.View, 2)));

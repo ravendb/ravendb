@@ -281,6 +281,7 @@
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
+    <Compile Include="Server\Controllers\DebugVoronController.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -345,6 +346,7 @@
     <Compile Include="Storage\TransactionalStorageHelper.cs" />
     <Compile Include="Storage\StringHelper.cs" />
     <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From12To13.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\DocumentReferencesFields.cs" />
@@ -824,7 +826,6 @@
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
-    <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />

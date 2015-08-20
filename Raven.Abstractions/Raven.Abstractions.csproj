@@ -322,6 +322,7 @@
     <Compile Include="Logging\ILogManager.cs" />
     <Compile Include="Logging\LogContext.cs" />
     <Compile Include="Logging\LoggerExecutionWrapper.cs" />
+    <Compile Include="Logging\LogHttpRequestStatsParams.cs" />
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogManager.cs" />
     <Compile Include="Logging\LogProviders\Log4NetLogManager.cs" />

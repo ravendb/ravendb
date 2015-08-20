@@ -16,7 +16,7 @@ namespace Voron.Tests.Trees
             {
                 for (int i = 0; i < size; i++)
                 {
-                    tx.State.Root.Add(string.Format("{0,5}", i*2), StreamFor("abcdefg"));
+                    tx.Root.Add			(string.Format("{0,5}", i*2), StreamFor("abcdefg"));
                 }
                 tx.Commit();
             }
@@ -24,16 +24,16 @@ namespace Voron.Tests.Trees
             {
                 for (int i = 0; i < size/2; i++)
                 {
-                    tx.State.Root.Delete(string.Format("{0,5}", i*2));
+                    tx.Root.Delete(string.Format("{0,5}", i*2));
                 }
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var pageCount = tx.State.Root.State.PageCount;
-                tx.State.Root.Add( "  244",new MemoryStream(new byte[512]));
-                Assert.Equal(pageCount, tx.State.Root.State.PageCount);
+                var pageCount = tx.Root.State.PageCount;
+                tx.Root.Add			( "  244",new MemoryStream(new byte[512]));
+                Assert.Equal(pageCount, tx.Root.State.PageCount);
                 tx.Commit();
             }
         }

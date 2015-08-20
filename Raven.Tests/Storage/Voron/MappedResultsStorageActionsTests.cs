@@ -1207,7 +1207,7 @@ namespace Raven.Tests.Storage
 				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce
-                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()), CancellationToken.None)
+                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()){}, CancellationToken.None)
 						.ToList();
 
 					Assert.Equal(0, results.Count);

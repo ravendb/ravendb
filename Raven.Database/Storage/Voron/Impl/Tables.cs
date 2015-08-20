@@ -104,7 +104,7 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByView = "by_view";
 
 				public const string ByViewAndLevelAndReduceKey  = "by_view_and_level_and_reduce_key";
-			}
+            }
 		}
 
         [Obsolete("Use RavenFS instead.")]
