@@ -117,6 +117,7 @@
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
+    <Compile Include="FixedSize\InlineDataWithRandomSeed.cs" />
     <Compile Include="FixedSize\LargeFixedSizeTrees.cs" />
     <Compile Include="FixedSize\SimpleFixedSizeTrees.cs" />
     <Compile Include="PrefixesFact.cs" />
