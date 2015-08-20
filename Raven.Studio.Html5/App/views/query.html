@@ -20,7 +20,7 @@
                     <span data-bind="text: selectedIndexLabel"></span>
                     <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu scrollable-menu" role="menu">
+                <ul class="dropdown-menu" role="menu" style="max-height: 300px; overflow-x: hidden;">
                     <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->

@@ -90,8 +90,13 @@ class autoCompleteBindingHandler {
 
     handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery, args: JQueryEventObject) {
         var enter = 13;
+		var escape = 27;
         var downArrow = 40;
         var upArrow = 38;
+
+	    if (args.which === escape) {
+		    element.style.display = "none";
+	    }
 
         var lis: JQuery, curSelected: JQuery;
         if (element.style.display == "none" && args.which === downArrow) {
@@ -103,36 +108,40 @@ class autoCompleteBindingHandler {
 
         if (args.which === downArrow || args.which === upArrow || args.which === enter) {
             lis = this.getAllAutoCompleteItems($element);
-            curSelected = $element.find('.selected');
+            curSelected = $element.find(".active");
         }
 
         if (args.which === downArrow) {
             if (curSelected.length > 0) {
-                curSelected.removeClass("selected");
+                curSelected.removeClass("active");
                 var nextSelected = curSelected.next();
 
                 if (nextSelected.length) {
-                    nextSelected.addClass("selected");
+                    nextSelected.addClass("active");
+	                $element.scrollTop((nextSelected.index() - 1) * 30);
                 } else {
-                    lis.first().addClass('selected');
+                    lis.first().addClass("active");
+					$element.scrollTop(0);
                 }
 
             } else {
-                curSelected = lis.first().addClass("selected");
+                curSelected = lis.first().addClass("active");
             }
         } else if (args.which === upArrow) {
             if (curSelected.length > 0) {
-                curSelected.removeClass("selected");
+                curSelected.removeClass("active");
                 var prevSelected = curSelected.prev();
 
                 if (prevSelected.length) {
-                    prevSelected.addClass("selected");
+                    prevSelected.addClass("active");
+					$element.scrollTop((prevSelected.index() - 1) * 30);
                 } else {
-                    lis.last().addClass('selected');
+                    lis.last().addClass("active");
+					$element.scrollTop($element.children("li").length * 30);
                 }
 
             } else {
-                curSelected = lis.last().addClass("selected");
+                curSelected = lis.last().addClass("active");
             }
         }
         else if (args.which === enter) {
