@@ -143,60 +143,66 @@ namespace Voron.Impl.Journal
             using (var writer = _env.Options.CreateDataFileWriter())
             {
                 var pagesToDispose = new List<IVirtualPager>();
-                for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
+                try
                 {
-                    var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber));
-                    pagesToDispose.Add(recoveryPager);
-                    using (var pager = _env.Options.OpenJournalPager(journalNumber))
+                    for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
                     {
-                        RecoverCurrentJournalSize(pager);
-
-                        var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                        var journalReader = new JournalReader(pager, recoveryPager, lastSyncedTransactionId, transactionHeader);
-                        journalReader.RecoverAndValidate(_env.Options);
-
-                        var pagesToWrite = journalReader
-                            .TransactionPageTranslation
-                            .Select(kvp => recoveryPager.Read(kvp.Value.JournalPos))
-                            .OrderBy(x => x.PageNumber)
-                            .ToList();
-
-                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                        if (lastReadHeaderPtr != null)
+                        var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber));
+                        pagesToDispose.Add(recoveryPager);
+                        using (var pager = _env.Options.OpenJournalPager(journalNumber))
                         {
-                            if (pagesToWrite.Count > 0)
+                            RecoverCurrentJournalSize(pager);
+
+                            var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
+                            var journalReader = new JournalReader(pager, recoveryPager, lastSyncedTransactionId, transactionHeader);
+                            journalReader.RecoverAndValidate(_env.Options);
+
+                            var pagesToWrite = journalReader
+                                .TransactionPageTranslation
+                                .Select(kvp => recoveryPager.Read(kvp.Value.JournalPos))
+                                .OrderBy(x => x.PageNumber)
+                                .ToList();
+
+                            var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+
+                            if (lastReadHeaderPtr != null)
                             {
-                                ApplyPagesToDataFileFromJournal(writer, pagesToWrite);
+                                if (pagesToWrite.Count > 0)
+                                {
+                                    ApplyPagesToDataFileFromJournal(writer, pagesToWrite);
+                                }
+
+                                *txHeader = *lastReadHeaderPtr;
+                                lastSyncedTxId = txHeader->TransactionId;
+                                lastShippedTxCrc = txHeader->Crc;
+                                lastSyncedJournal = journalNumber;
                             }
 
-                            *txHeader = *lastReadHeaderPtr;
-                            lastSyncedTxId = txHeader->TransactionId;
-                            lastShippedTxCrc = txHeader->Crc;
-                            lastSyncedJournal = journalNumber;
-                        }
+                            if (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal)
+                            {
+                                var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+                                var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
+                                jrnlFile.InitFrom(journalReader);
+                                jrnlFile.AddRef(); // creator reference - write ahead log
 
-                        if (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal)
-                        {
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-                            var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-                            jrnlFile.InitFrom(journalReader);
-                            jrnlFile.AddRef(); // creator reference - write ahead log
+                                journalFiles.Add(jrnlFile);
+                            }
 
-                            journalFiles.Add(jrnlFile);
-                        }
-
-                        if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
-                        {
-                            requireHeaderUpdate = true;
-                            break;
+                            if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                            {
+                                requireHeaderUpdate = true;
+                                break;
+                            }
                         }
                     }
+                    writer.Sync();
                 }
-                writer.Sync();
-                foreach (var virtualPager in pagesToDispose)
+                finally
                 {
-                    virtualPager.Dispose();
+                    foreach (var virtualPager in pagesToDispose)
+                    {
+                        virtualPager.Dispose();
+                    }
                 }
             }
 

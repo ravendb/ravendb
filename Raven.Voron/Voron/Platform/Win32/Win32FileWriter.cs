@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
+using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Voron.Trees;
 
@@ -25,7 +26,7 @@ namespace Voron.Platform.Win32
         private Queue<ManualResetEvent> _eventsQueue = new Queue<ManualResetEvent>();
         private List<PendingWrite> _pendingWrites = new List<PendingWrite>();
         private List<Page> _pendingPages = new List<Page>();
-        private const int _maxPendingWrites = 100;
+        private const int _maxPendingWrites = 64; // max number that we can pass to WaitAny
 
         private class PendingWrite
         {
@@ -104,6 +105,9 @@ namespace Voron.Platform.Win32
                 _eventsQueue.Enqueue(_pendingWrites[index].Event);
 
                 _pendingWrites.RemoveAt(index);
+
+                if (_pendingWrites.Count == 0)
+                    break;
 
                 //now let us clear anything else that is also completed
                 index = WaitHandle.WaitAny(GetPendingWaitHandles(), 0);
@@ -213,13 +217,16 @@ namespace Voron.Platform.Win32
                 if (lastWin32Error != Win32NativeFileMethods.ErrorIOPending)
                 {
                     _eventsQueue.Enqueue(pendingWrite.Event);
-                    throw new Win32Exception(lastWin32Error);
+					throw new VoronUnrecoverableErrorException("Could not write to data file", new Win32Exception(lastWin32Error));
                 }
                 _pendingWrites.Add(pendingWrite);
             }
             else
             {
-                _eventsQueue.Enqueue(pendingWrite.Event);
+                uint transferred;
+                if (Win32NativeFileMethods.GetOverlappedResult(_handle, pendingWrite.NativeOverlapped, out transferred, true) == false)
+					throw new VoronUnrecoverableErrorException("Could not write to data file", new Win32Exception(Marshal.GetLastWin32Error()));
+				 _eventsQueue.Enqueue(pendingWrite.Event);
             }
         }
 
