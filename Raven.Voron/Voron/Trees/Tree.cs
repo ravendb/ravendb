@@ -684,43 +684,39 @@ namespace Voron.Trees
             var root = _tx.GetReadOnlyPage(State.RootPageNumber);
             stack.Push(root);
 
-            while (stack.Count > 0)
-            {
-                var p = stack.Pop();
-                results.Add(p.PageNumber);
+	        while (stack.Count > 0)
+	        {
+		        var p = stack.Pop();
+		        results.Add(p.PageNumber);
 
-                var key = p.CreateNewEmptyKey();
+		        var key = p.CreateNewEmptyKey();
 
-                for (int i = 0; i < p.NumberOfEntries; i++)
-                {
-                    var node = p.GetNode(i);
-                    var pageNumber = node->PageNumber;
-                    if (p.IsBranch)
-                    {
-                        stack.Push(_tx.GetReadOnlyPage(pageNumber));
-                    }
-                    else if (node->Flags == NodeFlags.PageRef)
-                    {
-                        // This is an overflow page
-                        var overflowPage = _tx.GetReadOnlyPage(pageNumber);
-                        var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
-                        for (long j = 0; j < numberOfPages; ++j)
-                            results.Add(overflowPage.PageNumber + j);
-                    }
-                    else if (node->Flags == NodeFlags.MultiValuePageRef)
-                    {
-                        var childTreeHeader = (TreeRootHeader*)((byte*)node + node->KeySize + Constants.NodeHeaderSize);
-
-                        results.Add(childTreeHeader->RootPageNumber);
-
-                        // this is a multi value
-                        p.SetNodeKey(node, ref key);
-                        var tree = OpenMultiValueTree(_tx, key, node);
-                        results.AddRange(tree.AllPages());
-                    }
-                }
-            }
-            return results;
+		        for (int i = 0; i < p.NumberOfEntries; i++)
+		        {
+			        var node = p.GetNode(i);
+			        var pageNumber = node->PageNumber;
+			        if (p.IsBranch)
+			        {
+				        stack.Push(_tx.GetReadOnlyPage(pageNumber));
+			        }
+			        else if (node->Flags == NodeFlags.PageRef)
+			        {
+				        // This is an overflow page
+				        var overflowPage = _tx.GetReadOnlyPage(pageNumber);
+				        var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
+				        for (long j = 0; j < numberOfPages; ++j)
+					        results.Add(overflowPage.PageNumber + j);
+			        }
+			        else if (node->Flags == NodeFlags.MultiValuePageRef)
+			        {
+				        // this is a multi value
+				        p.SetNodeKey(node, ref key);
+				        var tree = OpenMultiValueTree(_tx, key, node);
+				        results.AddRange(tree.AllPages());
+			        }
+		        }
+	        }
+	        return results;
         }
 
         public override string ToString()
