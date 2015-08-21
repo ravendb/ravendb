@@ -77,8 +77,8 @@ namespace Voron.Trees
 	        if (globalKeysPrefixingSetting != null)
 				keysPrefixing = globalKeysPrefixingSetting.Value;
 
-            var newRootPage = NewPage(tx, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf, 1);
-            var tree = new Tree(tx, newRootPage.PageNumber)
+            var newRootPage = tx.AllocatePage(1, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf);
+			var tree = new Tree(tx, newRootPage.PageNumber)
             {
                 _state =
                 {
@@ -308,22 +308,16 @@ namespace Voron.Trees
 
         private void RemoveLeafNode(Page page, out ushort nodeVersion)
         {
-            var node = page.GetNode(page.LastSearchPosition);
-            nodeVersion = node->Version;
-            if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
-            {
-                var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
-                var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
-                for (int i = 0; i < numberOfPages; i++)
-                {
-                    _tx.FreePage(overflowPage.PageNumber + i);
-                }
+			var node = page.GetNode(page.LastSearchPosition);
+			nodeVersion = node->Version;
+			if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
+			{
+				var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
+				FreePage(overflowPage);
+			}
 
-                State.OverflowPages -= numberOfPages;
-                State.PageCount -= numberOfPages;
-            }
-            page.RemoveNode(page.LastSearchPosition);
-        }
+			page.RemoveNode(page.LastSearchPosition);
+		}
 
         [Conditional("VALIDATE")]
         public void DebugValidateTree(long rootPageNumber)
@@ -556,14 +550,35 @@ namespace Voron.Trees
             return true;
         }
 
-        internal static Page NewPage(Transaction tx, PageFlags flags, int num)
-        {
-            var page = tx.AllocatePage(num, flags);
+		internal Page NewPage(PageFlags flags, int num)
+		{
+			var page = _tx.AllocatePage(num, flags);
 
-            return page;
-        }
+			State.RecordNewPage(page, num);
 
-        public void Delete(Slice key, ushort? version = null)
+			return page;
+		}
+
+		internal void FreePage(Page p)
+		{
+			if (p.IsOverflow)
+			{
+				var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
+				for (int i = 0; i < numberOfPages; i++)
+				{
+					_tx.FreePage(p.PageNumber + i);
+				}
+
+				State.RecordFreedPage(p, numberOfPages);
+			}
+			else
+			{
+				_tx.FreePage(p.PageNumber);
+				State.RecordFreedPage(p, 1);
+			}
+		}
+
+		public void Delete(Slice key, ushort? version = null)
         {
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot delete a value in a read only transaction");

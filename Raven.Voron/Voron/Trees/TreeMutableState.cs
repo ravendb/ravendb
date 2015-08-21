@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
@@ -75,6 +76,28 @@ namespace Voron.Trees
 			else if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
 			{
 				OverflowPages += num;
+			}
+		}
+
+		public void RecordFreedPage(Page p, int num)
+		{
+			PageCount -= num;
+			Debug.Assert(PageCount >= 0);
+
+			if (p.IsBranch)
+			{
+				BranchPages--;
+				Debug.Assert(BranchPages >= 0);
+			}
+			else if (p.IsLeaf)
+			{
+				LeafPages--;
+				Debug.Assert(LeafPages >= 0);
+			}
+			else if (p.IsOverflow)
+			{
+				OverflowPages -= num;
+				Debug.Assert(OverflowPages >= 0);
 			}
 		}
 

@@ -234,6 +234,26 @@ namespace Voron.Tests.Storage
 				Assert.True(report.Trees[0].MultiValues.PageCount > 0);
                 Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
 			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("multi-tree");
+
+				for (int i = 0; i < 1000; i++)
+				{
+					tree.MultiDelete("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.True(report.Trees[0].MultiValues.PageCount == 0);
+				Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+			}
 		}
 
 		private List<string> AddEntries(Tree tree, int treeNumber)
