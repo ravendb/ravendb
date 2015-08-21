@@ -241,7 +241,8 @@ namespace Voron.Trees
 				if (tree.State.EntriesCount != 0) 
 					return;
 				_tx.TryRemoveMultiValueTree(this, key);
-				FreePage(_tx.GetReadOnlyPage(tree.State.RootPageNumber));
+				_tx.FreePage(tree.State.RootPageNumber);
+
 				Delete(key);
 			}
 			else // we use a nested page here

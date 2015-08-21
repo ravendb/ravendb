@@ -112,5 +112,36 @@ namespace Voron.Tests.Trees
 				Assert.Equal(allPagesDistinct.Count, allPages.Count);
 			}
 		}
+
+		[Fact]
+		public void MustNotProduceNegativePageCountNumber()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 50; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+					tree.MultiAdd("key2", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("multi-tree");
+
+				for (int i = 0; i < 50; i++)
+				{
+					Assert.DoesNotThrow(() => tree.MultiDelete("key", "items/" + i + "/" + new string('p', i)));
+					Assert.DoesNotThrow(() => tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i)));
+				}
+
+				Assert.True(tree.State.PageCount >= 0);
+				Assert.Equal(tree.AllPages().Count, tree.State.PageCount);
+			}
+		}
 	}
 }
