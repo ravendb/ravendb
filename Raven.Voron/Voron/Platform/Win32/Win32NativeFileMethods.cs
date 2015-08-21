@@ -21,6 +21,31 @@ namespace Voron.Platform.Win32
         public const int ErrorSuccess = 0;
         public const int ErrorHandleEof = 38;
 
+
+	    [StructLayout(LayoutKind.Explicit, Size = 8)]
+	    public struct FileSegmentElement
+	    {
+	        [FieldOffset(0)]
+	        public IntPtr Buffer;
+	        [FieldOffset(0)]
+	        public UInt64 Alignment;
+	    }
+
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
+	    [return: MarshalAs(UnmanagedType.Bool)]
+	    public static extern bool WriteFileGather(
+	        SafeFileHandle hFile,
+	        FileSegmentElement* aSegmentArray,
+	        uint nNumberOfBytesToWrite,
+	        IntPtr lpReserved,
+	        NativeOverlapped* lpOverlapped);
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
+	    public static extern bool GetOverlappedResult(SafeFileHandle hFile,
+	        NativeOverlapped* lpOverlapped,
+	        out uint lpNumberOfBytesTransferred, bool bWait);
+
 	    [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
            IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
@@ -298,7 +323,9 @@ namespace Voron.Platform.Win32
 			SectionReserve = 0x4000000,
 		}
 
-		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+
+
+	    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern IntPtr CreateFileMapping(
 			IntPtr hFile,
 			IntPtr lpFileMappingAttributes,

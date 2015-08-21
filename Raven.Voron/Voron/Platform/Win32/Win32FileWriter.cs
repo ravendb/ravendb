@@ -38,7 +38,8 @@ namespace Voron.Platform.Win32
             _pager = pager;
             _handle = Win32NativeFileMethods.CreateFile(file, Win32NativeFileAccess.GenericWrite,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
-                Win32NativeFileCreationDisposition.OpenAlways, Win32NativeFileAttributes.Overlapped | Win32NativeFileAttributes.RandomAccess, IntPtr.Zero);
+                Win32NativeFileCreationDisposition.OpenAlways, 
+                Win32NativeFileAttributes.Overlapped |  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero);
 
             if (_handle.IsInvalid)
                 throw new Win32Exception();
@@ -76,7 +77,7 @@ namespace Voron.Platform.Win32
             // check if we have a continious write
             var lastPage = _pendingPages[_pendingPages.Count-1];
             int pagesToWrite = lastPage.IsOverflow ? _pager.GetNumberOfOverflowPages(lastPage.OverflowSize) : 1;
-            if (lastPage.PageNumber + pagesToWrite == page.PageNumber)
+            if (lastPage.PageNumber + pagesToWrite == page.PageNumber && _pendingPages.Count < _maxPendingWrites)
             {
                 _pendingPages.Add(page);
                 return;
@@ -159,6 +160,33 @@ namespace Voron.Platform.Win32
                 pagesToWrite+=_pendingPages[i].IsOverflow ? _pager.GetNumberOfOverflowPages(_pendingPages[i].OverflowSize) : 1;
             }
 
+            var segments =  (Win32NativeFileMethods.FileSegmentElement*)(Marshal.AllocHGlobal(
+                (pagesToWrite+1) * sizeof(Win32NativeFileMethods.FileSegmentElement)));
+            int segmentsIndex = 0;
+            for (int i = 0; i < _pendingPages.Count; i++)
+            {
+                var pageBase = _pendingPages[i].Base;
+                if (!_pendingPages[i].IsOverflow)
+                {
+                    if (IntPtr.Size == 4)
+                        segments[segmentsIndex++].Alignment = (ulong)pageBase;
+                    else
+                        segments[segmentsIndex++].Buffer = new IntPtr(pageBase);
+                }
+                else
+                {
+                    var overFlowSize = _pager.GetNumberOfOverflowPages(_pendingPages[i].OverflowSize);
+                    for (int j = 0; j < overFlowSize; j++)
+                    {
+                        if (IntPtr.Size == 4)
+                            segments[segmentsIndex++].Alignment = (ulong)(pageBase + j * AbstractPager.PageSize);
+                        else
+                            segments[segmentsIndex++].Buffer = new IntPtr(pageBase + j * AbstractPager.PageSize);
+                    }
+                }
+            }
+            segments[segmentsIndex].Alignment = 0;// null terminating
+
             var offset = firstPage.PageNumber * AbstractPager.PageSize;
 
             var mre = _eventsQueue.Count > 0 ? _eventsQueue.Dequeue() : new ManualResetEvent(false);
@@ -171,15 +199,15 @@ namespace Voron.Platform.Win32
             var overlapped = new Overlapped(lo, hi, mre.SafeWaitHandle.DangerousGetHandle(), null);
             pendingWrite.NativeOverlapped = overlapped.Pack((code, bytes, overlap) =>
             {
-                var unpack = Overlapped.Unpack(overlap);
                 pendingWrite.Status = (int)code;
-                Overlapped.Free(overlap);
                 pendingWrite.NativeOverlapped = null;
+                Overlapped.Unpack(overlap);
+                Overlapped.Free(overlap);
+                Marshal.FreeHGlobal(new IntPtr(segments));
             }, null);
             int remaining = pagesToWrite * AbstractPager.PageSize;
 
-            int written;
-            if (Win32NativeFileMethods.WriteFile(_handle, firstPage.Base, remaining, out written, pendingWrite.NativeOverlapped) == false)
+            if (Win32NativeFileMethods.WriteFileGather(_handle, segments, (uint)remaining, IntPtr.Zero, pendingWrite.NativeOverlapped) == false)
             {
                 var lastWin32Error = Marshal.GetLastWin32Error();
                 if (lastWin32Error != Win32NativeFileMethods.ErrorIOPending)
@@ -200,10 +228,9 @@ namespace Voron.Platform.Win32
             if (_hasWrites == false)
                 return;
 
-            WaitForAllWritesToComplete();
+            FlushPendingPages();
 
-            if(Win32NativeFileMethods.FlushFileBuffers(_handle) == false)
-                throw new Win32Exception();
+            WaitForAllWritesToComplete();
         }
 
 
