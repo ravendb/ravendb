@@ -142,9 +142,11 @@ namespace Voron.Impl.Journal
             uint lastShippedTxCrc = 0;
             using (var writer = _env.Options.CreateDataFileWriter())
             {
+                var pagesToDispose = new List<IVirtualPager>();
                 for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
                 {
-                    using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
+                    var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber));
+                    pagesToDispose.Add(recoveryPager);
                     using (var pager = _env.Options.OpenJournalPager(journalNumber))
                     {
                         RecoverCurrentJournalSize(pager);
@@ -192,6 +194,10 @@ namespace Voron.Impl.Journal
                     }
                 }
                 writer.Sync();
+                foreach (var virtualPager in pagesToDispose)
+                {
+                    virtualPager.Dispose();
+                }
             }
 
             Shipper.SetPreviousTransaction(lastSyncedTxId, lastShippedTxCrc);

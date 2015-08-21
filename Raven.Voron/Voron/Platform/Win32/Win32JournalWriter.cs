@@ -18,9 +18,7 @@ namespace Voron.Platform.Win32
 	/// </summary>
 	public unsafe class Win32FileJournalWriter : IJournalWriter
 	{
-		private const int ErrorIOPending = 997;
-		private const int ErrorSuccess = 0;
-		private const int ErrorHandleEof = 38;
+	
 		private readonly string _filename;
 		private readonly SafeFileHandle _handle;
 		private SafeFileHandle _readHandle;
@@ -85,8 +83,8 @@ namespace Voron.Platform.Win32
 
 			switch (Marshal.GetLastWin32Error())
 			{
-				case ErrorSuccess:
-				case ErrorIOPending:
+				case Win32NativeFileMethods.ErrorSuccess:
+                case Win32NativeFileMethods.ErrorIOPending:
 					if (GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
 						throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 					break;
@@ -140,7 +138,7 @@ namespace Voron.Platform.Win32
 					if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
 					{
 						int lastWin32Error = Marshal.GetLastWin32Error();
-						if (lastWin32Error == ErrorHandleEof)
+                        if (lastWin32Error == Win32NativeFileMethods.ErrorHandleEof)
 							return false;
 						throw new Win32Exception(lastWin32Error);
 					}

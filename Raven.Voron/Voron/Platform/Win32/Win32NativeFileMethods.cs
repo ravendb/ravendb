@@ -17,9 +17,20 @@ namespace Voron.Platform.Win32
 {
 	public static unsafe class Win32NativeFileMethods
 	{
-        [DllImport("kernel32.dll", SetLastError = true)]
+        public const int ErrorIOPending = 997;
+        public const int ErrorSuccess = 0;
+        public const int ErrorHandleEof = 38;
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
            IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
+
+        public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, ref NativeOverlapped lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteFileEx(SafeFileHandle hFile, byte* lpBuffer,
+           uint nNumberOfBytesToWrite, [In] ref NativeOverlapped lpOverlapped,
+           WriteFileCompletionDelegate lpCompletionRoutine);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
@@ -75,7 +86,7 @@ namespace Voron.Platform.Win32
 					    filePath.EnsureCapacity(filePath.Capacity*2);
 					}
 
-					filePath = filePath.Replace(@"\\?\", string.Empty); // remove extended-length path prefix
+					filePath = filePath.Replace(@"\\?\", String.Empty); // remove extended-length path prefix
 
 					var fullFilePath = filePath.ToString();
 					var driveLetter = Path.GetPathRoot(fullFilePath);
