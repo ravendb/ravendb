@@ -28,7 +28,7 @@ namespace Voron.Tests.FixedSize
         /// <summary>
         ///     Gets the data values.
         /// </summary>
-        public object[] DataValues { get; }
+        public object[] DataValues { get; set; }
 
         /// <summary>
         ///     Returns the data to be used to test the theory.
