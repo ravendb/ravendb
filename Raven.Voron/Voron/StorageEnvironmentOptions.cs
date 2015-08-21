@@ -15,6 +15,7 @@ using Voron.Platform.Win32;
 using Voron.Util;
 using Mono.Unix.Native;
 using Sparrow;
+using Voron.Trees;
 
 namespace Voron
 {
@@ -59,7 +60,7 @@ namespace Voron
 				_initialLogFileSize = value;
 			}
 		}
-
+        
 		public long MaxScratchBufferSize { get; set; }
 
 		public long MaxNumberOfPagesInMergedTransaction { get; set; }
@@ -192,7 +193,15 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+		    public override IFileWriter CreateDataFileWriter()
+		    {
+		        var virtualPager = DataPager;// side effect creates the FilePath
+                if (RunningOnPosix)
+                    return new PosixFileWriter(FilePath, DataPager);
+		        return new Win32FileWriter(FilePath, virtualPager);
+		    }
+
+		    public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
 				var name = JournalName(journalNumber);
 				var path = Path.Combine(_journalPath, name);
@@ -414,7 +423,42 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-			public override IVirtualPager OpenJournalPager(long journalNumber)
+		    public override IFileWriter CreateDataFileWriter()
+		    {
+		        return new VirtualPageFileWriter(DataPager);
+		    }
+
+            private class VirtualPageFileWriter : IFileWriter
+            {
+                private readonly IVirtualPager _pager;
+
+                public VirtualPageFileWriter(IVirtualPager pager)
+                {
+                    _pager = pager;
+                }
+
+                public void Dispose()
+                {
+
+                }
+
+                public void Write(Page page)
+                {
+                    _pager.Write(page);
+                }
+
+                public void Sync()
+                {
+                    _pager.Sync();
+                }
+
+                public void EnsureContinuous(long pageNumber, int numberOfPagesInLastPage)
+                {
+                    _pager.EnsureContinuous(null, pageNumber, numberOfPagesInLastPage);
+                }
+            }
+
+		    public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
 				IJournalWriter value;
@@ -473,5 +517,6 @@ namespace Voron
 				}
 			}
 		}
+	    public abstract IFileWriter CreateDataFileWriter();
 	}
 }

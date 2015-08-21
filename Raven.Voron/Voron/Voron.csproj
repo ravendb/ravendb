@@ -64,6 +64,7 @@
     <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
+    <Compile Include="Impl\Paging\IFileWriter.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />
@@ -86,9 +87,11 @@
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
     <Compile Include="Platform\Posix\AllowBuildOnWindows.cs" />
+    <Compile Include="Platform\Posix\PosixFileWriter.cs" />
     <Compile Include="Platform\Posix\PosixHelper.cs" />
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
     <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />
+    <Compile Include="Platform\Win32\Win32FileWriter.cs" />
     <Compile Include="Platform\Win32\Win32Helper.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
