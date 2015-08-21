@@ -49,7 +49,6 @@ namespace Raven.Database.Server.Controllers
 			var documentsController = new DocumentsController();
 			documentsController.InitializeFrom(this);
 			var httpResponseMessage = documentsController.DocGet("Raven/StudioConfig");
-
 			if (httpResponseMessage.StatusCode != HttpStatusCode.NotFound)
 				return httpResponseMessage;
 

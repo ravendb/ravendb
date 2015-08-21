@@ -11,7 +11,6 @@ class studioConfig extends viewModelBase {
 
  
     configDocument = ko.observable<documentClass>();
-    timeUntilRemindToUpgrade = ko.observable<string>();
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -21,8 +20,7 @@ class studioConfig extends viewModelBase {
     ];
     selectedColor = ko.observable<environmentColor>();
 
-    timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
-    private  static documentId = "Raven/StudioConfig";
+    private static documentId = shell.studioConfigDocumentId;
 
     constructor() {
         super();
@@ -36,6 +34,11 @@ class studioConfig extends viewModelBase {
         var selectedColor = !!systemColor ? systemColor : this.environmentColors[0];;
         this.selectedColor(selectedColor);*/
 
+        /**/
+        var color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
+        var selectedColor = !!color[0] ? color[0] : this.environmentColors[0];
+        this.selectedColor(selectedColor);
+
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
     }
@@ -43,30 +46,26 @@ class studioConfig extends viewModelBase {
     canActivate(args): any {
         var deffered = $.Deferred();
 
-        new getDocumentWithMetadataCommand(studioConfig.documentId, this.activeDatabase())
+        deffered.resolve({ can: true });
+        this.configDocument(documentClass.empty());
+        /*new getDocumentWithMetadataCommand(studioConfig.documentId, this.activeDatabase())
             .execute()
             .done((doc: documentClass) => {
             this.configDocument(doc);
         })
             .fail(() => this.configDocument(documentClass.empty()))
-            .always(() => deffered.resolve({ can: true }));
+            .always(() => deffered.resolve({ can: true }));*/
 
         return deffered;
     }
 
     activate(args) {
         super.activate(args);
-        this.updateHelpLink("4J5OUB");
+        //this.updateHelpLink("4J5OUB");
     }
 
     attached() {
         super.attached();
-        var self = this;
-        $(window).bind('storage',(e: any) => {
-            if (e.originalEvent.key === serverBuildReminder.localStorageName) {
-                self.timeUntilRemindToUpgrade(serverBuildReminder.get());
-            }
-        });
 
         $("select").selectpicker();
         this.pickColor();
@@ -82,8 +81,8 @@ class studioConfig extends viewModelBase {
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
-            
             this.pickColor();
+            shell.selectedEnvironmentColorStatic(envColor);
         });
     }
 
@@ -95,15 +94,14 @@ class studioConfig extends viewModelBase {
         var deferred = $.Deferred();
 
         require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-            
             var saveTask = new saveDocumentCommand(studioConfig.documentId, newDocument, this.activeDatabase()).execute();
 
             saveTask
                 .done((saveResult: bulkDocumentDto[]) => {
-                this.configDocument(newDocument);
-                this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
-                deferred.resolve();
-            })
+                    this.configDocument(newDocument);
+                    this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                    deferred.resolve();
+                })
                 .fail(() => deferred.reject());
         });
 
