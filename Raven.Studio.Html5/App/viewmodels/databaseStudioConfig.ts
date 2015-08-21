@@ -9,12 +9,9 @@ import shell = require("viewmodels/shell");
 
 class studioConfig extends viewModelBase {
 
-    systemDatabase: database;
+ 
     configDocument = ko.observable<documentClass>();
-    warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
-    disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
-    mute: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -85,7 +82,7 @@ class studioConfig extends viewModelBase {
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
-            this.selectedColor(envColor);
+            
             this.pickColor();
         });
     }
