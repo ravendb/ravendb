@@ -119,34 +119,30 @@ namespace Voron.Platform.Win32
 			Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize);
 			if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
-				PagerState newPagerState = CreatePagerState();
-				if (newPagerState == null)
-				{
-					var errorMessage = string.Format(
-						"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-						(_totalAllocationSize + allocationSize));
-
-					throw new OutOfMemoryException(errorMessage);
-				}
-
-				newPagerState.DebugVerify(newLengthAfterAdjustment);
-
-				if (tx != null)
-				{
-					newPagerState.AddRef();
-					tx.AddPagerState(newPagerState);
-				}
-
-				var tmp = PagerState;
-				PagerState = newPagerState;
-				tmp.Release(); //replacing the pager state --> so one less reference for it
-			}
+                RefreshMappedView(tx);
+                PagerState.DebugVerify(newLengthAfterAdjustment);
+            }
 
 			_totalAllocationSize += allocationSize;
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 		}
 
-		private bool TryAllocateMoreContinuousPages(long allocationSize)
+	    public void RefreshMappedView(Transaction tx)
+	    {
+	        PagerState newPagerState = CreatePagerState();
+
+	        if (tx != null)
+	        {
+	            newPagerState.AddRef();
+	            tx.AddPagerState(newPagerState);
+	        }
+
+	        var tmp = PagerState;
+	        PagerState = newPagerState;
+	        tmp.Release(); //replacing the pager state --> so one less reference for it
+	    }
+
+	    private bool TryAllocateMoreContinuousPages(long allocationSize)
 		{
 			Debug.Assert(PagerState != null);
 			Debug.Assert(PagerState.AllocationInfos != null);
@@ -210,10 +206,16 @@ namespace Voron.Platform.Win32
 				null);
 
 
-			if (startingBaseAddressPtr == (byte*)0) //system didn't succeed in mapping the address where we wanted
-				throw new Win32Exception();
+		    if (startingBaseAddressPtr == (byte*) 0) //system didn't succeed in mapping the address where we wanted
+		    {
+		        var errorMessage = string.Format(
+		            "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+                    (_fileStream.Length));
 
-			var allocationInfo = new PagerState.AllocationInfo
+		        throw new OutOfMemoryException(errorMessage, new Win32Exception());
+		    }
+
+		    var allocationInfo = new PagerState.AllocationInfo
 			{
 				BaseAddress = startingBaseAddressPtr,
 				Size = _fileStream.Length,
@@ -259,29 +261,12 @@ namespace Voron.Platform.Win32
 				throw new Win32Exception();
 		}
 
-		public override int Write(Page page, long? pageNumber)
-		{
-			long startPage = pageNumber ?? page.PageNumber;
-
-			int toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
-
-			return WriteDirect(page, startPage, toWrite);
-		}
 
 		public override string ToString()
 		{
 			return _fileInfo.Name;
 		}
 
-		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
-		{
-			ThrowObjectDisposedIfNeeded();
-
-			int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
-
-			return toCopy;
-		}
 
 		public override void Dispose()
 		{

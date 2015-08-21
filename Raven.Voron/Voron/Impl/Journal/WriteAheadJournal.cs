@@ -142,7 +142,6 @@ namespace Voron.Impl.Journal
             uint lastShippedTxCrc = 0;
             using (var writer = _env.Options.CreateDataFileWriter())
             {
-                bool requireSync = false;
                 for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
                 {
                     using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
@@ -167,7 +166,6 @@ namespace Voron.Impl.Journal
                             if (pagesToWrite.Count > 0)
                             {
                                 ApplyPagesToDataFileFromJournal(writer, pagesToWrite);
-                                requireSync = true;
                             }
 
                             *txHeader = *lastReadHeaderPtr;
@@ -193,8 +191,7 @@ namespace Voron.Impl.Journal
                         }
                     }
                 }
-                if (requireSync)
-                    writer.Sync();
+                writer.Sync();
             }
 
             Shipper.SetPreviousTransaction(lastSyncedTxId, lastShippedTxCrc);
