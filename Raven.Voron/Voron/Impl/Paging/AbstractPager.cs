@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Sparrow;
 using Voron.Trees;
 using Voron.Util;
 
@@ -148,7 +149,15 @@ namespace Voron.Impl.Paging
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
 
-        public abstract int Write(Page page, long? pageNumber);
+
+        public virtual int Write(Page page, long? pageNumber)
+        {
+            long startPage = pageNumber ?? page.PageNumber;
+
+            int toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
+
+            return WriteDirect(page, startPage, toWrite);
+        }
 
         public bool Disposed { get; private set; }
 
@@ -210,8 +219,15 @@ namespace Voron.Impl.Paging
 			return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
-        public abstract int WriteDirect(Page start, long pagePosition, int pagesToWrite);
+        public virtual int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        {
+            ThrowObjectDisposedIfNeeded();
 
+            int toCopy = pagesToWrite * PageSize;
+            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+
+            return toCopy;
+        }
         public override abstract string ToString();
 
         public void RegisterDisposal(Task run)
