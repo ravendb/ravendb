@@ -704,10 +704,6 @@ namespace Voron.Trees
                     }
                     else if (node->Flags == NodeFlags.MultiValuePageRef)
                     {
-	                    var childTreeHeader = (TreeRootHeader*) ((byte*) node + node->KeySize + Constants.NodeHeaderSize);
-
-	                    results.Add(childTreeHeader->RootPageNumber);
-
 	                    // this is a multi value
 	                    p.SetNodeKey(node, ref key);
 	                    var tree = OpenMultiValueTree(_tx, key, node);

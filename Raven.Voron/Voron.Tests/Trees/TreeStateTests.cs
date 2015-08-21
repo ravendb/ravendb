@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Voron.Debugging;
 using Voron.Trees;
 using Xunit;
@@ -90,6 +92,25 @@ namespace Voron.Tests.Trees
 				Assert.Equal(3, tx.State.Root.State.Depth);
 
 			}
-		} 
+		}
+
+		[Fact]
+		public void AllPagesCantHasDuplicatesInMultiTrees()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 100; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				var allPages = tree.AllPages();
+				var allPagesDistinct = allPages.Distinct().ToList();
+				
+				Assert.Equal(allPagesDistinct.Count, allPages.Count);
+			}
+		}
 	}
 }
