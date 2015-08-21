@@ -17,6 +17,9 @@ namespace Voron.Platform.Win32
 {
 	public static unsafe class Win32NativeFileMethods
 	{
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
+           IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
@@ -45,11 +48,7 @@ namespace Voron.Platform.Win32
 		[DllImport("kernel32.dll", SetLastError = true)]
 		private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
-		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
-		                                         [Out] out int lpDistanceToMoveHigh, [In] Win32NativeFileMoveMethod dwMoveMethod);
-
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
 		[DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -57,21 +56,14 @@ namespace Voron.Platform.Win32
 		
 		public static void SetFileLength(SafeFileHandle fileHandle, long length)
 		{
-			var lo = (int)(length & 0xffffffff);
-			var hi = (int)(length >> 32);
-
-			int lastError;
-
-			if (SetFilePointer(fileHandle, lo, out hi, Win32NativeFileMoveMethod.Begin) == -1)
+		    if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
 			{
-				lastError = Marshal.GetLastWin32Error();
-				if (lastError != 0)
-					throw new Win32Exception(lastError);
+                throw new Win32Exception(Marshal.GetLastWin32Error());
 			}
 
 			if (SetEndOfFile(fileHandle) == false)
 			{
-				lastError = Marshal.GetLastWin32Error();
+				var lastError = Marshal.GetLastWin32Error();
 
 				if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
 				{
