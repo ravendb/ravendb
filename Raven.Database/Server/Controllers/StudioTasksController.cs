@@ -40,6 +40,22 @@ namespace Raven.Database.Server.Controllers
 	{
         const int CsvImportBatchSize = 512;
 
+
+		[HttpGet]
+		[RavenRoute("studio-tasks/config")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/config")]
+		public HttpResponseMessage StudioConfig()
+		{
+			var documentsController = new DocumentsController();
+			documentsController.InitializeFrom(this);
+			var httpResponseMessage = documentsController.DocGet("Raven/StudioConfig");
+
+			if (httpResponseMessage.StatusCode != HttpStatusCode.NotFound)
+				return httpResponseMessage;
+
+			documentsController.SetCurrentDatabase(DatabasesLandlord.SystemDatabase);
+			return documentsController.DocGet("Raven/StudioConfig");
+		}
 		[HttpGet]
 		[RavenRoute("studio-tasks/server-configs")]
 		public HttpResponseMessage GerServerConfigs()

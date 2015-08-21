@@ -212,6 +212,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
     <TypeScriptCompile Include="App\viewmodels\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
@@ -486,6 +487,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\databaseStudioConfig.html" />
     <Content Include="App\views\fieldRangeFilter.html" />
     <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
