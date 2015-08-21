@@ -1569,12 +1569,14 @@ namespace Raven.Database.Indexing
                 Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
-					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
+                    if (logQuerying.IsDebugEnabled)
+					    logQuerying.Debug("Issuing query on index {0} for all documents", parent.PublicName);
 					documentQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.indexId, query);
+                    if (logQuerying.IsDebugEnabled)
+                        logQuerying.Debug("Issuing query on index {0} for: {1}", parent.PublicName, query);
 					var toDispose = new List<Action>();
 					RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
