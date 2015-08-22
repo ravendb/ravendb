@@ -300,7 +300,7 @@ namespace Voron
 				if (RunningOnPosix)
 					return new PosixMemoryMapPager(path);
 			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
-			    win32MemoryMapPager.TryPrefetchingMemory();
+			    win32MemoryMapPager.TryPrefetchingWholeFile();
 			    return win32MemoryMapPager;
 			}
 		}

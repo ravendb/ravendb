@@ -254,6 +254,8 @@ namespace Voron.Impl.Journal
 
 			_dataPager.EnsureContinuous(null, last.PageNumber, numberOfPagesInLastPage);
 
+		    _dataPager.MaybePrefetchMemory(sortedPagesToWrite);
+
 			foreach (var page in sortedPagesToWrite)
 			{
 				_dataPager.Write(page);

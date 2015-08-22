@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -92,6 +93,16 @@ namespace Voron.Impl.Paging
             }
 
             return new Page(AcquirePagePointer(pageNumber), _source, PageSize);
+        }
+
+        public virtual void TryPrefetchingWholeFile()
+        {
+            // do nothing
+        }
+
+        public virtual void MaybePrefetchMemory(List<Page> sortedPages)
+        {
+            // do nothing
         }
 
         public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);

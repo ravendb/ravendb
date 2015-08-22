@@ -21,11 +21,13 @@ namespace Voron.Tryout
 	{
 		public static int Main()
 		{
-		    var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(@"Z:\main");
-		    using (var se = new StorageEnvironment(storageEnvironmentOptions))
-		    {
-		        
-		    }
+		    var sp = Stopwatch.StartNew();
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(@"\\10.0.0.10\Documents\main");
+            using (var se = new StorageEnvironment(storageEnvironmentOptions))
+            {
+
+            }
+		    Console.WriteLine(sp.Elapsed);
 		    return 0;
 		}
 

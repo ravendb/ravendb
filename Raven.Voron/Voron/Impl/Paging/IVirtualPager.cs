@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Voron.Trees;
 
 namespace Voron.Impl.Paging
@@ -30,5 +31,7 @@ namespace Voron.Impl.Paging
 
         int WriteDirect(Page start, long pagePosition, int pagesToWrite);
 	    Page GetWritable(long pageNumber);
-	}
+        void MaybePrefetchMemory(List<Page> sortedPages);
+        void TryPrefetchingWholeFile();
+    }
 }
