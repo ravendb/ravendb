@@ -193,13 +193,6 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-		    public override IFileWriter CreateDataFileWriter()
-		    {
-		        var virtualPager = DataPager;// side effect creates the FilePath
-                if (RunningOnPosix)
-                    return new PosixFileWriter(FilePath, DataPager);
-		        return new Win32FileWriter(FilePath, virtualPager);
-		    }
 
 		    public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
@@ -306,7 +299,9 @@ namespace Voron
 					throw new InvalidOperationException("No such journal " + path);
 				if (RunningOnPosix)
 					return new PosixMemoryMapPager(path);
-				return new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
+			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
+			    win32MemoryMapPager.TryPrefetchingMemory();
+			    return win32MemoryMapPager;
 			}
 		}
 
@@ -423,41 +418,6 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-		    public override IFileWriter CreateDataFileWriter()
-		    {
-		        return new VirtualPageFileWriter(DataPager);
-		    }
-
-            private class VirtualPageFileWriter : IFileWriter
-            {
-                private readonly IVirtualPager _pager;
-
-                public VirtualPageFileWriter(IVirtualPager pager)
-                {
-                    _pager = pager;
-                }
-
-                public void Dispose()
-                {
-
-                }
-
-                public void Write(Page page)
-                {
-                    _pager.Write(page);
-                }
-
-                public void Sync()
-                {
-                    _pager.Sync();
-                }
-
-                public void EnsureContinuous(long pageNumber, int numberOfPagesInLastPage)
-                {
-                    _pager.EnsureContinuous(null, pageNumber, numberOfPagesInLastPage);
-                }
-            }
-
 		    public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
@@ -517,6 +477,5 @@ namespace Voron
 				}
 			}
 		}
-	    public abstract IFileWriter CreateDataFileWriter();
 	}
 }

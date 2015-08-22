@@ -309,6 +309,17 @@ namespace Voron.Platform.Win32
 	{
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
+	    // ReSharper disable once InconsistentNaming - Win32
+	    public struct WIN32_MEMORY_RANGE_ENTRY
+	    {
+	        public void* VirtualAddress;
+	        public IntPtr NumberOfBytes;
+	    }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public extern static bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries,
+	        WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
+
 		[Flags]
 		public enum FileMapProtection : uint
 		{
@@ -397,6 +408,9 @@ namespace Voron.Platform.Win32
 			public uint Protect;
 			public uint Type;
 		}
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetCurrentProcess();
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);

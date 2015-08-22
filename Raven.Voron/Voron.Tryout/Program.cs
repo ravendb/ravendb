@@ -21,34 +21,16 @@ namespace Voron.Tryout
 	{
 		public static int Main()
 		{
-			var t = Type.GetType("Mono.Runtime");
-			var m = t.GetMethod("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-			Console.WriteLine("Mono runtime: " + m.Invoke(null, null));
-
-			//Console.WriteLine (BitConverter.IsLittleEndian);
-			/*
-			 var testAssembly = TestAssemblyBuilder.Build(new ExecutorWrapper("Voron.Tests.dll", null, false));
-
-			 var testMethods = testAssembly.EnumerateTestMethods(x => true).ToList();
-			 if (testMethods.Count == 0)
-				 return 0;
-
-			 var callback = new TestMethodRunnerCallback();
-			 testAssembly.Run(testMethods, callback);
-
-			 if (callback.FailedCount > 0)
-			 {
-				 Console.WriteLine("Has failures");
-				 return 1;
-			 }*/
-			var x = new InitialSize();
-			x.WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity();
-			Console.WriteLine("done");
-			return 0;
+		    var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(@"Z:\main");
+		    using (var se = new StorageEnvironment(storageEnvironmentOptions))
+		    {
+		        
+		    }
+		    return 0;
 		}
 
 
-		static void RunAllTests()
+	    static void RunAllTests()
 		{
 			using (var fileWriter = new StreamWriter("unit-tests.txt", append: false))
 			{

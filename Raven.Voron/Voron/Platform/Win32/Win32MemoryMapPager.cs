@@ -6,6 +6,7 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -288,5 +289,32 @@ namespace Voron.Platform.Win32
 			if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
 				throw new Win32Exception();
 		}
+
+        private bool IsWindows8OrNewer()
+        {
+            var os = Environment.OSVersion;
+            return os.Platform == PlatformID.Win32NT &&
+                   (os.Version.Major > 6 || (os.Version.Major == 6 && os.Version.Minor >= 2));
+        }
+
+	    public void TryPrefetchingMemory()
+	    {
+	        if (IsWindows8OrNewer() == false)
+	            return; // not supported
+
+	        var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[PagerState.AllocationInfos.Length];
+
+	        for (int i = 0; i < PagerState.AllocationInfos.Length; i++)
+	        {
+	            entries[i].VirtualAddress = PagerState.AllocationInfos[i].BaseAddress;
+	            entries[i].NumberOfBytes = (IntPtr)PagerState.AllocationInfos[i].Size;
+	        }
+
+
+	        if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
+	            (UIntPtr) PagerState.AllocationInfos.Length, entries, 0) == false)
+	            throw new Win32Exception();
+
+	    }
 	}
 }
