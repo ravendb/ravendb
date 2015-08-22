@@ -299,7 +299,8 @@ namespace Voron
 					throw new InvalidOperationException("No such journal " + path);
 				if (RunningOnPosix)
 					return new PosixMemoryMapPager(path);
-			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
+			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
+                    options:Win32NativeFileAttributes.SequentialScan);
 			    win32MemoryMapPager.TryPrefetchingWholeFile();
 			    return win32MemoryMapPager;
 			}
