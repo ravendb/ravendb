@@ -309,7 +309,8 @@ namespace Voron.Platform.Win32
             var list = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
 
             long lastPage = -1;
-            int sizeInPages = 16; // allocation granularity is 64K
+            const int numberOfPagesInBatch = 8;
+            int sizeInPages = numberOfPagesInBatch; // OS uses 32K when you touch a page, let us reuse this
             foreach (var page in sortedPages)
             {
                 if (lastPage == -1)
@@ -326,11 +327,11 @@ namespace Voron.Platform.Win32
                 if (endPage <= lastPage + sizeInPages)
                     continue; // already within the allocation granularity we have
 
-                if (page.PageNumber <= lastPage + sizeInPages + 16)
+                if (page.PageNumber <= lastPage + sizeInPages + numberOfPagesInBatch)
                 {
                     while (endPage > lastPage + sizeInPages)
                     {
-                        sizeInPages += 16;
+                        sizeInPages += numberOfPagesInBatch;
                     }
 
                     continue;
@@ -342,10 +343,10 @@ namespace Voron.Platform.Win32
                     VirtualAddress = AcquirePagePointer(lastPage)
                 });
                 lastPage = page.PageNumber;
-                sizeInPages = 16;
+                sizeInPages = numberOfPagesInBatch;
                 while (endPage > lastPage + sizeInPages)
                 {
-                    sizeInPages += 16;
+                    sizeInPages += numberOfPagesInBatch;
                 }
             }
             list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
