@@ -3,16 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
-using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Voron.Trees;
 
@@ -23,211 +21,108 @@ namespace Voron.Platform.Win32
         private readonly IVirtualPager _pager;
         private readonly SafeFileHandle _handle;
         private bool _hasWrites;
-        private Queue<ManualResetEvent> _eventsQueue = new Queue<ManualResetEvent>();
-        private List<PendingWrite> _pendingWrites = new List<PendingWrite>();
-        private List<Page> _pendingPages = new List<Page>();
-        private const int _maxPendingWrites = 64; // max number that we can pass to WaitAny
-
-        private class PendingWrite
-        {
-            public NativeOverlapped* NativeOverlapped;
-            public ManualResetEvent Event;
-            public int Status;
-        }
+        private int _numberOfPendingWrites;
+        private long _sizeOfPendingWrites;
+        private LinkedList<IntPtr> _nativeOverlapped = new LinkedList<IntPtr>();
+        private Win32NativeFileMethods.WriteFileCompletionDelegate _writeFileExCompletionRoutine;
+        private bool _disposed;
         public Win32FileWriter(string file, IVirtualPager pager)
         {
             _pager = pager;
             _handle = Win32NativeFileMethods.CreateFile(file, Win32NativeFileAccess.GenericWrite,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
-                Win32NativeFileCreationDisposition.OpenAlways, 
-                Win32NativeFileAttributes.Overlapped |  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero);
+                Win32NativeFileCreationDisposition.OpenAlways,
+                Win32NativeFileAttributes.Overlapped, IntPtr.Zero);
 
             if (_handle.IsInvalid)
                 throw new Win32Exception();
-
-            if(ThreadPool.BindHandle(_handle) == false)
-                throw new Win32Exception();
+            _writeFileExCompletionRoutine = WriteFileEx_CompletionRoutine;
         }
 
         public void Dispose()
         {
-            _handle.Dispose();
-            foreach (var e in _eventsQueue)
+            _disposed = true; // won't throw from the callback now
+            // if called didn't call sync(because of exception, frex), we need to wait for the 
+            // pending I/O operations
+            while (_numberOfPendingWrites > 0)
             {
-                e.Dispose();
+                // let the APC queue run, completing all the pending I/Os
+                Win32NativeMethods.WaitForSingleObjectEx(_handle.DangerousGetHandle(), Timeout.Infinite, true);
             }
 
-            foreach (var pendingWrite in _pendingWrites)
+            _handle.Dispose();
+
+            foreach (var ptr in _nativeOverlapped)
             {
-                pendingWrite.Event.Dispose();
+                Marshal.FreeHGlobal(ptr);
             }
-            if(_hasWrites)
+            _nativeOverlapped.Clear();
+
+            if (_hasWrites)
                 ((Win32MemoryMapPager)_pager).RefreshMappedView(null);
         }
 
-        public unsafe void Write(Page page)
+        public void Write(Page page)
         {
             _hasWrites = true;
-            // nothing yet, so skip it 
-            if (_pendingPages.Count == 0)
+            int pagesToWrite = page.IsOverflow ? _pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
+
+            _numberOfPendingWrites++;
+            _sizeOfPendingWrites += pagesToWrite * AbstractPager.PageSize;
+            var offset = page.PageNumber * AbstractPager.PageSize;
+
+            // despite what the docs says, successful call to WriteFileEx won't change the GetLastError on success, I have to assume
+            // that depsite that, it is possible that this is triggered somehow, so we manually set the error code to 0 before hand,
+            // this way, if there is a call to SetLastError in WriteFileEx, we'll know about it
+            Win32NativeMethods.SetLastError(0);
+            if (Win32NativeFileMethods.WriteFileEx(_handle, page.Base,
+                (uint)(pagesToWrite * AbstractPager.PageSize),
+                AllocateOverlappedForOffset(offset), _writeFileExCompletionRoutine) == false)
+                throw new Win32Exception();
+            var lastWin32Error = Marshal.GetLastWin32Error();
+            if (lastWin32Error != 0)
+                throw new Win32Exception(lastWin32Error);
+
+            // if we have more than 1K pending writes, or more than 32 MB, we need to let the 
+            // system catch up and flush the APC queue
+            if (_sizeOfPendingWrites > 1024 * 1024 * 32 ||
+                _numberOfPendingWrites > 1024)
             {
-                _pendingPages.Add(page);
-                return;
+                // drain the queue of pending operations by forcing us to wait until something happens
+                Win32NativeMethods.WaitForSingleObjectEx(_handle.DangerousGetHandle(), Timeout.Infinite, true);
             }
-
-            // check if we have a continious write
-            var lastPage = _pendingPages[_pendingPages.Count-1];
-            int pagesToWrite = lastPage.IsOverflow ? _pager.GetNumberOfOverflowPages(lastPage.OverflowSize) : 1;
-            if (lastPage.PageNumber + pagesToWrite == page.PageNumber && _pendingPages.Count < _maxPendingWrites)
-            {
-                _pendingPages.Add(page);
-                return;
-            }
-
-            FlushPendingPages();
-            _pendingPages.Clear();
-
-            _pendingPages.Add(page);
         }
 
-
-        private void WaitIfHaveTooManyPendingWrites()
+        private void WriteFileEx_CompletionRoutine(uint dwErrorCode, uint dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped)
         {
-            if (_pendingWrites.Count < _maxPendingWrites)
-                return;
+            _nativeOverlapped.AddFirst((IntPtr)lpOverlapped);
+            _numberOfPendingWrites--;
 
-            var index = WaitHandle.WaitAny(GetPendingWaitHandles());
-            while (_pendingWrites.Count > 0)
-            {
-                if (_pendingWrites[index].Status != 0)
-                    throw new Win32Exception(_pendingWrites[index].Status);
-                
-                _eventsQueue.Enqueue(_pendingWrites[index].Event);
+            if (dwErrorCode != 0 && _disposed == false)
+                throw new Win32Exception((int)dwErrorCode);
 
-                _pendingWrites.RemoveAt(index);
-
-                if (_pendingWrites.Count == 0)
-                    break;
-
-                //now let us clear anything else that is also completed
-                index = WaitHandle.WaitAny(GetPendingWaitHandles(), 0);
-                if (index == WaitHandle.WaitTimeout)
-                    break;
-            } 
+            _sizeOfPendingWrites -= dwNumberOfBytesTransfered;
         }
 
-        private WaitHandle[] GetPendingWaitHandles()
+        private NativeOverlapped* AllocateOverlappedForOffset(long offset)
         {
-            var events = new WaitHandle[_pendingWrites.Count];
-            for (int i = 0; i < _pendingWrites.Count; i++)
+            IntPtr ptr;
+            if (_nativeOverlapped.Count == 0)
             {
-                events[i] = _pendingWrites[i].Event;
-            }
-            return events;
-        }
-
-
-        private void WaitForAllWritesToComplete()
-        {
-            if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
-            {
-                for (int i = 0; i < _pendingWrites.Count; i++)
-                {
-                    _pendingWrites[i].Event.WaitOne();
-                }
+                ptr = Marshal.AllocHGlobal(sizeof(NativeOverlapped));
             }
             else
             {
-                if (WaitHandle.WaitAll(GetPendingWaitHandles()) == false)
-                    throw new Win32Exception();
+                ptr = _nativeOverlapped.First.Value;
+                _nativeOverlapped.RemoveFirst();
             }
-            for (int i = 0; i < _pendingWrites.Count; i++)
-            {
-                if(_pendingWrites[i].Status != 0)
-                    throw new Win32Exception(_pendingWrites[i].Status);
-            }
-        }
-
-        private unsafe void FlushPendingPages()
-        {
-            if (_pendingPages.Count == 0)
-                return;
-
-            WaitIfHaveTooManyPendingWrites();
-
-            var firstPage = _pendingPages[0];
-
-            int pagesToWrite = 0;
-
-            for (int i = 0; i < _pendingPages.Count; i++)
-            {
-                pagesToWrite+=_pendingPages[i].IsOverflow ? _pager.GetNumberOfOverflowPages(_pendingPages[i].OverflowSize) : 1;
-            }
-
-            var segments =  (Win32NativeFileMethods.FileSegmentElement*)(Marshal.AllocHGlobal(
-                (pagesToWrite+1) * sizeof(Win32NativeFileMethods.FileSegmentElement)));
-            int segmentsIndex = 0;
-            for (int i = 0; i < _pendingPages.Count; i++)
-            {
-                var pageBase = _pendingPages[i].Base;
-                if (!_pendingPages[i].IsOverflow)
-                {
-                    if (IntPtr.Size == 4)
-                        segments[segmentsIndex++].Alignment = (ulong)pageBase;
-                    else
-                        segments[segmentsIndex++].Buffer = new IntPtr(pageBase);
-                }
-                else
-                {
-                    var overFlowSize = _pager.GetNumberOfOverflowPages(_pendingPages[i].OverflowSize);
-                    for (int j = 0; j < overFlowSize; j++)
-                    {
-                        if (IntPtr.Size == 4)
-                            segments[segmentsIndex++].Alignment = (ulong)(pageBase + j * AbstractPager.PageSize);
-                        else
-                            segments[segmentsIndex++].Buffer = new IntPtr(pageBase + j * AbstractPager.PageSize);
-                    }
-                }
-            }
-            segments[segmentsIndex].Alignment = 0;// null terminating
-
-            var offset = firstPage.PageNumber * AbstractPager.PageSize;
-
-            var mre = _eventsQueue.Count > 0 ? _eventsQueue.Dequeue() : new ManualResetEvent(false);
-            mre.Reset();
-
-            var pendingWrite = new PendingWrite { Event = mre };
-           
-            var lo = (int) (offset & 0xffffffff);
-            var hi = (int) (offset >> 32);
-            var overlapped = new Overlapped(lo, hi, mre.SafeWaitHandle.DangerousGetHandle(), null);
-            pendingWrite.NativeOverlapped = overlapped.Pack((code, bytes, overlap) =>
-            {
-                pendingWrite.Status = (int)code;
-                pendingWrite.NativeOverlapped = null;
-                Overlapped.Unpack(overlap);
-                Overlapped.Free(overlap);
-                Marshal.FreeHGlobal(new IntPtr(segments));
-            }, null);
-            int remaining = pagesToWrite * AbstractPager.PageSize;
-
-            if (Win32NativeFileMethods.WriteFileGather(_handle, segments, (uint)remaining, IntPtr.Zero, pendingWrite.NativeOverlapped) == false)
-            {
-                var lastWin32Error = Marshal.GetLastWin32Error();
-                if (lastWin32Error != Win32NativeFileMethods.ErrorIOPending)
-                {
-                    _eventsQueue.Enqueue(pendingWrite.Event);
-					throw new VoronUnrecoverableErrorException("Could not write to data file", new Win32Exception(lastWin32Error));
-                }
-                _pendingWrites.Add(pendingWrite);
-            }
-            else
-            {
-                uint transferred;
-                if (Win32NativeFileMethods.GetOverlappedResult(_handle, pendingWrite.NativeOverlapped, out transferred, true) == false)
-					throw new VoronUnrecoverableErrorException("Could not write to data file", new Win32Exception(Marshal.GetLastWin32Error()));
-				 _eventsQueue.Enqueue(pendingWrite.Event);
-            }
+            var no = (NativeOverlapped*)ptr;
+            no->EventHandle = IntPtr.Zero;
+            no->InternalHigh = IntPtr.Zero;
+            no->InternalLow = IntPtr.Zero;
+            no->OffsetHigh = (int)(offset >> 32);
+            no->OffsetLow = (int)(offset & 0xffffffff);
+            return no;
         }
 
         public void Sync()
@@ -235,9 +130,13 @@ namespace Voron.Platform.Win32
             if (_hasWrites == false)
                 return;
 
-            FlushPendingPages();
-
-            WaitForAllWritesToComplete();
+            while (_numberOfPendingWrites > 0)
+            {
+                // let the APC queue run, completing all the pending I/Os
+                Win32NativeMethods.WaitForSingleObjectEx(_handle.DangerousGetHandle(), Timeout.Infinite, true);
+            }
+            if (Win32NativeFileMethods.FlushFileBuffers(_handle) == false)
+                throw new Win32Exception();
         }
 
 

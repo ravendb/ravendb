@@ -50,11 +50,11 @@ namespace Voron.Platform.Win32
         public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
            IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
 
-        public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, ref NativeOverlapped lpOverlapped);
+        public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool WriteFileEx(SafeFileHandle hFile, byte* lpBuffer,
-           uint nNumberOfBytesToWrite, [In] ref NativeOverlapped lpOverlapped,
+           uint nNumberOfBytesToWrite, NativeOverlapped* lpOverlapped,
            WriteFileCompletionDelegate lpCompletionRoutine);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -397,6 +397,16 @@ namespace Voron.Platform.Win32
 			public uint Protect;
 			public uint Type;
 		}
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint WaitForSingleObjectEx(IntPtr hHandle, int dwMilliseconds,
+           bool bAlertable);
+    
+        [DllImport("kernel32.dll")]
+        public static extern void SetLastError(uint dwErrCode);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
