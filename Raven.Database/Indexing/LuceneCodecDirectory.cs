@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -20,8 +22,6 @@ namespace Raven.Database.Indexing
 	{
 		private readonly List<AbstractIndexCodec> codecs;
 
-	    private readonly ObjectPool<byte[]> _bufferPool = new ObjectPool<byte[]>(() => new byte[BufferedIndexInput.BUFFER_SIZE]);
-
 		public LuceneCodecDirectory(string path, IEnumerable<AbstractIndexCodec> codecs)
 			: base(new DirectoryInfo(path), null)
 		{
@@ -30,13 +30,13 @@ namespace Raven.Database.Indexing
 
 		public override IndexInput OpenInput(string name, int bufferSize)
 		{
-			return OpenInputInner(name, bufferSize);
+			return OpenInputInner(name);
 		}
 
-		private CodecIndexInput OpenInputInner(string name, int bufferSize)
+		private CodecIndexInput OpenInputInner(string name)
 		{
 			var file = GetFile(name);
-			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s), bufferSize, _bufferPool);
+			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s));
 		}
 
 		public override IndexOutput CreateOutput(string name)
@@ -51,8 +51,7 @@ namespace Raven.Database.Indexing
 
 		public override long FileLength(string name)
 		{
-			using (var input = OpenInputInner(name, bufferSize: BufferedIndexInput.BUFFER_SIZE))
-				return input.Length();
+		    return GetFile(name).Length;
 		}
 
 		private Stream ApplyReadCodecs(string key, Stream stream)
@@ -113,179 +112,95 @@ namespace Raven.Database.Indexing
 				}
 			}
 		}
-
-		public class ConcurrentReadOnlyWin32FileStream : Stream
+		private unsafe class CodecIndexInput : IndexInput
 		{
-			private readonly SafeFileHandle handle;
-			[ThreadStatic] public static long NextPosition;
-
-			public ConcurrentReadOnlyWin32FileStream(SafeFileHandle handle)
-			{
-				this.handle = handle;
-			}
-
-			public unsafe override int Read(byte[] buffer, int offset, int count)
-			{
-				var overlapped = new Overlapped(
-					(int) (NextPosition & 0xffffffff),
-					(int) (NextPosition >> 32),
-					IntPtr.Zero,
-					null
-					);
-
-				var nativeOverlapped = overlapped.Pack(null,null);
-				try
-				{
-					fixed (byte* p = buffer)
-					{
-						int read;
-						if (Win32NativeFileMethods.ReadFile(handle, p + offset, count, out read, nativeOverlapped) == false)
-						{
-							const int ERROR_IO_PENDING = 997;
-
-							if (Marshal.GetLastWin32Error() != ERROR_IO_PENDING)
-								throw new Win32Exception();
-						}
-
-						uint transferred;
-						if(Win32NativeFileMethods.GetOverlappedResult(handle, nativeOverlapped, out transferred, true) == false)
-							throw new Win32Exception();
-
-						return (int)transferred;
-					}
-				}
-				finally
-				{
-					Overlapped.Free(nativeOverlapped);
-				}
-			}
-			public override void Flush()
-			{
-				throw new NotSupportedException();
-			}
-
-			public override long Seek(long offset, SeekOrigin origin)
-			{
-				throw new NotSupportedException();
-			}
-
-			public override void SetLength(long value)
-			{
-				throw new NotSupportedException();
-			}
-
-		
-
-			public override void Write(byte[] buffer, int offset, int count)
-			{
-				throw new NotSupportedException();
-			}
-
-			public override bool CanRead
-			{
-				get { return true; }
-			}
-			public override bool CanSeek
-			{
-				get { return false; }
-			}
-			public override bool CanWrite
-			{
-				get { return false; }
-			}
-			public override long Length
-			{
-				get { throw new NotSupportedException(); }
-				
-			}
-			public override long Position
-			{
-				get { throw new NotSupportedException(); }
-				set { throw new NotSupportedException(); }
-			}
-		}
-
-		private class CodecIndexInput : BufferedIndexInput
-		{
-			private FileInfo file;
-			private Func<Stream, Stream> applyCodecs;
-		    private readonly ObjectPool<byte[]> bufferPool;
+			private readonly FileInfo file;
+			private readonly Func<Stream, Stream> applyCodecs;
 		    private Stream stream;
-			private SafeFileHandle fileHandle;
-			private int usageCount = 1;
-		    private bool notPoolBuffer;
-			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize, ObjectPool<byte[]> bufferPool)
-				: base(bufferSize)
+		    private bool isOriginal = true;
+		    private readonly MemoryMappedFile _mmf;
+		    private readonly byte* _basePtr;
+            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+		    public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
 				this.applyCodecs = applyCodecs;
-			    this.bufferPool = bufferPool;
 
-			    this.buffer = bufferPool.Allocate();
+		        if (file.Exists == false)
+		            throw new FileNotFoundException(file.FullName);
 
-                fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
-					Win32NativeFileAccess.GenericRead,
-					Win32NativeFileShare.Read | Win32NativeFileShare.Write,
-					IntPtr.Zero,
-					Win32NativeFileCreationDisposition.OpenExisting,
-					Win32NativeFileAttributes.Overlapped,
-					IntPtr.Zero);
+			    _mmf = MemoryMappedFile.CreateFromFile(file.FullName,FileMode.Open);
+		        _basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(_mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+		            Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
+		            0, 0, UIntPtr.Zero, null);
+		        if (_basePtr == null)
+		            throw new Win32Exception();
 
-				if (fileHandle.IsInvalid)
-				{
-					const int ERROR_FILE_NOT_FOUND = 2;
-					if (Marshal.GetLastWin32Error() == ERROR_FILE_NOT_FOUND)
-						throw new FileNotFoundException(file.FullName);
-					throw new Win32Exception();
-				}
-
-				this.stream = applyCodecs(new ConcurrentReadOnlyWin32FileStream(fileHandle));
+		        stream = applyCodecs(new UnmanagedMemoryStream(_basePtr, file.Length, file.Length, FileAccess.Read));
 			}
 
-			public override long Length()
-			{
-				return file.Length;
-			}
-
-		    public override void SetBufferSize(int newSize)
+		    public override object Clone()
 		    {
-		        var oldBuffer = buffer;
-                base.SetBufferSize(newSize);
-		        if (oldBuffer != buffer)
-		        {
-		            notPoolBuffer = true;
-                    bufferPool.Free(oldBuffer);
-		        }
+                if (_cts.IsCancellationRequested)
+                    throw new ObjectDisposedException("CodecIndexInput");
+
+                var clone = (CodecIndexInput) base.Clone();
+		        clone.isOriginal = false;
+                clone.stream = applyCodecs(new UnmanagedMemoryStream(_basePtr, file.Length, file.Length, FileAccess.Read));
+                return clone;
+		    }
+
+		    public override byte ReadByte()
+		    {
+                if (_cts.IsCancellationRequested)
+                    throw new ObjectDisposedException("CodecIndexInput");
+                var readByte = stream.ReadByte();
+		        if (readByte == -1)
+		            throw new EndOfStreamException();
+		        return (byte)readByte;
+		    }
+
+		    public override void ReadBytes(byte[] b, int offset, int len)
+		    {
+                if (_cts.IsCancellationRequested)
+                    throw new ObjectDisposedException("CodecIndexInput");
+                stream.Read(b, offset, len);
 		    }
 
 		    protected override void Dispose(bool disposing)
-			{
-				stream.Close();
-                bufferPool.Free(buffer);
-				if (Interlocked.Decrement(ref usageCount) == 0)
-					fileHandle.Close();
-			}
+		    {
+                stream.Dispose();
 
-			public override void ReadInternal(byte[] b, int offset, int length)
-			{
-				ConcurrentReadOnlyWin32FileStream.NextPosition = FilePointer;
+                if (isOriginal == false)
+                    return;
+		        _cts.Cancel();
+                Win32MemoryMapNativeMethods.UnmapViewOfFile(_basePtr);
+                _mmf.Dispose();
+		    }
 
-				stream.ReadEntireBlock(b, offset, length);
-			}
+		    public override void Seek(long pos)
+		    {
+                if(_cts.IsCancellationRequested)
+                    throw new ObjectDisposedException("CodecIndexInput");
+		        stream.Seek(pos, SeekOrigin.Begin);
+		    }
 
-			public override void SeekInternal(long pos)
-			{
-			}
+		    public override long Length()
+		    {
 
-			public override object Clone()
-			{
-				Interlocked.Increment(ref usageCount);
-				var codecIndexInput = (CodecIndexInput) base.Clone();
-				codecIndexInput.file = file;
-				codecIndexInput.applyCodecs = applyCodecs;
-				codecIndexInput.stream = applyCodecs(new ConcurrentReadOnlyWin32FileStream(fileHandle));
-				return codecIndexInput;
-			}
+		        return file.Length;
+		    }
+
+		    public override long FilePointer
+		    {
+		        get
+		        {
+                    if (_cts.IsCancellationRequested)
+                        throw new ObjectDisposedException("CodecIndexInput");
+                    return stream.Position;
+		        }
+		    }
 		}
 
 		private class CodecIndexOutput : BufferedIndexOutput
