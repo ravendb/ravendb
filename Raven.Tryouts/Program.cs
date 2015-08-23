@@ -12,7 +12,7 @@ namespace Raven.Tryouts
 		{
 			using (var counterStore = new CounterStore
 			{
-				Url = "http://localhost:8080",
+				Url = "http://localhost:8081",
 				Name = "TestCounterStore",				
 			})
 			{
