@@ -138,7 +138,8 @@ namespace Raven.Bundles.Expiration
         /// <filterpriority>2</filterpriority>
         public void Dispose()
         {
-            Database.TimerManager.ReleaseTimer(timer);
+            if(timer != null)
+                Database.TimerManager.ReleaseTimer(timer);
             timer = null;
         }
     }
