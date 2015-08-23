@@ -118,9 +118,9 @@ namespace Raven.Database.Indexing
 			private readonly Func<Stream, Stream> applyCodecs;
 		    private Stream stream;
 		    private bool isOriginal = true;
-		    private readonly MemoryMappedFile _mmf;
-		    private readonly byte* _basePtr;
-            private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+		    private readonly MemoryMappedFile mmf;
+		    private readonly byte* basePtr;
+            private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
 		    public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
@@ -130,31 +130,32 @@ namespace Raven.Database.Indexing
 		        if (file.Exists == false)
 		            throw new FileNotFoundException(file.FullName);
 
-			    _mmf = MemoryMappedFile.CreateFromFile(file.FullName,FileMode.Open);
-		        _basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(_mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+			    mmf = MemoryMappedFile.CreateFromFile(file.FullName,FileMode.Open);
+		        basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
 		            Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
 		            0, 0, UIntPtr.Zero, null);
-		        if (_basePtr == null)
+		        if (basePtr == null)
 		            throw new Win32Exception();
 
-		        stream = applyCodecs(new UnmanagedMemoryStream(_basePtr, file.Length, file.Length, FileAccess.Read));
+		        stream = applyCodecs(new UnmanagedMemoryStream(basePtr, file.Length, file.Length, FileAccess.Read));
 			}
 
 		    public override object Clone()
 		    {
-                if (_cts.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
 
                 var clone = (CodecIndexInput) base.Clone();
                 GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
-                clone.stream = applyCodecs(new UnmanagedMemoryStream(_basePtr, file.Length, file.Length, FileAccess.Read));
+                clone.stream = applyCodecs(new UnmanagedMemoryStream(basePtr, file.Length, file.Length, FileAccess.Read));
+		        clone.stream.Position = stream.Position;
                 return clone;
 		    }
 
 		    public override byte ReadByte()
 		    {
-                if (_cts.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
                 var readByte = stream.ReadByte();
 		        if (readByte == -1)
@@ -164,7 +165,7 @@ namespace Raven.Database.Indexing
 
 		    public override void ReadBytes(byte[] b, int offset, int len)
 		    {
-                if (_cts.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
                 stream.Read(b, offset, len);
 		    }
@@ -177,9 +178,9 @@ namespace Raven.Database.Indexing
                     return;
 
 		        GC.SuppressFinalize(this);
-		        _cts.Cancel();
-                Win32MemoryMapNativeMethods.UnmapViewOfFile(_basePtr);
-                _mmf.Dispose();
+		        cts.Cancel();
+                Win32MemoryMapNativeMethods.UnmapViewOfFile(basePtr);
+                mmf.Dispose();
 		    }
 
             ~CodecIndexInput()
@@ -196,7 +197,7 @@ namespace Raven.Database.Indexing
 
 		    public override void Seek(long pos)
 		    {
-                if(_cts.IsCancellationRequested)
+                if(cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
 		        stream.Seek(pos, SeekOrigin.Begin);
 		    }
@@ -211,7 +212,7 @@ namespace Raven.Database.Indexing
 		    {
 		        get
 		        {
-                    if (_cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested)
                         throw new ObjectDisposedException("CodecIndexInput");
                     return stream.Position;
 		        }
