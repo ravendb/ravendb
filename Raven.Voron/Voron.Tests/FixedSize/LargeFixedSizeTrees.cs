@@ -250,11 +250,11 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(250)]
-        [InlineData(1000)]
-        [InlineData(94000)]
-        [InlineData(300000)]
-        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
+        [InlineDataWithRandomSeed(250)]
+        [InlineDataWithRandomSeed(1000)]
+        [InlineDataWithRandomSeed(94000)]
+        [InlineDataWithRandomSeed(300000)]
+        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -274,8 +274,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var tc = Environment.TickCount;
-			var random = new Random(tc);
+			var random = new Random(seed);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
             {
@@ -332,12 +331,12 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(1000)]
-        [InlineData(100000)]
-        [InlineData(500000)]
-        [InlineData(1000000)]
-        [InlineData(2000000)]
-        public void CanDeleteRange_RandomRanges(int count)
+        [InlineDataWithRandomSeed(1000)]
+        [InlineDataWithRandomSeed(100000)]
+        [InlineDataWithRandomSeed(500000)]
+        [InlineDataWithRandomSeed(1000000)]
+        [InlineDataWithRandomSeed(2000000)]
+        public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -357,8 +356,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var tc = Environment.TickCount;
-			var random = new Random(tc);
+			var random = new Random(seed);
 			for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
@@ -389,11 +387,11 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(100)]
-        [InlineData(10000)]
-        [InlineData(75000)]
-        [InlineData(300000)]
-        public void CanDeleteRange_RandomRanges_WithGaps(int count)
+        [InlineDataWithRandomSeed(100)]
+        [InlineDataWithRandomSeed(10000)]
+        [InlineDataWithRandomSeed(75000)]
+        [InlineDataWithRandomSeed(300000)]
+        public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -410,8 +408,7 @@ namespace Voron.Tests.FixedSize
 
                 tx.Commit();
             }
-            var tc = Environment.TickCount;
-            var random = new Random(tc);
+            var random = new Random(seed);
             for (var i = 0; i < count/10; i++)
             {
                 var start = random.Next(status.Length);

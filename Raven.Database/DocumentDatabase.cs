@@ -1027,7 +1027,7 @@ namespace Raven.Database
 		{
 			if (MappingThreadPool != null)
 			{
-				MappingThreadPool.WaitForWorkToBeDone();
+				MappingThreadPool.DrainThePendingTasks();
 				MappingThreadPool.Dispose();
 				MappingThreadPool = null;
 			}
@@ -1038,7 +1038,7 @@ namespace Raven.Database
 		{
 			if (ReducingThreadPool != null)
 			{
-				ReducingThreadPool.WaitForWorkToBeDone();
+				ReducingThreadPool.DrainThePendingTasks();
 				ReducingThreadPool.Dispose();
 				ReducingThreadPool = null;
 			}

@@ -104,7 +104,7 @@ namespace Raven.SlowTests.RavenThreadPool
 
 				for (var i = 0; i < 8; i++)
 				{
-					tp.ThrottleDown();
+					tp.HandleHighCpuUsage();
 					int normalPrioritiesCount = 0, belowNormalPrioritiesCount = 0;
 					threadPoolStats = tp.GetThreadPoolStats();
 					var threadPrioritiesCounts = threadPoolStats.ThreadsPrioritiesCounts;
@@ -121,7 +121,7 @@ namespace Raven.SlowTests.RavenThreadPool
 
 				for (var i = 0; i < 7; i++)
 				{
-					tp.ThrottleDown();
+					tp.HandleHighCpuUsage();
 					threadPoolStats = tp.GetThreadPoolStats();
 
 					Assert.Equal(7 - i, threadPoolStats.ConcurrentWorkingThreadsAmount);
@@ -129,7 +129,7 @@ namespace Raven.SlowTests.RavenThreadPool
 
 				for (var i = 1; i < 8; i++)
 				{
-					tp.ThrottleUp();
+					tp.HandleLowCpuUsage();
 					threadPoolStats = tp.GetThreadPoolStats();
 
 					Assert.Equal(i+1, threadPoolStats.ConcurrentWorkingThreadsAmount);
@@ -137,7 +137,7 @@ namespace Raven.SlowTests.RavenThreadPool
 
 				for (var i = 1; i <= 8; i++)
 				{
-					tp.ThrottleUp();
+					tp.HandleLowCpuUsage();
 					int normalPrioritiesCount = 0, belowNormalPrioritiesCount = 0;
 					threadPoolStats = tp.GetThreadPoolStats();
 					var threadPrioritiesCounts = threadPoolStats.ThreadsPrioritiesCounts;
@@ -191,9 +191,9 @@ namespace Raven.SlowTests.RavenThreadPool
 					Thread.Sleep((int)Math.Pow(input,4) *5);
 				}, allowPartialBatchResumption: true);
 				var waitingTasksAmount = tp.GetAllWaitingTasks().Count();
-				var runnintTasksAmount = tp.GetRunningTasksAmount();
+				var runnintTasksAmount = tp.RunningTasksAmount;
 				Assert.NotEqual(waitingTasksAmount + runnintTasksAmount, 0);
-				while (tp.GetAllWaitingTasks().Count() != 0 || tp.GetRunningTasksAmount() != 0)
+				while (tp.GetAllWaitingTasks().Count() != 0 || tp.RunningTasksAmount != 0)
 				{
 					Thread.Sleep(100);
 				}
