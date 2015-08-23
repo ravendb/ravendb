@@ -118,7 +118,8 @@ namespace Raven.Database.Indexing
 			private readonly Func<Stream, Stream> applyCodecs;
 		    private Stream stream;
 		    private bool isOriginal = true;
-		    private readonly MemoryMappedFile mmf;
+		    private readonly SafeFileHandle fileHandle;
+		    private readonly IntPtr mmf;
 		    private readonly byte* basePtr;
             private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -130,8 +131,28 @@ namespace Raven.Database.Indexing
 		        if (file.Exists == false)
 		            throw new FileNotFoundException(file.FullName);
 
-			    mmf = MemoryMappedFile.CreateFromFile(file.FullName,FileMode.Open);
-		        basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+		        fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
+		            Win32NativeFileAccess.GenericRead,
+		            Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete,
+		            IntPtr.Zero,
+		            Win32NativeFileCreationDisposition.OpenExisting,
+		            Win32NativeFileAttributes.RandomAccess,
+		            IntPtr.Zero);
+
+		        if (fileHandle.IsInvalid)
+		        {
+		            const int ERROR_FILE_NOT_FOUND = 2;
+                    if (Marshal.GetLastWin32Error() == ERROR_FILE_NOT_FOUND)
+                        throw new FileNotFoundException(file.FullName);
+		            throw new Win32Exception();
+		        }
+
+		        mmf = Win32MemoryMapNativeMethods.CreateFileMapping(fileHandle.DangerousGetHandle(), IntPtr.Zero, Win32MemoryMapNativeMethods.FileMapProtection.PageReadonly,
+		            0, 0, null);
+                if(mmf == IntPtr.Zero)
+                    throw new Win32Exception();
+
+		        basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf,
 		            Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
 		            0, 0, UIntPtr.Zero, null);
 		        if (basePtr == null)
@@ -180,7 +201,8 @@ namespace Raven.Database.Indexing
 		        GC.SuppressFinalize(this);
 		        cts.Cancel();
                 Win32MemoryMapNativeMethods.UnmapViewOfFile(basePtr);
-                mmf.Dispose();
+		        Win32NativeMethods.CloseHandle(mmf);
+                fileHandle.Close();
 		    }
 
             ~CodecIndexInput()
