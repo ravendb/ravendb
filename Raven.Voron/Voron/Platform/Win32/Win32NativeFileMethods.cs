@@ -23,6 +23,13 @@ namespace Voron.Platform.Win32
 		                                    out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 
 
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern bool GetOverlappedResult(SafeFileHandle hFile,
+		   NativeOverlapped* lpOverlapped,
+		   out uint lpNumberOfBytesTransferred, bool bWait);
+
+
 		[DllImport(@"kernel32.dll", SetLastError = true)]
 		public static extern bool ReadFile(
 			SafeFileHandle hFile,
