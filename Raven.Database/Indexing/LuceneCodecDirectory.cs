@@ -11,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
+using Sparrow;
 using Voron.Platform.Win32;
 
 namespace Raven.Database.Indexing
@@ -18,6 +19,8 @@ namespace Raven.Database.Indexing
 	public class LuceneCodecDirectory : FSDirectory
 	{
 		private readonly List<AbstractIndexCodec> codecs;
+
+	    private readonly ObjectPool<byte[]> _bufferPool = new ObjectPool<byte[]>(() => new byte[BufferedIndexInput.BUFFER_SIZE]);
 
 		public LuceneCodecDirectory(string path, IEnumerable<AbstractIndexCodec> codecs)
 			: base(new DirectoryInfo(path), null)
@@ -33,7 +36,7 @@ namespace Raven.Database.Indexing
 		private CodecIndexInput OpenInputInner(string name, int bufferSize)
 		{
 			var file = GetFile(name);
-			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s), bufferSize);
+			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s), bufferSize, _bufferPool);
 		}
 
 		public override IndexOutput CreateOutput(string name)
@@ -206,17 +209,21 @@ namespace Raven.Database.Indexing
 		{
 			private FileInfo file;
 			private Func<Stream, Stream> applyCodecs;
-			private Stream stream;
+		    private readonly ObjectPool<byte[]> bufferPool;
+		    private Stream stream;
 			private SafeFileHandle fileHandle;
 			private int usageCount = 1;
-
-			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize)
+		    private bool notPoolBuffer;
+			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize, ObjectPool<byte[]> bufferPool)
 				: base(bufferSize)
 			{
 				this.file = file;
 				this.applyCodecs = applyCodecs;
+			    this.bufferPool = bufferPool;
 
-				fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
+			    this.buffer = bufferPool.Allocate();
+
+                fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
 					Win32NativeFileAccess.GenericRead,
 					Win32NativeFileShare.Read | Win32NativeFileShare.Write,
 					IntPtr.Zero,
@@ -240,9 +247,21 @@ namespace Raven.Database.Indexing
 				return file.Length;
 			}
 
-			protected override void Dispose(bool disposing)
+		    public override void SetBufferSize(int newSize)
+		    {
+		        var oldBuffer = buffer;
+                base.SetBufferSize(newSize);
+		        if (oldBuffer != buffer)
+		        {
+		            notPoolBuffer = true;
+                    bufferPool.Free(oldBuffer);
+		        }
+		    }
+
+		    protected override void Dispose(bool disposing)
 			{
 				stream.Close();
+                bufferPool.Free(buffer);
 				if (Interlocked.Decrement(ref usageCount) == 0)
 					fileHandle.Close();
 			}
