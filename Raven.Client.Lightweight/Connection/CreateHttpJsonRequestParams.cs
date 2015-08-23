@@ -39,13 +39,6 @@ namespace Raven.Client.Connection
 		{
 		}
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, Func<string, bool> shouldCacheRequest, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
-			: this(self, url, method, new RavenJObject(), credentials, null, requestTimeMetric, timeout)
-		{
-			ShouldCacheRequest = shouldCacheRequest;
-		}
-
-
 		public Func<string, bool> ShouldCacheRequest { get; set; }
 
 		public bool AvoidCachingRequest { get; set; }

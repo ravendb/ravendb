@@ -4,11 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Linq;
-using System.Web;
 using Raven.Abstractions.Data;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Database.Server.Security.OAuth
 {

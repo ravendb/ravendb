@@ -39,7 +39,7 @@ namespace Raven.Client.TimeSeries.Operations
 			CreateHttpJsonRequestParams @params;
 			if (timeout.HasValue)
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,
@@ -48,7 +48,7 @@ namespace Raven.Client.TimeSeries.Operations
 			}
 			else
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, timeSeriesConvention)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,

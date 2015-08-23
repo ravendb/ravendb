@@ -735,8 +735,17 @@ namespace Raven.Client.Connection.Async
 
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url));
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, 
+					(operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), 
+					HttpMethod.Get, 
+					metadata, 
+					operationMetadata.Credentials, 
+					convention, 
+					GetRequestTimeMetric(operationMetadata.Url));
+
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(
+				createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
+										   .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
 			{
 				Task<JsonDocument> resolveConflictTask;
 				try

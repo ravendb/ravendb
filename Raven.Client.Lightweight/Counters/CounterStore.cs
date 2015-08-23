@@ -138,7 +138,11 @@ namespace Raven.Client.Counters
 		
 		private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, CountersConvention.ShouldCacheRequest)
+			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, 
+				requestUriString, 
+				httpMethod, 
+				Credentials, 
+				CountersConvention)
 			{
 				DisableRequestCompression = disableRequestCompression,
 				DisableAuthentication = disableAuthentication
@@ -158,14 +162,12 @@ namespace Raven.Client.Counters
 			if (CountersConvention.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user
 
-			if (string.IsNullOrEmpty(Credentials.ApiKey) == false)
-				Credentials = null;
-
 			var basicAuthenticator = new BasicAuthenticator(JsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
 			var securedAuthenticator = new SecuredAuthenticator();
 
 			JsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			JsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
+			
 
 			CountersConvention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
