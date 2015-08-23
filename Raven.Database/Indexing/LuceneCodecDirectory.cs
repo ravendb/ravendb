@@ -146,6 +146,7 @@ namespace Raven.Database.Indexing
                     throw new ObjectDisposedException("CodecIndexInput");
 
                 var clone = (CodecIndexInput) base.Clone();
+                GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
                 clone.stream = applyCodecs(new UnmanagedMemoryStream(_basePtr, file.Length, file.Length, FileAccess.Read));
                 return clone;
@@ -174,10 +175,24 @@ namespace Raven.Database.Indexing
 
                 if (isOriginal == false)
                     return;
+
+		        GC.SuppressFinalize(this);
 		        _cts.Cancel();
                 Win32MemoryMapNativeMethods.UnmapViewOfFile(_basePtr);
                 _mmf.Dispose();
 		    }
+
+            ~CodecIndexInput()
+            {
+                try
+                {
+                    Dispose(false);
+                }
+                catch (Exception)
+                {
+                    // nothing can be done here
+                }
+            }
 
 		    public override void Seek(long pos)
 		    {
