@@ -78,7 +78,7 @@ namespace Voron.Platform.Win32
 
 			if (operationCompleted)
 			{
-				if (GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+				if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
 					throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 				return;
 			}
@@ -87,7 +87,7 @@ namespace Voron.Platform.Win32
 			{
 				case ErrorSuccess:
 				case ErrorIOPending:
-					if (GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+					if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
 						throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 					break;
 				default:
@@ -199,11 +199,6 @@ namespace Voron.Platform.Win32
 			uint nNumberOfBytesToWrite,
 			IntPtr lpReserved,
 			NativeOverlapped* lpOverlapped);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		static extern bool GetOverlappedResult(SafeFileHandle hFile,
-		   NativeOverlapped* lpOverlapped,
-		   out uint lpNumberOfBytesTransferred, bool bWait);
 
 		~Win32FileJournalWriter()
 		{
