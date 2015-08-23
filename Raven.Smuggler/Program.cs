@@ -3,9 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Net.Http;
 using System.Runtime.Remoting.Messaging;
 using NDesk.Options;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Extensions;
@@ -339,7 +341,6 @@ namespace Raven.Smuggler
 							PrintUsageAndExit(e);
 						}
 
-
 						switch (action)
 						{
 							case SmugglerAction.Export:
@@ -369,9 +370,15 @@ namespace Raven.Smuggler
 			catch (Exception e)
 			{
 				if (e is AggregateException)
-					Console.WriteLine(e.SimplifyError());
+				{
+					Console.WriteLine(e.InnerException != null ? e.InnerException.SimplifyError() : e.SimplifyError());
+				}
 				else
-					Console.WriteLine(e.Message);
+				{
+					var errorResponseException = e as ErrorResponseException;
+					Console.WriteLine(errorResponseException != null ? 
+						String.Format("{0} \n\r {1}", errorResponseException.SimplifyError(), errorResponseException.Response) : e.Message);
+				}
 
 				Environment.Exit(-1);
 			}
@@ -379,17 +386,17 @@ namespace Raven.Smuggler
 
 		private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
 		{
-			if (allowImplicitDatabase == false)
-			{
-				if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
-				{
-					throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
-				}
+			if (allowImplicitDatabase)
+				return;
 
-				if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
-				{
-					throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
-				}
+			if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
+			{
+				throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+			}
+
+			if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
+			{
+				throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
 			}
 		}
 

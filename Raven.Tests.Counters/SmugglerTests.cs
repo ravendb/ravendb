@@ -24,6 +24,36 @@ namespace Raven.Tests.Counters
 			IOExtensions.DeleteDirectory(CounterDumpFilename); //counters incremental export creates folder with incremental dump files
 		}
 
+		private const string apikey = "test/ThisIsMySecret";
+
+		[Fact]
+		public async Task SmugglerExport_and_import_with_ApiKey_should_work()
+		{
+			using (var serverA = GetNewServer(port: 8010,configureConfig: ConfigureServerForAuth))
+			using (var serverB = GetNewServer(port: 8011, configureConfig: ConfigureServerForAuth))
+			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA))
+			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
+			using (var counterStoreA = NewRemoteCountersStore("storeX",ravenStore: ravenStoreA))
+			using (var counterStoreB = NewRemoteCountersStore("storeY", ravenStore: ravenStoreB))
+			{								
+				ConfigureApiKey(serverA.SystemDatabase, "test", "ThisIsMySecret", counterStoreA.Name);
+				ConfigureApiKey(serverB.SystemDatabase, "test", "ThisIsMySecret", counterStoreB.Name);
+
+				await counterStoreA.IncrementAsync("G", "C");
+				await counterStoreA.DecrementAsync("G", "C2");
+
+				var smugglerApi = new SmugglerCounterApi();
+
+				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+				{
+					ToFile = CounterDumpFilename,
+					From = ConnectionStringTo(counterStoreA)
+				});
+
+				//Not finished yet
+			}			
+		}
+
 		[Fact]
 		public void SmugglerExport_with_error_in_stream_should_fail_gracefully()
 		{
