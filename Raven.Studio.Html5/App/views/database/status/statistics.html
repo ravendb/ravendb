@@ -47,11 +47,19 @@
             </div>
         </div>
         <div class="form-group">
+            <label class="col-md-2 control-label">Last Indexing Time</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: stats().LastIndexingDateTime"></p>
+            </div>
+        </div>
+
+        <div class="form-group">
             <label class="col-md-2 control-label">Reduce Batch Size</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToReduceInSingleBatchLocale"></p>
             </div>
         </div>
+
         <div class="form-group">
             <label class="col-md-2 control-label">Indexes</label>
             <div class="col-md-10">
@@ -93,13 +101,13 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label class="col-md-2 control-label">Last run</label>
+                                        <label class="col-md-2 control-label">Docs indexed from</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="text: LastIndexedTimestampText"></p>
                                         </div>
                                     </div>
                                     <div class="form-group" data-bind="if: IndexingAttempts !== null">
-                                        <label class="col-md-2 control-label">Reduce runs</label>
+                                        <label class="col-md-2 control-label">Maps reduced from</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="css: { 'text-success': ReduceIndexingAttempts === ReduceIndexingSuccesses, 'text-warning': ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, 'text-danger': ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0 }">
                                                 <span data-bind="visible: ReduceIndexingAttempts > 0, text: ReduceIndexingAttemptsLocale"></span>
