@@ -76,8 +76,8 @@ class disableResourceToggleCommand extends commandBase {
         var mergedPromise = $.Deferred();
 
         var combinedPromise = $.when.apply(null, toggleTasks);
-        combinedPromise.done(() => {
-            var toggledResources = [].concat.apply([], arguments);
+        combinedPromise.done((resources) => {
+            var toggledResources = [].concat.apply([], resources);
             this.reportSuccess("Successfully " + action + "d " + toggledResources.length + " resources!")
             mergedPromise.resolve(toggledResources);
         });
@@ -90,6 +90,8 @@ class disableResourceToggleCommand extends commandBase {
     }
 
     private toggleTask(resources: Array<resource>, togglePath: string):JQueryPromise<resource[]> {
+		var _arguments = arguments;
+
         var args = {
             ids: resources.map(d => d.name),
             isSettingDisabled: this.isSettingDisabled
@@ -102,7 +104,7 @@ class disableResourceToggleCommand extends commandBase {
             .done((resourceNames: string[]) => {
                 task.resolve(resources.filter(r => resourceNames.contains(r.name)));
             })
-            .fail(() => task.reject(arguments));
+            .fail(() => task.reject(_arguments));
         return task;
 
         

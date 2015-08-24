@@ -11,14 +11,14 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
 
     execute(): JQueryPromise<documentMetadataDto[]> {
         var url = '/docs';
-        var arguments = {
+        var args = {
             'startsWith': this.prefix,
             'exclude': null,
             'start': 0,
             'pageSize': this.resultsAmount,
             'metadata-only': true
         };
-        return this.query<any>(url, arguments, this.db);
+        return this.query<any>(url, args, this.db);
     }
 }
 
