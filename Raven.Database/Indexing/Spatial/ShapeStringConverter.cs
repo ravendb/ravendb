@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing.Spatial
 		{
 		    shape = default(string);
 
-            if (!value.StartsWith("BOX:", StringComparison.OrdinalIgnoreCase))
+            if (!value.StartsWith("BOX", StringComparison.OrdinalIgnoreCase))
                 return false;
 			var match = RegexBox.Match(value);
 			if (match.Success)
