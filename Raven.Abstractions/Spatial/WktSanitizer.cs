@@ -26,9 +26,6 @@ namespace Raven.Abstractions.Spatial
 		    if (string.IsNullOrEmpty(shapeWkt))
 		        return shapeWkt;
 
-            if (char.IsLetter(shapeWkt[0]))
-                return shapeWkt;
-
 			if (RectangleRegex.IsMatch(shapeWkt))
 				return shapeWkt;
 
