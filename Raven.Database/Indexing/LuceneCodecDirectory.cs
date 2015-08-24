@@ -51,10 +51,11 @@ namespace Raven.Database.Indexing
 
 		public override long FileLength(string name)
 		{
-		    return GetFile(name).Length;
+		    using (var input = OpenInput(name))
+		        return input.Length();
 		}
 
-		private Stream ApplyReadCodecs(string key, Stream stream)
+	    private Stream ApplyReadCodecs(string key, Stream stream)
 		{
 			try
 			{
@@ -226,8 +227,7 @@ namespace Raven.Database.Indexing
 
 		    public override long Length()
 		    {
-
-		        return file.Length;
+                return stream.Length;
 		    }
 
 		    public override long FilePointer
