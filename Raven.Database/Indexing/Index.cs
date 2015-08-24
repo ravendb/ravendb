@@ -66,6 +66,10 @@ namespace Raven.Database.Indexing
 		private volatile string waitReason;
 		private readonly long flushSize;
 		private long writeErrors;
+        // Users sometimes configure index outputs without realizing that we need to count on that for memory 
+        // management. That can result in very small batch sizes, so we want to make sure that we don't trust
+        // the user configuration, and use what is actually going on
+	    private int maxActualIndexOutput = 1;
 
 		public IndexingPriority Priority { get; set; }
 		/// <summary>
@@ -164,9 +168,17 @@ namespace Raven.Database.Indexing
 			get { return indexDefinition.IsTestIndex; }
 		}
 
-		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
+	    public int? MaxIndexOutputsPerDocument
+	    {
+	        get
+	        {
+	            if (maxActualIndexOutput == 1)
+	                return null;
+                return maxActualIndexOutput;
+	        }
+	    }
 
-		[CLSCompliant(false)]
+	    [CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
 		private DateTime _indexCreationTime;
 
@@ -319,6 +331,8 @@ namespace Raven.Database.Indexing
 		            if (disposed)
 		                return;
 		            if (indexWriter == null)
+		                return;
+		            if (context.IndexStorage == null)
 		                return;
 
 		            try
@@ -1569,12 +1583,14 @@ namespace Raven.Database.Indexing
                 Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
-					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
+                    if (logQuerying.IsDebugEnabled)
+					    logQuerying.Debug("Issuing query on index {0} for all documents", parent.PublicName);
 					documentQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.indexId, query);
+                    if (logQuerying.IsDebugEnabled)
+                        logQuerying.Debug("Issuing query on index {0} for: {1}", parent.PublicName, query);
 					var toDispose = new List<Action>();
 					RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
@@ -1812,6 +1828,8 @@ namespace Raven.Database.Indexing
 
 		public Etag GetLastEtagFromStats()
 		{
+            if (context.IndexStorage == null) // startup
+                return Etag.Empty;
 			return context.IndexStorage.GetLastEtagForIndex(this);
 		}
 
@@ -1891,7 +1909,31 @@ namespace Raven.Database.Indexing
 
 		protected bool EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
 		{
-			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ??
+		    if (indexDefinition.MaxIndexOutputsPerDocument != null)
+		    {
+		        // user has specifically configured this value, but we don't trust it.
+           
+		        var actualIndexOutput = maxActualIndexOutput;
+		        if (actualIndexOutput > numberOfAlreadyProducedOutputs)
+		        {
+		            // okay, now let verify that this is indeed the case, in thread safe manner,
+                    // this way, most of the time we don't need volatile reads, and other sync operations
+                    // in the code ensure we don't have too stale a view on the data (beside, stale view have
+                    // to mean a smaller number, which we then verify).
+		            actualIndexOutput = Thread.VolatileRead(ref maxActualIndexOutput);
+		            while (actualIndexOutput > numberOfAlreadyProducedOutputs)
+		            {
+                        // if it changed, we don't care, it is just another max, and another thread probably
+                        // set it for us, so we only retry if this is still smaller
+                        actualIndexOutput = Interlocked.CompareExchange(
+                            ref maxActualIndexOutput, 
+                            numberOfAlreadyProducedOutputs,
+		                    actualIndexOutput);
+		            }
+		        }
+		    }
+
+		    var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ??
 										(IsMapReduce ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument);
 
 			if (maxNumberOfIndexOutputs == -1)
@@ -1974,9 +2016,12 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					EnsureIndexWriter();
-					ForceWriteToDisk();
-					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                    // if in memory, flush to disk
+				    if (indexWriter != null)
+				    {
+                        ForceWriteToDisk();
+                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				    }
 				}
 				catch (Exception e)
 				{

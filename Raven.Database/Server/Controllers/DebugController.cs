@@ -583,7 +583,6 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[HttpPost]
 		[RavenRoute("debug/user-info")]
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()

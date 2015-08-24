@@ -51,20 +51,10 @@ namespace Voron.Platform.Win32
 		    return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
 		}
 
-		public override void Sync()
+	    public override void Sync()
 		{
 			// nothing to do here, we are already synced to memory, and we 
             // don't go anywhere
-		}
-
-		public override int Write(Page page, long? pageNumber)
-		{
-			long startPage = pageNumber ?? page.PageNumber;
-
-			//note: GetNumberOfOverflowPages and WriteDirect can throw ObjectDisposedException if the pager is already disposed
-			int toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
-
-			return WriteDirect(page, startPage, toWrite);
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
@@ -109,15 +99,6 @@ namespace Voron.Platform.Win32
 		}
 
 	
-		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
-		{
-			ThrowObjectDisposedIfNeeded();
-
-			int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
-
-			return toCopy;
-		}
 
 		public override string ToString()
 		{

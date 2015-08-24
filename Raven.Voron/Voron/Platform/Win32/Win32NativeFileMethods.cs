@@ -17,10 +17,50 @@ namespace Voron.Platform.Win32
 {
 	public static unsafe class Win32NativeFileMethods
 	{
+        public const int ErrorIOPending = 997;
+        public const int ErrorSuccess = 0;
+        public const int ErrorHandleEof = 38;
+
+
+	    [StructLayout(LayoutKind.Explicit, Size = 8)]
+	    public struct FileSegmentElement
+	    {
+	        [FieldOffset(0)]
+	        public IntPtr Buffer;
+	        [FieldOffset(0)]
+	        public UInt64 Alignment;
+	    }
+
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
+	    [return: MarshalAs(UnmanagedType.Bool)]
+	    public static extern bool WriteFileGather(
+	        SafeFileHandle hFile,
+	        FileSegmentElement* aSegmentArray,
+	        uint nNumberOfBytesToWrite,
+	        IntPtr lpReserved,
+	        NativeOverlapped* lpOverlapped);
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
+	    public static extern bool GetOverlappedResult(SafeFileHandle hFile,
+	        NativeOverlapped* lpOverlapped,
+	        out uint lpNumberOfBytesTransferred, bool bWait);
+
+	    [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
+           IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
+
+        public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteFileEx(SafeFileHandle hFile, byte* lpBuffer,
+           uint nNumberOfBytesToWrite, NativeOverlapped* lpOverlapped,
+           WriteFileCompletionDelegate lpCompletionRoutine);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
 		                                    out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
+
 
 
 		[DllImport(@"kernel32.dll", SetLastError = true)]
@@ -45,11 +85,7 @@ namespace Voron.Platform.Win32
 		[DllImport("kernel32.dll", SetLastError = true)]
 		private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
-		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
-		                                         [Out] out int lpDistanceToMoveHigh, [In] Win32NativeFileMoveMethod dwMoveMethod);
-
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
 		[DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -57,21 +93,14 @@ namespace Voron.Platform.Win32
 		
 		public static void SetFileLength(SafeFileHandle fileHandle, long length)
 		{
-			var lo = (int)(length & 0xffffffff);
-			var hi = (int)(length >> 32);
-
-			int lastError;
-
-			if (SetFilePointer(fileHandle, lo, out hi, Win32NativeFileMoveMethod.Begin) == -1)
+		    if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
 			{
-				lastError = Marshal.GetLastWin32Error();
-				if (lastError != 0)
-					throw new Win32Exception(lastError);
+                throw new Win32Exception(Marshal.GetLastWin32Error());
 			}
 
 			if (SetEndOfFile(fileHandle) == false)
 			{
-				lastError = Marshal.GetLastWin32Error();
+				var lastError = Marshal.GetLastWin32Error();
 
 				if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
 				{
@@ -83,7 +112,7 @@ namespace Voron.Platform.Win32
 					    filePath.EnsureCapacity(filePath.Capacity*2);
 					}
 
-					filePath = filePath.Replace(@"\\?\", string.Empty); // remove extended-length path prefix
+					filePath = filePath.Replace(@"\\?\", String.Empty); // remove extended-length path prefix
 
 					var fullFilePath = filePath.ToString();
 					var driveLetter = Path.GetPathRoot(fullFilePath);
@@ -281,6 +310,17 @@ namespace Voron.Platform.Win32
 	{
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
+	    // ReSharper disable once InconsistentNaming - Win32
+	    public struct WIN32_MEMORY_RANGE_ENTRY
+	    {
+	        public void* VirtualAddress;
+	        public IntPtr NumberOfBytes;
+	    }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public extern static bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries,
+	        WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
+
 		[Flags]
 		public enum FileMapProtection : uint
 		{
@@ -295,7 +335,9 @@ namespace Voron.Platform.Win32
 			SectionReserve = 0x4000000,
 		}
 
-		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+
+
+	    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern IntPtr CreateFileMapping(
 			IntPtr hFile,
 			IntPtr lpFileMappingAttributes,
@@ -367,6 +409,19 @@ namespace Voron.Platform.Win32
 			public uint Protect;
 			public uint Type;
 		}
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint SleepEx(uint dwMilliseconds, bool bAlertable);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint WaitForSingleObjectEx(IntPtr hHandle, int dwMilliseconds,
+           bool bAlertable);
+    
+        [DllImport("kernel32.dll")]
+        public static extern void SetLastError(uint dwErrCode);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,

@@ -159,24 +159,6 @@ namespace Voron.Platform.Posix
             }
         }
 
-        public override int Write(Page page, long? pageNumber)
-        {
-            long startPage = pageNumber ?? page.PageNumber;
-
-            int toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
-
-            return WriteDirect(page, startPage, toWrite);
-        }
-
-        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
-        {
-            ThrowObjectDisposedIfNeeded();
-
-            int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
-
-            return toCopy;
-        }
 
         public override string ToString()
         {

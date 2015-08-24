@@ -249,8 +249,18 @@ namespace Raven.Client.Indexes
 					TransformResults, Conventions, "results", translateIdentityProperty: false),
 			};
 
-			if (prettify)
-				transformerDefinition.TransformResults = IndexPrettyPrinter.Format(transformerDefinition.TransformResults);
+		    if (prettify)
+		    {
+		        var transformResults = transformerDefinition.TransformResults;
+		        try
+		        {
+		            transformerDefinition.TransformResults = IndexPrettyPrinter.Format(transformResults);
+		        }
+		        catch (Exception )
+		        {
+		            transformerDefinition.TransformResults = transformResults;
+		        }
+		    }
 
 			return transformerDefinition;
 		}

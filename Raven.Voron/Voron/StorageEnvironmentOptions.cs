@@ -15,6 +15,7 @@ using Voron.Platform.Win32;
 using Voron.Util;
 using Mono.Unix.Native;
 using Sparrow;
+using Voron.Trees;
 
 namespace Voron
 {
@@ -59,7 +60,7 @@ namespace Voron
 				_initialLogFileSize = value;
 			}
 		}
-
+        
 		public long MaxScratchBufferSize { get; set; }
 
 		public long MaxNumberOfPagesInMergedTransaction { get; set; }
@@ -192,7 +193,8 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+
+		    public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
 				var name = JournalName(journalNumber);
 				var path = Path.Combine(_journalPath, name);
@@ -297,7 +299,10 @@ namespace Voron
 					throw new InvalidOperationException("No such journal " + path);
 				if (RunningOnPosix)
 					return new PosixMemoryMapPager(path);
-				return new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
+			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
+                    options:Win32NativeFileAttributes.SequentialScan);
+			    win32MemoryMapPager.TryPrefetchingWholeFile();
+			    return win32MemoryMapPager;
 			}
 		}
 
@@ -414,7 +419,7 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-			public override IVirtualPager OpenJournalPager(long journalNumber)
+		    public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
 				IJournalWriter value;
