@@ -245,6 +245,10 @@
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopology.cs" />
     <Compile Include="GplexBuffers.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardFilter.cs" />

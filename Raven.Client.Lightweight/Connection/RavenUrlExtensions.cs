@@ -19,6 +19,14 @@ namespace Raven.Client.Connection
             return url;
         }
 
+		public static string ForFilesystem(this string url, string filesystem)
+		{
+			if (url.EndsWith("/"))
+				return url + "fs/" + filesystem;
+
+			return url + "/fs/" + filesystem;
+		}
+
 		public static string Indexes(this string url, string index)
 		{
 			return url + "/indexes/" + index;

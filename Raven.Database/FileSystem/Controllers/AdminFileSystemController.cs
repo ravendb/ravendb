@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Raven.Database.FileSystem.Synchronization;
 
 
 namespace Raven.Database.FileSystem.Controllers
@@ -632,5 +633,16 @@ namespace Raven.Database.FileSystem.Controllers
 
             return IOExtensions.ToFullPath(documentDataDir, baseDataPath);
         }
-    }
+
+		[HttpPost]
+		[RavenRoute("fs/{fileSystemName}/admin/synchronization/topology/view")]
+		public Task<HttpResponseMessage> SynchronizationTopology()
+		{
+			var synchronizationTopologyDiscoverer = new SynchronizationTopologyDiscoverer(FileSystem, new RavenJArray(), 10, Log);
+			var node = synchronizationTopologyDiscoverer.Discover();
+			var topology = node.Flatten();
+
+			return GetMessageWithObjectAsTask(topology);
+		}
+	}
 }

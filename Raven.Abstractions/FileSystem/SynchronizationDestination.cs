@@ -1,4 +1,7 @@
-﻿namespace Raven.Abstractions.FileSystem
+﻿using System.Net;
+using Raven.Imports.Newtonsoft.Json;
+
+namespace Raven.Abstractions.FileSystem
 {
     public class SynchronizationDestination
     {
@@ -39,7 +42,22 @@
             this.Enabled = true;
         }
 
-        protected bool Equals(SynchronizationDestination other)
+		[JsonIgnore]
+		public ICredentials Credentials
+	    {
+		    get
+		    {
+				if (string.IsNullOrEmpty(Username) == false)
+				{
+					return string.IsNullOrEmpty(Domain)
+									  ? new NetworkCredential(Username, Password)
+									  : new NetworkCredential(Username, Password, Domain);
+				}
+			    return null;
+		    }
+	    }
+
+	    protected bool Equals(SynchronizationDestination other)
         {
             return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(FileSystem, other.FileSystem);

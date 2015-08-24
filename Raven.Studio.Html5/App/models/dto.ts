@@ -1213,9 +1213,21 @@ interface importOperationStatusDto extends operationStatusDto{
     ExceptionDetails: string;
 }
 
+interface globalTopologyDto {
+    Databases: replicationTopologyDto;
+    FileSystems: synchronizationTopologyDto;
+}
+
 interface replicationTopologyDto {
     Servers: string[];
     Connections: replicationTopologyConnectionDto[];
+    SkippedResources: string[];
+}
+
+interface synchronizationTopologyDto {
+    Servers: string[];
+    Connections: synchronizationTopologyConnectionDto[];
+    SkippedResources: string[];
 }
 
 interface replicationTopologyConnectionDto {
@@ -1229,6 +1241,19 @@ interface replicationTopologyConnectionDto {
     Source: string;
     SourceToDestinationState: string;
     StoredServerId: string;
+    UiType: string;
+}
+
+interface synchronizationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastSourceFileEtag: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+    UiType: string;
 }
 
 interface runningTaskDto {

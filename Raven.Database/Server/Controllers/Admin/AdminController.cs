@@ -40,7 +40,10 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.Replication.Data;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Commercial;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
@@ -1238,8 +1241,92 @@ namespace Raven.Database.Server.Controllers.Admin
 					})
 				})
 			}));
-
-			
 		}
-	}
+
+		[HttpPost]
+		[RavenRoute("admin/replication/topology/global")]
+		public Task<HttpResponseMessage> GlobalReplicationTopology()
+		{
+			var databasesTopology = CollectReplicationTopology();
+
+			var filesystemsTopology = CollectFilesystemSynchronizationTopology();
+
+			return GetMessageWithObjectAsTask(new
+			{
+				Databases = databasesTopology,
+				FileSystems = filesystemsTopology
+			});
+		}
+
+		private ReplicationTopology CollectReplicationTopology()
+		{
+			var mergedTopology = new ReplicationTopology();
+
+			int nextPageStart = 0;
+			var databases = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var databaseNames = databases
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			DatabasesLandlord.ForAllDatabases(db =>
+			{
+				if (db.IsSystemDatabase())
+					return;
+
+				databaseNames.Remove(db.Name);
+				var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
+				var node = replicationSchemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = databaseNames;
+			return mergedTopology;
+		}
+
+		private SynchronizationTopology CollectFilesystemSynchronizationTopology()
+		{
+			var mergedTopology = new SynchronizationTopology();
+
+			int nextPageStart = 0;
+			var filesystems = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(FileSystemsLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var filesystemsNames = filesystems
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(FileSystemsLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			FileSystemsLandlord.ForAllFileSystems(fs =>
+			{
+				filesystemsNames.Remove(fs.Name);
+
+				var synchronizationSchemaDiscoverer = new SynchronizationTopologyDiscoverer(fs, new RavenJArray(), 10, Log);
+				var node = synchronizationSchemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = filesystemsNames;
+
+			return mergedTopology;
+		}
+    }
 }
