@@ -332,6 +332,8 @@ namespace Raven.Database.Indexing
 		                return;
 		            if (indexWriter == null)
 		                return;
+		            if (context.IndexStorage == null)
+		                return;
 
 		            try
 		            {
@@ -1826,6 +1828,8 @@ namespace Raven.Database.Indexing
 
 		public Etag GetLastEtagFromStats()
 		{
+            if (context.IndexStorage == null) // startup
+                return Etag.Empty;
 			return context.IndexStorage.GetLastEtagForIndex(this);
 		}
 
@@ -2012,9 +2016,12 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					EnsureIndexWriter();
-					ForceWriteToDisk();
-					WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                    // if in memory, flush to disk
+				    if (indexWriter != null)
+				    {
+                        ForceWriteToDisk();
+                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+				    }
 				}
 				catch (Exception e)
 				{
