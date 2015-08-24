@@ -42,18 +42,26 @@ namespace Raven.Tests.Counters
 			Authentication.EnableOnce();
 		}
 
-		protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null)
+		protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null, bool isAdmin = false)
 		{
-			database.Documents.Put("Raven/ApiKeys/" + Name, null, RavenJObject.FromObject(new ApiKeyDefinition
+			var allowedResources = new List<ResourceAccess>
+			{					
+				new ResourceAccess {TenantId = resourceName, Admin = isAdmin}
+			};
+
+			if (isAdmin)
+			{
+				allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true});
+			}
+
+			var apiKeyDefinition = RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = Name,
 				Secret = Secret,
 				Enabled = true,
-				Databases = new List<ResourceAccess>
-				{
-                    new ResourceAccess {TenantId = resourceName, Admin = false}
-				}
-			}), new RavenJObject(), null);
+				Databases = allowedResources
+			});
+			database.Documents.Put("Raven/ApiKeys/" + Name, null, apiKeyDefinition, new RavenJObject(), null);
 		}
 
 

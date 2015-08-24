@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
@@ -24,34 +26,94 @@ namespace Raven.Tests.Counters
 			IOExtensions.DeleteDirectory(CounterDumpFilename); //counters incremental export creates folder with incremental dump files
 		}
 
-		private const string apikey = "test/ThisIsMySecret";
+		private const string goodApikey = "test/ThisIsMySecret";
+		private const string badApikey = "test2/ThisIsNotMySecret";
 
 		[Fact]
-		public async Task SmugglerExport_and_import_with_ApiKey_should_work()
+		public async Task Smuggler_export_with_ApiKey_should_work()
+		{
+			using (var server = GetNewServer(port: 8010,configureConfig: ConfigureServerForAuth))
+			using (var documentStore = NewRemoteDocumentStore(ravenDbServer: server))
+			{
+				using (var counterStore = NewRemoteCountersStore("storeX", ravenStore: documentStore))
+				{
+					await counterStore.IncrementAsync("G", "C");
+					await counterStore.DecrementAsync("G", "C2");
+				}
+
+				using (var counterStore = NewRemoteCountersStore("storeX", ravenStore: documentStore))
+				{
+					ConfigureApiKey(server.SystemDatabase, "test", "ThisIsMySecret", counterStore.Name, true);
+					var smugglerApi = new SmugglerCounterApi();
+
+					Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
+						smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+						{
+							ToFile = CounterDumpFilename,
+							From = ConnectionStringTo(counterStore, goodApikey)
+						})));
+				}
+			}
+		}
+
+		//note: smuggler import/export requires admin access to <system> database
+		[Fact]
+		public async Task Smuggler_import_with_ApiKey_should_work()
 		{
 			using (var serverA = GetNewServer(port: 8010,configureConfig: ConfigureServerForAuth))
 			using (var serverB = GetNewServer(port: 8011, configureConfig: ConfigureServerForAuth))
 			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA))
 			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
-			using (var counterStoreA = NewRemoteCountersStore("storeX",ravenStore: ravenStoreA))
-			using (var counterStoreB = NewRemoteCountersStore("storeY", ravenStore: ravenStoreB))
-			{								
-				ConfigureApiKey(serverA.SystemDatabase, "test", "ThisIsMySecret", counterStoreA.Name);
-				ConfigureApiKey(serverB.SystemDatabase, "test", "ThisIsMySecret", counterStoreB.Name);
-
-				await counterStoreA.IncrementAsync("G", "C");
-				await counterStoreA.DecrementAsync("G", "C2");
-
-				var smugglerApi = new SmugglerCounterApi();
-
-				await smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+			{
+				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenStore: ravenStoreA))
 				{
-					ToFile = CounterDumpFilename,
-					From = ConnectionStringTo(counterStoreA)
-				});
+					await counterStoreA.IncrementAsync("G", "C");
+					await counterStoreA.DecrementAsync("G", "C2");
+				}
 
-				//Not finished yet
-			}			
+				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenStore: ravenStoreA))
+				using (var counterStoreB = NewRemoteCountersStore("storeY", ravenStore: ravenStoreB))
+				{
+					ConfigureApiKey(serverA.SystemDatabase, "test", "ThisIsMySecret", counterStoreA.Name, true);
+					ConfigureApiKey(serverA.SystemDatabase, "test2", "ThisIsNotMySecret", counterStoreA.Name + "FooBar", true);
+					ConfigureApiKey(serverB.SystemDatabase, "test", "ThisIsMySecret", counterStoreB.Name, true);
+					ConfigureApiKey(serverB.SystemDatabase, "test2", "ThisIsNotMySecret", counterStoreB.Name + "FooBar", true);
+
+					var smugglerApi = new SmugglerCounterApi();
+
+					var e = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() =>
+						smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+						{
+							ToFile = CounterDumpFilename,
+							From = ConnectionStringTo(counterStoreA, badApikey)
+						})));
+
+					e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+					Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
+						smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+						{
+							ToFile = CounterDumpFilename,
+							From = ConnectionStringTo(counterStoreA, goodApikey)
+						})));
+
+					e = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() =>
+						smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
+						{
+							FromFile = CounterDumpFilename,
+							To = ConnectionStringTo(counterStoreB, badApikey)
+						})));
+
+					e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+					Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
+						smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
+						{
+							FromFile = CounterDumpFilename,
+							To = ConnectionStringTo(counterStoreB, goodApikey)
+						})));
+				}
+			}
 		}
 
 		[Fact]
@@ -288,11 +350,11 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-		private CounterConnectionStringOptions ConnectionStringTo(ICounterStore counterStore)
+		private CounterConnectionStringOptions ConnectionStringTo(ICounterStore counterStore, string overrideApiKey = null)
 		{
 			return new CounterConnectionStringOptions
 			{
-				ApiKey = counterStore.Credentials.ApiKey,
+				ApiKey = overrideApiKey ?? counterStore.Credentials.ApiKey,
 				Credentials = counterStore.Credentials.Credentials,
 				CounterStoreId = counterStore.Name,
 				Url = counterStore.Url

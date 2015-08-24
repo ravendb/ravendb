@@ -20,7 +20,50 @@ namespace Raven.Tests.Counters
 		{
 			ConfigureServerForAuth(configuration);
 		}
-		
+
+		[Fact]
+		public void Cannot_use_admin_endpoint_with_non_admin_apiKey()
+		{
+			string storeName;
+			using (var store = NewRemoteCountersStore("TestStore")) //this will create the TestStore
+			{
+				storeName = store.Name;
+			}
+
+			Database.Server.Security.Authentication.EnableOnce();
+
+			//GoodApiKey is with admin access to <system>
+			ConfigureApiKey(servers[0].SystemDatabase, "thisIsApiKeyName", "thisIsSecret", storeName, true);
+
+			//BadApiKey is without admin access to <system>
+			ConfigureApiKey(servers[0].SystemDatabase, "NotThisIsApiKeyName", "thisIsSecret", storeName);
+
+			using (var store = new CounterStore
+			{
+				Url = servers[0].SystemDatabase.ServerUrl,
+				Name = storeName,
+				Credentials = new OperationCredentials(BadApiKey, null)
+			})
+			{
+				store.Initialize();
+				var e = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => store.Admin.GetCounterStoragesNamesAsync()));
+				e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+			}
+
+			using (var store = new CounterStore
+			{
+				Url = servers[0].SystemDatabase.ServerUrl,
+				Name = storeName,
+				Credentials = new OperationCredentials(GoodApiKey, null)
+			})
+			{
+				store.Initialize();
+				var storageNames = new string[0];
+				Assert.DoesNotThrow(() => storageNames = AsyncHelpers.RunSync(() => store.Admin.GetCounterStoragesNamesAsync()));
+				storageNames.Should().HaveCount(1);
+			}
+		}
+
 		[Fact]
 		public async Task When_Counter_has_apiKey_auth_then_operations_with_wrong_apiKey_should_fail()
 		{
