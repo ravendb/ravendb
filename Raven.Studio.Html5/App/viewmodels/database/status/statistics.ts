@@ -59,7 +59,8 @@ class statistics extends viewModelBase {
         // Attach string versions numbers with thousands separator to the indexes.
         results['CountOfDocumentsLocale'] = optional.val(results.CountOfDocuments).bind(v => v).bind(v => v.toLocaleString());
         results['CurrentNumberOfItemsToIndexInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToIndexInSingleBatch).bind(v => v.toLocaleString());
-        results['CurrentNumberOfItemsToReduceInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToReduceInSingleBatch).bind(v => v.toLocaleString()); 
+        results['CurrentNumberOfItemsToReduceInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToReduceInSingleBatch).bind(v => v.toLocaleString());
+        results['LastIndexingDateTime'] = String(optional.val(results.Indexes.map(x => x.LastIndexedTimestamp).reduce((prev, curr) => moment(prev).isAfter(moment(curr)) ? prev : curr)).bind(v => v.toHumanizedDate()));
         results.Indexes.forEach(i=> {
             i['CreatedTimestampText'] = optional.val(i.CreatedTimestamp).bind(v => v.toHumanizedDate());
             i['LastIndexedTimestampText'] = optional.val(i.LastIndexedTimestamp).bind(v => v.toHumanizedDate());
@@ -75,6 +76,7 @@ class statistics extends viewModelBase {
             i['IndexingErrorsLocale'] = optional.val(i.IndexingErrors).bind(v => v.toLocaleString());
             i['IndexingSuccessesLocale'] = optional.val(i.IndexingSuccesses).bind(v => v.toLocaleString());
         });
+
         results.Indexes.sort((a, b) => a.Name < b.Name ? -1 : a.Name > b.Name ? 1 : 0);
 
         this.stats(results);
