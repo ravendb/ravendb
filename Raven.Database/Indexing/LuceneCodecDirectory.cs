@@ -124,42 +124,136 @@ namespace Raven.Database.Indexing
 		    private readonly byte* basePtr;
             private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
-		    public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
-			{
-				this.file = file;
-				this.applyCodecs = applyCodecs;
+		    public class MmapStream : Stream
+		    {
+		        private readonly byte* ptr;
+		        private readonly long len;
+		        private long pos;
 
-		        if (file.Exists == false)
-		            throw new FileNotFoundException(file.FullName);
-
-		        fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
-		            Win32NativeFileAccess.GenericRead,
-		            Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete,
-		            IntPtr.Zero,
-		            Win32NativeFileCreationDisposition.OpenExisting,
-		            Win32NativeFileAttributes.RandomAccess,
-		            IntPtr.Zero);
-
-		        if (fileHandle.IsInvalid)
+		        public MmapStream(byte* ptr, long len)
 		        {
-		            const int ERROR_FILE_NOT_FOUND = 2;
-                    if (Marshal.GetLastWin32Error() == ERROR_FILE_NOT_FOUND)
-                        throw new FileNotFoundException(file.FullName);
-		            throw new Win32Exception();
+		            this.ptr = ptr;
+		            this.len = len;
 		        }
 
-		        mmf = Win32MemoryMapNativeMethods.CreateFileMapping(fileHandle.DangerousGetHandle(), IntPtr.Zero, Win32MemoryMapNativeMethods.FileMapProtection.PageReadonly,
-		            0, 0, null);
-                if(mmf == IntPtr.Zero)
-                    throw new Win32Exception();
+		        public override void Flush()
+		        {
+		            throw new NotSupportedException();
+		        }
 
-		        basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf,
-		            Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
-		            0, 0, UIntPtr.Zero, null);
-		        if (basePtr == null)
-		            throw new Win32Exception();
+		        public override long Seek(long offset, SeekOrigin origin)
+		        {
+		            switch (origin)
+		            {
+		                case SeekOrigin.Begin:
+		                    Position = offset;
+		                    break;
+		                case SeekOrigin.Current:
+		                    Position += offset;
+		                    break;
+		                case SeekOrigin.End:
+		                    Position = len + offset;
+		                    break;
+		                default:
+		                    throw new ArgumentOutOfRangeException("origin", origin, null);
+		            }
+		            return Position;
+		        }
 
-		        stream = applyCodecs(new UnmanagedMemoryStream(basePtr, file.Length, file.Length, FileAccess.Read));
+		        public override void SetLength(long value)
+		        {
+                    throw new NotSupportedException();
+		        }
+
+		        public override int ReadByte()
+		        {
+		            if (Position == len)
+		                return -1;
+		            return ptr[Position++];
+		        }
+
+		        public override int Read(byte[] buffer, int offset, int count)
+		        {
+		            if (pos == len)
+		                return 0;
+		            if (count > len - pos)
+		            {
+		                count = (int) (len - pos);
+		            }
+		            fixed (byte* dst = buffer)
+		            {
+		                Memory.CopyInline(dst, ptr, count);
+		            }
+		            return count;
+		        }
+
+		        public override void Write(byte[] buffer, int offset, int count)
+		        {
+                    throw new NotSupportedException();
+		        }
+
+		        public override bool CanRead
+		        {
+		            get { return true; }
+		        }
+		        public override bool CanSeek
+		        {
+                    get { return true; }
+		        }
+		        public override bool CanWrite
+		        {
+                    get { return false; }
+		        }
+		        public override long Length
+		        {
+		            get { return len; }
+		        }
+		        public override long Position { get { return pos; } set { pos = (int)value; } }
+		    }
+
+		    public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
+			{
+		        try
+		        {
+                    this.file = file;
+                    this.applyCodecs = applyCodecs;
+
+                    fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
+                        Win32NativeFileAccess.GenericRead,
+                        Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete,
+                        IntPtr.Zero,
+                        Win32NativeFileCreationDisposition.OpenExisting,
+                        Win32NativeFileAttributes.RandomAccess,
+                        IntPtr.Zero);
+
+                    if (fileHandle.IsInvalid)
+                    {
+                        const int ERROR_FILE_NOT_FOUND = 2;
+                        if (Marshal.GetLastWin32Error() == ERROR_FILE_NOT_FOUND)
+                            throw new FileNotFoundException(file.FullName);
+                        throw new Win32Exception();
+                    }
+
+                    mmf = Win32MemoryMapNativeMethods.CreateFileMapping(fileHandle.DangerousGetHandle(), IntPtr.Zero, Win32MemoryMapNativeMethods.FileMapProtection.PageReadonly,
+                        0, 0, null);
+                    if (mmf == IntPtr.Zero)
+                    {
+                        throw new Win32Exception();
+                    }
+
+                    basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf,
+                        Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
+                        0, 0, UIntPtr.Zero, null);
+                    if (basePtr == null)
+                        throw new Win32Exception();
+
+                    stream = applyCodecs(new MmapStream(basePtr, file.Length));
+		        }
+		        catch (Exception)
+		        {
+		            Dispose(false);
+		            throw;
+		        }
 			}
 
 		    public override object Clone()
@@ -170,7 +264,7 @@ namespace Raven.Database.Indexing
                 var clone = (CodecIndexInput) base.Clone();
                 GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
-                clone.stream = applyCodecs(new UnmanagedMemoryStream(basePtr, file.Length, file.Length, FileAccess.Read));
+                clone.stream = applyCodecs(new MmapStream(basePtr, file.Length));
 		        clone.stream.Position = stream.Position;
                 return clone;
 		    }
@@ -194,16 +288,21 @@ namespace Raven.Database.Indexing
 
 		    protected override void Dispose(bool disposing)
 		    {
-                stream.Dispose();
+		        if (stream != null)
+		            stream.Dispose();
+
+                GC.SuppressFinalize(this);
 
                 if (isOriginal == false)
                     return;
 
-		        GC.SuppressFinalize(this);
 		        cts.Cancel();
-                Win32MemoryMapNativeMethods.UnmapViewOfFile(basePtr);
-		        Win32NativeMethods.CloseHandle(mmf);
-                fileHandle.Close();
+		        if (basePtr != null)
+		            Win32MemoryMapNativeMethods.UnmapViewOfFile(basePtr);
+		        if (mmf != IntPtr.Zero)
+		            Win32NativeMethods.CloseHandle(mmf);
+		        if (fileHandle != null)
+		            fileHandle.Close();
 		    }
 
             ~CodecIndexInput()
