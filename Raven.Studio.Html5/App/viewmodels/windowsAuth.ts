@@ -2,8 +2,6 @@
 import windowsAuthData = require("models/windowsAuthData");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/getWindowsAuthCommand");
-import shell = require("viewmodels/shell");
-import database = require("models/database");
 
 class windowsAuth extends viewModelBase {
 
