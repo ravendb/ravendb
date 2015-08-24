@@ -169,7 +169,7 @@ namespace Raven.Database.Indexing
 		        {
 		            if (Position == len)
 		                return -1;
-		            return ptr[Position++];
+		            return ptr[pos++];
 		        }
 
 		        public override int Read(byte[] buffer, int offset, int count)
@@ -182,8 +182,9 @@ namespace Raven.Database.Indexing
 		            }
 		            fixed (byte* dst = buffer)
 		            {
-		                Memory.CopyInline(dst, ptr, count);
+		                Memory.CopyInline(dst + offset, ptr + pos, count);
 		            }
+		            pos += count;
 		            return count;
 		        }
 
