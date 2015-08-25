@@ -368,6 +368,7 @@ namespace Voron.Trees
 
 			var rootPage = _tx.ModifyPage(node->PageNumber, _tree, null);
 			_tree.State.RootPageNumber = rootPage.PageNumber;
+	        _tree.State.Depth--;
 
             Debug.Assert(rootPage.Dirty);
 

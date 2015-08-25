@@ -109,7 +109,7 @@ namespace Voron.Tests.Trees
 				}
 
 				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
-
+				
 				Assert.Equal(4, tree.State.Depth);
 
 				tx.Commit();
