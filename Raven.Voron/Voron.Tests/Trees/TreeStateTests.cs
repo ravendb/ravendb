@@ -95,6 +95,58 @@ namespace Voron.Tests.Trees
 		}
 
 		[Fact]
+		public void HasReducedTreeDepthValueAfterRemovingEntries()
+		{
+			const int numberOfItems = 1024;
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "test");
+
+				for (int i = 0; i < numberOfItems; i++)
+				{
+					tree.Add("test" + new string('-', 256) + i, new byte[256]);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+				
+				Assert.Equal(4, tree.State.Depth);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
+				for (int i = 0; i < numberOfItems * 0.75; i++)
+				{
+					tree.Delete("test" + new string('-', 256) + i);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+
+				Assert.Equal(3, tree.State.Depth);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
+				for (int i = 0; i < numberOfItems; i++)
+				{
+					tree.Delete("test" + new string('-', 256) + i);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+
+				Assert.Equal(1, tree.State.Depth);
+			}
+		}
+
+		[Fact]
 		public void AllPagesCantHasDuplicatesInMultiTrees()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
