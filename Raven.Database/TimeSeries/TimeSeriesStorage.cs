@@ -993,7 +993,8 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
 
 				var tree = tx.ReadTree(SeriesTreePrefix + type);
-				existingType.KeysCount = tree.State.EntriesCount;
+				if (tree != null)
+					existingType.KeysCount = tree.State.EntriesCount;
 				if (existingType.KeysCount > 0)
 					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has associated keys.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
 

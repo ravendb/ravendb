@@ -26,8 +26,6 @@ class timeSeriesPoints extends viewModelBase {
     minPoint = ko.observable<string>();
     maxPoint = ko.observable<string>();
 
-    types = ko.observableArray<timeSeriesType>([]);
-
     pointsList = ko.observable<pagedList>();
     selectedPointsIndices = ko.observableArray<number>();
     selectedPointsText: KnockoutComputed<string>;

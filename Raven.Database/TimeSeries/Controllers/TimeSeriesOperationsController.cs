@@ -57,7 +57,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			Storage.DeleteType(type);
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 
-			return new HttpResponseMessage(HttpStatusCode.Created);
+			return new HttpResponseMessage(HttpStatusCode.OK);
 		}
 
 		[RavenRoute("ts/{timeSeriesName}/append/{type}")]

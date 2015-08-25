@@ -18,4 +18,4 @@ class deleteKeyCommand extends commandBase {
     }
 }
 
-export = deleteKeyCommand;  
+export = deleteKeyCommand;
