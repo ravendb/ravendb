@@ -362,7 +362,7 @@ namespace Raven.Database.Counters.Controllers
 
 	    private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent)
 	    {
-			var message = new ReplicationMessage { ServerId = storage.ServerId, SendingServerName = storage.ResourceName };
+			var message = new ReplicationMessage { ServerId = storage.ServerId, SendingServerName = storage.CounterStorageUrl };
 
             using (var reader = storage.CreateReader())
             {
