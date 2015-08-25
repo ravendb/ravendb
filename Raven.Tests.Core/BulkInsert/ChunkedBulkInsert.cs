@@ -30,7 +30,7 @@ namespace Raven.Tests.Core.BulkInsert
 				}
 				}))
 				{
-					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 					{
 						if (x.Type == DocumentChangeTypes.BulkInsertStarted)
 							Interlocked.Increment(ref bulkInsertStartsCounter);
@@ -68,7 +68,7 @@ namespace Raven.Tests.Core.BulkInsert
 				}
 				}))
 				{
-					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 					{
 						if (x.Type == DocumentChangeTypes.BulkInsertStarted)
 							Interlocked.Increment(ref bulkInsertStartsCounter);
@@ -108,7 +108,7 @@ namespace Raven.Tests.Core.BulkInsert
 					}
 				}))
 				{
-					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 					{
 						if (x.Type == DocumentChangeTypes.BulkInsertStarted)
 							Interlocked.Increment(ref bulkInsertStartsCounter);
@@ -148,7 +148,7 @@ namespace Raven.Tests.Core.BulkInsert
 					}
 				}))
 				{
-					store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 					{
 						if (x.Type == DocumentChangeTypes.BulkInsertStarted)
 							Interlocked.Increment(ref bulkInsertStartsCounter);
@@ -183,7 +183,7 @@ namespace Raven.Tests.Core.BulkInsert
 				{
 					using (var bulkInsert = store.BulkInsert())
 					{
-						store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+						store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
 						{
 							if (x.Type == DocumentChangeTypes.BulkInsertStarted)
 								Assert.True(bulkInsertStartsCounter.TryAdd(x.OperationId,x));

@@ -32,7 +32,7 @@ namespace Raven.Client.Counters.Operations
 			CreateHttpJsonRequestParams @params;
 			if (timeout.HasValue)
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,
@@ -41,7 +41,7 @@ namespace Raven.Client.Counters.Operations
 			}
 			else
 			{
-				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention.ShouldCacheRequest)
+				@params = new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, credentials, countersConvention)
 				{
 					DisableRequestCompression = disableRequestCompression,
 					DisableAuthentication = disableAuthentication,

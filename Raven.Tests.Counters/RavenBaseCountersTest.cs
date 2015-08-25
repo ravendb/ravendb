@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -7,9 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Counters;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Security;
+using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Counters
@@ -29,6 +35,35 @@ namespace Raven.Tests.Counters
 			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
+
+		protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
+		{
+			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+			Authentication.EnableOnce();
+		}
+
+		protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null, bool isAdmin = false)
+		{
+			var allowedResources = new List<ResourceAccess>
+			{					
+				new ResourceAccess {TenantId = resourceName, Admin = isAdmin}
+			};
+
+			if (isAdmin)
+			{
+				allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true});
+			}
+
+			var apiKeyDefinition = RavenJObject.FromObject(new ApiKeyDefinition
+			{
+				Name = Name,
+				Secret = Secret,
+				Enabled = true,
+				Databases = allowedResources
+			});
+			database.Documents.Put("Raven/ApiKeys/" + Name, null, apiKeyDefinition, new RavenJObject(), null);
+		}
+
 
 		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
 		{

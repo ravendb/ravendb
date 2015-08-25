@@ -91,6 +91,7 @@ interface databaseStatisticsDto {
     Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
+    LastIndexingDateTime: string;
     Prefetches: futureBatchStatsDto[];
     StaleIndexes: string[];
     SupportsDtc: boolean;

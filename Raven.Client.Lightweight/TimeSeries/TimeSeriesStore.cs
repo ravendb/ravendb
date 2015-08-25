@@ -127,7 +127,7 @@ namespace Raven.Client.TimeSeries
 		
 		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, TimeSeriesConvention.ShouldCacheRequest)
+			return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, requestUriString, httpMethod, Credentials, TimeSeriesConvention)
 			{
 				DisableRequestCompression = disableRequestCompression,
 				DisableAuthentication = disableAuthentication

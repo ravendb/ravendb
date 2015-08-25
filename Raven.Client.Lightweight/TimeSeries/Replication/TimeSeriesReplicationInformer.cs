@@ -308,7 +308,7 @@ namespace Raven.Client.TimeSeries.Replication
 							var r = await TryExecuteOperationAsync<object>(timeSeriesStoreUrl,null, async (url, timeSeriesStoreName) =>
 							{
 								var serverCheckUrl = GetServerCheckUrl(url);
-								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, TimeSeriesConventions.ShouldCacheRequest);
+								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, TimeSeriesConventions);
 								using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 								{
 									await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);

@@ -43,7 +43,9 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
 		{
-                        return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+			return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
+				AsyncHelpers.RunSync(() => 
+					serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
 		}
 
 		private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -62,9 +64,7 @@ namespace Raven.Client.Connection
 
 					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (IsInvalidDestinationsDocument(document) == false)
-					{
 						UpdateReplicationInformationFromDocument(document);
-					}
 				}
 
 				firstTime = false;
@@ -76,13 +76,12 @@ namespace Raven.Client.Connection
 				if (taskCopy != null)
 					return taskCopy;
 
-                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
-					.ContinueWith(task =>
+                return refreshReplicationInformationTask = Task.Factory.StartNew(() => 
+					RefreshReplicationInformationInternal(url, getReplicationDestinations)).
+					ContinueWith(task =>
 					{
 						if (task.Exception != null)
-						{
 							Log.ErrorException("Failed to refresh replication information", task.Exception);
-						}
 						refreshReplicationInformationTask = null;
 					});
 			}

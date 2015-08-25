@@ -27,7 +27,7 @@ namespace Raven.Database.Counters.Controllers
 {
     public class AdminCounterStorageController : BaseAdminController
     {
-	    private string CounterStorageName { get; set; }
+	    private string currentCounterStorageName { get; set; }
 
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
@@ -39,26 +39,31 @@ namespace Raven.Database.Counters.Controllers
 				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
 
 				if (selectedData != null)
-					CounterStorageName = selectedData.Values["counterStorageName"] as string;
+					currentCounterStorageName = selectedData.Values["counterStorageName"] as string;
 			}
 			else
 			{
 				if (values.ContainsKey("counterStorageName"))
-					CounterStorageName = values["counterStorageName"] as string;
+					currentCounterStorageName = values["counterStorageName"] as string;
 			}
 		}
+
+	    public override string TenantName
+	    {
+		    get { return currentCounterStorageName; }
+	    }
 
 	    private CounterStorage Storage
 		{
 			get
 			{
-				if (string.IsNullOrWhiteSpace(CounterStorageName))
+				if (string.IsNullOrWhiteSpace(currentCounterStorageName))
 					throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
 
-				var counterStorage = CountersLandlord.GetCounterInternal(CounterStorageName);
+				var counterStorage = CountersLandlord.GetCounterInternal(currentCounterStorageName);
 				if (counterStorage == null)
 				{
-					throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
+					throw new InvalidOperationException("Could not find a counter storage named: " + currentCounterStorageName);
 				}
 
 				return counterStorage.Result;
@@ -66,17 +71,17 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 	    [HttpGet]
-	    [RavenRoute("admin/cs/{*id}")]
-	    public async Task<HttpResponseMessage> Get(string id)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+	    public async Task<HttpResponseMessage> Get()
 	    {
 		    var op = GetQueryStringValue("op");
 		    if (string.IsNullOrWhiteSpace(op))
-			    return GetMessageWithString("'op' query parameter missing",HttpStatusCode.BadRequest);
+			    return GetMessageWithString("mandatory 'op' query parameter is missing",HttpStatusCode.BadRequest);
 
 		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
-			    return await GetNamesAndGroups(id);
+			    return await GetNamesAndGroups(currentCounterStorageName);
 		    if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
-			    return await GetSummary(id);
+				return await GetSummary(currentCounterStorageName);
 		    
 			return GetMessageWithString("'op' query parameter is invalid - must be either group-names or summary", HttpStatusCode.BadRequest);
 	    }
@@ -166,11 +171,11 @@ namespace Raven.Database.Counters.Controllers
 		}
 
         [HttpPut]
-		[RavenRoute("admin/cs/{*id}")]
-		public async Task<HttpResponseMessage> Put(string id)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+		public async Task<HttpResponseMessage> Put(string counterStorageName)
         {
 	        MessageWithStatusCode nameFormatErrorMsg;
-			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
+			if (IsValidName(counterStorageName, Database.Configuration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -186,13 +191,13 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var docKey = Constants.Counter.Prefix + id;
+			var docKey = Constants.Counter.Prefix + counterStorageName;
 
 			var isCounterStorageUpdate = ParseBoolQueryString("update");
 			var counterStorage = Database.Documents.Get(docKey, null);
 			if (counterStorage != null && isCounterStorageUpdate == false)
             {
-				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
+				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
             }
 
             var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
@@ -206,11 +211,11 @@ namespace Raven.Database.Counters.Controllers
         }
 
 	    [HttpDelete]
-		[RavenRoute("admin/cs/{*id}")]
-		public HttpResponseMessage Delete(string id)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+		public HttpResponseMessage Delete(string counterStorageName)
 		{
 			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
-			var message = DeleteCounterStorage(id, isHardDeleteNeeded);
+			var message = DeleteCounterStorage(counterStorageName, isHardDeleteNeeded);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -245,10 +250,10 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/cs/{*id}")]
-		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+		public HttpResponseMessage Disable(string counterStorageName, bool isSettingDisabled)
 		{
-			var message = ToggleCounterStorageDisabled(id, isSettingDisabled);
+			var message = ToggleCounterStorageDisabled(counterStorageName, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);

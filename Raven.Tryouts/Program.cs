@@ -1,31 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Util;
 using Raven.Client.Counters;
+using Raven.Tests.Core;
+using Raven.Tests.Core.BulkInsert;
 
 namespace Raven.Tryouts
 {
 	public class Program
 	{
-		private static void Main()
-		{
-			using (var counterStore = new CounterStore
+		public static void Main()
+		{			
+			for (int i = 0; i < 1000; i++)
 			{
-				Url = "http://localhost:8080",
-				Name = "TestCounterStore",				
-			})
-			{
-				counterStore.Initialize(true);				
-	
-				AsyncHelpers.RunSync(() => counterStore.IncrementAsync("G", "C1"));
-
-				AsyncHelpers.RunSync(() => counterStore.IncrementAsync("G", "C2"));
-				AsyncHelpers.RunSync(() => counterStore.IncrementAsync("G", "C2"));
-
-				AsyncHelpers.RunSync(() => counterStore.IncrementAsync("G2", "C1"));
-
-				AsyncHelpers.RunSync(() => counterStore.ChangeAsync("G2", "C2", 26));
+				try
+				{
+					//if(i % 100 == 0)
+						Console.WriteLine(i);
+					using (var f = new TestServerFixture())
+					{
+						var test = new ChunkedBulkInsert();
+						test.SetFixture(f);
+						test.ValidateChunkedBulkInsertOperationsIDsCount();
+					}
+				}
+				catch (Exception e)
+				{
+					Debugger.Break();
+				}
 			}
 		}
 	}

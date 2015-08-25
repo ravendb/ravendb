@@ -254,7 +254,8 @@ namespace Raven.Client.Connection.Implementation
 				ErrorResponseException responseException;
 				try
 				{
-                    return await requestOperation().ConfigureAwait(false);
+                    var opResult = await requestOperation().ConfigureAwait(false);
+					return opResult;
 				}
 				catch (ErrorResponseException e)
 				{
@@ -268,8 +269,9 @@ namespace Raven.Client.Connection.Implementation
 
 					responseException = e;
 				}
+				var responseStatusCode = Response.StatusCode;
 
-				if (Response.StatusCode == HttpStatusCode.Forbidden)
+				if (responseStatusCode == HttpStatusCode.Forbidden)
 				{
 					await HandleForbiddenResponseAsync(Response).ConfigureAwait(false);
 					throw responseException;
