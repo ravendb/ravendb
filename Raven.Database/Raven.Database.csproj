@@ -236,6 +236,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Data\GlobalReplicationTopologyRequest.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterAndTransformSpecifiedCollections.cs" />
@@ -245,6 +246,14 @@
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="Counters\Controllers\CountersReplicationTopologyController.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopologyNode.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopology.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopology.cs" />
     <Compile Include="GplexBuffers.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardFilter.cs" />

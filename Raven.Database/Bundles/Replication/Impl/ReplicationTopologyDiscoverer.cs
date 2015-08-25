@@ -10,6 +10,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Config.Retriever;
 using Raven.Json.Linq;
@@ -205,7 +206,8 @@ namespace Raven.Database.Bundles.Replication.Impl
                 var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
 
                 // replace host name with target hostname
-                targetServerUrl = new UriBuilder(serverUrl) { Host = new Uri(serverUrlFromTargetConfig).Host }.Uri.ToString();
+	            targetServerUrl = new UriBuilder(serverUrl) {Host = new Uri(serverUrlFromTargetConfig).Host}.Uri.ToString();
+				
                 return true;
             }
             catch (Exception e)
