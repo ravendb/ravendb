@@ -10,6 +10,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Voron.Impl.Paging;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -68,10 +69,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
 		{
 			using (var tran = env.NewTransaction(TransactionFlags.Read))
-			{
+	        {
 				return env.GenerateReport(tran, computeExactSizes);
-			}
-		}
+		            }
+		        }
 
 		public SnapshotReader CreateSnapshot()
 		{
@@ -138,7 +139,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
-				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
+				return tx.ReadTree(table.TableName).State.EntriesCount;
 			}
 		}
 
@@ -158,7 +159,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-			var tree = tx.State.GetTree(tx, table.TableName);
+			var tree = env.CreateTree(tx, table.TableName);
 
 			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
 			var rootPageNumber = tree.State.RootPageNumber;

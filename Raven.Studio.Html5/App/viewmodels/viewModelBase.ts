@@ -180,6 +180,9 @@ class viewModelBase {
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
+
+		this.isAttached = true;
+		viewModelBase.showSplash(false);
     }
 
     /*
@@ -188,6 +191,9 @@ class viewModelBase {
     deactivate() {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+
+		this.isAttached = true;
+		viewModelBase.showSplash(false);
     }
 
     createNotifications(): Array<changeSubscription> {

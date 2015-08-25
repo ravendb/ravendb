@@ -29,16 +29,16 @@ namespace Raven.Database.Storage.Voron
         public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, Reference<WriteBatch> writeBatchReference, Reference<SnapshotReader> snapshotReference, TableStorage storage, TransactionalStorage transactionalStorage, IBufferPool bufferPool)
         {
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshotReference, storage, bufferPool);
-            Indexing = new IndexingStorageActions(storage, generator, snapshotReference, writeBatchReference, this, bufferPool);
             Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
-			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool, this, transactionalStorage.GetScheduledReductionsPerViewAndLevel());
             Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshotReference, generator, storage, transactionalStorage, bufferPool);
 	        var generalStorageActions = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool, this);
 	        General = generalStorageActions;
 			Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool, generalStorageActions);
-		}
+            Indexing = new IndexingStorageActions(storage, generator, snapshotReference, writeBatchReference, this, bufferPool, generalStorageActions);
+            MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool, this, transactionalStorage.GetScheduledReductionsPerViewAndLevel(), generalStorageActions);
+        }
 
 
 		public void Dispose()

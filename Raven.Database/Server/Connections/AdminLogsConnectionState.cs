@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 using Raven.Abstractions.Logging;
@@ -11,7 +12,13 @@ namespace Raven.Database.Server.Connections
     {
         private readonly EasyReaderWriterLock slim = new EasyReaderWriterLock();
 
-        private readonly SortedDictionary<string, LogLevel> logConfig = new SortedDictionary<string, LogLevel>(new ReverseStringComparer());
+        private readonly SortedDictionary<string, LogConfig> logConfig = new SortedDictionary<string, LogConfig>(new ReverseStringComparer());
+
+        private class LogConfig
+        {
+            public LogLevel Level;
+            public bool WatchStack;
+        }
 
         private IEventsTransport logsTransport;
 
@@ -31,28 +38,21 @@ namespace Raven.Database.Server.Connections
             {
                 using (slim.EnterReadLock())
                 {
-                    return logConfig.ToDictionary(x => x.Key, x => x.Value);    
+                    return new SortedDictionary<string, LogConfig>(logConfig, new ReverseStringComparer()); 
                 }
             }
         }
 
 
-        private bool ShouldLog(LogEventInfo logEvent)
-        {
-            using (slim.EnterReadLock())
-            {
-                return
-                    logConfig.Any(
-                        categoryAndLevel =>
-                        logEvent.LoggerName.StartsWith(categoryAndLevel.Key) && logEvent.Level >= categoryAndLevel.Value);
-            }
-        }
-
-        public void EnableLogging(string category, LogLevel minLevel)
+        public void EnableLogging(string category, LogLevel minLevel, bool watchStack)
         {
             using (slim.EnterWriteLock())
             {
-                logConfig[category] = minLevel;
+                logConfig[category] = new LogConfig
+                {
+                    Level = minLevel,
+                    WatchStack = watchStack
+                };
             }
         }
 
@@ -70,10 +70,25 @@ namespace Raven.Database.Server.Connections
             {
                 return;
             }
-            if (ShouldLog(logEvent))
+            bool shouldLog = false;
+            bool watchStackTrace = false;
+            using (slim.EnterReadLock())
             {
-                logsTransport.SendAsync(logEvent);    
+                foreach (var config in logConfig)
+                {
+                    if(logEvent.LoggerName.StartsWith(config.Key) == false)
+                        continue;
+                    if(logEvent.Level < config.Value.Level)
+                        continue;
+                    shouldLog = true;
+                    watchStackTrace = config.Value.WatchStack;
+                }
             }
+            if (shouldLog == false) 
+                return;
+            if(watchStackTrace)
+                logEvent.StackTrace = new StackTrace();
+            logsTransport.SendAsync(logEvent);
         }
 
         public void Dispose()

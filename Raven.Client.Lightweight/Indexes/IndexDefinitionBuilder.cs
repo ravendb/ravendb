@@ -20,6 +20,7 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument, TReduceResult>
 	{
+	    private readonly string indexName;
 		/// <summary>
 		/// Gets or sets the map function
 		/// </summary>
@@ -132,8 +133,9 @@ namespace Raven.Client.Indexes
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
-		public IndexDefinitionBuilder()
+		public IndexDefinitionBuilder(string indexName = null)
 		{
+	        this.indexName = indexName ?? GetType().FullName;
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
 			StoresStrings = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
@@ -157,8 +159,10 @@ namespace Raven.Client.Indexes
 		{
 			if (Map == null && validateMap)
 				throw new InvalidOperationException(
-					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
+					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", indexName));
 
+		    try
+		    {
 			if (Reduce != null)
 				IndexDefinitionHelper.ValidateReduce(Reduce);
 
@@ -233,6 +237,11 @@ namespace Raven.Client.Indexes
 			}
 			return indexDefinition;
 		}
+		    catch (Exception e)
+		    {
+		        throw new IndexCompilationException("Failed to create index " + indexName, e);
+		    }
+		}
 
 		private bool ContainsWhereEntityIs()
 		{
@@ -272,7 +281,7 @@ namespace Raven.Client.Indexes
 			{
 				var propertyPath = value.ToPropertyPath('_');
 				result.Add(propertyPath);
-			}
+	}
 			return result;
 		}
 	}
@@ -282,5 +291,8 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument>
 	{
+	    public IndexDefinitionBuilder(string indexName = null) : base(indexName)
+	    {
 	}
+}
 }

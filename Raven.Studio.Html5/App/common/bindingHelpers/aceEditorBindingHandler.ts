@@ -259,7 +259,7 @@ class aceEditorBindingHandler {
         var aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
         var editorCode = aceEditor.getSession().getValue();
         if (code !== editorCode) {
-            aceEditor.getSession().setValue(code);
+            aceEditor.getSession().setValue(code||"");
         }
         if (this.allowResize) {
             this.alterHeight(element, aceEditor);

@@ -106,10 +106,11 @@ namespace Raven.Database
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
+                initializer.ValidateLicense();
+
 				initializer.ValidateStorage();
 
 				initializer.InitializeEncryption();
-				initializer.ValidateLicense();
 
 				initializer.SubscribeToDomainUnloadOrProcessExit();
 				initializer.SubscribeToDiskSpaceChanges();
@@ -195,6 +196,9 @@ namespace Raven.Database
 					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					InitializeTriggersExceptIndexCodecs();
 
+				    EnsureAllIndexDefinitionsHaveIndexes();
+
+					RaiseIndexingWiringComplete();
 
 
 					ExecuteStartupTasks();
@@ -220,6 +224,21 @@ namespace Raven.Database
 				}
 			}
 		}
+
+	    private void EnsureAllIndexDefinitionsHaveIndexes()
+	    {
+	        // this code is here to make sure that all index defs in the storage have
+            // matching indexes.
+	        foreach (var index in IndexDefinitionStorage.IndexNames)
+	        {
+                if (IndexStorage.HasIndex(index))
+                    continue;
+	            var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
+	            // here we have an index definition without an index
+	            Indexes.DeleteIndex(index);
+	            Indexes.PutIndex(index, indexDefinition);
+	        }
+	    }
 
 		public event EventHandler Disposing;
 
@@ -854,7 +873,7 @@ namespace Raven.Database
 				exceptionAggregator.Execute(IndexStorage.Dispose);
 
 			if (TransactionalStorage != null)
-				exceptionAggregator.Execute(TransactionalStorage.Dispose);
+		        exceptionAggregator.Execute(() => TransactionalStorage.Dispose());
 
 			if (Configuration != null)
 				exceptionAggregator.Execute(Configuration.Dispose);
@@ -988,7 +1007,7 @@ namespace Raven.Database
 		public RavenThreadPool MappingThreadPool;
 		public RavenThreadPool ReducingThreadPool;
 
-                public void SpinBackgroundWorkers(bool manualStart = false)
+		public void SpinBackgroundWorkers(bool manualStart = false)
 		{
 			if (manualStart == false && indexingWorkersStoppedManually)
 				return;
@@ -996,12 +1015,14 @@ namespace Raven.Database
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
 			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
-			if (null != disableIndexing)
+			if (disableIndexing != null)
 			{
 				bool disableIndexingStatus;
 				var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
-				if (res && disableIndexingStatus) return; //indexing were set to disable 
+				if (res && disableIndexingStatus)
+					return; //indexing were set to disable 
 			}
+
 			backgroundWorkersSpun = true;
 			indexingWorkersStoppedManually = false;
 
@@ -1021,6 +1042,19 @@ namespace Raven.Database
 
 			RaiseIndexingWiringComplete();
 
+			SpinReduceWorker();
+		}
+
+	    public void SpinReduceWorker()
+	    {
+            if(ReducingExecuter == null)
+                throw new InvalidOperationException("Cannot start reducing when reducing executer is null");
+
+            if (reducingBackgroundTask != null &&
+                reducingBackgroundTask.IsCompleted == false)
+                return;
+
+            reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
 		private void StopMappingThreadPool()
@@ -1057,6 +1091,19 @@ namespace Raven.Database
 		{
 			workContext.StartIndexing();
 		}
+
+	    public void StopReduceWorkers()
+	    {
+            workContext.StopReducing();
+            try
+            {
+                reducingBackgroundTask.Wait();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
+        }
 
 		public void StopIndexingWorkers(bool manualStop)
 		{

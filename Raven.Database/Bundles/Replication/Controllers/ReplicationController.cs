@@ -28,7 +28,6 @@ using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Config;
-using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -88,7 +87,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
 		public HttpResponseMessage ExplainGet(string docId)
 		{
-			if (string.IsNullOrEmpty(docId))
+			if (string.IsNullOrEmpty(docId)) 
 				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
 
 			var destinationUrl = GetQueryStringValue("destinationUrl");
@@ -199,7 +198,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						destinationIsLeader = node.Name == currentLeader;
 					else
 						destinationIsLeader = false;
-				}
+		}
 
 				configurationDocumentWithClusterInformation
 					.Destinations
@@ -266,7 +265,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = DocsReplicationConflictResolvers;
+				var conflictResolvers = DocsReplicationConflictResolvers; 
 
 				string lastEtag = Etag.Empty.ToString();
 
@@ -304,7 +303,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 					if (lastIndex == docIndex)
 					{
-
+						
 						if (retries == 3)
 						{
 							Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
@@ -374,7 +373,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var conflictResolvers = AttachmentReplicationConflictResolvers;
+				var conflictResolvers = AttachmentReplicationConflictResolvers; 
 
 				Database.TransactionalStorage.Batch(actions =>
 				{
@@ -486,7 +485,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Database.Documents.Put(docKey, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
-							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId)
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
 								document = null;
 						}
 					}
@@ -506,8 +505,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					if (sourceReplicationInformation == null)
 						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
-					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false
-						&& sourceReplicationInformation.LastModified.HasValue
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
+						&& sourceReplicationInformation.LastModified.HasValue 
 						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
 					{
 						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
@@ -524,19 +523,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
 				if (lowMemory)
 				{
-					int size;
+				    int size;
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
 					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-						size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
 					else if (lastBatchSize.HasValue)
-						size = lastBatchSize.Value;
+                        size = lastBatchSize.Value;
 					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-						size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
 					else
-						size = 128;
+					    size = 128;
 
-					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
-						Math.Max(size / 2, 64);
+				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+                        Math.Max(size / 2, 64);
 				}
 				else
 				{
@@ -664,7 +663,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				{
 					using (Database.DisableAllTriggersForCurrentThread())//prevent this from being replicated as this change is internal and should not be replicated
 					using (Database.DocumentLock.Lock()) //prevent race condition -> simultaneously with replication to this node, 
-					//a client creates side-by-side index
+														 //a client creates side-by-side index
 					{
 						Database.Indexes.DeleteIndex(sideBySideIndex.Name);
 						var id = Constants.IndexReplacePrefix + sideBySideReplicationInfo.SideBySideIndex.Name;
@@ -699,13 +698,16 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalse -> for better readability
 			if (areIndexesEqual && areSideBySideIndexesEqual == false)
 			{
+				var internalPutIndex = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+				if (internalPutIndex.IsSuccessStatusCode)
 				PutSideBySideIndexDocument(sideBySideReplicationInfo);
-				return InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+				return internalPutIndex;
 			}
 
-			PutSideBySideIndexDocument(sideBySideReplicationInfo);
 			var updateIndexResult = InternalPutIndex(sideBySideReplicationInfo.Index, "Side-by-side indexes were equal, updated the old index.");
 			var updateSideBySideIndexResult = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
+			if (updateSideBySideIndexResult.IsSuccessStatusCode)
+				PutSideBySideIndexDocument(sideBySideReplicationInfo);
 
 			if (updateIndexResult.IsSuccessStatusCode && updateSideBySideIndexResult.IsSuccessStatusCode)
 				return GetMessageWithObject(new
@@ -760,7 +762,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 		}
-
+		
 		[HttpPost]
 		[RavenRoute("replication/replicate-indexes")]
 		[RavenRoute("databases/{databaseName}/replication/replicate-indexes")]
@@ -784,8 +786,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(indexName) == false)
 			{
 				replicationTask.IndexReplication.Execute(indexName);
-				return GetEmptyMessage();
-			}
+			return GetEmptyMessage();
+		}
 
 			replicationTask.IndexReplication.Execute();
 			return GetEmptyMessage();
@@ -813,8 +815,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(transformerName) == false)
 			{
 				replicationTask.TransformerReplication.Execute(transformerName);
-				return GetEmptyMessage();
-			}
+			return GetEmptyMessage();
+		}
 
 			replicationTask.TransformerReplication.Execute();
 			return GetEmptyMessage();

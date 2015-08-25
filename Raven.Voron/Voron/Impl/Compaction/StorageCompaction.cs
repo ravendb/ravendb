@@ -56,90 +56,86 @@ namespace Voron.Impl.Compaction
 
 		private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport = null)
 		{
-			using (var rootIterator = existingEnv.State.Root.Iterate())
+            using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
+            using (var rootIterator = txr.Root.Iterate())
 			{
 				if (rootIterator.Seek(Slice.BeforeAllKeys) == false)
 					return;
 
-				var totalTreesCount = existingEnv.State.Root.State.EntriesCount;
+				var totalTreesCount = txr.Root.State.EntriesCount;
 				var copiedTrees = 0L;
 
 				do
 				{
-					var treeName = rootIterator.CurrentKey.ToString();
+				    var treeName = rootIterator.CurrentKey.ToString();
+				    var existingTree = txr.ReadTree(treeName);
 
-					using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
-					{
-						var existingTree = existingEnv.State.GetTree(txr, treeName);
+				    Report(treeName, copiedTrees, totalTreesCount, 0, existingTree.State.EntriesCount, progressReport);
 
-						Report(treeName, copiedTrees, totalTreesCount, 0, existingTree.State.EntriesCount, progressReport);
+				    using (var existingTreeIterator = existingTree.Iterate())
+				    {
+				        if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
+				            continue;
 
-						using (var existingTreeIterator = existingTree.Iterate())
-						{
-							if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
-								continue;
+				        using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+				        {
+				            compactedEnv.CreateTree(txw, treeName);
+				            txw.Commit();
+				        }
 
-							using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
-							{
-								compactedEnv.CreateTree(txw, treeName);
-								txw.Commit();
-							}
+				        var copiedEntries = 0L;
 
-							var copiedEntries = 0L;
+				        do
+				        {
+				            var transactionSize = 0L;
 
-							do
-							{
-								var transactionSize = 0L;
+				            using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+				            {
+				                var newTree = txw.ReadTree(treeName);
 
-								using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
-								{
-									var newTree = txw.ReadTree(treeName);
+				                do
+				                {
+				                    var key = existingTreeIterator.CurrentKey;
 
-									do
-									{
-										var key = existingTreeIterator.CurrentKey;
+				                    if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
+				                    {
+				                        using (var multiTreeIterator = existingTree.MultiRead(key))
+				                        {
+				                            if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
+				                                continue;
 
-										if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
-										{
-											using (var multiTreeIterator = existingTree.MultiRead(key))
-											{
-												if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
-													continue;
+				                            do
+				                            {
+				                                var multiValue = multiTreeIterator.CurrentKey;
+				                                newTree.MultiAdd(key, multiValue);
+				                                transactionSize += multiValue.Size;
+				                            } while (multiTreeIterator.MoveNext());
+				                        }
+				                    }
+				                    else
+				                    {
+				                        using (var value = existingTree.Read(key).Reader.AsStream())
+				                        {
+				                            newTree.Add(key, value);
+				                            transactionSize += value.Length;
+				                        }
+				                    }
 
-												do
-												{
-													var multiValue = multiTreeIterator.CurrentKey;
-													newTree.MultiAdd(key, multiValue);
-													transactionSize += multiValue.Size;
-												} while (multiTreeIterator.MoveNext());
-											}
-										}
-										else
-										{
-											using (var value = existingTree.Read(key).Reader.AsStream())
-											{
-												newTree.Add(key, value);
-												transactionSize += value.Length;
-											}
-										}
+				                    copiedEntries++;
+				                } while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && existingTreeIterator.MoveNext());
 
-										copiedEntries++;
+				                txw.Commit();
+				            }
 
-									} while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && existingTreeIterator.MoveNext());
+				            if (copiedEntries == existingTree.State.EntriesCount)
+				                copiedTrees++;
 
-									txw.Commit();
-								}
+				            Report(treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.EntriesCount,
+				                progressReport);
 
-								if (copiedEntries == existingTree.State.EntriesCount)
-									copiedTrees++;
-
-								Report(treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.EntriesCount, progressReport);
-
-								compactedEnv.FlushLogToDataFile();
-
-							} while (existingTreeIterator.MoveNext());
-						}
-					}
+				            compactedEnv.FlushLogToDataFile();
+				        } while (existingTreeIterator.MoveNext());
+				    }
 				} while (rootIterator.MoveNext());
 			}
 		}

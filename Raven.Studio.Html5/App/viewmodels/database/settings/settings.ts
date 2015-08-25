@@ -10,7 +10,7 @@ class settings extends viewModelBase {
 
     private bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index", periodicbackup: "Periodic Export" };
     private sqlSubBundles = ["sqlreplicationconnectionstringsmanagement", "editsqlreplication"];
-    userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
+    userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions", "Studio Config"]);
     activeSubViewTitle: KnockoutComputed<string>;
 
     constructor() {
@@ -27,6 +27,7 @@ class settings extends viewModelBase {
         var versioningRoute = { route: 'databases/settings/versioning', moduleId: 'viewmodels/database/settings/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
         var periodicExportRoute = { route: 'databases/settings/periodicExport', moduleId: 'viewmodels/database/settings/periodicExport', title: 'Periodic Export', nav: true, hash: appUrl.forCurrentDatabase().periodicExport };
         var customFunctionsEditorRoute = { route: 'databases/settings/customFunctionsEditor', moduleId: 'viewmodels/database/settings/customFunctionsEditor', title: 'Custom Functions', nav: true, hash: appUrl.forCurrentDatabase().customFunctionsEditor };
+        var databaseStudioConfig = { route: 'databases/settings/databaseStudioConfig', moduleId: 'viewmodels/databaseStudioConfig', title: 'Studio Config', nav: true, hash: appUrl.forCurrentDatabase().databaseStudioConfig };
 
         this.router = durandalRouter.createChildRouter()
             .map([
@@ -39,7 +40,8 @@ class settings extends viewModelBase {
                 versioningRoute,
                 periodicExportRoute,
                 //scriptedIndexesRoute,
-                customFunctionsEditorRoute
+                customFunctionsEditorRoute,
+                databaseStudioConfig
             ])
             .buildNavigationModel();
 
@@ -90,7 +92,7 @@ class settings extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.userDatabasePages(["Database Settings", "Custom Functions"]);
+        this.userDatabasePages(["Database Settings", "Custom Functions", "Studio Config"]);
         var db: database = this.activeDatabase();
         var bundles: string[] = db.activeBundles();
 

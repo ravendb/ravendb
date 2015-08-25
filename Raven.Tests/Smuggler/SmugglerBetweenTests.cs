@@ -121,7 +121,7 @@ namespace Raven.Tests.Smuggler
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
 						});
-
+					    WaitForIndexing(store2);
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
                             Assert.Equal(3, await session2.Query<User>().CountAsync());

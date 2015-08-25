@@ -141,7 +141,7 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-			Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
+			Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.InnerException.Message);
 		}
 
 		[Fact]
@@ -157,7 +157,7 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-			var e = (IndexCompilationException)exception.InnerException;
+			var e = (IndexCompilationException)exception.InnerException.InnerException;
 			Assert.Equal("Reduce cannot contain Count() methods in grouping.", e.InnerException.Message);
 
             exception = Assert.Throws<AggregateException>(

@@ -16,8 +16,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Plugins.Builtins;
-using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -228,7 +226,7 @@ namespace Raven.Database.Server.Tenancy
 			if (config.Settings[Constants.TempPath] == null)
 				config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
 
-	        SetupTenantConfiguration(config);
+            SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
 
@@ -317,7 +315,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
 			Authentication.AssertLicensedBundles(config.ActiveBundles);
-        }
+                }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)
         {
@@ -332,7 +330,15 @@ namespace Raven.Database.Server.Tenancy
 
         protected override DateTime LastWork(DocumentDatabase resource)
         {
-            return resource.WorkContext.LastWorkTime;
+            var databaseSizeInformation = resource.TransactionalStorage.GetDatabaseSize();
+            return resource.WorkContext.LastWorkTime +
+                   // this allow us to increase the time large databases will be held in memory
+                   // because they are more expensive to unload & reload. Using this method, we'll
+                   // add 0.5 ms per each KB, or roughly half a second of idle time per MB.
+                   // A DB with 1GB will remain live another 16 minutes after being item. Given the default idle time
+                   // that means that we'll keep it alive for about 30 minutes without shutting down.
+                   // A database with 50GB will take roughly 8 hours of idle time to shut down. 
+                   TimeSpan.FromMilliseconds(databaseSizeInformation.AllocatedSizeInBytes / 1024L / 2);
         }
 
         public void Init()

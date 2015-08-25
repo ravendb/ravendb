@@ -17,7 +17,6 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
-using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
@@ -25,6 +24,8 @@ using Raven.Database.Storage.Voron.Backup;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Storage.Voron.Schema;
 using Raven.Json.Linq;
+
+using Sparrow.Collections;
 
 using Voron;
 using Voron.Impl;
@@ -43,6 +44,8 @@ namespace Raven.Storage.Voron
 	public class TransactionalStorage : ITransactionalStorage
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+		private readonly ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>> lowMemoryHandlers = new ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>>();
 
 		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
 		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
@@ -63,8 +66,8 @@ namespace Raven.Storage.Voron
 		private TableStorage tableStorage;
 
 	    private readonly IBufferPool bufferPool;
-		private Action onNestedTransactionExit;
-		private Action onNestedTransactionEnter;
+		private readonly Action onNestedTransactionExit;
+		private readonly Action onNestedTransactionEnter;
 
 		private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
 			= new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
@@ -124,6 +127,37 @@ namespace Raven.Storage.Voron
 			if (configuration.Indexing.DisableMapReduceInMemoryTracking) return;
 			scheduledReductionsPerViewAndLevel = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
 		}
+
+		public void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler)
+		{
+			lowMemoryHandlers.Add(new WeakReference<ITransactionalStorageNotificationHandler>(handler));
+		}
+
+		private void RunTransactionalStorageNotificationHandlers()
+		{
+			var inactiveHandlers = new List<WeakReference<ITransactionalStorageNotificationHandler>>();
+
+			foreach (var lowMemoryHandler in lowMemoryHandlers)
+			{
+				ITransactionalStorageNotificationHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						handler.HandleTransactionalStorageNotification();
+					}
+					catch (Exception e)
+					{
+						Log.Error("Failure to process transactional storage notification (handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => lowMemoryHandlers.TryRemove(x));
+		}
+
 		public Guid Id { get; private set; }
 		public IDocumentCacher DocumentCacher { get { return documentCacher; }}
 
@@ -201,8 +235,8 @@ namespace Raven.Storage.Voron
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
-					if (Environment.StackTrace.Contains(".Finalize()") == false)
-						throw e;
+					if (System.Environment.StackTrace.Contains(".Finalize()") == false)
+						throw;
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
@@ -298,6 +332,17 @@ namespace Raven.Storage.Voron
 				CreateMemoryStorageOptionsFromConfiguration(configuration) :
 		        CreateStorageOptionsFromConfiguration(configuration);
 
+			options.OnScratchBufferSizeChanged += size =>
+			{
+				if (configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold < 0)
+					return;
+
+				if (size < configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
+					return;
+
+				RunTransactionalStorageNotificationHandlers();
+			};
+
 		    tableStorage = new TableStorage(options, bufferPool);
 			var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
 			schemaCreator.CreateSchema();
@@ -319,14 +364,14 @@ namespace Raven.Storage.Voron
 		{
 			var options = StorageEnvironmentOptions.CreateMemoryOnly();
 			options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-			options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024 * 1024;
+			options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
 
 			return options;
 		}
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
-		{
-			var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+        {
+            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo (directoryPath);
 
 			if (filePathFolder.Exists == false) {
@@ -343,7 +388,7 @@ namespace Raven.Storage.Voron
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
 		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-		    options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024 * 1024;
+		    options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
 
             return options;
         }
@@ -566,6 +611,11 @@ namespace Raven.Storage.Voron
             throw new NotSupportedException("Not valid for Voron storage");
         }
 
+	    public StorageEnvironment Environment
+	    {
+	        get { return tableStorage.Environment; }
+	    }
+
 		[CLSCompliant(false)]
 		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
@@ -623,7 +673,7 @@ namespace Raven.Storage.Voron
 				sb.Append(Environment.NewLine);
 
 				if (tree.MultiValues != null)
-				{
+		{
 					sb.Append("Multi values: ");
 					sb.Append(Environment.NewLine);
 
@@ -651,8 +701,8 @@ namespace Raven.Storage.Voron
 					sb.Append("OverflowPages: ");
 					sb.Append(tree.MultiValues.OverflowPages);
 					sb.Append(Environment.NewLine);
-				}
-				
+		}
+
 				reportAsList.Add(sb.ToString());
 			}
 

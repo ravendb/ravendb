@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -15,10 +16,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -37,17 +38,13 @@ using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Directory = System.IO.Directory;
-using System.ComponentModel.Composition;
-using System.Security.Cryptography;
-using Lucene.Net.Util;
 using Constants = Raven.Abstractions.Data.Constants;
+using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Database.Indexing
 {
-	using Imports.Newtonsoft.Json.Linq;
-
 	/// <summary>
 	/// 	Thread safe, single instance for the entire application
 	/// </summary>
@@ -125,8 +122,8 @@ namespace Raven.Database.Indexing
 				this.documentDatabase = documentDatabase;
 				path = configuration.IndexStoragePath;
 
-				if (Directory.Exists(path) == false && configuration.RunInMemory == false)
-					Directory.CreateDirectory(path);
+				if (System.IO.Directory.Exists(path) == false && configuration.RunInMemory == false)
+					System.IO.Directory.CreateDirectory(path);
 
 				if (configuration.RunInMemory == false)
 				{
@@ -194,7 +191,7 @@ namespace Raven.Database.Indexing
 			string[] keysToDeleteAfterRecovery = null;
 			while (true)
 			{
-				Lucene.Net.Store.Directory luceneDirectory = null;
+				Directory luceneDirectory = null;
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried, forceFullExistingIndexCheck: forceFullIndexCheck);
@@ -273,7 +270,7 @@ namespace Raven.Database.Indexing
 			return indexImplementation;
 		}
 
-		private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
+		private void CheckIndexState(Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
 		{
 			//if (configuration.ResetIndexOnUncleanShutdown == false)
 			//	return;
@@ -378,7 +375,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private string[] TryRecoveringIndex(IndexDefinition indexDefinition,
-											Lucene.Net.Store.Directory luceneDirectory)
+											Directory luceneDirectory)
 		{
 			string[] keysToDeleteAfterRecovery = null;
 			if (indexDefinition.IsMapReduce == false)
@@ -403,7 +400,7 @@ namespace Raven.Database.Indexing
 		private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
 		{
 			var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
-			if (!Directory.Exists(suggestionsForIndex))
+			if (!System.IO.Directory.Exists(suggestionsForIndex))
 				return;
 
 			try
@@ -463,7 +460,7 @@ namespace Raven.Database.Indexing
 				var parentDir = Directory.GetParent(directory).FullName;
 
 				if (key.Contains("-"))
-				{
+		{
 					var tokens = key.Split('-');
 					var field = tokens[0];
 					if (alreadySeenFields.Contains(field))
@@ -524,19 +521,19 @@ namespace Raven.Database.Indexing
 					{
 						if (directory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
 						{
-							IndexWriter.Unlock(directory);
-							// for some reason, just calling unlock doesn't remove this file
-							directory.DeleteFile("write.lock");
-						}
-						if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
-						{
-							if (configuration.ResetIndexOnUncleanShutdown)
-								throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
-
-							CheckIndexAndTryToFix(directory, indexDefinition);
-							directory.DeleteFile("writing-to-index.lock");
-						}
+						IndexWriter.Unlock(directory);
+						// for some reason, just calling unlock doesn't remove this file
+						directory.DeleteFile("write.lock");
 					}
+					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+					{
+						if (configuration.ResetIndexOnUncleanShutdown)
+							throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
+
+						CheckIndexAndTryToFix(directory, indexDefinition);
+						directory.DeleteFile("writing-to-index.lock");
+					}
+				}
 					else
 					{
 						IndexWriter.Unlock(directory);
@@ -548,7 +545,7 @@ namespace Raven.Database.Indexing
 
 						if (directory.FileExists("writing-to-index.lock"))
 							directory.DeleteFile("writing-to-index.lock");
-					}
+			}
 				}
 			}
 
@@ -556,14 +553,14 @@ namespace Raven.Database.Indexing
 
 		}
 
-		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		private void RegenerateMapReduceIndex(Directory directory, IndexDefinition indexDefinition)
 		{
 			// remove old index data
 			var dirOnDisk = Path.Combine(path, indexDefinition.IndexId.ToString());
 			IOExtensions.DeleteDirectory(dirOnDisk);
 
 			// initialize by new index
-			Directory.CreateDirectory(dirOnDisk);
+			System.IO.Directory.CreateDirectory(dirOnDisk);
 			WriteIndexVersion(directory, indexDefinition);
 			new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
 
@@ -592,8 +589,6 @@ namespace Raven.Database.Indexing
 						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexDefinition.IndexId, reduceKey, CancellationToken.None).Distinct();
 
 						itemsToScheduleOnLevel0.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
-
-						actions.General.MaybePulseTransaction();
 					}
 
 					foreach (var itemToReduce in itemsToScheduleOnLevel2)
@@ -637,7 +632,7 @@ namespace Raven.Database.Indexing
 			return "index.version";
 		}
 
-		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		public static void WriteIndexVersion(Directory directory, IndexDefinition indexDefinition)
 		{
 			var version = IndexVersion;
 			if (indexDefinition.IsMapReduce)
@@ -651,7 +646,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void EnsureIndexVersionMatches(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		private static void EnsureIndexVersionMatches(Directory directory, IndexDefinition indexDefinition)
 		{
 			var versionToCheck = IndexVersion;
 			if (indexDefinition.IsMapReduce)
@@ -672,7 +667,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		private static void CheckIndexAndTryToFix(Directory directory, IndexDefinition indexDefinition)
 		{
 			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDefinition.Name);
 
@@ -711,12 +706,12 @@ namespace Raven.Database.Indexing
 			var directoryName = indexCommit.SegmentsInfo.Generation.ToString("0000000000000000000", CultureInfo.InvariantCulture);
 			var commitPointDirectory = new IndexCommitPointDirectory(path, indexName, directoryName);
 
-			if (Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
+			if (System.IO.Directory.Exists(commitPointDirectory.AllCommitPointsFullPath) == false)
 			{
-				Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
+				System.IO.Directory.CreateDirectory(commitPointDirectory.AllCommitPointsFullPath);
 			}
 
-			Directory.CreateDirectory(commitPointDirectory.FullPath);
+			System.IO.Directory.CreateDirectory(commitPointDirectory.FullPath);
 
 			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
 			using (var sw = new StreamWriter(commitPointFile))
@@ -734,7 +729,7 @@ namespace Raven.Database.Indexing
 						Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
 						overwrite: true);
 
-			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
+			var storedCommitPoints = System.IO.Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
 			if (storedCommitPoints.Length > configuration.MaxNumberOfStoredCommitPoints)
 			{
@@ -767,7 +762,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private bool TryReusePreviousCommitPointsToRecoverIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
+		private bool TryReusePreviousCommitPointsToRecoverIndex(Directory directory, IndexDefinition indexDefinition, string indexStoragePath, out IndexCommitPoint indexCommit, out string[] keysToDelete)
 		{
 			indexCommit = null;
 			keysToDelete = null;
@@ -781,10 +776,10 @@ namespace Raven.Database.Indexing
 
 			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
 
-			if (Directory.Exists(allCommitPointsFullPath) == false)
+			if (System.IO.Directory.Exists(allCommitPointsFullPath) == false)
 				return false;
 
-			var filesInIndexDirectory = Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
+			var filesInIndexDirectory = System.IO.Directory.GetFiles(indexFullPath).Select(Path.GetFileName);
 
 			var existingCommitPoints =
 				IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
@@ -817,7 +812,7 @@ namespace Raven.Database.Indexing
 					var storedSegmentsFile = indexCommit.SegmentsInfo.SegmentsFileName;
 
 					// here there should be only one segments_N file, however remove all if there is more
-					foreach (var currentSegmentsFile in Directory.GetFiles(commitPointDirectory.IndexFullPath, "segments_*"))
+					foreach (var currentSegmentsFile in System.IO.Directory.GetFiles(commitPointDirectory.IndexFullPath, "segments_*"))
 					{
 						File.Delete(currentSegmentsFile);
 					}
@@ -856,7 +851,7 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public static IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Lucene.Net.Store.Directory directory)
+		public static IndexSegmentsInfo GetCurrentSegmentsInfo(string indexName, Directory directory)
 		{
 			var segmentInfos = new SegmentInfos();
 			var result = new IndexSegmentsInfo();
@@ -919,14 +914,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, IndexDefinition indexDefinition)
+		internal Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, IndexDefinition indexDefinition)
 		{
 			var newDir = new LuceneCodecDirectory(Path.Combine(path, indexDefinition.IndexId.ToString()), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
-			Lucene.Net.Store.Directory.Copy(ramDir, newDir, false);
+			Directory.Copy(ramDir, newDir, false);
 			return newDir;
 		}
 
-		private Index CreateIndexImplementation(IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(IndexDefinition indexDefinition, Directory directory)
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.IndexId);
 			var indexImplementation = indexDefinition.IsMapReduce
@@ -957,10 +952,10 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			FlushMapIndexes();
-			FlushReduceIndexes();
-
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly close index storage");
+
+		    exceptionAggregator.Execute(FlushMapIndexes);
+            exceptionAggregator.Execute(FlushReduceIndexes);
 
 			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => exceptionAggregator.Execute(index.Dispose)));
 
@@ -998,7 +993,7 @@ namespace Raven.Database.Indexing
 			Index ignored;
 
 			var dirOnDisk = Path.Combine(path, id.ToString());
-			if (!indexes.TryRemove(id, out ignored) || !Directory.Exists(dirOnDisk))
+			if (!indexes.TryRemove(id, out ignored) || !System.IO.Directory.Exists(dirOnDisk))
 				return;
 
 			UpdateIndexMappingFile();
@@ -1036,12 +1031,20 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index " + indexDefinition.Name + " already exists");
 			}
 
-			indexes.AddOrUpdate(indexDefinition.IndexId, n =>
+			var addedIndex = indexes.AddOrUpdate(indexDefinition.IndexId, n =>
 		{
 			var directory = OpenOrCreateLuceneDirectory(indexDefinition);
 			return CreateIndexImplementation(indexDefinition, directory);
 		}, (s, index) => index);
 
+			//prevent corrupted index when creating a map-reduce index
+			//need to do this for every map reduce index, even when indexing is enabled,
+			if (addedIndex.IsMapReduce)
+			{
+				addedIndex.EnsureIndexWriter();
+				addedIndex.Flush(Etag.Empty);
+			}
+				
 			UpdateIndexMappingFile();
 		}
 
@@ -1127,7 +1130,9 @@ namespace Raven.Database.Indexing
 			Index value = TryIndexByName(indexName);
 			if (value == null)
 			{
+                if (log.IsDebugEnabled)
 				log.Debug("Query on non existing index '{0}'", indexName);
+				
 				throw new InvalidOperationException("Index '" + indexName + "' does not exists");
 			}
 
@@ -1140,7 +1145,9 @@ namespace Raven.Database.Indexing
 			Index value = indexes[index];
 			if (value == null)
 			{
+                if (log.IsDebugEnabled)
 				log.Debug("Removing from non existing index '{0}', ignoring", index);
+
 				return;
 			}
 			value.Remove(keys, context);
@@ -1242,9 +1249,9 @@ namespace Raven.Database.Indexing
 			{
 				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
 					continue;
-				
-				value.Flush(value.GetLastEtagFromStats());
-			}
+
+					value.Flush(value.GetLastEtagFromStats());
+				}
 
 			SetUnusedIndexesToIdle();
 			UpdateLatestPersistedQueryTime();
@@ -1501,9 +1508,9 @@ namespace Raven.Database.Indexing
 				return;
 			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
 			{
-				value.Flush(value.GetLastEtagFromStats());
-			}
-		}
+					value.Flush(value.GetLastEtagFromStats());
+				}
+				}
 
 		public void FlushReduceIndexes()
 		{
@@ -1511,9 +1518,9 @@ namespace Raven.Database.Indexing
 				return;
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
-				value.Flush(value.GetLastEtagFromStats());
-			}
-		}
+					value.Flush(value.GetLastEtagFromStats());
+				}
+				}
 
 		public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
 		{

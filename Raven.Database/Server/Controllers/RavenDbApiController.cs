@@ -207,6 +207,12 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		public void SetCurrentDatabase(DocumentDatabase db)
+		{
+			DatabaseName = db.Name;
+			_currentDb = db;
+		}
+
 	    public override InMemoryRavenConfiguration ResourceConfiguration
 	    {
 	        get { return Database.Configuration; }
@@ -649,9 +655,9 @@ namespace Raven.Database.Server.Controllers
             }
 
 			msg = "Could not find a database named: " + tenantId;
-			Logger.Warn(msg);
-			throw new HttpException(503, msg);
-        }
+                Logger.Warn(msg);
+                throw new HttpException(503, msg);
+            }
 
 	    public override string TenantName
 	    {

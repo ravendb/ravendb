@@ -196,7 +196,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Voron.AllowIncrementalBackups.Value, actual => actual.Storage.Voron.AllowIncrementalBackups);
             configurationComparer.Assert(expected => expected.Voron.AllowOn32Bits.Value, actual => actual.Storage.Voron.AllowOn32Bits);
 			configurationComparer.Assert(expected => expected.Voron.InitialFileSize.Value, actual => actual.Storage.Voron.InitialFileSize);
-			configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
+            configurationComparer.Assert(expected => expected.Voron.ScratchBufferSizeNotificationThreshold.Value, actual => actual.Storage.Voron.ScratchBufferSizeNotificationThreshold);
+            configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
 			configurationComparer.Assert(expected => expected.Voron.MaxScratchBufferSize.Value, actual => actual.Storage.Voron.MaxScratchBufferSize);
 			configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
 			configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);

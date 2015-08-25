@@ -13,7 +13,7 @@
 		</DirectoryRef>
 		<DirectoryRef Id='INSTALLFOLDER'>
 			<Component Id="Raven.Web.Config.IIS_7_And_8" Guid="{B2E0822E-B80A-4BA2-851B-CA025BC61333}" Permanent="yes" NeverOverwrite="yes">
-				<Condition><![CDATA[IISMAJORVERSION >= "#7"]]></Condition>
+				<Condition><![CDATA[IISMAJORVERSION >= "#7" OR IISMAJORVERSION = "#10"]]></Condition>
 				<File Id='web.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web.config'>
 				</File>
 				<util:XmlFile Id="SetDataDirIIS"
@@ -119,7 +119,7 @@
 
 			</Component>
 			<Component Id="Raven.Web.Config.IIS_6" Guid="{0D39076B-E488-44DD-9E07-57732A515601}" Permanent="yes" NeverOverwrite="yes">
-				<Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
+				<Condition><![CDATA[IISMAJORVERSION < "#7" AND IISMAJORVERSION <> "#10"]]></Condition>
 				<File Id='web_iis6.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web_IIS6.config'>
 				</File>
 				<util:XmlFile Id="SetDataDirIIS6"

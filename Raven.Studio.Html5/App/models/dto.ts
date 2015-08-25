@@ -309,6 +309,7 @@ interface logDto {
     LoggerName: string;
     Level: string;
     Exception: string;
+    StackTrace: string;
 }
 
 interface queryResultDto {
@@ -1246,6 +1247,7 @@ interface runningTaskDto {
 interface adminLogsConfigEntryDto {
     category: string;
     level: string;
+    includeStackTrace: boolean;
 }
 
 interface fileSystemSettingsDto {

@@ -321,11 +321,12 @@ namespace Voron.Impl.Backup
 
 							env.Options.DataPager.Sync();
 
-							txw.State.Root = Tree.Open(txw, &lastTxHeader->Root);
-							txw.State.FreeSpaceRoot = Tree.Open(txw, &lastTxHeader->FreeSpace);
+						    var root = Tree.Open(txw, &lastTxHeader->Root);
+						    var freeSpaceRoot = Tree.Open(txw, &lastTxHeader->FreeSpace);
+                            freeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+                            root.Name = Constants.RootTreeName;
 
-							txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
-							txw.State.Root.Name = Constants.RootTreeName;
+                            txw.UpdateRootsIfNeeded(root, freeSpaceRoot);
 
 							txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
 

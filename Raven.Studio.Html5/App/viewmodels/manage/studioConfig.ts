@@ -27,7 +27,7 @@ class studioConfig extends viewModelBase {
     selectedColor = ko.observable<environmentColor>();
 
     timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
-    private documentId = "Raven/StudioConfig";
+    private documentId = shell.studioConfigDocumentId;
 
     constructor() {
         super();

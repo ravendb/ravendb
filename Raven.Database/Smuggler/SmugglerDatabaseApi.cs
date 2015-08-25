@@ -55,7 +55,7 @@ namespace Raven.Smuggler
 					await new SmugglerDatabaseBetweenOperation
 					{
 						OnShowProgress = betweenOptions.ReportProgress
-					}
+		}
 					.Between(new SmugglerBetweenOperations
 					{
 						From = exportOperations,
@@ -96,7 +96,7 @@ namespace Raven.Smuggler
 				finally
 				{
 					if (operation != null) 
-						disposeTask = operation.DisposeAsync();
+				    disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -109,8 +109,8 @@ namespace Raven.Smuggler
 		private BulkInsertOperation CreateBulkInsertOperation(DocumentStore documentStore)
 		{
 			var result = documentStore.BulkInsert(documentStore.DefaultDatabase, new BulkInsertOptions
-			{
-				BatchSize = Options.BatchSize,
+            {
+                BatchSize = Options.BatchSize,
 				OverwriteExisting = true,
 				Compression = Options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip,
 				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -154,9 +154,9 @@ namespace Raven.Smuggler
         public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
             using (store = CreateStore(exportOptions.From))
-            {
+			{
                 return await base.ExportData(exportOptions);
-            }
-		}
-	}
-}
+			}
+					}
+			}
+			}

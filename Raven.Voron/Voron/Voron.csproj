@@ -74,6 +74,7 @@
     <Compile Include="Impl\PagePosition.cs" />
     <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
+    <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />
@@ -140,7 +141,6 @@
     <Compile Include="ReadResult.cs" />
     <Compile Include="RecoveryErrorEventArgs.cs" />
     <Compile Include="StorageEnvironmentOptions.cs" />
-    <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />

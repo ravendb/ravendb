@@ -43,6 +43,7 @@ namespace Raven.Client.Document
 			nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
 			nonGenericCriteria.PropertiesMatch = criteria.GetPropertiesMatchStrings();
 			nonGenericCriteria.PropertiesNotMatch = criteria.GetPropertiesNotMatchStrings();
+			nonGenericCriteria.StartEtag = criteria.StartEtag;
 
 			return CreateAsync(nonGenericCriteria, database);
 		}

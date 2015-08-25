@@ -33,7 +33,7 @@ namespace Voron.Tests.Bugs
 					{
 						enumerator.MoveNext();
 
-						tx.State.Root.Add(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+						tx.Root.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
 					}
 
 					tx.Commit();
@@ -46,7 +46,7 @@ namespace Voron.Tests.Bugs
 			{
 				foreach (var item in sequentialLargeIds)
 				{
-					var readResult = tx.State.Root.Read(item.Key.ToString("0000000000000000"));
+					var readResult = tx.Root.Read(item.Key.ToString("0000000000000000"));
 
 					Assert.NotNull(readResult);
 

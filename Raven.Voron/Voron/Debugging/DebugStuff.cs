@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
@@ -14,14 +13,14 @@ namespace Voron.Debugging
 {
 	public class DebugStuff
 	{
-		[Conditional("DEBUG")]
+        [Conditional("DEBUG")]
         public static void RenderFreeSpace(Transaction tx)
         {
             RenderAndShow(tx, tx.ReadTree(tx.Environment.State.FreeSpaceRoot.Name).State.RootPageNumber);
         }
 
 		[Conditional("DEBUG")]
-		public static void DumpHumanReadable(Transaction tx, long startPageNumber,string filenamePrefix = null)
+        public static void DumpHumanReadable(Transaction tx, long startPageNumber, string filenamePrefix = null)
 		{
 			if (Debugger.IsAttached == false)
 				return;
@@ -29,7 +28,7 @@ namespace Voron.Debugging
 			TreeDumper.DumpHumanReadable(tx, path, tx.GetReadOnlyPage(startPageNumber));
 		}
 
-		public unsafe static bool HasDuplicateBranchReferences(Transaction tx, Page start,out long pageNumberWithDuplicates)
+        public unsafe static bool HasDuplicateBranchReferences(Transaction tx, Page start, out long pageNumberWithDuplicates)
 		{
 			var stack = new Stack<Page>();
 			var existingTreeReferences = new ConcurrentDictionary<long, List<long>>();
@@ -202,7 +201,7 @@ namespace Voron.Debugging
     }
 }";
 
-	    [Conditional("DEBUG")]
+		[Conditional("DEBUG")]
 	    public unsafe static void RenderAndShow_FixedSizeTree(Transaction tx, Tree tree, Slice name)
 	    {
 	        RenderHtmlTreeView(writer =>
@@ -213,7 +212,7 @@ namespace Voron.Debugging
 	                writer.WriteLine("<p>empty fixed size tree</p>");
 	            }
 	            else if (((FixedSizeTreeHeader.Embedded*) ptr)->Flags == FixedSizeTreeHeader.OptionFlags.Embedded)
-	            {
+		{
 	                var header = ((FixedSizeTreeHeader.Embedded*) ptr);
 	                writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
 	                writer.WriteLine("<ul>");
@@ -242,8 +241,8 @@ namespace Voron.Debugging
 
 	    private static void RenderHtmlTreeView(Action<TextWriter> action)
 	    {
-            if (Debugger.IsAttached == false)
-                return;
+			if (Debugger.IsAttached == false)
+				return;
 
             var output = Path.GetTempFileName() + ".html";
 	        using (var sw = new StreamWriter(output))
@@ -257,7 +256,7 @@ namespace Voron.Debugging
 	    }
 
 	    private unsafe static void RenderFixedSizeTreePage(Transaction tx, Page page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
-	    {
+			{
 	        sw.WriteLine(
                 "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
 	            page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text);
@@ -269,7 +268,7 @@ namespace Voron.Debugging
 	                var key =
 	                    *(long*) (page.Base + page.FixedSize_StartPosition + (((sizeof (long) + header->ValueSize))*i));
                     sw.Write("{0:#,#;;0}, ", key);
-	            }
+			}
 	            else
 	            {
                     var key =
@@ -285,23 +284,23 @@ namespace Voron.Debugging
 	        }
 
             sw.WriteLine("</ul></li></ul>");
-	    }
+		}
 
-	    [Conditional("DEBUG")]
-	    public static void RenderAndShow(Tree tree)
-	    {
-		    var headerData = string.Format("<p>{0}</p>", tree.State);
-		    RenderAndShow(tree.Tx, tree.State.RootPageNumber, headerData);
-	    }
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(Tree tree)
+        {
+            var headerData = string.Format("<p>{0}</p>", tree.State);
+            RenderAndShow(tree.Tx, tree.State.RootPageNumber, headerData);
+        }
 
-		[Conditional("DEBUG")]
-		public static void RenderAndShow(Transaction tx, long startPageNumber, string headerData = null)
-		{
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(Transaction tx, long startPageNumber, string headerData = null)
+        {
             RenderHtmlTreeView(writer =>
             {
-	            if (headerData != null)
-		            writer.WriteLine(headerData);
-	            writer.WriteLine("<div class='css-treeview'><ul>");
+                if (headerData != null)
+                    writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
 
                 var page = tx.GetReadOnlyPage(startPageNumber);
                 RenderPage(tx, page, writer, "Root", true);
@@ -309,10 +308,10 @@ namespace Voron.Debugging
                 writer.WriteLine("</ul></div>");
             });
 
-        }
+            }
 
-	    private unsafe static void RenderPage(Transaction tx, Page page, TextWriter sw, string text, bool open)
-	    {
+        private unsafe static void RenderPage(Transaction tx, Page page, TextWriter sw, string text, bool open)
+        {
             sw.WriteLine(
                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text);
@@ -324,7 +323,7 @@ namespace Voron.Debugging
                 {
                     var key = new Slice(nodeHeader).ToString();
                     sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, NodeHeader.GetDataSize(tx, nodeHeader));
-                }
+        }
                 else
                 {
                     var key = new Slice(nodeHeader).ToString();
@@ -335,10 +334,9 @@ namespace Voron.Debugging
                         key = "[smallest]";
 
                     RenderPage(tx, tx.GetReadOnlyPage(pageNum), sw, key, false);
-                }
-            }
-
-	        sw.WriteLine("</ul></li></ul>");
-        }
 	}
+}
+            sw.WriteLine("</ul></li></ul>");
+        }
+    }
 }
