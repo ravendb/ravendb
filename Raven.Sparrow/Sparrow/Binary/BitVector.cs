@@ -14,7 +14,7 @@ namespace Sparrow.Binary
     /// Differently from the numeric representation a BitVector operation is left-aligned.
     /// </summary>
     [DebuggerDisplay("{ToDebugString()}")]
-    public class BitVector : IComparable<BitVector>
+    public class BitVector : IComparable<BitVector>, IEquatable<BitVector>
     {
         public const int BitsPerByte = 8;
         public const int BitsPerWord = sizeof(ulong) * BitsPerByte;        
@@ -606,6 +606,12 @@ namespace Sparrow.Binary
             CompareToInline(other, out equalBits);
 
             return equalBits == this.Count && equalBits != other.Count;
+        }
+
+        public bool Equals(BitVector other)
+        {
+            int dummy;
+            return CompareToInline(other, out dummy) == 0;
         }
     }
 }

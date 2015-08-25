@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Sparrow.Tests
 {
@@ -21,6 +22,8 @@ namespace Sparrow.Tests
             Assert.Equal(0, tree.Count);
             Assert.Null(tree.FirstKeyOrDefault());
             Assert.Null(tree.LastKeyOrDefault());
+
+            StructuralVerify(tree);
         }
 
 
@@ -48,6 +51,8 @@ namespace Sparrow.Tests
             Assert.Null(tree.PredecessorOrDefault(key));
             Assert.Null(tree.PredecessorOrDefault("aq"));
             Assert.Equal(key, tree.PredecessorOrDefault("pq"));
+
+            StructuralVerify(tree);
         }
 
         [Fact]
@@ -77,6 +82,8 @@ namespace Sparrow.Tests
                         
             Assert.Equal(predecessor, successor);
             Assert.Equal(tree.Root, predecessor);
+
+            StructuralVerify(tree);
         }
 
         [Fact]
@@ -115,6 +122,8 @@ namespace Sparrow.Tests
             Assert.Equal(lesserKey, tree.PredecessorOrDefault(greaterKey));
             Assert.Null(tree.PredecessorOrDefault(lesserKey));
             Assert.Null(tree.PredecessorOrDefault(smallestKey));
+
+            StructuralVerify(tree);
         }
 
         [Fact]
@@ -144,6 +153,229 @@ namespace Sparrow.Tests
 
             Assert.Equal(predecessor.Next, successor);
             Assert.Equal(successor.Previous, predecessor);
+
+            StructuralVerify(tree);
+        }
+
+        [Fact]
+        public void Structure_MultipleBranchInsertion()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            Assert.True(tree.Add("8Jp3","8Jp3"));
+            Assert.True(tree.Add("GX37", "GX37"));
+            Assert.True(tree.Add("f04o", "f04o"));
+            Assert.True(tree.Add("KmGx","KmGx"));
+            StructuralVerify(tree);
+
+            DumpKeys(tree);            
+        }
+
+        private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+        private static string GenerateRandomString(Random generator, int size)
+        {           
+            var stringChars = new char[size];         
+            for (int i = 0; i < stringChars.Length; i++)
+                stringChars[i] = chars[generator.Next(chars.Length)];
+
+            return new String(stringChars);
+
+        }
+
+
+        public static IEnumerable<object[]> TreeSize
+        {
+            get
+            {
+                // Or this could read from a file. :)
+                return new[]
+                {
+                    //new object[] { 102, 4, 4 },
+                    new object[] { 100, 4, 8 },
+                    //new object[] { 100, 4, 16 },
+                    //new object[] { 100, 8, 32 },
+                    //new object[] { 100, 16, 256 }
+                };
+            }
+        }
+
+        [Theory, PropertyData("TreeSize")]
+        public void Structure_CappedSizeInsertion( int seed, int size, int count )
+        {
+            var generator = new Random(seed);
+ 
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            Console.WriteLine("Insert order");
+            for (int i = 0; i < count; i++)
+            {
+                string key = GenerateRandomString(generator, size);
+
+                if (!tree.Contains(key))
+                    tree.Add(key, key);
+
+                Console.WriteLine(key);
+            }
+
+            DumpKeys(tree);
+
+            StructuralVerify(tree);
+        }
+
+        private void DumpKeys<T,W> (ZFastTrieSortedSet<T,W> tree ) where T : IEquatable<T>
+        {
+            Console.WriteLine("Tree stored order");
+
+            var current = tree.Head.Next;
+            while (current != null && current != tree.Tail)
+            {
+                Console.WriteLine(current.Key.ToString());
+                current = current.Next;
+            }
+                
+        }
+
+
+        private void StructuralVerify<T,W> ( ZFastTrieSortedSet<T,W> tree ) where T : IEquatable<T>
+        {
+            Assert.NotNull( tree.Head );
+            Assert.NotNull( tree.Tail );
+            Assert.Null( tree.Tail.Next );
+            Assert.Null( tree.Head.Previous );
+
+            Assert.True(tree.Root == null || tree.Root.NameLength == 0); // Either the root does not exist or the root is internal and have name length == 0
+            //Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.SelectMany(x => x.Value).Count() + 1); 
+
+            if ( tree.Count == 0 )
+            {            
+                Assert.Equal(tree.Head, tree.Tail.Previous);
+                Assert.Equal(tree.Tail, tree.Head.Next);
+
+                Assert.NotNull(tree.NodesTable);
+                Assert.Equal(0, tree.NodesTable.Count);
+
+                return; // No more to check for an empty trie.
+            }
+           
+            var root = tree.Root;
+            var nodes = new HashSet<ZFastTrieSortedSet<T, W>.Node>();
+            
+            foreach ( var nodesList in tree.NodesTable )
+            {
+                foreach (var node in nodesList.Value )
+                {
+                    int handleLength = node.GetHandleLength();
+                    
+                    Assert.True(root == node || root.GetHandleLength() < handleLength); // All handled of lower nodes must be bigger than the root.
+                    Assert.Equal(node, node.ReferencePtr.ReferencePtr); // The reference of the reference should be itself.
+
+                    nodes.Add(node);                    
+                }
+            }
+
+            Assert.Equal(tree.NodesTable.SelectMany(x => x.Value).Count(), nodes.Count); // We are ensuring there are no repeated nodes in the hash table. 
+
+            if ( tree.Count == 1 )
+            {
+                Assert.Equal(tree.Root, tree.Head.Next);
+                Assert.Equal(tree.Root, tree.Tail.Previous);                
+            }
+            else
+            {
+                var toRight = tree.Head.Next;
+                var toLeft = tree.Tail.Previous;
+
+                for ( int i = 1; i < tree.Count; i++ )
+                {
+                    // Ensure there is name order in the linked list of leaves.
+                    Assert.True(toRight.Name(tree).CompareTo(toRight.Next.Name(tree)) < 0);
+                    Assert.True(toLeft.Name(tree).CompareTo(toLeft.Previous.Name(tree)) > 0);
+
+                    toRight = toRight.Next;
+                    toLeft = toLeft.Previous;
+                }
+
+                var leaves = new HashSet<ZFastTrieSortedSet<T, W>.Leaf>();
+                var references = new HashSet<T>();
+
+                int numberOfNodes = VisitNodes(tree, tree.Root, null, 0, nodes, leaves, references);
+                Assert.Equal(2 * tree.Count - 1, numberOfNodes); // The amount of nodes is directly correlated with the tree size.
+                Assert.Equal(tree.Count, leaves.Count); // The size of the tree is equal to the amount of leaves in the tree.
+
+                int counter = 0;
+                foreach ( var leaf in leaves )
+                {
+                    if (references.Contains(leaf.Key))
+                        counter++;
+                }
+
+                Assert.Equal(tree.Count - 1, counter);                    
+            }
+
+            Assert.Equal(0, nodes.Count);
+        }
+
+        private int VisitNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node, 
+                                     ZFastTrieSortedSet<T, W>.Node parent, int nameLength,
+                                     HashSet<ZFastTrieSortedSet<T, W>.Node> nodes,
+                                     HashSet<ZFastTrieSortedSet<T, W>.Leaf> leaves,
+                                     HashSet<T> references) where T : IEquatable<T>
+        {
+            if (node == null)
+                return 0;
+
+            Assert.True( nameLength <= node.GetExtentLength(tree) );
+
+            var parentAsInternal = parent as ZFastTrieSortedSet<T, W>.Internal;
+            if ( parentAsInternal != null )
+                Assert.True(parent.Extent(tree).Equals(node.Extent(tree).SubVector(0, parentAsInternal.ExtentLength)));
+
+            if ( node is ZFastTrieSortedSet<T, W>.Internal )
+            {
+                var leafNode = node.ReferencePtr as ZFastTrieSortedSet<T, W>.Leaf;
+                Assert.NotNull(leafNode); // We ensure that internal node references are leaves. 
+
+                Assert.True(references.Add(leafNode.Key));
+                Assert.True(nodes.Remove(node));
+
+                var handle = node.Handle(tree);
+
+                var allNodes = tree.NodesTable.SelectMany(x => x.Value)
+                                              .Select(x => x.Handle(tree));
+
+                Assert.True(allNodes.Contains(handle));
+
+                var internalNode = (ZFastTrieSortedSet<T,W>.Internal) node;
+                int jumpLength = internalNode.GetJumpLength();
+
+                var jumpLeft = internalNode.Left;
+                while (jumpLeft is ZFastTrieSortedSet<T, W>.Internal && jumpLength > ((ZFastTrieSortedSet<T, W>.Internal)jumpLeft).ExtentLength)
+                    jumpLeft = ((ZFastTrieSortedSet<T, W>.Internal)jumpLeft).Left;
+
+                Assert.Equal(internalNode.JumpLeftPtr, jumpLeft);
+
+                var jumpRight = internalNode.Right;
+                while (jumpRight is ZFastTrieSortedSet<T, W>.Internal && jumpLength > ((ZFastTrieSortedSet<T, W>.Internal)jumpRight).ExtentLength)
+                    jumpRight = ((ZFastTrieSortedSet<T, W>.Internal)jumpRight).Right;
+
+                Assert.Equal(internalNode.JumpRightPtr, jumpRight);
+
+                return 1 + VisitNodes(tree, internalNode.Left, internalNode, internalNode.ExtentLength + 1, nodes, leaves, references)
+                         + VisitNodes(tree, internalNode.Right, internalNode, internalNode.ExtentLength + 1, nodes, leaves, references);
+            }
+            else
+            {
+                var leafNode = node as ZFastTrieSortedSet<T, W>.Leaf;
+
+                Assert.NotNull(leafNode);
+                Assert.True(leaves.Add(leafNode)); // We haven't found this leaf somewhere else.
+                Assert.Equal(leafNode.Name(tree).Count, leafNode.GetExtentLength(tree)); // This is a leaf, the extent is the key
+
+                Assert.True(parent.ReferencePtr is ZFastTrieSortedSet<T, W>.Leaf); // We ensure that internal node references are leaves. 
+
+                return 1;
+            }             
         }
     }
 }
