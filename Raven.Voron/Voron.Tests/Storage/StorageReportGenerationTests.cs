@@ -223,6 +223,84 @@ namespace Voron.Tests.Storage
 			}
 		}
 
+		[Theory]
+		[InlineData(new[] { "key" }, 1000)]
+		[InlineData(new[] { "key1", "key2" }, 1000)]
+		[InlineData(new[] { "key" }, 1)]
+		[InlineData(new[] { "key1", "key2" }, 2)]
+		[InlineData(new[] { "key" }, 30)]
+		[InlineData(new[] { "key1", "key2" }, 30)]
+		public void TreeReportContainsInformationAboutMultiValueEntries(string[] keys, int numberOfValuesPerKey)
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				foreach (var key in keys)
+				{
+					for (int i = 0; i < numberOfValuesPerKey; i++)
+					{
+						tree.MultiAdd(key, "items/" + i + "/" + new string('p', i));
+					}
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.Equal(keys.Length, report.Trees[0].EntriesCount);
+
+				Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.EntriesCount);
+			}
+		}
+
+		[Fact]
+		public void TreeReportContainsInformationAboutPagesOfChildMultiTrees()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 1000; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.True(report.Trees[0].MultiValues.PageCount > 0);
+                Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("multi-tree");
+
+				for (int i = 0; i < 1000; i++)
+				{
+					tree.MultiDelete("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+				Assert.True(report.Trees[0].MultiValues.PageCount == 0);
+				Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+			}
+		}
+
 		private List<string> AddEntries(Tree tree, int treeNumber)
 		{
 			var entriesAdded = new List<string>();

@@ -67,7 +67,6 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
 		{
-
 			using (var tran = env.NewTransaction(TransactionFlags.Read))
 			{
 				return env.GenerateReport(tran, computeExactSizes);
