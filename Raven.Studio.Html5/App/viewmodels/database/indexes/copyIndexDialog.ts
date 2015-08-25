@@ -53,7 +53,7 @@ class copyIndexDialog extends dialogViewModelBase {
 
         return true;
     }
-
+   
     saveIndex() {
         if (this.isPaste === true && !!this.indexJSON()) {
             var indexDto: indexDefinitionDto;
@@ -67,26 +67,16 @@ class copyIndexDialog extends dialogViewModelBase {
             }
 
             if (indexDto) {
-
                 new getIndexDefinitionCommand(indexDto.Name, this.db)
                     .execute()
-                    .fail((request, status, error) => {
-                        if (request.status === ResponseCodes.NotFound) {
-                            new saveIndexDefinitionCommand(indexDto, this.db)
-                                .execute()
-                                .done(() => {
-                                    router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
-                                    this.close();
-                                });
-                        } else {
-                            messagePublisher.reportError("Cannot paste index, error occured!", error);
-                        }
-                    })
-                    .done(() => messagePublisher.reportError("Cannot paste index, error occured!", "Index with that name already exists!"));
+                    .done(() => {
+                        router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
+                        this.close();
+                    });
             }
-        } else {
-            this.close();
         }
+         else 
+            this.close();
     }
 
     close() {
