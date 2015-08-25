@@ -279,14 +279,20 @@ function SignFile($filePath){
 		return
 	}
 	
-	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+	$signTool = "C:\Program Files (x86)\Windows Kits\8.1\bin\x64\signtool.exe"
 	if (!(Test-Path $signTool)) 
 	{
-		$signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
+		
+		$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
 	
 		if (!(Test-Path $signTool)) 
 		{
-			throw "Could not find SignTool.exe under the specified path $signTool"
+			$signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
+
+			if (!(Test-Path $signTool)) 
+			{
+				throw "Could not find SignTool.exe under the specified path $signTool"
+			}
 		}
 	}
   
