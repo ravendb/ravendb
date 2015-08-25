@@ -22,6 +22,10 @@ class topology extends viewModelBase {
     currentLink = ko.observable<any>(null); 
     searchText = ko.observable<string>();
 
+    fetchDb = ko.observable<boolean>(true);
+    fetchFs = ko.observable<boolean>(true);
+    fetchCs = ko.observable<boolean>(true);
+
     showLoadingIndicator = ko.observable(false); 
 
     width: number;
@@ -89,60 +93,92 @@ class topology extends viewModelBase {
     }
 
     private fillNodes(topologyGraph) {
-        this.topologyFiltered().Databases.SkippedResources.forEach(s => {
-            topologyGraph.setNode(s, {
-                id: s,
-                rType: "db",
-                url: s,
-                name: ' (skipped)',
-                width: 220,
-                height: 40
+        if (this.topologyFiltered().Databases) {
+            this.topologyFiltered().Databases.SkippedResources.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "db",
+                    url: s,
+                    name: ' (skipped)',
+                    width: 220,
+                    height: 40
+                });
             });
-        });
 
-        this.topologyFiltered().Databases.Servers.forEach(s => {
-            topologyGraph.setNode(s, {
-                id: s,
-                rType: "db",
-                url: s.split("/databases/")[0],
-                name: s.split("/databases/")[1],
-                width: 220,
-                height: 40
+            this.topologyFiltered().Databases.Servers.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "db",
+                    url: s.split("/databases/")[0],
+                    name: s.split("/databases/")[1],
+                    width: 220,
+                    height: 40
+                });
             });
-        });
 
-        this.topologyFiltered().Databases.Connections.forEach(c => {
-            c.UiType = "db";
-            topologyGraph.setEdge(c.Source, c.Destination, c);
-        });
-
-        this.topologyFiltered().FileSystems.SkippedResources.forEach(s => {
-            topologyGraph.setNode(s, {
-                id: s,
-                rType: "fs",
-                url: s,
-                name: " (skipped)",
-                width: 220,
-                height: 40
+            this.topologyFiltered().Databases.Connections.forEach(c => {
+                c.UiType = "db";
+                topologyGraph.setEdge(c.Source, c.Destination, c);
             });
-        });
+        }
 
-
-        this.topologyFiltered().FileSystems.Servers.forEach(s => {
-            topologyGraph.setNode(s, {
-                id: s,
-                rType: "fs",
-                url: s.split("/fs/")[0],
-                name: s.split("/fs/")[1],
-                width: 220,
-                height: 40
+        if (this.topologyFiltered().FileSystems) {
+            this.topologyFiltered().FileSystems.SkippedResources.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "fs",
+                    url: s,
+                    name: " (skipped)",
+                    width: 220,
+                    height: 40
+                });
             });
-        });
 
-        this.topologyFiltered().FileSystems.Connections.forEach(c => {
-            c.UiType = "fs";
-            topologyGraph.setEdge(c.Source, c.Destination, c);
-        });
+            this.topologyFiltered().FileSystems.Servers.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "fs",
+                    url: s.split("/fs/")[0],
+                    name: s.split("/fs/")[1],
+                    width: 220,
+                    height: 40
+                });
+            });
+
+            this.topologyFiltered().FileSystems.Connections.forEach(c => {
+                c.UiType = "fs";
+                topologyGraph.setEdge(c.Source, c.Destination, c);
+            });
+        }
+
+        if (this.topologyFiltered().Counters) {
+            this.topologyFiltered().Counters.SkippedResources.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "cs",
+                    url: s,
+                    name: " (skipped)",
+                    width: 220,
+                    height: 40
+                });
+            });
+
+            this.topologyFiltered().Counters.Servers.forEach(s => {
+                topologyGraph.setNode(s, {
+                    id: s,
+                    rType: "cs",
+                    url: s.split("/cs/")[0],
+                    name: s.split("/cs/")[1],
+                    width: 220,
+                    height: 40
+                });
+            });
+
+            this.topologyFiltered().Counters.Connections.forEach(c => {
+                c.UiType = "cs";
+                topologyGraph.setEdge(c.Source, c.Destination, c);
+            });
+        }
     }
 
     linkWithArrow(d) {
@@ -173,6 +209,8 @@ class topology extends viewModelBase {
                 return "&#xf1c0";
             case "fs":
                 return "&#xf1c5";
+            case "cs":
+                return "&#xf163";
             
             default:
                 return "&#xf128";
@@ -182,7 +220,11 @@ class topology extends viewModelBase {
     renderTopology(topologyGraph) {
         var self = this;
 
-        var enteringGraph = this.svg.selectAll('.graph').data([null]).enter().append('g').attr('class', 'graph');
+        var graph = this.svg.selectAll('.graph').data([null]);
+
+        graph.attr('transform', 'translate(' + ((self.width - topologyGraph.graph().width) / 2) + ',10)');
+
+        var enteringGraph = graph.enter().append('g').attr('class', 'graph');
         var enteringGraphZoom = enteringGraph.append("g").attr("class", "graphZoom");
 
         enteringGraphZoom.append('g').attr('class', 'nodes');
@@ -265,7 +307,7 @@ class topology extends viewModelBase {
 
     fetchTopology() {
         this.showLoadingIndicator(true);
-        new getGlobalReplicationTopology() 
+        new getGlobalReplicationTopology(this.fetchDb(), this.fetchFs(), this.fetchCs()) 
             .execute()
             .done((topo: globalTopologyDto) => {
                 this.topology(topo);
@@ -299,13 +341,23 @@ class topology extends viewModelBase {
             return;
         }
 
-        filtered.Databases.SkippedResources = filtered.Databases.SkippedResources.filter(s => s.indexOf(criteria) > -1);
-        filtered.Databases.Servers = filtered.Databases.Servers.filter(s => s.indexOf(criteria) > -1);
-        filtered.Databases.Connections = filtered.Databases.Connections.filter(s => s.Source.indexOf(criteria) > -1 && s.Destination.indexOf(criteria) > -1);
+        if (filtered.Databases) {
+            filtered.Databases.SkippedResources = filtered.Databases.SkippedResources.filter(s => s.indexOf(criteria) > -1);
+            filtered.Databases.Servers = filtered.Databases.Servers.filter(s => s.indexOf(criteria) > -1);
+            filtered.Databases.Connections = filtered.Databases.Connections.filter(s => s.Source.indexOf(criteria) > -1 && s.Destination.indexOf(criteria) > -1);
+        }
 
-        filtered.FileSystems.SkippedResources = filtered.FileSystems.SkippedResources.filter(s => s.indexOf(criteria) > -1);
-        filtered.FileSystems.Servers = filtered.FileSystems.Servers.filter(s => s.indexOf(criteria) > -1);
-        filtered.FileSystems.Connections = filtered.FileSystems.Connections.filter(s => s.Source.indexOf(criteria) > -1 && s.Destination.indexOf(criteria) > -1);
+        if (filtered.FileSystems) {
+            filtered.FileSystems.SkippedResources = filtered.FileSystems.SkippedResources.filter(s => s.indexOf(criteria) > -1);
+            filtered.FileSystems.Servers = filtered.FileSystems.Servers.filter(s => s.indexOf(criteria) > -1);
+            filtered.FileSystems.Connections = filtered.FileSystems.Connections.filter(s => s.Source.indexOf(criteria) > -1 && s.Destination.indexOf(criteria) > -1);
+        }
+
+        if (filtered.Counters) {
+            filtered.Counters.SkippedResources = filtered.Counters.SkippedResources.filter(s => s.indexOf(criteria) > -1);
+            filtered.Counters.Servers = filtered.Counters.Servers.filter(s => s.indexOf(criteria) > -1);
+            filtered.Counters.Connections = filtered.Counters.Connections.filter(s => s.Source.indexOf(criteria) > -1 && s.Destination.indexOf(criteria) > -1);
+        }
 
         this.topologyFiltered(filtered);
 
@@ -314,6 +366,8 @@ class topology extends viewModelBase {
     }
 
     private resetZoom() {
+        this.zoom.scale(1);
+        this.zoom.translate([0, 0]);
         this.svg.select('.graphZoom')
             .transition()
             .attr('transform', 'translate(0,0)scale(1)');

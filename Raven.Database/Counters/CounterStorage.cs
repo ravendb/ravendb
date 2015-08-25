@@ -586,6 +586,33 @@ namespace Raven.Database.Counters
 				}
 			}
 
+			public IEnumerable<ServerEtagAndSourceName> GetServerSources()
+			{
+				var lookupDict = GetServerEtags().ToDictionary(x => x.ServerId, x => x.Etag);
+
+				using (var it = replicationSources.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) == false)
+						yield break;
+
+					do
+					{
+						var b = new byte[it.CurrentKey.Size];
+						it.CurrentKey.CreateReader().Read(b, 0, b.Length);
+
+						var serverId = new Guid(b);
+
+						yield return new ServerEtagAndSourceName
+						{
+							ServerId = serverId,
+							SourceName = it.CreateReaderForCurrent().ToString(),
+							Etag = lookupDict[serverId]
+						};
+
+					} while (it.MoveNext());
+				}
+			}
+
 			public IEnumerable<ServerEtag> GetServerEtags()
 			{
 				using (var it = serversLastEtag.Iterate())
@@ -595,16 +622,14 @@ namespace Raven.Database.Counters
 
 					do
 					{
-						//should never ever happen :)
-						/*Debug.Assert(buffer.Length >= it.GetCurrentDataSize());
+						var b = new byte[it.CurrentKey.Size];
+						it.CurrentKey.CreateReader().Read(b, 0, b.Length);
 
-						it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);*/
 						yield return new ServerEtag
 						{
-							ServerId = Guid.Parse(it.CurrentKey.ToString()),
+							ServerId = new Guid(b),
 							Etag = it.CreateReaderForCurrent().ReadBigEndianInt64()
 						};
-
 					} while (it.MoveNext());
 				}
 			}
@@ -1246,6 +1271,11 @@ namespace Raven.Database.Counters
 		{
 			public Guid ServerId { get; set; }
 			public long Etag { get; set; }
+		}
+
+		public class ServerEtagAndSourceName : ServerEtag
+		{
+			public string SourceName { get; set; }
 		}
 
 		private static class TreeNames

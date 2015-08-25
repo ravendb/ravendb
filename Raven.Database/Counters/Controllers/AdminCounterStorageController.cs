@@ -17,6 +17,7 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Counters.Backup;
+using Raven.Database.Counters.Replication;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
@@ -374,5 +375,16 @@ namespace Raven.Database.Counters.Controllers
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}
-    }
+
+		[HttpPost]
+		[RavenRoute("cs/{counterStorageName}/admin/replication/topology/view")]
+		public Task<HttpResponseMessage> ReplicationTopology()
+		{
+			var topologyDiscoverer = new CountersReplicationTopologyDiscoverer(Storage, new RavenJArray(), 10, Log);
+			var node = topologyDiscoverer.Discover();
+			var topology = node.Flatten();
+
+			return GetMessageWithObjectAsTask(topology);
+		}
+	}
 }

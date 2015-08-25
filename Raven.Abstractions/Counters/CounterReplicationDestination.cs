@@ -6,6 +6,8 @@
 
 using System;
 using System.Diagnostics;
+using System.Net;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Counters
 {
@@ -45,7 +47,22 @@ namespace Raven.Abstractions.Counters
 
         public bool Disabled { get; set; }
 
-        protected bool Equals(CounterReplicationDestination other)
+		[JsonIgnore]
+		public ICredentials Credentials
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(Username) == false)
+				{
+					return string.IsNullOrEmpty(Domain)
+									  ? new NetworkCredential(Username, Password)
+									  : new NetworkCredential(Username, Password, Domain);
+				}
+				return null;
+			}
+		}
+
+		protected bool Equals(CounterReplicationDestination other)
         {
             return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(CounterStorageName, other.CounterStorageName);

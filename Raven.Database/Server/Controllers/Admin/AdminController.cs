@@ -43,6 +43,7 @@ using Raven.Client.Extensions;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Commercial;
+using Raven.Database.Counters.Replication;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
@@ -1245,16 +1246,28 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[RavenRoute("admin/replication/topology/global")]
-		public Task<HttpResponseMessage> GlobalReplicationTopology()
+		public async Task<HttpResponseMessage> GlobalReplicationTopology()
 		{
-			var databasesTopology = CollectReplicationTopology();
+			var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>();
 
-			var filesystemsTopology = CollectFilesystemSynchronizationTopology();
+			ReplicationTopology databasesTopology = null;
+			SynchronizationTopology filesystemsTopology = null;
+			CountersReplicationTopology counterStoragesTopology = null;
 
-			return GetMessageWithObjectAsTask(new
+			if (request.Databases)
+				databasesTopology = CollectReplicationTopology();
+
+			if (request.Filesystems)
+				filesystemsTopology = CollectFilesystemSynchronizationTopology();
+
+			if (request.Counters) 
+				counterStoragesTopology = CollectionCountersReplicationTopology();
+
+			return GetMessageWithObject(new
 			{
 				Databases = databasesTopology,
-				FileSystems = filesystemsTopology
+				FileSystems = filesystemsTopology,
+				Counters = counterStoragesTopology
 			});
 		}
 
@@ -1325,6 +1338,41 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 
 			mergedTopology.SkippedResources = filesystemsNames;
+
+			return mergedTopology;
+		}
+
+		private CountersReplicationTopology CollectionCountersReplicationTopology()
+		{
+			var mergedTopology = new CountersReplicationTopology();
+
+			int nextPageStart = 0;
+			var counters = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(CountersLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var countersNames = counters
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(CountersLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			CountersLandlord.ForAllCountersInCacheOnly(cs =>
+			{
+				countersNames.Remove(cs.Name);
+
+				var schemaDiscoverer = new CountersReplicationTopologyDiscoverer(cs, new RavenJArray(), 10, Log);
+				var node = schemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = countersNames;
 
 			return mergedTopology;
 		}
