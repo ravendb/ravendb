@@ -97,6 +97,7 @@
     <TypeScriptCompile Include="App\commands\timeSeries\putTypeCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\putPointCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\updatePointCommand.ts" />
+    <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
@@ -106,16 +107,9 @@
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
-    <TypeScriptCompile Include="App\common\queryUtil.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
-    <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
-    <TypeScriptCompile Include="App\common\messagePublisher.ts" />
-    <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
-    <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
-    <TypeScriptCompile Include="App\common\pair.ts" />
-    <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\typeChange.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\pointChange.ts" />
@@ -196,13 +190,11 @@
     <TypeScriptCompile Include="App\common\inputCursor.ts" />
     <TypeScriptCompile Include="App\common\jsonUtil.ts" />
     <TypeScriptCompile Include="App\common\chunkFetcher.ts" />
-    <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\common\fileDownloader.ts" />
     <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
     <TypeScriptCompile Include="App\common\eventSourceSettingStorage.ts" />
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
-    <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <Content Include="App\main.js" />
@@ -974,8 +966,6 @@
     <TypeScriptCompile Include="App\common\extensions.ts" />
     <TypeScriptCompile Include="App\common\generalUtils.ts" />
     <TypeScriptCompile Include="App\common\idGenerator.ts" />
-    <TypeScriptCompile Include="App\common\inputCursor.ts" />
-    <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
     <TypeScriptCompile Include="App\common\messagePublisher.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
