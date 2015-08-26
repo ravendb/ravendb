@@ -67,12 +67,12 @@ class copyIndexDialog extends dialogViewModelBase {
             }
 
             if (indexDto) {
-                    new saveIndexDefinitionCommand(indexDto, this.db)
-                            .execute()
-                            .done(() => {
-                                router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
-                                this.close();
-                            });
+                new saveIndexDefinitionCommand(indexDto, this.db)
+                        .execute()
+                        .done(() => {
+                            router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
+                            this.close();
+                        });
             }
         }
          else 
