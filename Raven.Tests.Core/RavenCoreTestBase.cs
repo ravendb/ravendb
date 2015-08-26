@@ -201,5 +201,15 @@ namespace Raven.Tests.Core
 				Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase(db, hardDelete: true);
 			}
 		}
+
+		public static IEnumerable<object[]> InsertOptions
+		{
+			get
+			{
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+				yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+			}
+		}
 	}
 }
