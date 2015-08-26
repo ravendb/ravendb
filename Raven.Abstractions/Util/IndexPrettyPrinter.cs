@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
@@ -16,37 +17,49 @@ namespace Raven.Abstractions.Util
 	{
 		public static string Format(string code)
 		{
-			if (string.IsNullOrEmpty(code))
+		    if (string.IsNullOrEmpty(code))
 				return code;
 
-			var cSharpParser = new CSharpParser();
-			var expr = cSharpParser.ParseExpression(code);
-			if (cSharpParser.HasErrors)
-				throw new ArgumentException(string.Join(Environment.NewLine, cSharpParser.Errors.Select(e => e.ErrorType + " " + e.Message + " " + e.Region)));
-
-			// Wrap expression in parenthesized expression, this is necessary because the transformations
-			// can't replace the root node of the syntax tree
-			expr = new ParenthesizedExpression(expr);
-			// Apply transformations
-			new IntroduceQueryExpressions().Run(expr);
-			new CombineQueryExpressions().Run(expr);
-			new IntroduceParenthesisForNestedQueries().Run(expr);
-
-			new RemoveQueryContinuation().Run(expr);
-
-			// Unwrap expression
-			expr = ((ParenthesizedExpression)expr).Expression;
-
-			var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
-			if (format.Substring(0, 3) == "\r\n\t")
-			{
-				format = format.Remove(0, 3);
-			}
-			format = format.Replace("\r\n\t", "\n");
-			return format;
+		    try
+		    {
+		        return FormatInternal(code);
+		    }
+		    catch (FileNotFoundException)
+		    {
+		        return code;
+		    }
 		}
 
-		#region Decompiler Logic
+	    private static string FormatInternal(string code)
+	    {
+	        var cSharpParser = new CSharpParser();
+	        var expr = cSharpParser.ParseExpression(code);
+	        if (cSharpParser.HasErrors)
+	            throw new ArgumentException(string.Join(Environment.NewLine, cSharpParser.Errors.Select(e => e.ErrorType + " " + e.Message + " " + e.Region)));
+
+	        // Wrap expression in parenthesized expression, this is necessary because the transformations
+	        // can't replace the root node of the syntax tree
+	        expr = new ParenthesizedExpression(expr);
+	        // Apply transformations
+	        new IntroduceQueryExpressions().Run(expr);
+	        new CombineQueryExpressions().Run(expr);
+	        new IntroduceParenthesisForNestedQueries().Run(expr);
+
+	        new RemoveQueryContinuation().Run(expr);
+
+	        // Unwrap expression
+	        expr = ((ParenthesizedExpression) expr).Expression;
+
+	        var format = expr.GetText(FormattingOptionsFactory.CreateAllman());
+	        if (format.Substring(0, 3) == "\r\n\t")
+	        {
+	            format = format.Remove(0, 3);
+	        }
+	        format = format.Replace("\r\n\t", "\n");
+	        return format;
+	    }
+
+	    #region Decompiler Logic
 		// Copyright (c) 2011 AlphaSierraPapa for the SharpDevelop Team
 		// 
 		// Permission is hereby granted, free of charge, to any person obtaining a copy of this

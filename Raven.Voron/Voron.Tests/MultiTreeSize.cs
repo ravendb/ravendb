@@ -16,7 +16,7 @@ namespace Voron.Tests
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.MultiAdd("ChildTreeKey", "test");
+				tx.Root.MultiAdd("ChildTreeKey", "test");
 				tx.Commit();
 			}
 
@@ -30,8 +30,8 @@ namespace Voron.Tests
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.MultiAdd("ChildTreeKey", "test1");
-				tx.State.Root.MultiAdd("ChildTreeKey", "test2");
+				tx.Root.MultiAdd("ChildTreeKey", "test1");
+				tx.Root.MultiAdd("ChildTreeKey", "test2");
 				tx.Commit();
 			}
 

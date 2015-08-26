@@ -42,6 +42,16 @@ namespace Raven.Database.Server.Controllers
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
 		}
 
+		public void InitializeFrom(RavenDbApiController other)
+		{
+			DatabaseName = other.DatabaseName;
+			queryFromPostRequest = other.queryFromPostRequest;
+			if (other.Configuration != null)
+				Configuration = other.Configuration;
+			ControllerContext = other.ControllerContext;
+			ActionContext = other.ActionContext;
+		}
+
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
@@ -205,6 +215,12 @@ namespace Raven.Database.Server.Controllers
 
                 return _currentDb = database.Result;
 			}
+		}
+
+		public void SetCurrentDatabase(DocumentDatabase db)
+		{
+			DatabaseName = db.Name;
+			_currentDb = db;
 		}
 
 	    public override InMemoryRavenConfiguration ResourceConfiguration
@@ -649,9 +665,9 @@ namespace Raven.Database.Server.Controllers
             }
 
 			msg = "Could not find a database named: " + tenantId;
-			Logger.Warn(msg);
-			throw new HttpException(503, msg);
-        }
+                Logger.Warn(msg);
+                throw new HttpException(503, msg);
+            }
 
 	    public override string TenantName
 	    {

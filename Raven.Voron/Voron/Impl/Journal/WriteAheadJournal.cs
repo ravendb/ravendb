@@ -190,7 +190,6 @@ namespace Voron.Impl.Journal
 			}
 
 			Shipper.SetPreviousTransaction(lastSyncedTxId, lastShippedTxCrc);
-			
 
 			_files = _files.AppendRange(journalFiles);
 			
@@ -202,12 +201,9 @@ namespace Voron.Impl.Journal
 			_headerAccessor.Modify(
 				header =>
 				{
-					header->Journal.LastSyncedJournal = lastSyncedJournal;
-					header->Journal.LastSyncedTransactionId = lastSyncedTxId;
 					header->Journal.CurrentJournal = lastSyncedJournal;
 					header->Journal.JournalFilesCount = _files.Count;
 					header->IncrementalBackup.LastCreatedJournal = _journalIndex;
-					header->PreviousTransactionCrc = lastShippedTxCrc;
 				});
 
 			CleanupInvalidJournalFiles(lastSyncedJournal);
@@ -258,12 +254,12 @@ namespace Voron.Impl.Journal
 
 			_dataPager.EnsureContinuous(null, last.PageNumber, numberOfPagesInLastPage);
 
+		    _dataPager.MaybePrefetchMemory(sortedPagesToWrite);
+
 			foreach (var page in sortedPagesToWrite)
 			{
 				_dataPager.Write(page);
 			}
-
-			_dataPager.Sync();
 		}
 
 		private void RecoverCurrentJournalSize(IVirtualPager pager)

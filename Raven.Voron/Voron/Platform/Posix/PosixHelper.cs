@@ -58,7 +58,9 @@ namespace Voron.Platform.Posix
 					remaining -= (int) written;
 					ptr += written;
 				}
-				Syscall.fsync(fd);
+				if(Syscall.fsync(fd) == -1)
+                    ThrowLastError(Marshal.GetLastWin32Error());
+
 			}
 			finally
 			{

@@ -85,8 +85,17 @@ namespace Raven.Client.Indexes
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{
 				string formattedMap = map;
-				if (Conventions.PrettifyGeneratedLinqExpressions)
-					formattedMap = IndexPrettyPrinter.Format(formattedMap);
+			    if (Conventions.PrettifyGeneratedLinqExpressions)
+			    {
+			        try
+			        {
+			            formattedMap = IndexPrettyPrinter.Format(formattedMap);
+			        }
+			        catch (Exception)
+			        {
+			            formattedMap = map;
+			        }
+                }
 				indexDefinition.Maps.Add(formattedMap);
 			}
 			return indexDefinition;

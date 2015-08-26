@@ -51,10 +51,10 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/indexes")]
 		public async Task<HttpResponseMessage> IndexMultiPut()
 		{
-			MultiplePutIndexParam multiplePutIndexParam;
+			IndexToAdd[] indexesToAdd;
 			try
 			{
-				multiplePutIndexParam = await ReadJsonObjectAsync<MultiplePutIndexParam>().ConfigureAwait(false);
+				indexesToAdd = await ReadJsonObjectAsync<IndexToAdd[]>().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Message = "Could not understand json, please check its validity.",
 					Error = e.Message
-				}, (HttpStatusCode) 500); 
+				}, (HttpStatusCode)500);
 
 			}
 			catch (InvalidDataException e)
@@ -75,19 +75,18 @@ namespace Raven.Database.Server.Controllers
 					Error = e
 				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 			}
-			var definitions = multiplePutIndexParam.Definitions;
-			var priorities = multiplePutIndexParam.Priorities;
-			var indexes = multiplePutIndexParam.IndexesNames;
-			string[] createdIndexes;
-			for (int i =0; i< indexes.Length; i++)
+
+			foreach (var indexToAdd in indexesToAdd)
 			{
-				var data = definitions[i];											
+				var data = indexToAdd.Definition;
 				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 			}
+
+			string[] createdIndexes;
 			try
 			{
-				createdIndexes = Database.Indexes.PutIndexes(indexes, definitions, priorities);
+				createdIndexes = Database.Indexes.PutIndexes(indexesToAdd);
 			}
 			catch (Exception ex)
 			{
@@ -102,6 +101,77 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 			return GetMessageWithObject(new { Indexes = createdIndexes }, HttpStatusCode.Created);
+		}
+
+		[HttpPut]
+		[RavenRoute("side-by-side-indexes")]
+		[RavenRoute("databases/{databaseName}/side-by-side-indexes")]
+		public async Task<HttpResponseMessage> SideBySideIndexMultiPut()
+		{
+			SideBySideIndexes sideBySideIndexes;
+			try
+			{
+				sideBySideIndexes = await ReadJsonObjectAsync<SideBySideIndexes>().ConfigureAwait(false);
+			}
+			catch (InvalidOperationException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				return GetMessageWithObject(new
+				{
+					Message = "Could not understand json, please check its validity.",
+					Error = e.Message
+				}, (HttpStatusCode)500);
+
+			}
+			catch (InvalidDataException e)
+			{
+				Log.DebugException("Failed to deserialize index request. Error: ", e);
+
+				return GetMessageWithObject(new
+				{
+					Error = e
+				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+			}
+
+			foreach (var indexToAdd in sideBySideIndexes.IndexesToAdd)
+			{
+				var data = indexToAdd.Definition;
+				if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+					return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+			}
+
+			IndexActions.SideBySideIndexInfo[] createdIndexes;
+			try
+			{
+				createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes.IndexesToAdd);
+			}
+			catch (Exception ex)
+			{
+				var compilationException = ex as IndexCompilationException;
+
+				return GetMessageWithObject(new
+				{
+					ex.Message,
+					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
+					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+					Error = ex.ToString()
+				}, HttpStatusCode.BadRequest);
+			}
+
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var createdIndex in createdIndexes.Where(x => x.IsSideBySide))
+				{
+					Database.Documents.Put(
+						Constants.IndexReplacePrefix + createdIndex.Name,
+						null,
+						RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = createdIndex.OriginalName, MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace, ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc}),
+						new RavenJObject(),
+						null);
+		}
+			});
+
+			return GetMessageWithObject(new { Indexes = createdIndexes.Select(x => x.Name).ToArray() }, HttpStatusCode.Created);
 		}
 
 		[HttpGet]
@@ -125,7 +195,14 @@ namespace Raven.Database.Server.Controllers
                 if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false) 
                     return GetExplanation(index);
 
+                try
+                {
                 return GetIndexQueryResult(index, cts.Token);
+            }
+                catch (OperationCanceledException e)
+                {
+                    throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+		}
             }
 		}
 
@@ -145,8 +222,6 @@ namespace Raven.Database.Server.Controllers
 			});
 			return GetEmptyMessage();
 		}
-
-
 
 		[HttpPut]
 		[RavenRoute("indexes/{*id}")]
@@ -184,10 +259,10 @@ namespace Raven.Database.Server.Controllers
 			if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 				return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 
-			// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
-			// in order to ensure that they don't reset the default value for old clients, we force the default
-			// value to maintain the existing behavior
-			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
+            // older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
+            // in order to ensure that they don't reset the default value for old clients, we force the default
+            // value to maintain the existing behavior
+            if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
                 data.MaxIndexOutputsPerDocument = 16 * 1024;
 
 			try
@@ -392,7 +467,6 @@ namespace Raven.Database.Server.Controllers
 				Index = indexDefinition,
 			});
 		}
-
 
 		private HttpResponseMessage GetIndexSource(string index)
 		{

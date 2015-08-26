@@ -5,13 +5,15 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
+
+using Raven.Database.Storage;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	using Raven.Abstractions.Util;
 
-	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler, ITransactionalStorageNotificationHandler
 	{
 		protected readonly WorkContext context;
 
@@ -30,6 +32,7 @@ namespace Raven.Database.Indexing
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
 			NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
+			context.TransactionalStorage.RegisterTransactionalStorageNotificationHandler(this);
 			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
 		}
 
@@ -42,6 +45,11 @@ namespace Raven.Database.Indexing
 		public void SoftMemoryRelease()
 		{
 			
+		}
+
+		public void HandleTransactionalStorageNotification()
+		{
+			HandleLowMemory();
 		}
 
 		public virtual LowMemoryHandlerStatistics GetStats()
@@ -127,8 +135,27 @@ namespace Raven.Database.Indexing
 			if (timeSpan > context.Configuration.MaxProcessingRunLatency)
 				return false;
 
-			NumberOfItemsToProcessInSingleBatch = Math.Min(MaxNumberOfItems,
-                                                         NumberOfItemsToProcessInSingleBatch * 2);
+            // We want to aggressively increase the size while it is small, but once we hit a certain
+            // size, we don't want to just double it. It is easy to create major issues that way.
+            // as long as we are less than 25% of the max size, we can double it until we hit that limit
+            int maybeNewSize = NumberOfItemsToProcessInSingleBatch * 2;
+		    // if we are more than 25% of the size, we want to grow more slowly, we'll grow my 1/8 of the 
+            // max number of items
+            //
+            // For the details, that means that we'll double the sizes until we get to 32K items, then increase
+            // it by 16K each time we need to increase. That is much more gradual and will let us more time to 
+            // see if we don't want to increase things.
+            if (maybeNewSize > MaxNumberOfItems/4)
+            {
+                var stepSize = MaxNumberOfItems / 8;
+                if (stepSize < InitialNumberOfItems)
+                    stepSize = InitialNumberOfItems;
+                maybeNewSize = NumberOfItemsToProcessInSingleBatch + stepSize;
+            }
+
+
+		    NumberOfItemsToProcessInSingleBatch = Math.Min(MaxNumberOfItems,
+                                                         maybeNewSize);
 			return true;
 		}
 

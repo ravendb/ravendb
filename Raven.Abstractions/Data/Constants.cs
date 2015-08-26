@@ -123,6 +123,7 @@ namespace Raven.Abstractions.Data
 		public const string MaxNumberOfStoredIndexingBatchInfoElements = "Raven/Indexing/MaxNumberOfStoredIndexingBatchInfoElements";
 		public const string UseLuceneASTParser = "Raven/Indexing/UseLuceneASTParser";
 		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
+		public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
@@ -373,7 +374,8 @@ namespace Raven.Abstractions.Data
 
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
 	        public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
-        }
+			public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
+		}
 
 		public class Versioning
 		{

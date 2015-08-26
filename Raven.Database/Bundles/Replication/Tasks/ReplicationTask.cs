@@ -111,7 +111,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			IndexReplication.Start();
 			TransformerReplication.Start();
-		}
+			}
 
 		public void Pause()
 		{
@@ -145,7 +145,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					IsRunning = !IsHotSpare() && !shouldPause;
 
-					log.Debug("Replication task found work. Running: " + IsRunning);
+					log.Debug("Replication task found work. Running: {0}", IsRunning);
 
 					if (IsRunning)
 					{
@@ -182,7 +182,7 @@ namespace Raven.Bundles.Replication.Tasks
 					tcsReplicationOnce.SetResult(null);
 					return tcsReplicationOnce.Task;
 				}
-
+				
 				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
 				var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
@@ -243,20 +243,20 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 
 				return Task.WhenAll(startedTasks.ToArray()).ContinueWith(
-										t =>
-										{
-											if (destinationStats.Count == 0)
-												return;
+					t =>
+					{
+						if (destinationStats.Count == 0)
+							return;
 
-											foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
-											{
-												PrefetchingBehavior prefetchingBehavior;
-												if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
-												{
-													prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
-												}
-											}
-										}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
+						foreach (var stats in destinationStats.Where(stats => stats.Value.LastReplicatedEtag != null))
+						{
+							PrefetchingBehavior prefetchingBehavior;
+							if (prefetchingBehaviors.TryGetValue(stats.Key, out prefetchingBehavior))
+							{
+								prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
+							}
+						}
+					}).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
 			}
 		}
 
@@ -443,7 +443,7 @@ namespace Raven.Bundles.Replication.Tasks
 									return false;
 								}
 							}
-
+									
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty &&
 							    destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty)
 							{
@@ -869,7 +869,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-	
+
 				var url = GetUrlFor(destination, "/replication/replicateDocs");
 
 				url += "&count=" + jsonDocuments.Length;
@@ -945,7 +945,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var duration = Stopwatch.StartNew();
 			var result = new JsonDocumentsToReplicate
 			{
-				LastEtag = Etag.Empty,
+			    LastEtag = Etag.Empty,
 			};
 			try
 			{
@@ -970,13 +970,13 @@ namespace Raven.Bundles.Replication.Tasks
 						IEnumerable<JsonDocument> handled = fetchedDocs;
 
 						foreach (var handler in new IReplicatedDocsHandler[]
-						{
+								{
 							new FilterReplicatedDocs(docDb.Documents, destination, prefetchingBehavior, destinationId, result.LastEtag),
 							new FilterAndTransformSpecifiedCollections(docDb, destination, destinationId)
 						})
-						{
+									{
 							handled = handler.Handle(handled);
-						}
+										}
 
 						docsToReplicate = handled.ToList();								
 
@@ -1461,7 +1461,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
-		internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
+	    internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
 		{
 			Debug.Assert(database != null);
 

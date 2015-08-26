@@ -192,6 +192,8 @@
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
+    <Compile Include="Data\SideBySideIndexes.cs" />
+    <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
@@ -304,7 +306,6 @@
     <Compile Include="Indexing\IndexMergeResults.cs" />
     <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
-    <Compile Include="Indexing\MultiplePutIndexParam.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Indexing\TransformerLockMode.cs" />
     <Compile Include="Json\JsonConverterCache.cs" />
@@ -341,6 +342,7 @@
     <Compile Include="Logging\ILogManager.cs" />
     <Compile Include="Logging\LogContext.cs" />
     <Compile Include="Logging\LoggerExecutionWrapper.cs" />
+    <Compile Include="Logging\LogHttpRequestStatsParams.cs" />
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogManager.cs" />
     <Compile Include="Logging\LogProviders\Log4NetLogManager.cs" />
@@ -476,6 +478,7 @@
     <Compile Include="Util\IndexPrettyPrinterEqualityComparer.cs" />
     <Compile Include="Util\MD5.cs" />
     <Compile Include="Util\NetworkUtil.cs" />
+    <Compile Include="Util\PinnableBufferCache.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />

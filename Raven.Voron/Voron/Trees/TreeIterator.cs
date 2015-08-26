@@ -14,7 +14,10 @@ namespace Voron.Trees
 		private Page _currentPage;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 		private MemorySlice _currentInternalKey;
+	    private bool _disposed;
 
+        public event Action<IIterator> OnDispoal;
+ 
 		public TreeIterator(Tree tree, Transaction tx)
 		{
 			_tree = tree;
@@ -28,11 +31,16 @@ namespace Voron.Trees
 
 		public int GetCurrentDataSize()
 		{
+            if(_disposed)
+                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 			return NodeHeader.GetDataSize(_tx, Current);
 		}
 
 		public bool Seek(Slice key)
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+
 			Lazy<Cursor> lazy;
 			NodeHeader* node;
 			_currentPage = _tree.FindPageFor(key, out node, out lazy);
@@ -58,6 +66,9 @@ namespace Voron.Trees
 		{
 			get
 			{
+                if (_disposed)
+                    throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+
 				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
 
@@ -83,6 +94,9 @@ namespace Voron.Trees
 		{
 			get
 			{
+                if (_disposed)
+                    throw new ObjectDisposedException("TreeIterator " + _tree.Name);
+
 				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
 
@@ -95,6 +109,8 @@ namespace Voron.Trees
 
 		public bool MovePrev()
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 			while (true)
 			{
 				_currentPage.LastSearchPosition--;
@@ -126,6 +142,8 @@ namespace Voron.Trees
 
 		public bool MoveNext()
 		{
+            if (_disposed)
+                throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
 			while (_currentPage != null)
 			{
@@ -187,9 +205,18 @@ namespace Voron.Trees
 
 		public void Dispose()
 		{
-		}
+		    if (_disposed)
+		        return;
+		    _disposed = true;
+            _cursor.Dispose();
+            var action = OnDispoal;
+            if (action != null)
+            {
+                action(this);
+            }
+        }
 
-		public Slice RequiredPrefix { get; set; }
+	    public Slice RequiredPrefix { get; set; }
 
 		public Slice MaxKey { get; set; }
 

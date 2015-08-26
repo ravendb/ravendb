@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
@@ -44,6 +45,10 @@ namespace Raven.Database.Indexing.Spatial
 
 		private bool TryParseBox(string value, out string shape)
 		{
+		    shape = default(string);
+
+            if (!value.StartsWith("BOX", StringComparison.OrdinalIgnoreCase))
+                return false;
 			var match = RegexBox.Match(value);
 			if (match.Success)
 			{
@@ -59,7 +64,7 @@ namespace Raven.Database.Indexing.Spatial
 		{
 			shape = default(string);
 
-			if (!uriString.StartsWith("geo:"))
+			if (!uriString.StartsWith("geo:",StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			var components = uriString.Substring(4, uriString.Length - 4).Split(';').Select(x => x.Trim());

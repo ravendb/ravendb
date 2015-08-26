@@ -86,8 +86,8 @@ namespace TrafficRecorder
 				var amountConstraint = Int32.Parse(x);
 				config.AmountConstraint = amountConstraint;
 			});
-			options.Add("compressed", OptionCategory.TrafficRecordReplay, "Time to perform the traffic watch", x => { config.IsCompressed = true; });
-			options.Add("noOutput", OptionCategory.TrafficRecordReplay, "Suppress output", value => config.PrintOutput = false);
+			options.Add("compressed", OptionCategory.TrafficRecordReplay, "Work with compressed json outpu/input", x => { config.IsCompressed = true; });
+			options.Add("noOutput", OptionCategory.TrafficRecordReplay, "Suppress console progress output", value => config.PrintOutput = false);
 			options.Add("timeout:", OptionCategory.TrafficRecordReplay, "The timeout to use for requests(seconds)", s => config.Timeout = TimeSpan.FromSeconds(int.Parse(s)));
 			options.Add("u|user|username:", OptionCategory.TrafficRecordReplay, "The username to use when the database requires the client to authenticate.", value => GetCredentials(config.ConnectionString).UserName = value);
 			options.Add("p|pass|password:", OptionCategory.TrafficRecordReplay, "The password to use when the database requires the client to authenticate.", value => GetCredentials(config.ConnectionString).Password = value);

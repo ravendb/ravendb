@@ -30,18 +30,18 @@ namespace Voron.Tests.Bugs
 				txw.Commit();
 
                 DebugStuff.RenderAndShow(txw, 1);
-            }
+			}
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var tree = Env.State.GetTree(txw, "bar");
+				var tree = Env.CreateTree(txw, "bar");
 
 				tree.Add("bars/1", new MemoryStream(bytes));
 
 				txw.Commit();
 
                 DebugStuff.RenderAndShow(txw, 1);
-            }
+			}
 
 			var bytesToFillFirstJournalCompletely = new byte[8*AbstractPager.PageSize];
 
@@ -49,7 +49,7 @@ namespace Voron.Tests.Bugs
 
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var tree = Env.State.GetTree(txw, "baz");
+				var tree = Env.CreateTree(txw, "baz");
 
 				// here we have to put a big value to be sure that in next transaction we will put the
 				// updated value into a new journal file - this is the key to expose the issue
@@ -58,24 +58,24 @@ namespace Voron.Tests.Bugs
 				txw.Commit();
 
                 DebugStuff.RenderAndShow(txw, 1);
-            }
+			}
 
 			using (var txr = Env.NewTransaction(TransactionFlags.Read))
 			{
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = Env.State.GetTree(txw, "foo");
+					var tree = Env.CreateTree(txw, "foo");
 
 					tree.Add("foos/1", new MemoryStream());
 
 					txw.Commit();
 
                     DebugStuff.RenderAndShow(txw, 1);
-                }
+				}
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.State.GetTree(txr, "foo").Read("foos/1"));
+				Assert.NotNull(Env.CreateTree(txr, "foo").Read("foos/1"));
 			}
 		}
 	}

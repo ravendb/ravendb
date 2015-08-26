@@ -110,6 +110,7 @@ namespace Raven.SlowTests.Migration
 
 		private void ValidateBackup(IDocumentStore store)
 		{
+		    WaitForIndexing(store);
 			ValidateCounts(store);
 			ValidateIndexes(store);
 		}

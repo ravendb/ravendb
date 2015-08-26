@@ -21,7 +21,6 @@ namespace Raven.Database.Server.Connections
 
         readonly ConcurrentDictionary<string, AdminLogsConnectionState> connections = new ConcurrentDictionary<string, AdminLogsConnectionState>();
 
-        private bool enabled; // true when connections.Count > 0 - it allows us to avoid locks
 
         public TimeSensitiveStore<string> TimeSensitiveStore
         {
@@ -30,7 +29,7 @@ namespace Raven.Database.Server.Connections
 
         private void AlterEnabled()
         {
-            enabled = connections.Count > 0;
+            LogManager.EnableDebugLogForTargets = connections.Count > 0;
         }
 
         public void OnIdle()
@@ -87,9 +86,9 @@ namespace Raven.Database.Server.Connections
 	        }
 		}
 
-	    public override bool ShouldLog(ILog logger, LogLevel level)
+	    public override bool ShouldLog(ILog log, LogLevel level)
 	    {
-	        return enabled;
+            return LogManager.EnableDebugLogForTargets;
 	    }
 
         public AdminLogsConnectionState For(string id, RavenBaseApiController controller = null)

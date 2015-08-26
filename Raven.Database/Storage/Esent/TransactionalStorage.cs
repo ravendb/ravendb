@@ -121,7 +121,12 @@ namespace Raven.Storage.Esent
 	    {
 			scheduledReductionsPerViewAndLevel.Clear();
 	    }
-        public TableColumnsCache TableColumnsCache
+
+	    public void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler)
+	    {
+	    }
+
+	    public TableColumnsCache TableColumnsCache
         {
             get { return tableColumnsCache; }
         }

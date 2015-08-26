@@ -23,7 +23,6 @@ using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Util;
-using Raven.Database.Linq.PrivateExtensions;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
@@ -336,7 +335,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 					                      TotalSize = GetTotalSize(),
 					                      UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
 					                      Metadata = RetrieveMetadata(),
-					                      Name = filename,
+					                      Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"]),
 					                      Start = start
 				                      };
 
@@ -353,7 +352,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 					do
 					{
 						var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-						if (name != filename)
+						if (name.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
 							continue;
 
 						fileInformation.Pages.Add(new PageInformation
@@ -502,7 +501,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				do
 				{
 					var rowName = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-					if (rowName != filename)
+					if (rowName.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
 						break;
 
 					var pageId = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value;
@@ -571,7 +570,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-
 		public void CompleteFileUpload(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -629,7 +627,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 					do
 					{
 						var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-						if (name != filename)
+						if (name.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
 							break;
 
 						using (var update = new Update(session, Usage, JET_prep.Replace))

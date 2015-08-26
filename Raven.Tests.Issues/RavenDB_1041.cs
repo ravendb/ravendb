@@ -3,12 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Replication;
+
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
@@ -62,7 +60,6 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			ShowLogs = true;
 
 			var store1 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store1");
 			var store2 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store2");
@@ -112,6 +109,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanSpecifyTimeoutWhenWaitingForReplication()
 		{
+		    ShowLogs = true;
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
@@ -130,8 +128,6 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldThrowTimeoutException()
 		{
-			ShowLogs = true;
-
 			var store1 = CreateStore(requestedStorageType: "esent");
 			var store2 = CreateStore(requestedStorageType: "esent");
 
@@ -164,7 +160,7 @@ namespace Raven.Tests.Issues
 			}
 
 			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
-			Assert.Contains("Confirmed that the specified etag", exception.Message);
+			Assert.Contains("Could only confirm that the specified Etag", exception.Message);
 		}
 
 		[Fact]

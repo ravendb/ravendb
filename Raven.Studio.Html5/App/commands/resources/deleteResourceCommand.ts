@@ -77,8 +77,8 @@ class deleteDatabaseCommand extends commandBase {
         var mergedPromise = $.Deferred();
 
         var combinedPromise = $.when.apply(null, deleteTasks);
-        combinedPromise.done(() => {
-            var deletedResources = [].concat.apply([], _arguments);
+        combinedPromise.done((resources) => {
+            var deletedResources = [].concat.apply([], resources);
             this.reportSuccess("Successfully deleted " + deletedResources.length + " resources!");
             mergedPromise.resolve(deletedResources);
         });

@@ -13,11 +13,11 @@
                             <span data-bind="text: selectedDestionationText"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu scrollable-menu" role="menu">
-                            <!-- ko foreach: destinations -->
-                            <li data-bind="click: $root.setSelectedDestination.bind($root, $data)"><a href="#" data-bind="text: $data.Database + ' on ' + $data.Url"></a></li>
-                            <!-- /ko -->
-                        </ul>
+						<ul class="dropdown-menu scrollable-resource-menu" role="menu">
+							<!-- ko foreach: destinations -->
+							<li data-bind="click: $root.setSelectedDestination.bind($root, $data)"><a href="#" data-bind="text: $data.Database + ' on ' + $data.Url"></a></li>
+							<!-- /ko -->
+						</ul>
                     </div>
                 </div>
             </div>

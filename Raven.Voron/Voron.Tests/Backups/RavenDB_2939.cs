@@ -37,7 +37,7 @@ namespace Voron.Tests.Backups
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+					tx.Root.Add			("items/" + i, new MemoryStream(buffer));
 					tx.Commit();
 				}
 			}

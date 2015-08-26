@@ -6,26 +6,19 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Connections
 {
 	public class WebSocketBufferPool
 	{
-		private const int TakeRetries = 128;
 		private const int BufferSize = 1024;
-		private readonly int numberOfBuffersToAllocate = 128;
-		private readonly ConcurrentStack<ArraySegment<byte>> buffersOnGen2OrLoh = new ConcurrentStack<ArraySegment<byte>>();
-		private readonly ConcurrentQueue<byte[]> buffersNotOnGen2 = new ConcurrentQueue<byte[]>();
-		private readonly Version dotNetVersion = Environment.Version;
-		private readonly Version dotNetVersion_4_5_2 = Version.Parse("4.0.30319.34000");
-
 		public static WebSocketBufferPool Instance;
+		private PinnableBufferCache pinnableBufferCache;
 
-		public WebSocketBufferPool(int webSocketPoolSizeInBytes)
+		private WebSocketBufferPool(int webSocketPoolSizeInBytes)
 		{
-			numberOfBuffersToAllocate = webSocketPoolSizeInBytes/BufferSize;
-
-			AllocateBuffers();
+			pinnableBufferCache = new PinnableBufferCache("websocketbufferpool", BufferSize);
 		}
 
 		public static void Initialize(int webSocketPoolSizeInBytes)
@@ -35,83 +28,15 @@ namespace Raven.Database.Server.Connections
 
 			Instance = new WebSocketBufferPool(webSocketPoolSizeInBytes);
 		}
-
-		private void AllocateBuffers()
-		{
-			if (dotNetVersion.CompareTo(dotNetVersion_4_5_2) > 0) // >= .NET 4.5.2
-			{
-				var bytes = new byte[numberOfBuffersToAllocate * BufferSize];
-
-				for (var i = 0; i < numberOfBuffersToAllocate; i++)
-				{
-					var buffer = new ArraySegment<byte>(bytes, i * BufferSize, BufferSize);
-					buffersOnGen2OrLoh.Push(buffer);
-				}
-			}
-			else
-			{
-				// there was a bug (fixed in .NET 4.5.2) which doesn't allow us to specify non-zero offset in ArraySegment
-				// https://connect.microsoft.com/VisualStudio/feedback/details/812310/bug-websockets-can-only-use-0-offset-internal-buffer
-
-				while (buffersNotOnGen2.Count < numberOfBuffersToAllocate)
-				{
-					buffersNotOnGen2.Enqueue(new byte[BufferSize]);
-				}
-
-				var promotingBuffersToGen2Duration = Stopwatch.StartNew();
-
-				while (true)
-				{
-					bool atLeastOneSentToGen2 = false;
-
-					byte[] buffer = null;
-
-					while (buffersNotOnGen2.TryDequeue(out buffer) && GC.GetGeneration(buffer) == GC.MaxGeneration)
-					{
-						atLeastOneSentToGen2 = true;
-						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
-					}
-
-					if (atLeastOneSentToGen2)
-						break;
-
-					if(buffer != null)
-						buffersNotOnGen2.Enqueue(buffer);
-
-					// force to move to Gen2
-					for (int i = 0; i < GC.MaxGeneration; i++)
-					{
-						GC.Collect(i, GCCollectionMode.Forced, true);
-					}
-
-					if (promotingBuffersToGen2Duration.Elapsed > TimeSpan.FromSeconds(1) && buffer != null)
-					{
-						buffersOnGen2OrLoh.Push(new ArraySegment<byte>(buffer));
-					}
-				}
-			}
-		}
-
+		
 		public ArraySegment<byte> TakeBuffer()
 		{
-			var retries = 0;
-			// ReSharper disable once TooWideLocalVariableScope
-			ArraySegment<byte> buffer;
-				
-			while (retries++ < TakeRetries)
-			{
-				if (buffersOnGen2OrLoh.TryPop(out buffer))
-					return buffer;
-				
-				AllocateBuffers();
-			}
-
-			throw new InvalidOperationException("Unable to take a web socket buffer");
+			return new ArraySegment<byte>(pinnableBufferCache.AllocateBuffer());
 		}
 
 		public void ReturnBuffer(ArraySegment<byte> buffer)
 		{
-			buffersOnGen2OrLoh.Push(buffer);
+			pinnableBufferCache.FreeBuffer(buffer.Array);
 		}
 	}
 }

@@ -23,6 +23,9 @@ namespace Raven.Abstractions.Spatial
 
 		public string Sanitize(string shapeWkt)
 		{
+		    if (string.IsNullOrEmpty(shapeWkt))
+		        return shapeWkt;
+
 			if (RectangleRegex.IsMatch(shapeWkt))
 				return shapeWkt;
 

@@ -106,7 +106,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public bool IsReduceStale(int id)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-            using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, (Slice)CreateKey(id)))
+            using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateViewKey(id)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;

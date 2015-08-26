@@ -195,14 +195,11 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void ReplicateIndexesMultiPut(ReplicationStrategy destination, List<Tuple<IndexDefinition, IndexingPriority>> candidatesForReplication)
 		{
-			var requestParams = new MultiplePutIndexParam
-			{
-				Definitions = candidatesForReplication.Select(x => x.Item1).ToArray(),
-				IndexesNames = candidatesForReplication.Select(x => x.Item1.Name).ToArray(),
-				Priorities = candidatesForReplication.Select(x => x.Item2).ToArray()
-			};
+			var indexesToAdd = candidatesForReplication
+				.Select(x => new IndexToAdd { Definition = x.Item1, Name = x.Item1.Name, Priority = x.Item2 })
+				.ToArray();
 
-			var serializedIndexDefinitions = RavenJToken.FromObject(requestParams);
+			var serializedIndexDefinitions = RavenJToken.FromObject(indexesToAdd);
 			var url = string.Format("{0}/indexes?{1}", destination.ConnectionStringOptions.Url, GetDebugInformation());
 
 			var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, replication.GetRequestBuffering(destination));

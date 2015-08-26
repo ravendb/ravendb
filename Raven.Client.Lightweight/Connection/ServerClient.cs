@@ -29,7 +29,6 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Json.Linq;
@@ -241,9 +240,15 @@ namespace Raven.Client.Connection
 		{
 			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
 		}
-		public List<string> PutIndexes(string[] names, IndexDefinition[] definitions, IndexingPriority[] priorities)
+
+		public string[] PutIndexes(IndexToAdd[] indexesToAdd)
 		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(names, definitions, priorities));
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));
+		}
+
+		public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			return AsyncHelpers.RunSync(() => asyncServerClient.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc));
 		}
 
 		public bool IndexHasChanged(string name, IndexDefinition indexDef)

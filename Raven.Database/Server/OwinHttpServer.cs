@@ -7,6 +7,7 @@ using Microsoft.Owin.Hosting;
 using Owin;
 using Raven.Database.Config;
 using Raven.Database.Embedded;
+using Raven.Database.Impl;
 using Raven.Database.Server.Security.Windows;
 
 namespace Raven.Database.Server
@@ -83,11 +84,12 @@ namespace Raven.Database.Server
 	
 		public void Dispose()
 		{
-            owinEmbeddedHost.Dispose();
+		    var ea = new ExceptionAggregator("Cannot dispose server");
+		    ea.Execute(owinEmbeddedHost.Dispose);
 		    if (server != null)
-		    {
-		        server.Dispose();
-		    }
+                ea.Execute(server.Dispose);
+
+            ea.ThrowIfNeeded();
 		}
 	}
 }
