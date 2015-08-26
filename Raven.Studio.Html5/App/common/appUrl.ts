@@ -281,6 +281,10 @@ class appUrl {
         return "#admin/settings/adminLogs";
     }
 
+    static forServerTopology(): string { 
+        return "#admin/settings/topology";
+    }
+
     static forTrafficWatch(): string {
         return "#admin/settings/trafficWatch";
     }

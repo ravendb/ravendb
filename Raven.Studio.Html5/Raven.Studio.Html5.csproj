@@ -33,6 +33,7 @@
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
     <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
@@ -170,6 +171,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
@@ -378,6 +380,7 @@
     <Content Include="App\views\manage\ioTest.html" />
     <Content Include="App\views\manage\licenseInformation.html" />
     <Content Include="App\views\manage\diskIoViewer.html" />
+    <Content Include="App\views\manage\topology.html" />
     <Content Include="App\views\manage\restore.html" />
     <Content Include="App\views\manage\serverSmuggling.html" />
     <Content Include="App\views\manage\studioConfig.html" />
