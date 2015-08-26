@@ -63,17 +63,17 @@ namespace Voron.Trees
 
 		public void RecordNewPage(Page p, int num)
 		{
-			PageCount++;
-			var flags = p.Flags;
-			if ((flags & PageFlags.Branch) == PageFlags.Branch)
+			PageCount += num;
+
+			if (p.IsBranch)
 			{
 				BranchPages++;
 			}
-			else if ((flags & PageFlags.Leaf) == PageFlags.Leaf)
+			else if (p.IsLeaf)
 			{
 				LeafPages++;
 			}
-			else if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+			else if (p.IsOverflow)
 			{
 				OverflowPages += num;
 			}

@@ -49,7 +49,6 @@ namespace Voron.Trees
         public byte* Execute()
         {
             Page rightPage = _tree.NewPage(_page.Flags, 1);
-            _treeState.RecordNewPage(_page, 1);
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
@@ -57,7 +56,6 @@ namespace Voron.Trees
 				_cursor.Push(newRootPage);
                 _treeState.RootPageNumber = newRootPage.PageNumber;
                 _treeState.Depth++;
-                _treeState.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page
                 newRootPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, _page.PageNumber);
