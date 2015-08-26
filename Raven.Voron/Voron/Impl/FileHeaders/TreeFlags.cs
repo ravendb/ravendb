@@ -7,6 +7,7 @@ namespace Voron.Impl.FileHeaders
     {
         None = 0,
         MultiValue = 1,
-		FixedSizeTrees = 2
+		FixedSizeTrees = 2,
+		MultiValueTrees = 4
     }
 }

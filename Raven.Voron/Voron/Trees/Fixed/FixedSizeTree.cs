@@ -648,7 +648,7 @@ namespace Voron.Trees.Fixed
                 largeHeader->NumberOfEntries -= nextPage.FixedSize_NumberOfEntries;
 
 
-                var treeDeleted = RemoveEntirePage(nextPage); // this will rebalance the tree if needed
+                var treeDeleted = RemoveEntirePage(nextPage, largeHeader); // this will rebalance the tree if needed
                 System.Diagnostics.Debug.Assert(treeDeleted == false);
             }
 
@@ -677,7 +677,7 @@ namespace Voron.Trees.Fixed
                         break;
                 }
 
-                rangeRemoved = RemoveRangeFromPage(page, end);
+                rangeRemoved = RemoveRangeFromPage(page, end, largeHeader);
                 if (_flags == FixedSizeTreeHeader.OptionFlags.Large)// we might have converted to embedded, in which case we can't use it
                     largeHeader->NumberOfEntries -= rangeRemoved;
                 entriesDeleted += rangeRemoved;
@@ -711,7 +711,7 @@ namespace Voron.Trees.Fixed
             return null;
         }
 
-        private int RemoveRangeFromPage(Page page, long rangeEnd)
+        private int RemoveRangeFromPage(Page page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
         {
             var startPos = page.LastSearchPosition;
             BinarySearch(page, rangeEnd);
@@ -733,20 +733,20 @@ namespace Voron.Trees.Fixed
             page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
             if (page.FixedSize_NumberOfEntries == 0)
             {
-                if (RemoveEntirePage(page))
+                if (RemoveEntirePage(page, largeHeader))
                     return entriesDeleted;
             }
             else
             {
                 while (page != null)
                 {
-                    page = RebalancePage(page);
+                    page = RebalancePage(page, largeHeader);
                 }
             }
             return entriesDeleted;
         }
 
-        private bool RemoveEntirePage(Page page)
+        private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
         {
             _tx.FreePage(page.PageNumber);
             if (_cursor.Count == 0) //remove the root page
@@ -760,7 +760,7 @@ namespace Voron.Trees.Fixed
             RemoveEntryFromPage(parentPage, parentPage.LastSearchPosition);
             while (parentPage != null)
             {
-                parentPage = RebalancePage(parentPage);
+                parentPage = RebalancePage(parentPage, largeHeader);
             }
             return false;
         }
@@ -780,7 +780,7 @@ namespace Voron.Trees.Fixed
 
             while (page != null)
             {
-                page = RebalancePage(page);
+                page = RebalancePage(page, largeHeader);
             }
 
 	        return new DeletionResult {NumberOfEntriesDeleted = 1};
@@ -802,7 +802,7 @@ namespace Voron.Trees.Fixed
                    (page.FixedSize_NumberOfEntries - pos + 1) * size);
         }
 
-        private Page RebalancePage(Page page)
+        private Page RebalancePage(Page page, FixedSizeTreeHeader.Large* largeTreeHeader)
         {
             if (_cursor.Count == 0)
             {
@@ -830,7 +830,11 @@ namespace Voron.Trees.Fixed
                     var rootPageNum = page.PageNumber;
                     Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, AbstractPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
-                    _tx.FreePage(childPage);
+
+	                if (largeTreeHeader != null)
+		                largeTreeHeader->Depth--;
+
+	                _tx.FreePage(childPage);
                 }
 
                 return null;

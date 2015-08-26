@@ -88,6 +88,7 @@
     <Compile Include="CounterReplicationTests.cs" />
     <Compile Include="CountersChangesTests.cs" />
     <Compile Include="CounterStatsTests.cs" />
+    <Compile Include="CountersTopologyViewTests.cs" />
     <Compile Include="RavenBaseCountersTest.cs" />
     <Compile Include="CountersBasicClientTests.cs" />
     <Compile Include="CountersBatchTests.cs" />

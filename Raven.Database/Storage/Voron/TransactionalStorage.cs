@@ -575,7 +575,7 @@ namespace Raven.Storage.Voron
 		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
 		{
 			var seperator = new String('#', 80);
-			var padding = new String('\t', 3);
+			var padding = new String('\t', 1);
 			var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
 			var reportAsList = new List<string>();
 			reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
@@ -620,8 +620,42 @@ namespace Raven.Storage.Voron
 				sb.Append(Environment.NewLine);
 				sb.Append("OverflowPages: ");
 				sb.Append(tree.OverflowPages);
+				sb.Append(Environment.NewLine);
+
+				if (tree.MultiValues != null)
+				{
+					sb.Append("Multi values: ");
+					sb.Append(Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("Records: ");
+					sb.Append(tree.MultiValues.EntriesCount);
+					sb.Append(Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("PageCount: ");
+					sb.Append(tree.MultiValues.PageCount);
+					sb.Append(Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("LeafPages: ");
+					sb.Append(tree.MultiValues.LeafPages);
+					sb.Append(Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("BranchPages: ");
+					sb.Append(tree.MultiValues.BranchPages);
+					sb.Append(Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("OverflowPages: ");
+					sb.Append(tree.MultiValues.OverflowPages);
+					sb.Append(Environment.NewLine);
+				}
+				
 				reportAsList.Add(sb.ToString());
 			}
+
 			if (report.Journals.Any())
 			{
 				reportAsList.Add("Journals:");
@@ -640,10 +674,12 @@ namespace Raven.Storage.Voron
 					sb.Append("Allocated space: ");
 					sb.Append(SizeHelper.Humane(journal.AllocatedSpaceInBytes));
 					sb.Append(Environment.NewLine);
+
+					reportAsList.Add(sb.ToString());
 				}
 			}
-			return reportAsList;
 
+			return reportAsList;
 		}
 
 		public List<TransactionContextData> GetPreparedTransactions()

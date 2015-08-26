@@ -1,13 +1,17 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -30,7 +34,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/replication/purge-tombstones")]
 		[RavenRoute("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
@@ -67,7 +70,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/replicationInfo")]
 		[RavenRoute("databases/{databaseName}/admin/replicationInfo")]
 		public async Task<HttpResponseMessage> ReplicationInfo()
 		{
@@ -87,7 +89,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/replication/topology/view")]
 		[RavenRoute("databases/{databaseName}/admin/replication/topology/view")]
 		public Task<HttpResponseMessage> ReplicationTopology()
 		{

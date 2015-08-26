@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Voron.Debugging;
 using Voron.Trees;
 using Xunit;
@@ -90,6 +92,108 @@ namespace Voron.Tests.Trees
 				Assert.Equal(3, tx.State.Root.State.Depth);
 
 			}
-		} 
+		}
+
+		[Fact]
+		public void HasReducedTreeDepthValueAfterRemovingEntries()
+		{
+			const int numberOfItems = 1024;
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "test");
+
+				for (int i = 0; i < numberOfItems; i++)
+				{
+					tree.Add("test" + new string('-', 256) + i, new byte[256]);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+				
+				Assert.Equal(4, tree.State.Depth);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
+				for (int i = 0; i < numberOfItems * 0.75; i++)
+				{
+					tree.Delete("test" + new string('-', 256) + i);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+
+				Assert.Equal(3, tree.State.Depth);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
+				for (int i = 0; i < numberOfItems; i++)
+				{
+					tree.Delete("test" + new string('-', 256) + i);
+				}
+
+				DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber);
+
+				Assert.Equal(1, tree.State.Depth);
+			}
+		}
+
+		[Fact]
+		public void AllPagesCantHasDuplicatesInMultiTrees()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 100; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+				}
+
+				var allPages = tree.AllPages();
+				var allPagesDistinct = allPages.Distinct().ToList();
+				
+				Assert.Equal(allPagesDistinct.Count, allPages.Count);
+			}
+		}
+
+		[Fact]
+		public void MustNotProduceNegativePageCountNumber()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "multi-tree");
+
+				for (int i = 0; i < 50; i++)
+				{
+					tree.MultiAdd("key", "items/" + i + "/" + new string('p', i));
+					tree.MultiAdd("key2", "items/" + i + "/" + new string('p', i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("multi-tree");
+
+				for (int i = 0; i < 50; i++)
+				{
+					Assert.DoesNotThrow(() => tree.MultiDelete("key", "items/" + i + "/" + new string('p', i)));
+					Assert.DoesNotThrow(() => tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i)));
+				}
+
+				Assert.True(tree.State.PageCount >= 0);
+				Assert.Equal(tree.AllPages().Count, tree.State.PageCount);
+			}
+		}
 	}
 }

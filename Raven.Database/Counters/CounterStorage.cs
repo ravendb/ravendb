@@ -93,6 +93,7 @@ namespace Raven.Database.Counters
 			using (var tx = Environment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				storageEnvironment.CreateTree(tx, TreeNames.ServersLastEtag);
+				storageEnvironment.CreateTree(tx, TreeNames.ReplicationSources);
 				storageEnvironment.CreateTree(tx, TreeNames.Counters);
 				storageEnvironment.CreateTree(tx, TreeNames.DateToTombstones);
 				storageEnvironment.CreateTree(tx, TreeNames.GroupToCounters);
@@ -304,7 +305,7 @@ namespace Raven.Database.Counters
 		public class Reader : IDisposable
 		{
 			private readonly Transaction transaction;
-			private readonly Tree counters, tombstonesByDate, groupToCounters, tombstonesGroupToCounters, counterIdWithNameToGroup, etagsToCounters, countersToEtag, serversLastEtag, metadata;
+			private readonly Tree counters, tombstonesByDate, groupToCounters, tombstonesGroupToCounters, counterIdWithNameToGroup, etagsToCounters, countersToEtag, serversLastEtag, replicationSources, metadata;
 			private readonly CounterStorage parent;
 
 			[CLSCompliant(false)]
@@ -320,6 +321,7 @@ namespace Raven.Database.Counters
 				countersToEtag = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
 				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
 				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
+				replicationSources = transaction.State.GetTree(transaction, TreeNames.ReplicationSources);
 				metadata = transaction.State.GetTree(transaction, TreeNames.Metadata);
 			}
 
@@ -584,6 +586,33 @@ namespace Raven.Database.Counters
 				}
 			}
 
+			public IEnumerable<ServerEtagAndSourceName> GetServerSources()
+			{
+				var lookupDict = GetServerEtags().ToDictionary(x => x.ServerId, x => x.Etag);
+
+				using (var it = replicationSources.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) == false)
+						yield break;
+
+					do
+					{
+						var b = new byte[it.CurrentKey.Size];
+						it.CurrentKey.CreateReader().Read(b, 0, b.Length);
+
+						var serverId = new Guid(b);
+
+						yield return new ServerEtagAndSourceName
+						{
+							ServerId = serverId,
+							SourceName = it.CreateReaderForCurrent().ToString(),
+							Etag = lookupDict[serverId]
+						};
+
+					} while (it.MoveNext());
+				}
+			}
+
 			public IEnumerable<ServerEtag> GetServerEtags()
 			{
 				using (var it = serversLastEtag.Iterate())
@@ -593,16 +622,14 @@ namespace Raven.Database.Counters
 
 					do
 					{
-						//should never ever happen :)
-						/*Debug.Assert(buffer.Length >= it.GetCurrentDataSize());
+						var b = new byte[it.CurrentKey.Size];
+						it.CurrentKey.CreateReader().Read(b, 0, b.Length);
 
-						it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);*/
 						yield return new ServerEtag
 						{
-							ServerId = Guid.Parse(it.CurrentKey.ToString()),
+							ServerId = new Guid(b),
 							Etag = it.CreateReaderForCurrent().ReadBigEndianInt64()
 						};
-
 					} while (it.MoveNext());
 				}
 			}
@@ -694,6 +721,16 @@ namespace Raven.Database.Counters
 				return readResult != null ? readResult.Reader.ReadBigEndianInt64() : 0;
 			}
 
+			public string GetSourceNameFor(Guid serverId)
+			{
+				var slice = new Slice(serverId.ToByteArray());
+				var readResult = replicationSources.Read(slice);
+				var reader = readResult.Reader;
+				int used;
+				var sourceNameBuffer = reader.ReadBytes(reader.Length, out used);
+				return Encoding.UTF8.GetString(sourceNameBuffer, 0, reader.Length);
+			}
+
 			public CountersReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read("replication");
@@ -744,8 +781,9 @@ namespace Raven.Database.Counters
 				counterIdWithNameToGroup, 
 				etagsToCounters, 
 				countersToEtag, 
-				serversLastEtag, 
-				metadata;
+				serversLastEtag,
+				replicationSources,
+                metadata;
 			private readonly Buffer buffer;
 
 			private class Buffer
@@ -781,6 +819,8 @@ namespace Raven.Database.Counters
 				countersToEtag = tx.State.GetTree(tx, TreeNames.CountersToEtag);
 				etagsToCounters = tx.State.GetTree(tx, TreeNames.EtagsToCounters);
 				serversLastEtag = tx.State.GetTree(tx, TreeNames.ServersLastEtag);
+				replicationSources = tx.State.GetTree(tx, TreeNames.ReplicationSources);
+
 				metadata = tx.State.GetTree(tx, TreeNames.Metadata);
 				buffer = new Buffer(parent.sizeOfGuid);
 			}
@@ -1035,6 +1075,12 @@ namespace Raven.Database.Counters
 				return serverId.Equals(parent.tombstoneId);
 			}
 
+			public void RecordSourceNameFor(Guid serverId, string sourceName)
+			{
+				var serverIdSlice = new Slice(serverId.ToByteArray());
+				replicationSources.Add(serverIdSlice, new Slice(sourceName));
+			}
+
 			public void RecordLastEtagFor(Guid serverId, long lastEtag)
 			{
 				var serverIdSlice = new Slice(serverId.ToByteArray());
@@ -1227,9 +1273,15 @@ namespace Raven.Database.Counters
 			public long Etag { get; set; }
 		}
 
+		public class ServerEtagAndSourceName : ServerEtag
+		{
+			public string SourceName { get; set; }
+		}
+
 		private static class TreeNames
 		{
-			public const string ServersLastEtag = "servers->lastEtag";
+			public const string ReplicationSources = "servers->sourceName";
+            public const string ServersLastEtag = "servers->lastEtag";
 			public const string Counters = "counters";
 			public const string DateToTombstones = "date->tombstones";
 			public const string GroupToCounters = "group->counters";
