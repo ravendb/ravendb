@@ -67,8 +67,6 @@ class copyIndexDialog extends dialogViewModelBase {
             }
 
             if (indexDto) {
-                new getIndexDefinitionCommand(indexDto.Name, this.db)
-                    .execute();
                     new saveIndexDefinitionCommand(indexDto, this.db)
                             .execute()
                             .done(() => {
