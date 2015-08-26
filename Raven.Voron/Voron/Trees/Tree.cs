@@ -264,10 +264,10 @@ namespace Voron.Trees
             {
                 using ( var cursor = lazy.Value )
                 {
-                cursor.Update(cursor.Pages.First, page);
+                    cursor.Update(cursor.Pages.First, page);
 
                 var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
-                dataPos = pageSplitter.Execute();
+                    dataPos = pageSplitter.Execute();
                 }
 
                 DebugValidateTree(State.RootPageNumber);
@@ -295,7 +295,7 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
+		private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
             var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
             var overflowPageStart = _tx.AllocatePage(numberOfPages, PageFlags.Overflow);
@@ -551,9 +551,9 @@ namespace Voron.Trees
             return true;
         }
 
-        internal Page NewPage(PageFlags flags, int num)
+		internal Page NewPage(PageFlags flags, int num)
         {
-            var page = _tx.AllocatePage(num, flags);
+			var page = _tx.AllocatePage(num, flags);
 
 			State.RecordNewPage(page, num);
 
@@ -765,7 +765,7 @@ namespace Voron.Trees
             return new Tree(tx, _state.Clone()) { Name = Name };
         }
 
-        private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
+		private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
                                                       MemorySlice key, int len, ushort? version, out byte* pos)
         {
             if (updatedNode->Flags == NodeFlags.PageRef &&

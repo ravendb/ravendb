@@ -650,7 +650,7 @@ namespace Raven.Storage.Voron
 				if (computeExactSizes)
 				{
 					sb.Append("Used Size: ");
-					sb.Append(SizeHelper.Humane((long) (ownedSize*tree.Density)));
+					sb.Append(SizeHelper.Humane((long)(ownedSize * tree.Density)));
 					sb.Append(System.Environment.NewLine);
 				}
 				sb.Append("Records: ");
@@ -673,7 +673,7 @@ namespace Raven.Storage.Voron
 				sb.Append(System.Environment.NewLine);
 
 				if (tree.MultiValues != null)
-		{
+				{
 					sb.Append("Multi values: ");
 					sb.Append(System.Environment.NewLine);
 
@@ -701,7 +701,7 @@ namespace Raven.Storage.Voron
 					sb.Append("OverflowPages: ");
 					sb.Append(tree.MultiValues.OverflowPages);
 					sb.Append(System.Environment.NewLine);
-		}
+				}
 
 				reportAsList.Add(sb.ToString());
 			}
