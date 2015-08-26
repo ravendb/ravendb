@@ -51,7 +51,7 @@ namespace Raven.Database.Storage
 		void ClearCaches();
 		void DumpAllStorageTables();
 		InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
-        IList<string> ComputeDetailedStorageInformation();
+        IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false);
         List<TransactionContextData> GetPreparedTransactions();
 
 		object GetInFlightTransactionsInternalStateForDebugOnly();
