@@ -635,72 +635,72 @@ namespace Raven.Storage.Voron
 			foreach (var tree in report.Trees.OrderByDescending(x => x.PageCount))
 			{
 				var sb = new StringBuilder();
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append(seperator);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append(padding);
 				sb.Append(tree.Name);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append(seperator);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("Owned Size: ");
 				var ownedSize = AbstractPager.PageSize * tree.PageCount;
 				sb.Append(SizeHelper.Humane(ownedSize));
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				if (computeExactSizes)
 				{
 					sb.Append("Used Size: ");
 					sb.Append(SizeHelper.Humane((long) (ownedSize*tree.Density)));
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 				}
 				sb.Append("Records: ");
 				sb.Append(tree.EntriesCount);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("Depth: ");
 				sb.Append(tree.Depth);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("PageCount: ");
 				sb.Append(tree.PageCount);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("LeafPages: ");
 				sb.Append(tree.LeafPages);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("BranchPages: ");
 				sb.Append(tree.BranchPages);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 				sb.Append("OverflowPages: ");
 				sb.Append(tree.OverflowPages);
-				sb.Append(Environment.NewLine);
+				sb.Append(System.Environment.NewLine);
 
 				if (tree.MultiValues != null)
 		{
 					sb.Append("Multi values: ");
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					sb.Append(padding);
 					sb.Append("Records: ");
 					sb.Append(tree.MultiValues.EntriesCount);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					sb.Append(padding);
 					sb.Append("PageCount: ");
 					sb.Append(tree.MultiValues.PageCount);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					sb.Append(padding);
 					sb.Append("LeafPages: ");
 					sb.Append(tree.MultiValues.LeafPages);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					sb.Append(padding);
 					sb.Append("BranchPages: ");
 					sb.Append(tree.MultiValues.BranchPages);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					sb.Append(padding);
 					sb.Append("OverflowPages: ");
 					sb.Append(tree.MultiValues.OverflowPages);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 		}
 
 				reportAsList.Add(sb.ToString());
@@ -712,18 +712,18 @@ namespace Raven.Storage.Voron
 				foreach (var journal in report.Journals.OrderByDescending(x => x.AllocatedSpaceInBytes))
 				{
 					var sb = new StringBuilder();
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 					sb.Append(seperator);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 					sb.Append(padding);
 					sb.Append("Journal number: ");
 					sb.Append(journal.Number);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 					sb.Append(seperator);
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 					sb.Append("Allocated space: ");
 					sb.Append(SizeHelper.Humane(journal.AllocatedSpaceInBytes));
-					sb.Append(Environment.NewLine);
+					sb.Append(System.Environment.NewLine);
 
 					reportAsList.Add(sb.ToString());
 				}

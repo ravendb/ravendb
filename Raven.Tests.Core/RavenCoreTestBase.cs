@@ -98,23 +98,14 @@ namespace Raven.Tests.Core
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-<<<<<<< HEAD
-			var timeSpan = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
-			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeSpan);
-=======
 		    var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
 			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0,to);
->>>>>>> 799bb2f8945ce9571d7008db2de0c23fdc0fe1a7
 
 			if (spinUntil == false)
 			{
 				var statistics = databaseCommands.GetStatistics();
 				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-<<<<<<< HEAD
-				throw new TimeoutException("The indexes stayed stale for more than " + timeSpan + Environment.NewLine + stats);
-=======
 				throw new TimeoutException("The indexes stayed stale for more than " + to + Environment.NewLine + stats);
->>>>>>> 799bb2f8945ce9571d7008db2de0c23fdc0fe1a7
 			}
 		}
 
@@ -210,15 +201,5 @@ namespace Raven.Tests.Core
 				Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase(db, hardDelete: true);
 			}
 		}
-
-        public static IEnumerable<object[]> InsertOptions
-        {
-            get
-            {
-                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
-                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
-                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
-            }
-        }
 	}
 }

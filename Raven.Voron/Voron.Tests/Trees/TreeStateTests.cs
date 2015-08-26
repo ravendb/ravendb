@@ -27,17 +27,17 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < regularItemsCount; i++)
 				{
-					tx.State.Root.Add("test" + new string('-', r.Next(128)) + i, new byte[r.Next(512)]);
+					tx.Root.Add("test" + new string('-', r.Next(128)) + i, new byte[r.Next(512)]);
 				}
 
 				for (int i = 0; i < overflowsCount; i++)
 				{
-					tx.State.Root.Add("overflow" + new string('-', r.Next(128)) + i, new byte[r.Next(8192)]);
+					tx.Root.Add("overflow" + new string('-', r.Next(128)) + i, new byte[r.Next(8192)]);
 				}
 
 				tx.Commit();
 
-				var treeState = tx.State.Root.State;
+				var treeState = tx.Root.State;
 
 				Assert.True(treeState.PageCount > 0);
 				Assert.Equal(treeState.PageCount, treeState.BranchPages + treeState.LeafPages + treeState.OverflowPages);
@@ -54,42 +54,42 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < numberOfRegularItems; i++)
 				{
-					tx.State.Root.Add("test" + new string('-', 128) + i, new byte[256]);
+					tx.Root.Add("test" + new string('-', 128) + i, new byte[256]);
 				}
 
 				for (int i = 0; i < numberOfOverflowItems; i++)
 				{
-					tx.State.Root.Add("overflow" + new string('-', 128) + i, new byte[8192]);
+					tx.Root.Add("overflow" + new string('-', 128) + i, new byte[8192]);
 				}
 
 				tx.Commit();
 
-				Assert.Equal(50, tx.State.Root.State.PageCount);
-				Assert.Equal(38, tx.State.Root.State.LeafPages);
-				Assert.Equal(3, tx.State.Root.State.BranchPages);
-				Assert.Equal(9, tx.State.Root.State.OverflowPages);
-				Assert.Equal(3, tx.State.Root.State.Depth);				
+				Assert.Equal(50, tx.Root.State.PageCount);
+				Assert.Equal(38, tx.Root.State.LeafPages);
+				Assert.Equal(3, tx.Root.State.BranchPages);
+				Assert.Equal(9, tx.Root.State.OverflowPages);
+				Assert.Equal(3, tx.Root.State.Depth);				
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < numberOfRegularItems / 2; i++)
 				{
-					tx.State.Root.Delete("test" + new string('-', 128) + i);
+					tx.Root.Delete("test" + new string('-', 128) + i);
 				}
 
-				tx.State.Root.Delete("overflow" + new string('-', 128) + 0);
+				tx.Root.Delete("overflow" + new string('-', 128) + 0);
 
 				tx.Commit();
 
-				DebugStuff.RenderAndShow(tx.State.Root);
+				DebugStuff.RenderAndShow(tx.Root);
 
-				Assert.Equal(31, tx.State.Root.AllPages().Count);
-				Assert.Equal(31, tx.State.Root.State.PageCount);
-				Assert.Equal(22, tx.State.Root.State.LeafPages);
-				Assert.Equal(3, tx.State.Root.State.BranchPages);
-				Assert.Equal(6, tx.State.Root.State.OverflowPages);
-				Assert.Equal(3, tx.State.Root.State.Depth);
+				Assert.Equal(31, tx.Root.AllPages().Count);
+				Assert.Equal(31, tx.Root.State.PageCount);
+				Assert.Equal(22, tx.Root.State.LeafPages);
+				Assert.Equal(3, tx.Root.State.BranchPages);
+				Assert.Equal(6, tx.Root.State.OverflowPages);
+				Assert.Equal(3, tx.Root.State.Depth);
 
 			}
 		}

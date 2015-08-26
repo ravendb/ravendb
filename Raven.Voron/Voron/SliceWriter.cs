@@ -4,91 +4,83 @@ using Voron.Util.Conversion;
 
 namespace Voron
 {
-    public struct SliceWriter
-    {
-        private int _pos;
-        private readonly byte[] _buffer;
-	    private static readonly EndianBitConverter BitConverter = EndianBitConverter.Big;
+	public struct SliceWriter
+	{
+		private int _pos;
+		private readonly byte[] _buffer;
 
 		public SliceWriter(byte[] outsideBuffer)
-	    {
-		    _buffer = outsideBuffer;
-			_pos = 0;
-	    }
-
-        public SliceWriter(int size)
-        {
-		    _buffer = new byte[size];
-            _pos = 0;
-		}
-
-	    public void Write(string s)
-	    {
-			var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
-		    _pos += stringBytes;
-	    }
-
-		public void WriteBytes(byte[] bytes)
-	    {
-			Array.Copy(bytes, 0, _buffer, _pos, bytes.Length);
-			_pos += (bytes.Length);
-		}
-
-		public void Write(byte b)
 		{
-			_buffer[_pos] = b;
-			_pos += sizeof(byte);
+			_buffer = outsideBuffer;
+			_pos = 0;
+		}
+
+		public SliceWriter(int size)
+		{
+			_pos = 0;
+			_buffer = new byte[size];
+		}
+
+		public void WriteBigEndian(int i)
+		{
+			EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
+			_pos += sizeof(int);
+		}
+
+		public void WriteBigEndian(long l)
+		{
+			EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
+			_pos += sizeof(long);
+		}
+
+		public void WriteBigEndian(ulong l)
+		{
+			EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
+			_pos += sizeof(ulong);
+		}
+
+		public void WriteBigEndian(short s)
+		{
+			EndianBitConverter.Big.CopyBytes(s, _buffer, _pos);
+			_pos += sizeof(short);
+		}
+
+		public Slice CreateSlice()
+		{
+			return new Slice(_buffer);
+		}
+
+		public void Write(byte[] bytes)
+		{
+			Write(bytes, 0, bytes.Length);
+		}
+
+		private void Write(byte[] bytes, int offset, int count)
+		{
+			Buffer.BlockCopy(bytes, offset, _buffer, _pos, count);
+			_pos += count;
 		}
 
 		public void Write(char i)
 		{
-			BitConverter.CopyBytes(i, _buffer, _pos);
+			EndianBitConverter.Big.CopyBytes(i, _buffer, _pos);
 			_pos += sizeof(char);
-        }
-
-		public void Write(double d)
-        {
-			BitConverter.CopyBytes(d, _buffer, _pos);
-			_pos += sizeof(double);
-        }
-
-		public void Write(int i)
-        {
-			BitConverter.CopyBytes(i, _buffer, _pos);
-            _pos += sizeof(int);
 		}
 
-		public void Write(long l)
-        {
-			BitConverter.CopyBytes(l, _buffer, _pos);
-            _pos += sizeof(long);
-        }
+		public void Write(string s)
+		{
+			var stringBytes = Encoding.UTF8.GetBytes(s, 0, s.Length, _buffer, _pos);
+			_pos += stringBytes;
+		}
 
-        public void WriteBigEndian(ulong l)
-        {
-            EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
-            _pos += sizeof(ulong);
-        }
+		public void Reset()
+		{
+			_pos = 0;
+		}
 
-        public void WriteBigEndian(short s)
-        {
-			BitConverter.CopyBytes(s, _buffer, _pos);
-            _pos += sizeof(short);
-        }
-
-        public Slice CreateSlice()
-        {
-			return new Slice(_buffer, (ushort)(_pos));
-        }
-
-        public void Write(byte[] bytes)
-        {
-            Write(bytes, 0, bytes.Length);
-    }
-
-        private void Write(byte[] bytes, int offset, int count)
-        {
-            Buffer.BlockCopy(bytes, offset, _buffer, _pos, count);
-            _pos += count;
-}    }
+		public Slice CreateSlice(int pos)
+		{
+			return new Slice(_buffer, (ushort)pos);
+		}
+	}
 }

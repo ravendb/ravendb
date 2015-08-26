@@ -27,7 +27,7 @@ namespace Voron.Tests.FixedSize
             var bytes = new byte[48];
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -41,7 +41,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -65,7 +65,7 @@ namespace Voron.Tests.FixedSize
             var slice = new Slice(bytes);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -78,7 +78,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 var total = 0;
                 using (var it = fst.Iterate())
                 {
@@ -104,7 +104,7 @@ namespace Voron.Tests.FixedSize
             var slice = new Slice(bytes);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -117,7 +117,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -129,7 +129,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -151,7 +151,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -166,13 +166,13 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 Assert.Equal(count, fst.NumberOfEntries);
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(4, count - 3);
                 Assert.Equal(count - 6, itemsRemoved.NumberOfEntriesDeleted);
@@ -183,7 +183,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -214,7 +214,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -227,7 +227,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
                 Assert.Equal(count, itemsRemoved.NumberOfEntriesDeleted);
@@ -238,7 +238,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -262,7 +262,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -284,7 +284,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                     for (int j = (int) start; j <= (int) end; j++)
                     {
                         status[j] = false;
@@ -303,7 +303,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 					if (fst.NumberOfEntries == 0)
 						break;
 					for (int j = start; j <= end; j++)
@@ -318,7 +318,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i < count; i++)
                 {
                     if (status[i] != fst.Contains(i))
@@ -344,7 +344,7 @@ namespace Voron.Tests.FixedSize
             var status = new BitArray(count + 1);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -364,7 +364,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 					if (fst.NumberOfEntries == 0)
 						break;
 					for (int j = start; j <= end; j++)
@@ -378,7 +378,7 @@ namespace Voron.Tests.FixedSize
             }
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
                     Assert.Equal(status[i], fst.Contains(i));
@@ -399,7 +399,7 @@ namespace Voron.Tests.FixedSize
             var status = new BitArray(count * 3);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i*3, slice);
@@ -415,7 +415,7 @@ namespace Voron.Tests.FixedSize
                 var end = random.Next(start, status.Length);
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 	                if (fst.NumberOfEntries == 0)
 		                break;
 	                for (int j = start; j <= end; j++)
@@ -429,7 +429,7 @@ namespace Voron.Tests.FixedSize
             }
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {

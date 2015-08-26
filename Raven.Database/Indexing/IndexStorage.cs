@@ -405,7 +405,7 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				var directories = Directory.GetDirectories(suggestionsForIndex);
+				var directories = System.IO.Directory.GetDirectories(suggestionsForIndex);
 				if (directories.Any(dir => dir.Contains("-")))
 				{
 					// Legacy handling:
@@ -416,7 +416,7 @@ namespace Raven.Database.Indexing
 					HandleLegacySuggestions(directories);
 
 					// Refresh directories list as handling legacy might rename or delete some of them.					
-					directories = Directory.GetDirectories(suggestionsForIndex);
+					directories = System.IO.Directory.GetDirectories(suggestionsForIndex);
 				}
 
 				foreach (var directory in directories)
@@ -457,7 +457,7 @@ namespace Raven.Database.Indexing
 			foreach (var directory in directories)
 			{
 				var key = Path.GetFileName(directory);
-				var parentDir = Directory.GetParent(directory).FullName;
+				var parentDir = System.IO.Directory.GetParent(directory).FullName;
 
 				if (key.Contains("-"))
 		{
@@ -474,7 +474,7 @@ namespace Raven.Database.Indexing
 						var newLocation = Path.Combine(parentDir, field);
 
 						log.Info("Moving suggestions from: {0} to {1}", directory, newLocation);
-						Directory.Move(directory, newLocation);
+						System.IO.Directory.Move(directory, newLocation);
 					}
 				}
 				else

@@ -1,10 +1,10 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/database");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import database = require("models/resources/database");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
-import documentClass = require("models/document");
+import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
-import environmentColor = require("models/environmentColor");
+import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 
 class studioConfig extends viewModelBase {

@@ -823,8 +823,6 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.Index.EnsureIndexWriter();
 							indexToWorkOn.Index.Flush(lastEtag);
 						};
-					};
-
 						});
 					innerFilteredOutIndexes.Push(indexToWorkOn);
 					context.MarkIndexFilteredOut(indexName);
@@ -850,26 +848,25 @@ namespace Raven.Database.Indexing
 				for (int i = 0; i < 10 && keepTrying; i++)
 				{
 					keepTrying = false;
-			transactionalStorage.Batch(actionsAccessor =>
-			{
-						try
-				{
-					if (action != null)
-				    {
-				        try
-				        {
-						action(actionsAccessor);
-				}
-						catch (Exception e)
+					transactionalStorage.Batch(actionsAccessor =>
+					{
+						if (action != null)
 						{
-							if (actionsAccessor.IsWriteConflict(e))
+							try
 							{
-								keepTrying = true;
-								return;
+								action(actionsAccessor);
 							}
-							throw;
+							catch (Exception e)
+							{
+								if (actionsAccessor.IsWriteConflict(e))
+								{
+									keepTrying = true;
+									return;
+								}
+								throw;
+							}
 						}
-			});
+					});
 
 					if (keepTrying)
 						Thread.Sleep(11);

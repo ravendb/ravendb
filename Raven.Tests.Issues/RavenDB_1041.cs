@@ -3,21 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-<<<<<<< HEAD
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Replication;
+
 using Raven.Abstractions.Util;
-=======
-using System.Threading.Tasks;
->>>>>>> 799bb2f8945ce9571d7008db2de0c23fdc0fe1a7
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Issues

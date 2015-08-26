@@ -313,16 +313,16 @@ namespace Raven.Database.Counters
             {
 				this.transaction = transaction;
                 this.parent = parent;
-				counters = transaction.State.GetTree(transaction, TreeNames.Counters);
-				tombstonesByDate = transaction.State.GetTree(transaction, TreeNames.DateToTombstones);
-				groupToCounters = transaction.State.GetTree(transaction, TreeNames.GroupToCounters);
-				tombstonesGroupToCounters = transaction.State.GetTree(transaction, TreeNames.TombstonesGroupToCounters);
-				counterIdWithNameToGroup = transaction.State.GetTree(transaction, TreeNames.CounterIdWithNameToGroup);
-				countersToEtag = transaction.State.GetTree(transaction, TreeNames.CountersToEtag);
-				etagsToCounters = transaction.State.GetTree(transaction, TreeNames.EtagsToCounters);
-				serversLastEtag = transaction.State.GetTree(transaction, TreeNames.ServersLastEtag);
-				replicationSources = transaction.State.GetTree(transaction, TreeNames.ReplicationSources);
-				metadata = transaction.State.GetTree(transaction, TreeNames.Metadata);
+				counters = transaction.ReadTree(TreeNames.Counters);
+				tombstonesByDate = transaction.ReadTree(TreeNames.DateToTombstones);
+				groupToCounters = transaction.ReadTree(TreeNames.GroupToCounters);
+				tombstonesGroupToCounters = transaction.ReadTree(TreeNames.TombstonesGroupToCounters);
+				counterIdWithNameToGroup = transaction.ReadTree(TreeNames.CounterIdWithNameToGroup);
+				countersToEtag = transaction.ReadTree(TreeNames.CountersToEtag);
+				etagsToCounters = transaction.ReadTree(TreeNames.EtagsToCounters);
+				serversLastEtag = transaction.ReadTree(TreeNames.ServersLastEtag);
+				replicationSources = transaction.ReadTree(TreeNames.ReplicationSources);
+				metadata = transaction.ReadTree(TreeNames.Metadata);
             }
 
 		    public long GetCountersCount()
@@ -786,17 +786,17 @@ namespace Raven.Database.Counters
 				this.parent = parent;
 				Tx = tx;
 				reader = new Reader(parent, tx);
-				counters = tx.State.GetTree(tx, TreeNames.Counters);
-				dateToTombstones = tx.State.GetTree(tx, TreeNames.DateToTombstones);
-				groupToCounters = tx.State.GetTree(tx, TreeNames.GroupToCounters);
-				tombstonesGroupToCounters = tx.State.GetTree(tx, TreeNames.TombstonesGroupToCounters);
-				counterIdWithNameToGroup = tx.State.GetTree(tx, TreeNames.CounterIdWithNameToGroup);
-				countersToEtag = tx.State.GetTree(tx, TreeNames.CountersToEtag);
-				etagsToCounters = tx.State.GetTree(tx, TreeNames.EtagsToCounters);
-				serversLastEtag = tx.State.GetTree(tx, TreeNames.ServersLastEtag);
-				replicationSources = tx.State.GetTree(tx, TreeNames.ReplicationSources);
+				counters = tx.ReadTree(TreeNames.Counters);
+				dateToTombstones = tx.ReadTree(TreeNames.DateToTombstones);
+				groupToCounters = tx.ReadTree(TreeNames.GroupToCounters);
+				tombstonesGroupToCounters = tx.ReadTree(TreeNames.TombstonesGroupToCounters);
+				counterIdWithNameToGroup = tx.ReadTree(TreeNames.CounterIdWithNameToGroup);
+				countersToEtag = tx.ReadTree(TreeNames.CountersToEtag);
+				etagsToCounters = tx.ReadTree(TreeNames.EtagsToCounters);
+				serversLastEtag = tx.ReadTree(TreeNames.ServersLastEtag);
+				replicationSources = tx.ReadTree(TreeNames.ReplicationSources);
 
-				metadata = tx.State.GetTree(tx, TreeNames.Metadata);
+				metadata = tx.ReadTree(TreeNames.Metadata);
 				buffer = new Buffer(parent.sizeOfGuid);
 			}
 
@@ -897,7 +897,7 @@ namespace Raven.Database.Counters
 				EnsureBufferSize(ref buffer.CounterNameWithId, counterNameWithIdSize);
 				var sliceWriter = new SliceWriter(buffer.CounterNameWithId);
 				sliceWriter.Write(counterName);
-				sliceWriter.WriteBytes(counterId);
+				sliceWriter.Write(counterId);
 				var counterNameWithIdSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
 
 				if (serverId.Equals(parent.tombstoneId))
@@ -918,7 +918,7 @@ namespace Raven.Database.Counters
 		            }
 
 				sliceWriter.Reset();
-				sliceWriter.WriteBytes(counterId);
+				sliceWriter.Write(counterId);
 				sliceWriter.Write(counterName);
 				var idWithCounterNameSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
 				counterIdWithNameToGroup.Add(idWithCounterNameSlice, groupNameSlice);
@@ -927,8 +927,8 @@ namespace Raven.Database.Counters
 			private Slice GetFullCounterNameSlice(byte[] counterIdBytes, Guid serverId, char sign)
             {
 				var sliceWriter = new SliceWriter(buffer.FullCounterName);
-				sliceWriter.WriteBytes(counterIdBytes);
-				sliceWriter.WriteBytes(serverId.ToByteArray());
+				sliceWriter.Write(counterIdBytes);
+				sliceWriter.Write(serverId.ToByteArray());
 				sliceWriter.Write(sign);
 				return sliceWriter.CreateSlice();
             }

@@ -71,7 +71,6 @@ class shell extends viewModelBase {
     selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
     canShowEnviromentText = ko.computed(() => this.selectedColor().name !== "Default");
 
-    private router = router;
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
@@ -654,7 +653,7 @@ class shell extends viewModelBase {
                     resourceObservableArray.remove(resourceToDelete);
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
-					if (resourceType == logTenantType.Database)
+                    if (resourceType == TenantType.Database)
 						recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"

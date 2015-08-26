@@ -147,7 +147,6 @@ namespace Voron
 
 			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}
-            }
 
         private static readonly uint[] _lookup32 = CreateLookup32();
 

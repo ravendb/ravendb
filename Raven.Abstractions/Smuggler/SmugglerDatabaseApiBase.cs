@@ -347,7 +347,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-					transformers = await Operations.GetTransformers(src, totalCount);
+					transformers = await Operations.GetTransformers(totalCount);
 				}
 				catch (Exception e)
 				{
@@ -1048,7 +1048,7 @@ namespace Raven.Abstractions.Smuggler
 				if (Options.StripReplicationInformation) 
 					attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
 
-				await Operations.PutAttachment(dst, attachmentExportInfo);
+				await Operations.PutAttachment(attachmentExportInfo);
 				}
 				catch (Exception e)
 				{
@@ -1303,7 +1303,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-					indexes = await Operations.GetIndexes(src, totalCount);
+					indexes = await Operations.GetIndexes(totalCount);
 				}
 				catch (Exception e)
 				{

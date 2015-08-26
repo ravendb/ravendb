@@ -278,7 +278,7 @@ namespace Raven.Database.TimeSeries
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(type.Fields.Length * sizeof(double)));
-					var periodFixedTree = periodTx.State.GetTree(periodTx, PeriodTreePrefix + query.Type)
+					var periodFixedTree = periodTx.ReadTree(PeriodTreePrefix + query.Type)
 						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double)));
 
 					using (var periodWriter = new RollupWriter(periodFixedTree, type.Fields.Length))
@@ -616,7 +616,7 @@ namespace Raven.Database.TimeSeries
 					if (currentType == null)
 						throw new InvalidOperationException("There is no type named: " + type);
 
-					tree = tx.State.GetTree(tx, SeriesTreePrefix + currentType.Type);
+					tree = tx.ReadTree(SeriesTreePrefix + currentType.Type);
 				}
 
 				if (values.Length != currentType.Fields.Length)
@@ -1052,7 +1052,7 @@ namespace Raven.Database.TimeSeries
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				long keys = 0, points = 0;
-				using (var rootIt = tx.State.Root.Iterate())
+				using (var rootIt = tx.Root.Iterate())
 				{
 					rootIt.RequiredPrefix = SeriesTreePrefix;
 					if (rootIt.Seek(rootIt.RequiredPrefix))

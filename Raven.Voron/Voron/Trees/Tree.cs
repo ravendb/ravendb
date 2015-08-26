@@ -56,7 +56,6 @@ namespace Voron.Trees
         }
 
         public bool KeysPrefixing { get { return _state.KeysPrefixing; } }
-        public Transaction Tx { get { return _tx; } }
 
         public static Tree Open(Transaction tx, TreeRootHeader* header)
         {

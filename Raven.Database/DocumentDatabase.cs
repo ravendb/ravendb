@@ -91,6 +91,7 @@ namespace Raven.Database
 		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
 		private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
+
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
 		{
 			TimerManager = new ResourceTimerManager();
@@ -1041,20 +1042,6 @@ namespace Raven.Database
 			ReducingThreadPool.Start();
 
 			RaiseIndexingWiringComplete();
-
-			SpinReduceWorker();
-		}
-
-	    public void SpinReduceWorker()
-	    {
-            if(ReducingExecuter == null)
-                throw new InvalidOperationException("Cannot start reducing when reducing executer is null");
-
-            if (reducingBackgroundTask != null &&
-                reducingBackgroundTask.IsCompleted == false)
-                return;
-
-            reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
 		private void StopMappingThreadPool()
@@ -1091,19 +1078,6 @@ namespace Raven.Database
 		{
 			workContext.StartIndexing();
 		}
-
-	    public void StopReduceWorkers()
-	    {
-            workContext.StopReducing();
-            try
-            {
-                reducingBackgroundTask.Wait();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background reducing", e);
-            }
-        }
 
 		public void StopIndexingWorkers(bool manualStop)
 		{
@@ -1449,5 +1423,14 @@ namespace Raven.Database
 			if (onOnBackupComplete != null) onOnBackupComplete(this);
 		}
 
+		public void SpinReduceWorker()
+		{
+			throw new NotImplementedException();
+		}
+
+		public void StopReduceWorkers()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

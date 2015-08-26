@@ -535,19 +535,21 @@ namespace Voron
 		    var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
 
 		    var trees = new List<Tree>();
-		    var rootIterator = tx.State.Root.Iterate();
+			using (var rootIterator = tx.Root.Iterate())
+			{
+				if (rootIterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+						trees.Add(tree);
 
-		    if (rootIterator.Seek(Slice.BeforeAllKeys))
-		    {
-			    do
-			    {
-				    var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
-				    trees.Add(tree);
+					}
+					while (rootIterator.MoveNext());
+				}
+			}
 
-			    } while (rootIterator.MoveNext());
-		    }
-
-		    var generator = new StorageReportGenerator(tx);
+			var generator = new StorageReportGenerator(tx);
 
 		    return generator.Generate(new ReportInput
 		    {

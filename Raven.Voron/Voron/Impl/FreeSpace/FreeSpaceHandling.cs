@@ -262,32 +262,7 @@ namespace Voron.Impl.FreeSpace
 
 		public List<long> AllPages(Transaction tx)
 		{
-			if (tx.State.FreeSpaceRoot.State.EntriesCount == 0)
-				return new List<long>();
-
-			using (var it = tx.State.FreeSpaceRoot.Iterate())
-			{
-				if (it.Seek(Slice.BeforeAllKeys) == false)
-					return new List<long>();
-
-				var freePages = new List<long>();
-
-				do
-				{
-					var stream = it.CreateReaderForCurrent();
-
-					var current = new StreamBitArray(stream);
-					var currentSectionId = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-
-					for (var i = 0; i < NumberOfPagesInSection; i++)
-					{
-						if (current.Get(i))
-							freePages.Add(currentSectionId*NumberOfPagesInSection + i);
-		}
-				} while (it.MoveNext());
-
-				return freePages;
-			}
+			return tx.FreeSpaceRoot.AllPages();
 		}
 
 		public void FreePage(Transaction tx, long pageNumber)

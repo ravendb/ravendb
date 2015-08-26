@@ -33,6 +33,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
