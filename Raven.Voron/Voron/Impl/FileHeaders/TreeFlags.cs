@@ -1,8 +1,13 @@
-﻿namespace Voron.Impl.FileHeaders
+﻿using System;
+
+namespace Voron.Impl.FileHeaders
 {
-    public enum TreeFlags : byte
-    {
-        None = 0,
-        MultiValue = 1,
-    }
+	[Flags]
+	public enum TreeFlags : byte
+	{
+		None = 0,
+		MultiValue = 1,
+		FixedSizeTrees = 2,
+		MultiValueTrees = 4
+	}
 }

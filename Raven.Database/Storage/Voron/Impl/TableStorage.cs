@@ -66,36 +66,12 @@ namespace Raven.Database.Storage.Voron.Impl
 			Initialize();
 		}
 
-		internal Dictionary<string, object> GenerateReportOnStorage()
+		internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
 		{
-			var reportData = new Dictionary<string, object>
-	        {
-	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
-                {"UsedPages", env.State.NextPageNumber-1},
-	            {"MaxNodeSize", AbstractPager.NodeMaxSize},
-	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
-	            {"PageSize", AbstractPager.PageSize},
-                {"Root",  System.Environment.NewLine + env.State.Root},
-                {"FreeSpace", System.Environment.NewLine +  env.State.FreeSpaceRoot},
-	        };
-
-		    using (var tx = env.NewTransaction(TransactionFlags.Read))
-		    {
-		        using (var it = tx.Root.Iterate())
-		        {
-		            if (it.Seek(Slice.BeforeAllKeys))
-		            {
-		                do
-		                {
-		                    var tree = tx.ReadTree(it.CurrentKey.ToString());
-		                    reportData[tree.Name] = System.Environment.NewLine + tree.State.ToString();
-		                } while (it.MoveNext());
-		            }
-		        }
-		    }
-
-			return reportData;
+			using (var tran = env.NewTransaction(TransactionFlags.Read))
+			{
+				return env.GenerateReport(tran, computeExactSizes);
+			}
 		}
 
 		public SnapshotReader CreateSnapshot()

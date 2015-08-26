@@ -529,6 +529,39 @@ namespace Voron
             return results;
         }
 
+		public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+		{
+			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+			var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
+
+			var trees = new List<Tree>();
+			using (var rootIterator = tx.Root.Iterate())
+			{
+				if (rootIterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+						trees.Add(tree);
+
+					}
+					while (rootIterator.MoveNext());
+				}
+			}
+
+			var generator = new StorageReportGenerator(tx);
+
+			return generator.Generate(new ReportInput
+			{
+				NumberOfAllocatedPages = numberOfAllocatedPages,
+				NumberOfFreePages = numberOfFreePages,
+				NextPageNumber = NextPageNumber,
+				Journals = Journal.Files.ToList(),
+				Trees = trees,
+				IsLightReport = !computeExactSizes
+			});
+		}
+
 		public EnvironmentStats Stats()
 		{
 		    using (var tx = NewTransaction(TransactionFlags.Read))
