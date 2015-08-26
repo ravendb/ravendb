@@ -36,9 +36,8 @@ namespace Sparrow.Tests
         public void Constants()
         {
             Assert.Equal(64, BitVector.BitsPerWord);
-            Assert.Equal((uint) Math.Log(BitVector.BitsPerWord, 2), BitVector.Log2BitsPerWord);
+            Assert.Equal((uint)Math.Log(BitVector.BitsPerWord, 2), BitVector.Log2BitsPerWord);
         }
-
 
         [Fact]
         public void Operations_Bits()
@@ -511,6 +510,12 @@ namespace Sparrow.Tests
             Assert.Equal(0, v1.LongestCommonPrefixLength(v2));
             Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
 
+            v1 = BitVector.Parse("00000000010001110000000001011000000000000011001100000000001101110000000000000000");
+            v2 = BitVector.Parse("00000000011001100000000000110000000000000011010000000000011011110000000000000000");
+            
+            Assert.Equal(10, v1.LongestCommonPrefixLength(v2));
+            Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+
             v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
             v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000001);
 
@@ -522,6 +527,14 @@ namespace Sparrow.Tests
 
             Assert.Equal(128, v1.LongestCommonPrefixLength(v2));
             Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
+        }
+
+        [Fact]
+        public void Operations_GetByte()
+        {
+            var v1 = BitVector.Of(0x01020304, 0x05060708, 0x090A0B0C, 0x0D0E0F10);
+            for( int i = 0; i < v1.Count / BitVector.BitsPerByte; i++ )
+                Assert.Equal(i+1, v1.GetByte(i));
         }
 
         [Fact]

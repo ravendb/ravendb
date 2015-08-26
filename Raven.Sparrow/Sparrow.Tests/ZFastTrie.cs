@@ -23,7 +23,7 @@ namespace Sparrow.Tests
             Assert.Null(tree.FirstKeyOrDefault());
             Assert.Null(tree.LastKeyOrDefault());
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
 
@@ -52,7 +52,7 @@ namespace Sparrow.Tests
             Assert.Null(tree.PredecessorOrDefault("aq"));
             Assert.Equal(key, tree.PredecessorOrDefault("pq"));
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Sparrow.Tests
             Assert.Equal(predecessor, successor);
             Assert.Equal(tree.Root, predecessor);
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace Sparrow.Tests
             Assert.Null(tree.PredecessorOrDefault(lesserKey));
             Assert.Null(tree.PredecessorOrDefault(smallestKey));
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -154,7 +154,7 @@ namespace Sparrow.Tests
             Assert.Equal(predecessor.Next, successor);
             Assert.Equal(successor.Previous, predecessor);
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -166,9 +166,9 @@ namespace Sparrow.Tests
             Assert.True(tree.Add("GX37", "GX37"));
             Assert.True(tree.Add("f04o", "f04o"));
             Assert.True(tree.Add("KmGx","KmGx"));
-            StructuralVerify(tree);
 
-            DumpKeys(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+            ZFastTrieDebugHelpers.DumpKeys(tree);            
         }
 
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -180,7 +180,6 @@ namespace Sparrow.Tests
                 stringChars[i] = chars[generator.Next(chars.Length)];
 
             return new String(stringChars);
-
         }
 
 
@@ -191,9 +190,9 @@ namespace Sparrow.Tests
                 // Or this could read from a file. :)
                 return new[]
                 {
-                    //new object[] { 102, 4, 4 },
-                    new object[] { 100, 4, 8 },
-                    //new object[] { 100, 4, 16 },
+                    new object[] { 102, 4, 4 },                    
+                    //new object[] { 100, 4, 8 },
+                    //new object[] { 101, 4, 16 },
                     //new object[] { 100, 8, 32 },
                     //new object[] { 100, 16, 256 }
                 };
@@ -218,12 +217,16 @@ namespace Sparrow.Tests
                 Console.WriteLine(key);
             }
 
-            DumpKeys(tree);
+            ZFastTrieDebugHelpers.DumpKeys(tree);
 
-            StructuralVerify(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
+    }
 
-        private void DumpKeys<T,W> (ZFastTrieSortedSet<T,W> tree ) where T : IEquatable<T>
+    public static class ZFastTrieDebugHelpers
+    {
+
+        public static void DumpKeys<T, W>(ZFastTrieSortedSet<T, W> tree) where T : IEquatable<T>
         {
             Console.WriteLine("Tree stored order");
 
@@ -233,22 +236,58 @@ namespace Sparrow.Tests
                 Console.WriteLine(current.Key.ToString());
                 current = current.Next;
             }
-                
+        }
+
+        public static void DumpTree<T, W>(ZFastTrieSortedSet<T, W> tree) where T : IEquatable<T>
+        {
+            if (tree.Count == 0)
+            {
+                Console.WriteLine("Tree is empty.");
+            }
+            else
+            {
+                DumpNodes(tree, tree.Root, null, 0, 0);
+            }
+        }
+
+        private static int DumpNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node, ZFastTrieSortedSet<T, W>.Node parent, int nameLength, int depth) where T : IEquatable<T>
+        {
+            if (node == null)
+                return 0;
+
+            for (int i = depth; i-- != 0; )
+                Console.Write('\t');
+
+            if (node is ZFastTrieSortedSet<T, W>.Internal)
+            {
+                var internalNode = node as ZFastTrieSortedSet<T, W>.Internal;
+
+                Console.WriteLine(string.Format("Node {0} (name length: {1}) Jump left: {2} Jump right: {3}", node.ToDebugString(tree), nameLength, internalNode.JumpLeftPtr.ToDebugString(tree), internalNode.JumpRightPtr.ToDebugString(tree)));
+
+                return 1 + DumpNodes(tree, internalNode.Left, internalNode, internalNode.ExtentLength + 1, depth + 1)
+                         + DumpNodes(tree, internalNode.Right, internalNode, internalNode.ExtentLength + 1, depth + 1);
+            }
+            else
+            {
+                Console.WriteLine(string.Format("Node {0} (name length: {1})", node.ToDebugString(tree), nameLength));
+
+                return 1;
+            }
         }
 
 
-        private void StructuralVerify<T,W> ( ZFastTrieSortedSet<T,W> tree ) where T : IEquatable<T>
+        public static void StructuralVerify<T, W>(ZFastTrieSortedSet<T, W> tree) where T : IEquatable<T>
         {
-            Assert.NotNull( tree.Head );
-            Assert.NotNull( tree.Tail );
-            Assert.Null( tree.Tail.Next );
-            Assert.Null( tree.Head.Previous );
+            Assert.NotNull(tree.Head);
+            Assert.NotNull(tree.Tail);
+            Assert.Null(tree.Tail.Next);
+            Assert.Null(tree.Head.Previous);
 
             Assert.True(tree.Root == null || tree.Root.NameLength == 0); // Either the root does not exist or the root is internal and have name length == 0
-            //Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.SelectMany(x => x.Value).Count() + 1); 
+            Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.SelectMany(x => x.Value).Count() + 1); 
 
-            if ( tree.Count == 0 )
-            {            
+            if (tree.Count == 0)
+            {
                 Assert.Equal(tree.Head, tree.Tail.Previous);
                 Assert.Equal(tree.Tail, tree.Head.Next);
 
@@ -257,36 +296,36 @@ namespace Sparrow.Tests
 
                 return; // No more to check for an empty trie.
             }
-           
+
             var root = tree.Root;
             var nodes = new HashSet<ZFastTrieSortedSet<T, W>.Node>();
-            
-            foreach ( var nodesList in tree.NodesTable )
+
+            foreach (var nodesList in tree.NodesTable)
             {
-                foreach (var node in nodesList.Value )
+                foreach (var node in nodesList.Value)
                 {
-                    int handleLength = node.GetHandleLength();
-                    
-                    Assert.True(root == node || root.GetHandleLength() < handleLength); // All handled of lower nodes must be bigger than the root.
+                    int handleLength = node.GetHandleLength(tree);
+
+                    Assert.True(root == node || root.GetHandleLength(tree) < handleLength); // All handled of lower nodes must be bigger than the root.
                     Assert.Equal(node, node.ReferencePtr.ReferencePtr); // The reference of the reference should be itself.
 
-                    nodes.Add(node);                    
+                    nodes.Add(node);
                 }
             }
 
             Assert.Equal(tree.NodesTable.SelectMany(x => x.Value).Count(), nodes.Count); // We are ensuring there are no repeated nodes in the hash table. 
 
-            if ( tree.Count == 1 )
+            if (tree.Count == 1)
             {
                 Assert.Equal(tree.Root, tree.Head.Next);
-                Assert.Equal(tree.Root, tree.Tail.Previous);                
+                Assert.Equal(tree.Root, tree.Tail.Previous);
             }
             else
             {
                 var toRight = tree.Head.Next;
                 var toLeft = tree.Tail.Previous;
 
-                for ( int i = 1; i < tree.Count; i++ )
+                for (int i = 1; i < tree.Count; i++)
                 {
                     // Ensure there is name order in the linked list of leaves.
                     Assert.True(toRight.Name(tree).CompareTo(toRight.Next.Name(tree)) < 0);
@@ -304,19 +343,19 @@ namespace Sparrow.Tests
                 Assert.Equal(tree.Count, leaves.Count); // The size of the tree is equal to the amount of leaves in the tree.
 
                 int counter = 0;
-                foreach ( var leaf in leaves )
+                foreach (var leaf in leaves)
                 {
                     if (references.Contains(leaf.Key))
                         counter++;
                 }
 
-                Assert.Equal(tree.Count - 1, counter);                    
+                Assert.Equal(tree.Count - 1, counter);
             }
 
             Assert.Equal(0, nodes.Count);
         }
 
-        private int VisitNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node, 
+        private static int VisitNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node,
                                      ZFastTrieSortedSet<T, W>.Node parent, int nameLength,
                                      HashSet<ZFastTrieSortedSet<T, W>.Node> nodes,
                                      HashSet<ZFastTrieSortedSet<T, W>.Leaf> leaves,
@@ -325,13 +364,13 @@ namespace Sparrow.Tests
             if (node == null)
                 return 0;
 
-            Assert.True( nameLength <= node.GetExtentLength(tree) );
+            Assert.True(nameLength <= node.GetExtentLength(tree));
 
             var parentAsInternal = parent as ZFastTrieSortedSet<T, W>.Internal;
-            if ( parentAsInternal != null )
+            if (parentAsInternal != null)
                 Assert.True(parent.Extent(tree).Equals(node.Extent(tree).SubVector(0, parentAsInternal.ExtentLength)));
 
-            if ( node is ZFastTrieSortedSet<T, W>.Internal )
+            if (node is ZFastTrieSortedSet<T, W>.Internal)
             {
                 var leafNode = node.ReferencePtr as ZFastTrieSortedSet<T, W>.Leaf;
                 Assert.NotNull(leafNode); // We ensure that internal node references are leaves. 
@@ -346,8 +385,8 @@ namespace Sparrow.Tests
 
                 Assert.True(allNodes.Contains(handle));
 
-                var internalNode = (ZFastTrieSortedSet<T,W>.Internal) node;
-                int jumpLength = internalNode.GetJumpLength();
+                var internalNode = (ZFastTrieSortedSet<T, W>.Internal)node;
+                int jumpLength = internalNode.GetJumpLength(tree);
 
                 var jumpLeft = internalNode.Left;
                 while (jumpLeft is ZFastTrieSortedSet<T, W>.Internal && jumpLength > ((ZFastTrieSortedSet<T, W>.Internal)jumpLeft).ExtentLength)
@@ -375,7 +414,7 @@ namespace Sparrow.Tests
                 Assert.True(parent.ReferencePtr is ZFastTrieSortedSet<T, W>.Leaf); // We ensure that internal node references are leaves. 
 
                 return 1;
-            }             
+            }
         }
     }
 }

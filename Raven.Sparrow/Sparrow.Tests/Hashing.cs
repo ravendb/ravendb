@@ -56,6 +56,25 @@ namespace Sparrow.Tests
             Assert.Equal(expected, result);
         }
 
+        [Fact]
+        public void EquivalenceInDifferentMemoryLocations()
+        {
+            string value = "abcd";
+            uint result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            uint expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "abc";
+            result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "κόσμε";
+            result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+        }
+
 
         [Fact]
         public void NotEquivalenceOfBytesWithString()

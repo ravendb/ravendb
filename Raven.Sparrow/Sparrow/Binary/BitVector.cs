@@ -17,7 +17,8 @@ namespace Sparrow.Binary
     public class BitVector : IComparable<BitVector>, IEquatable<BitVector>
     {
         public const int BitsPerByte = 8;
-        public const int BitsPerWord = sizeof(ulong) * BitsPerByte;        
+        public const int BitsPerWord = sizeof(ulong) * BitsPerByte;
+        public const int BytesPerWord = sizeof(ulong) / sizeof(byte);        
         public const uint Log2BitsPerWord = 6; // Math.Log( BitsPerWord, 2 )
         
 	    public const uint WordMask = BitsPerWord - 1;
@@ -31,7 +32,7 @@ namespace Sparrow.Binary
         
         public readonly ulong[] Bits;        
 
-        protected string ToDebugString()
+        public string ToDebugString()
         {
             unchecked
             {
@@ -103,6 +104,8 @@ namespace Sparrow.Binary
 
         public void Set(int idx)
         {
+            Contract.Requires(idx >= 0 && idx < this.Count);
+
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
 
@@ -111,6 +114,8 @@ namespace Sparrow.Binary
 
         public void Set(int idx, bool value)
         {
+            Contract.Requires(idx >= 0 && idx < this.Count);
+
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
 
@@ -121,18 +126,32 @@ namespace Sparrow.Binary
 
         public bool Get(int idx)
         {
+            Contract.Requires(idx >= 0 && idx < this.Count);
+
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
             return (Bits[word] & mask) != 0;
         }
 
-        public ulong GetWord(int wordIdx)
+        public int GetByte(int idx)
         {
+            int positionInWord = idx % BitVector.BytesPerWord;
+            
+            ulong word = GetWord(idx / BitVector.BytesPerWord);
+            word <<= BitVector.BitsPerByte * positionInWord;
+            word >>= BitVector.BitsPerByte * (BitVector.BytesPerWord - 1);
+            
+            return (int)word;
+        }
+
+        public ulong GetWord(int wordIdx)
+        {            
             return Bits[wordIdx];
         }
 
         public void Fill(bool value)
         {
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
             unsafe
             {
                 byte x = value ? (byte)0xFF : (byte)0x00;
@@ -143,6 +162,11 @@ namespace Sparrow.Binary
 
         public void Fill(bool value, int from, int to)
         {
+            Contract.Requires(from >= 0 && from < this.Count);
+            Contract.Requires(to >= 0 && to < this.Count);
+            Contract.Requires(from <= to);
+
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
             unchecked
             {
                 int bFrom = from / BitVector.BitsPerWord;
@@ -186,12 +210,18 @@ namespace Sparrow.Binary
 
         public void Flip()
         {
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             for (int i = 0; i < Bits.Length; i++)
                 Bits[i] ^= BitVector.Ones;
         }
 
         public void Flip(int idx)
         {
+            Contract.Requires(idx >= 0 && idx < this.Count);
+
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             unchecked
             {
                 uint wPos = WordForBit(idx);
@@ -201,6 +231,12 @@ namespace Sparrow.Binary
 
         public void Flip(int from, int to)
         {
+            Contract.Requires(from >= 0 && from < this.Count);
+            Contract.Requires(to >= 0 && to < this.Count);
+            Contract.Requires(from <= to);
+
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             unchecked
             {
                 int bTo = to / BitVector.BitsPerWord;
@@ -241,6 +277,8 @@ namespace Sparrow.Binary
 
         public BitVector And(BitVector v)
         {
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
@@ -254,6 +292,8 @@ namespace Sparrow.Binary
 
         public BitVector Or(BitVector v)
         {
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
@@ -267,6 +307,8 @@ namespace Sparrow.Binary
 
         public BitVector Xor(BitVector v)
         {
+            // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
+
             int words = Math.Min(Bits.Length, v.Bits.Length) - 1;
             while (words >= 0)
             {
@@ -517,9 +559,52 @@ namespace Sparrow.Binary
             return CompareToInline(other, out equalBits);
         }
 
-        public int CompareTo(BitVector other, int startAt, int length)
+        public int CompareTo(BitVector other, int length)
         {
-            throw new NotImplementedException();
+            Contract.Requires(length < this.Count);
+
+            var srcKey = length;
+            var otherKey = other.Count;
+            length = Math.Min(length, otherKey);
+
+            unsafe
+            {
+                fixed (ulong* srcPtr = this.Bits)
+                fixed (ulong* destPtr = other.Bits)
+                {
+                    int wholeBytes = length / BitsPerWord;
+
+                    ulong* bpx = srcPtr;
+                    ulong* bpy = destPtr;
+
+                    for (int i = 0; i < wholeBytes; i++, bpx += 1, bpy += 1)
+                    {
+                        if (*((long*)bpx) != *((long*)bpy))
+                            break;
+                    }
+
+                    // We always finish the last extent with a bit-wise comparison (bit vector is stored in big endian).
+                    int from = (int)(bpx - srcPtr) * BitsPerWord;
+                    int leftover = length - from;
+                    while (leftover > 0)
+                    {
+                        // TODO: We can try use a fast Rank0 function to find leading zeros after an XOR to achieve peak performance at the byte level. 
+                        //       See Broadword Implementation of Rank/Select Queries by Sebastiano Vigna http://vigna.di.unimi.it/ftp/papers/Broadword.pdf
+                        bool thisBit = this[from];
+                        bool otherBit = other[from];
+
+                        if (thisBit != otherBit)
+                        {
+                            return thisBit ? 1 : -1;
+                        }
+
+                        from++;
+                        leftover--;
+                    }
+                }
+            }
+
+            return srcKey - otherKey;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -559,11 +644,11 @@ namespace Sparrow.Binary
                         {
                             equalBits = from;
                             return thisBit ? 1 : -1;
-                        }                            
+                        }
 
                         from++;
                         leftover--;
-                    }                    
+                    }
                 }
             }
 
@@ -581,6 +666,9 @@ namespace Sparrow.Binary
 
         public BitVector SubVector(int start, int length)
         {
+            Contract.Requires(start >= 0 && start < this.Count);
+            Contract.Requires(length >= 0 && start + length < this.Count);
+
             var subVector = new BitVector(length);
             BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
             return subVector;
@@ -610,8 +698,27 @@ namespace Sparrow.Binary
 
         public bool Equals(BitVector other)
         {
+            if (other == null) return false;
+            if (this == other) return true;
+
             int dummy;
             return CompareToInline(other, out dummy) == 0;
         }
+
+        public string ToBinaryString()
+        {
+            var builder = new StringBuilder();
+            for ( int i = 0; i < this.Count; i++ )
+            {
+                if (i != 0 && i % 8 == 0)
+                    builder.Append(" ");
+
+                builder.Append( this[i] ? "1" : "0");                   
+            }
+
+            return builder.ToString();
+        }
+
+
     }
 }

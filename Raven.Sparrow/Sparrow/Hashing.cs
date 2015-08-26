@@ -311,13 +311,18 @@ namespace Sparrow
             }
         }
 
-        public static int Combine( int x, int y )
+        public static int Combine(int x, int y)
+        {
+            return CombineInline(x, y);
+        }
+
+        public static uint Combine(uint x, uint y)
         {
             return CombineInline(x, y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CombineInline( int x, int y )
+        public static int CombineInline(int x, int y)
         {
             long key = x << 32 | y;
 
@@ -328,7 +333,22 @@ namespace Sparrow
             key = key + (key << 6);
             key = key ^ (key >> 22);
 
-            return (int) key;
+            return (int)key;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint CombineInline(uint x, uint y)
+        {
+            long key = x << 32 | y;
+
+            key = (~key) + (key << 18); // key = (key << 18) - key - 1;
+            key = key ^ (key >> 31);
+            key = key * 21; // key = (key + (key << 2)) + (key << 4);
+            key = key ^ (key >> 11);
+            key = key + (key << 6);
+            key = key ^ (key >> 22);
+
+            return (uint)key;
         }
 
     }
