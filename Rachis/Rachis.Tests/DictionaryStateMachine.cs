@@ -32,10 +32,6 @@ namespace Rachis.Tests
 				_snapshot = snapshot;
 			}
 
-			public void Dispose()
-			{
-			}
-
 			public long Index { get; set; }
 			public long Term { get; set; }
 			public void WriteSnapshot(Stream stream)

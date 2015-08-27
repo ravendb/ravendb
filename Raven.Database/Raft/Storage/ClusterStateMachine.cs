@@ -165,44 +165,37 @@ namespace Raven.Database.Raft.Storage
 
 		public class SnapshotWriter : ISnapshotWriter
 		{
-			private readonly FileStream _file;
+			private readonly string fileName;
 
 			public SnapshotWriter(string dataDirectory)
 			{
 				var directoryPath = Path.Combine(dataDirectory, "Raft", "Snapshot");
-				var file = Directory.GetFiles(directoryPath, "*.Snapshot").LastOrDefault();
+				fileName = Directory.GetFiles(directoryPath, "*.Snapshot").LastOrDefault();
 
-				if (file == null)
+				if (fileName == null)
 					throw new InvalidOperationException("Could not find a full backup file to start the snapshot writing");
 
-				var last = Path.GetFileNameWithoutExtension(file);
+				var last = Path.GetFileNameWithoutExtension(fileName);
 				Debug.Assert(last != null);
 				var parts = last.Split('-');
 				if (parts.Length != 3)
-					throw new InvalidOperationException("Invalid snapshot file name " + file + ", could not figure out index & term");
+					throw new InvalidOperationException("Invalid snapshot file name " + fileName + ", could not figure out index & term");
 
 				Index = long.Parse(parts[1]);
 				Term = long.Parse(parts[2]);
-
-				_file = File.OpenRead(file);
-			}
-
-			public void Dispose()
-			{
-				if (_file != null)
-				{
-					_file.Dispose();
-				}
 			}
 
 			public long Index { get; private set; }
 			public long Term { get; private set; }
 			public void WriteSnapshot(Stream stream)
 			{
-				var writer = new BinaryWriter(stream);
-				writer.Write(_file.Length);
-				writer.Flush();
-				_file.CopyTo(stream);
+				using (var f = File.OpenRead(fileName))
+				{
+					var writer = new BinaryWriter(stream);
+					writer.Write(f.Length);
+					writer.Flush();
+					f.CopyTo(stream);
+				}
 			}
 		}
 

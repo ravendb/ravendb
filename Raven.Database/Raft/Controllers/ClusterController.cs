@@ -4,24 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 
-using Newtonsoft.Json;
-
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
-
-using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Raft.Controllers
 {
