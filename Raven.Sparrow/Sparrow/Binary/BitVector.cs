@@ -685,6 +685,17 @@ namespace Sparrow.Binary
             return equalBits == this.Count;
         }
 
+        public bool IsPrefix(BitVector other, int length)
+        {
+            if (length > this.Count || length > other.Count)
+                return false;
+
+            int equalBits;
+            CompareToInline(other, out equalBits);
+
+            return equalBits > length;
+        }
+
         public bool IsProperPrefix(BitVector other)
         {
             if (this.Count >= other.Count)

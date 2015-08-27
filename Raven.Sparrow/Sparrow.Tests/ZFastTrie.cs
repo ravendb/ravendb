@@ -171,6 +171,71 @@ namespace Sparrow.Tests
             ZFastTrieDebugHelpers.DumpKeys(tree);            
         }
 
+        [Fact]
+        public void Structure_MultipleBranch_OrderPreservation()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            tree.Add("8Jp3", "8Jp3");
+            tree.Add("V6sl", "V6sl");
+            tree.Add("GX37", "GX37");
+            tree.Add("f04o", "f04o");
+            tree.Add("KmGx", "KmGx");
+
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_OrderPreservation2()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            tree.Add("1Z", "8Jp3");
+            tree.Add("fG", "V6sl");
+            tree.Add("dW", "GX37");
+            tree.Add("8I", "f04o");
+            tree.Add("7H", "KmGx");
+            tree.Add("73", "KmGx");
+
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_InternalExtent()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            tree.Add("8Jp3V6sl", "8Jp3");
+            tree.Add("VJ7hXe8d", "V6sl");
+            tree.Add("39XCGX37", "GX37");
+            tree.Add("f04oKmGx", "f04o");
+            tree.Add("feiF1gdt", "KmGx");
+
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_InternalExtent2()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            tree.Add("i", "8Jp3");
+            tree.Add("4", "V6sl");
+            tree.Add("j", "GX37");
+            tree.Add("P", "f04o");
+            tree.Add("8", "KmGx");
+            tree.Add("3", "KmG3");
+
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+        }
+
+
+
+
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
         private static string GenerateRandomString(Random generator, int size)
@@ -190,37 +255,87 @@ namespace Sparrow.Tests
                 // Or this could read from a file. :)
                 return new[]
                 {
-                    new object[] { 102, 4, 4 },                    
+                    //new object[] { 102, 4, 4 },                    
                     //new object[] { 100, 4, 8 },
-                    //new object[] { 101, 4, 16 },
-                    //new object[] { 100, 8, 32 },
-                    //new object[] { 100, 16, 256 }
+                    new object[] { 101, 2, 128 },
+                    //new object[] { 100, 8, 5 },
+                    //new object[] { 100, 16, 168 }
                 };
             }
         }
 
-        [Theory, PropertyData("TreeSize")]
-        public void Structure_CappedSizeInsertion( int seed, int size, int count )
+        //[Fact]
+        public void Structure_RandomTester()
         {
-            var generator = new Random(seed);
- 
-            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            var generator = new Random(100);
 
-            Console.WriteLine("Insert order");
-            for (int i = 0; i < count; i++)
+            int count = 4;
+            int size = 1;
+            for ( int i = 0; i < 1; i++ )
             {
-                string key = GenerateRandomString(generator, size);
+                var keys = new string[count];
 
-                if (!tree.Contains(key))
-                    tree.Add(key, key);
+                var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-                Console.WriteLine(key);
+                try
+                {                  
+                    for (int j = 0; j < count; i++)
+                    {
+                        string key = GenerateRandomString(generator, size);
+
+                        if (!tree.Contains(key))
+                            tree.Add(key, key);
+
+                        keys[j] = key;
+                    }
+
+                    ZFastTrieDebugHelpers.StructuralVerify(tree);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("--- Insert order for error --- ");
+                    foreach (var key in keys)
+                        Console.WriteLine(key);
+
+                    Console.WriteLine();
+                    ZFastTrieDebugHelpers.DumpKeys(tree);
+
+                    throw new Exception("Fail", ex);
+                }             
             }
-
-            ZFastTrieDebugHelpers.DumpKeys(tree);
-
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
+
+
+    //    [Theory, PropertyData("TreeSize")]
+    //    public void Structure_CappedSizeInsertion( int seed, int size, int count )
+    //    {
+    //        var generator = new Random(seed);
+ 
+    //        var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            
+    //        var keys = new string[count];
+    //        for (int i = 0; i < count; i++)
+    //        {
+    //            string key = GenerateRandomString(generator, size);                
+
+    //            if (!tree.Contains(key))
+    //                tree.Add(key, key);
+
+    //            keys[i] = key;                
+    //        }
+
+    //        Console.WriteLine();
+    //        Console.WriteLine("--- Insert order --- ");
+    //        foreach ( var key in keys )
+    //            Console.WriteLine(key);
+
+    //        Console.WriteLine();
+    //        ZFastTrieDebugHelpers.DumpKeys(tree);
+
+    //        Console.WriteLine();
+    //        ZFastTrieDebugHelpers.StructuralVerify(tree);
+    //    }
     }
 
     public static class ZFastTrieDebugHelpers
@@ -328,8 +443,8 @@ namespace Sparrow.Tests
                 for (int i = 1; i < tree.Count; i++)
                 {
                     // Ensure there is name order in the linked list of leaves.
-                    Assert.True(toRight.Name(tree).CompareTo(toRight.Next.Name(tree)) < 0);
-                    Assert.True(toLeft.Name(tree).CompareTo(toLeft.Previous.Name(tree)) > 0);
+                    Assert.True(toRight.Name(tree).CompareTo(toRight.Next.Name(tree)) <= 0);
+                    Assert.True(toLeft.Name(tree).CompareTo(toLeft.Previous.Name(tree)) >= 0);
 
                     toRight = toRight.Next;
                     toLeft = toLeft.Previous;

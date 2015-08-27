@@ -1,6 +1,7 @@
 ﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -65,7 +66,7 @@ namespace Sparrow.Collections
 
             public bool IsExitNodeOf(ZFastTrieSortedSet<TKey, TValue> owner, int length, int lcpLength)
             {
-                return this.NameLength <= lcpLength && (lcpLength < Extent(owner).Count || lcpLength == length);
+                return this.NameLength <= lcpLength && (lcpLength < this.GetExtentLength(owner) || lcpLength == length);
             }
 
             public Leaf GetRightLeaf()
@@ -356,9 +357,9 @@ namespace Sparrow.Collections
         {
             // We prepare the signature to compute incrementally. 
             BitVector searchKey = binarizeFunc(key);
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("Add(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
-
+#endif
             if ( size == 0 )
             {
                 // We set the root of the current key to the new leaf.
@@ -381,7 +382,9 @@ namespace Sparrow.Collections
 
             var exitNode = cutPoint.Exit;
 
+#if DETAILED_DEBUG        
             Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
+#endif
 
             // If the exit node is a leaf and the key is equal to the LCP 
             var exitNodeAsLeaf = exitNode as Leaf;
@@ -394,7 +397,9 @@ namespace Sparrow.Collections
             bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
             bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
 
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
+#endif
 
             // Create a new internal node that will hold the new leaf.            
             var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
@@ -448,11 +453,9 @@ namespace Sparrow.Collections
                 // If the cut point was low and the exit node internal
                 if (isCutLow && exitNodeAsInternal != null)
                 {
-                    int handleSize = exitNodeAsInternal.GetHandleLength(this);
-
-                    uint hash = CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, handleSize);
-                    ReplaceExistingNodeInTable(hash, exitNodeAsInternal, newInternal);                       
-
+                    uint hash = CalculateHashForBits(searchKey, hashState, exitNodeAsInternal.GetHandleLength(this));
+                    ReplaceExistingNodeInTable(hash, exitNodeAsInternal, newInternal);
+#if DETAILED_DEBUG
                     {
                         int prefixLength = exitNodeHandleLength / BitVector.BitsPerByte;
                         if (exitNodeHandleLength % BitVector.BitsPerByte != 0)
@@ -460,15 +463,15 @@ namespace Sparrow.Collections
 
                         Console.WriteLine(string.Format("\tMap.Replace -> prefix: '{0}', bytes: {1} ", searchKey.SubVector(0, exitNodeHandleLength).ToDebugString(), prefixLength));
                     }                                       
-
+#endif
                     exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
 
-                    hash = CalculateHashForBits(exitNodeAsInternal.Name(this), hashState);
+                    hash = CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this));
                     InsertNodeInTable(hash, exitNodeAsInternal);
 
                     //  We update the jumps for the exit node.                
                     UpdateJumps(exitNodeAsInternal);
-
+#if DETAILED_DEBUG
                     {
                         // DEBUG
                         int handleLength = exitNodeAsInternal.GetHandleLength(this);
@@ -478,16 +481,17 @@ namespace Sparrow.Collections
 
                         Console.WriteLine(string.Format("\tMap.Add-low -> prefix: '{0}', bytes: {1} ", exitNodeAsInternal.Name(this).SubVector(0, handleLength).ToDebugString(), prefixLength));
                     }                    
+#endif
                 }
                 else
                 {
                     //  We add the internal node to the jump table.                
                     exitNode.NameLength = cutPoint.LongestPrefix + 1;
 
-                    uint hash = CalculateHashForBits(newInternal.Handle(this), hashState, newInternal.GetHandleLength(this));                  
+                    uint hash = CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));                  
 
                     InsertNodeInTable(hash, newInternal);
-
+#if DETAILED_DEBUG
                     {
                         // DEBUG
                         int handleLength = newInternal.GetHandleLength(this);
@@ -497,7 +501,7 @@ namespace Sparrow.Collections
 
                         Console.WriteLine(string.Format("\tMap.Add -> prefix: '{0}', bytes: {1} ", newInternal.Handle(this).ToDebugString(), prefixLength));
                     }
-
+#endif
                 }
             }
 
@@ -509,15 +513,19 @@ namespace Sparrow.Collections
 
             size++;
 
+#if DETAILED_DEBUG
+            Console.WriteLine(DumpNodesTable());
+#endif
+
             return true;
         }
 
-        private static uint CalculateHashForBits(BitVector vector, Hashing.Iterative.XXHash32Block state, int count = int.MaxValue)
+        private static uint CalculateHashForBits(BitVector vector, Hashing.Iterative.XXHash32Block state, int length = int.MaxValue)
         {
-            count = Math.Min(vector.Count, count); // Ensure we use the proper value.
+            length = Math.Min(vector.Count, length); // Ensure we use the proper value.
 
-            int bytes = count / BitVector.BitsPerWord;
-            int remaining = count % BitVector.BitsPerWord;
+            int bytes = length / BitVector.BitsPerWord;
+            int remaining = length % BitVector.BitsPerWord;
 
             ulong remainingWord = 0;
             if (remaining != 0)
@@ -531,13 +539,13 @@ namespace Sparrow.Collections
                 fixed (ulong* bitsPtr = vector.Bits)
                 {
                     uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, bytes, state);
-
+#if DETAILED_DEBUG
                     Console.WriteLine(string.Format("\tHash -> Prefix: {0}, Remaining: {2}, Bits({1})", hash, remaining, remainingWord));
-
+#endif
                     uint upper = (uint)(remainingWord >> 32);
                     uint bottom = (uint)remainingWord;
 
-                    return Hashing.CombineInline(hash, Hashing.CombineInline(Hashing.CombineInline(upper, bottom), (uint)bytes));
+                    return Hashing.CombineInline(hash, Hashing.CombineInline(Hashing.CombineInline(upper, bottom), (uint)length));
                 }
             }
         }
@@ -553,7 +561,9 @@ namespace Sparrow.Collections
 
             if (!values.Contains(node))
             {
+#if DETAILED_DEBUG
                 Console.WriteLine(string.Format("\tMap.Add -> Node:{0}, Hash:{1}", node.ToDebugString(this), hash));
+#endif
                 values.Add(node);
             }
                 
@@ -571,8 +581,9 @@ namespace Sparrow.Collections
 
             var removed = values.Remove(oldNode);
             values.Add(newNode);
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("\tMap.Replace -> Add:{0}, ToRemove: {1}, Found: {2}, Hash:{3}", newNode.ToDebugString(this), oldNode.ToDebugString(this), removed, hash));
+#endif
         }
 
         private void UpdateJumps(Internal node)
@@ -854,8 +865,9 @@ namespace Sparrow.Collections
 
         private void UpdateRightJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
         {
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("UpdateRightJumpsAfterInsertion({0}, {1}, {2}, {3}, {4})", insertedNode.ToDebugString(this), exitNode.ToDebugString(this), isRightChild, insertedLeaf.ToDebugString(this), DumpStack(stack)));
-
+#endif
             if ( ! isRightChild )
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
@@ -907,8 +919,9 @@ namespace Sparrow.Collections
 
         private void UpdateLeftJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
         {
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("UpdateLeftJumpsAfterInsertion({0}, {1}, {2}, {3}, {4})", insertedNode.ToDebugString(this), exitNode.ToDebugString(this), isRightChild, insertedLeaf.ToDebugString(this), DumpStack(stack)));
-
+#endif
             // See: Algorithm 2 of [1]
 
             if ( isRightChild )
@@ -962,9 +975,9 @@ namespace Sparrow.Collections
         internal CutPoint FindParentExitNode(BitVector searchKey, Stack<Internal> stack = null)
         {
             Contract.Requires(size != 0);
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("FindParentExitNode({0})", searchKey.ToBinaryString()));
-
+#endif
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
                 return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);
@@ -1113,9 +1126,9 @@ namespace Sparrow.Collections
             Contract.Requires(state != null);
             Contract.Requires(stack != null);
             Contract.Requires(startBit < endBit - 1);
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("FatBinarySearch({0},{1},({2}..{3})", searchKey.ToDebugString(), DumpStack(stack), startBit, endBit));
-
+#endif
             endBit--;
 
             Internal top = stack.Count != 0 ? stack.Peek() : null;
@@ -1133,16 +1146,18 @@ namespace Sparrow.Collections
             while (endBit - startBit > 0)
             {
                 Contract.Assert(checkMask != 0);
+#if DETAILED_DEBUG
                 Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
-
+#endif
                 int current = endBit & (int)checkMask;
                 if ((startBit & checkMask) != current)
                 {
+#if DETAILED_DEBUG
                     Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
-
+#endif
                     // We calculate the hash up to the word it makes sense. 
                     uint hash = CalculateHashForBits(searchKey, state, current);
-
+#if DETAILED_DEBUG
                     {
                         int prefixLength = current / BitVector.BitsPerByte;
                         if (current % BitVector.BitsPerByte != 0)
@@ -1150,33 +1165,45 @@ namespace Sparrow.Collections
 
                         Console.WriteLine(string.Format("\tMap.Locate -> key:{0}, bytes:{1}, hash:{2}", searchKey.SubVector(0, current).ToBinaryString(), prefixLength, hash));                
                     }
-                    
+#endif                    
+                    bool found = false;
 
                     List<Internal> items;
                     if (NodesTable.TryGetValue(hash, out items))
                     {
-                        // We don't care, we just get the first match. It could be a false positive though (with very low probability).
-                        var item = items.FirstOrDefault();
-                        if (item == null || item.ExtentLength < current)
-                        {
-                            Console.WriteLine("Missing");
-                            endBit = current - 1;
-                        }
-                        else
-                        {
-                            Console.WriteLine("Found extent of length " + item.ExtentLength);
+                        // If we only have a single match there only check we need is the item.ExtentLenght < current
+                        // However, if there are multiple matches, then we should also ensure that the Handle has the same size and 
+                        // that the reference pointer to the leaf share the prefix up to the current query size. 
+                        bool isSingle = items.Count == 1;
 
-                            // Add it to the stack, update search and continue
-                            top = item;
-                            if (stack != null)
-                                stack.Push(top);
+                        foreach( var item in items )
+                        {
+                            if ( item.ExtentLength >= current )
+                            {
+                                if (!isSingle && (item.GetHandleLength(this) != current || item.ReferencePtr.Name(this).IsPrefix(searchKey, current))) 
+                                                                                       /// searchKey.CompareTo(item.ReferencePtr.Name(this), current) != 0 ))
+                                    continue;
+#if DETAILED_DEBUG
+                                Console.WriteLine("Found extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
+#endif
+                                // Add it to the stack, update search and continue
+                                top = item;
+                                if (stack != null)
+                                    stack.Push(top);
 
-                            startBit = item.ExtentLength;
+                                startBit = item.ExtentLength;
+                                found = true;
+
+                                break;
+                            }
                         }
                     }
-                    else
+
+                    if (found == false)
                     {
+#if DETAILED_DEBUG
                         Console.WriteLine("Missing");
+#endif
                         endBit = current - 1;
                     }
                 }
@@ -1184,8 +1211,9 @@ namespace Sparrow.Collections
                 checkMask >>= 1;
             }
 
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}; Stack: {3}", startBit, endBit + 1, top.ToDebugString(this), DumpStack(stack)));
-
+#endif
             return top;
         }
 
@@ -1195,9 +1223,9 @@ namespace Sparrow.Collections
             Contract.Requires(state != null);
             Contract.Requires(stack != null);
             Contract.Requires(startBit < endBit - 1);
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("FatBinarySearchExact({0},{1},({2}..{3})", searchKey.ToDebugString(), DumpStack(stack), startBit, endBit));
-
+#endif
             endBit--;
 
             Internal top = stack.Count != 0 ? stack.Peek() : null;
@@ -1215,16 +1243,18 @@ namespace Sparrow.Collections
             while (endBit - startBit > 0)
             {
                 Contract.Assert(checkMask != 0);
+#if DETAILED_DEBUG
                 Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
-
+#endif
                 int current = endBit & checkMask;
                 if ((startBit & checkMask) != current)
                 {
+#if DETAILED_DEBUG
                     Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
-
+#endif
                     // We calculate the hash up to the word it makes sense. 
                     uint hash = CalculateHashForBits(searchKey, state, current);
-
+#if DETAILED_DEBUG
                     {
                         int prefixLength = current / BitVector.BitsPerByte;
                         if (current % BitVector.BitsPerByte != 0)
@@ -1232,6 +1262,7 @@ namespace Sparrow.Collections
 
                         Console.WriteLine(string.Format("\tMap.Locate -> key:{0}, bytes:{1}, hash:{2}", searchKey.SubVector(0, current).ToBinaryString(), prefixLength, hash));   
                     }
+#endif
 
                     bool found = false;                    
 
@@ -1247,8 +1278,9 @@ namespace Sparrow.Collections
                                 // Make sure it is not a false positive
                                  item.ExtentLength < current)
                             {
+#if DETAILED_DEBUG
                                 Console.WriteLine("Found extent of length " + item.ExtentLength);
-
+#endif
                                 // Add it to the stack, update search and continue
                                 top = item;
                                 if (stack != null)
@@ -1264,17 +1296,18 @@ namespace Sparrow.Collections
                     // We haven't found an exact match. 
                     if (!found)
                     {
+#if DETAILED_DEBUG
                         Console.WriteLine("Missing");
-
+#endif
                         endBit = current - 1;
                     }
                 }
 
                 checkMask >>= 1;
             }
-
+#if DETAILED_DEBUG
             Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}; Stack: {3}", startBit, endBit + 1, top.ToDebugString(this), DumpStack(stack)));
-
+#endif
             return top;
         }
 
@@ -1283,6 +1316,31 @@ namespace Sparrow.Collections
         private static int TwoFattest( int a, int b)
         {
             return -1 << Bits.MostSignificantBit(a ^ b) & b;
+        }
+
+        private string DumpNodesTable()
+        {
+            var builder = new StringBuilder();
+
+            bool first = true;
+            builder.Append("After Insertion. NodesTable: {");
+            foreach (var item in this.NodesTable)
+            {
+                var node = item.Value.First();
+
+                if (!first )
+                    builder.Append(", ");
+
+                builder.Append(node.Handle(this).ToDebugString())
+                       .Append(" => ")
+                       .Append(node.ToDebugString(this));
+                
+                first = false;
+            }
+            builder.Append("} Root: ")
+                   .Append( this.Root.ToDebugString(this) );
+
+            return builder.ToString();
         }
 
         private string DumpStack<T>(Stack<T> stack) where T : Node

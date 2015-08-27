@@ -550,13 +550,22 @@ namespace Sparrow.Tests
             v2 = BitVector.Parse("11");
 
             Assert.False(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));          
+            Assert.False(v2.IsPrefix(v1));
+            Assert.True(v2.IsPrefix(v1, 0));
+            Assert.False(v2.IsPrefix(v1, 1));            
 
             v1 = BitVector.Parse("10000000");
             v2 = BitVector.Parse("10000000");
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.True(v2.IsPrefix(v1));          
+            Assert.True(v2.IsPrefix(v1));
+
+            for (int i = 0; i < v1.Count; i++)
+            {
+                Assert.True(v2.IsPrefix(v1, i));
+                Assert.True(v1.IsPrefix(v2, i));
+            }
+                
 
             v1 = BitVector.Parse("1100000");
             v2 = BitVector.Parse("11000001");
@@ -574,7 +583,15 @@ namespace Sparrow.Tests
             v2 = BitVector.Parse("01000000110");
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));     
+            Assert.False(v2.IsPrefix(v1));
+
+            for (int i = 0; i < v1.Count; i++)
+            {
+                Assert.True(v2.IsPrefix(v1, i));
+                Assert.True(v1.IsPrefix(v2, i));
+            }
+
+            Assert.False(v1.IsPrefix(v2, v2.Count));
 
             v1 = BitVector.Parse("");
             v2 = BitVector.Parse("01000000111");
