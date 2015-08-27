@@ -3,10 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Newtonsoft.Json;
 using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Tests
 {

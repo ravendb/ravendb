@@ -11,13 +11,14 @@ using System.IO;
 using System.Threading;
 using System.Web.Http;
 using Microsoft.Owin.Hosting;
-using Newtonsoft.Json;
 using Owin;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 using Voron;
 using Xunit;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Tests
 {

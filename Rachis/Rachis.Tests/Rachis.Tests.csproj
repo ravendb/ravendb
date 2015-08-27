@@ -101,9 +101,6 @@
     <Reference Include="xunit.extensions">
       <HintPath>..\..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BasicTests.cs" />
@@ -113,6 +110,7 @@
     <Compile Include="HttpTransportPingTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ElectionRelatedTests.cs" />
+    <Compile Include="TestRaftController.cs" />
     <Compile Include="RaftTestsBase.cs" />
     <Compile Include="SnapshotTests.cs" />
     <Compile Include="TopologyChangesTests.cs" />
@@ -125,6 +123,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
