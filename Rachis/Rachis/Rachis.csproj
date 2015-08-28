@@ -101,7 +101,6 @@
     <Compile Include="Storage\Topology.cs" />
     <Compile Include="Storage\PersistentState.cs" />
     <Compile Include="Transport\NodeConnectionInfo.cs" />
-    <Compile Include="Transport\RaftController.cs" />
     <Compile Include="Transport\RaftWebApiConfig.cs" />
     <Compile Include="Utils\NotLeadingException.cs" />
   </ItemGroup>

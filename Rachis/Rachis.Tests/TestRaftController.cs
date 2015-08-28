@@ -1,85 +1,57 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ClusterController.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RaftController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-
+using System.Web.Http.Controllers;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Database.Raft.Controllers
+namespace Rachis.Tests
 {
-	public class ClusterController : RavenDbApiController
+	public class TestRaftController : ApiController
 	{
-		private HttpTransport Transport
+		private HttpTransportBus _bus;
+
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
-			get
+			_bus = (HttpTransportBus)controllerContext.Configuration.Properties[typeof(HttpTransportBus)];
+			var sp = Stopwatch.StartNew();
+			var msg = await base.ExecuteAsync(controllerContext, cancellationToken);
+			if (_bus.Log.IsDebugEnabled)
 			{
-				return (HttpTransport)ClusterManager.Engine.Transport;
+				_bus.Log.Debug("{0} {1} {2} in {3:#,#;;0} ms", msg.StatusCode, controllerContext.Request.Method, controllerContext.Request.RequestUri,
+					sp.ElapsedMilliseconds);
 			}
+			return msg;
 		}
 
-		private HttpTransportBus Bus
-		{
-			get
-			{
-				return Transport.Bus;
-			}
-		}
-
-
-		[HttpGet]
-		[RavenRoute("cluster/status")]
-		public HttpResponseMessage Status()
-		{
-			var allNodes = ClusterManager.Engine.CurrentTopology.AllNodes.ToList();
-			var tasks = allNodes.Select(x => 
-				new
-				{
-					Uri = x.Uri.AbsoluteUri, 
-					Task = FetchNodeStatus(x)
-				}).ToArray();
-			return GetMessageWithObject(tasks.Select(x => new { Uri = x.Uri, Status = x.Task.Result }).ToList());
-		}
-
-		private Task<ConnectivityStatus> FetchNodeStatus(NodeConnectionInfo nci)
-		{
-			return ClusterManager.Client.CheckConnectivity(nci);
-		}
-
-		[HttpGet]
-		[RavenRoute("cluster/topology")]
-		public HttpResponseMessage Topology()
-		{
-			return GetMessageWithObject(ClusterManager.GetTopology());
-		}
 
 		[HttpPost]
-		[RavenRoute("raft/installSnapshot")]
+		[Route("raft/installSnapshot")]
 		public async Task<HttpResponseMessage> InstallSnapshot([FromUri]InstallSnapshotRequest request, [FromUri]string topology)
 		{
 			request.Topology = JsonConvert.DeserializeObject<Topology>(topology);
 			var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource, stream);
+			_bus.Publish(request, taskCompletionSource, stream);
 			return await taskCompletionSource.Task.ConfigureAwait(false);
 		}
 
 		[HttpPost]
-		[RavenRoute("raft/appendEntries")]
+		[Route("raft/appendEntries")]
 		public async Task<HttpResponseMessage> AppendEntries([FromUri]AppendEntriesRequest request, [FromUri]int entriesCount)
 		{
-			var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
+			var stream = await Request.Content.ReadAsStreamAsync();
 			request.Entries = new LogEntry[entriesCount];
 			for (int i = 0; i < entriesCount; i++)
 			{
@@ -104,47 +76,11 @@ namespace Raven.Database.Raft.Controllers
 			}
 
 			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource);
-			return await taskCompletionSource.Task.ConfigureAwait(false);
+			_bus.Publish(request, taskCompletionSource);
+			return await taskCompletionSource.Task;
 		}
 
-		[HttpGet]
-		[RavenRoute("raft/requestVote")]
-		public Task<HttpResponseMessage> RequestVote([FromUri]RequestVoteRequest request)
-		{
-			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource);
-			return taskCompletionSource.Task;
-		}
-
-		[HttpGet]
-		[RavenRoute("raft/timeoutNow")]
-		public Task<HttpResponseMessage> TimeoutNow([FromUri]TimeoutNowRequest request)
-		{
-			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource);
-			return taskCompletionSource.Task;
-		}
-
-		[HttpGet]
-		[RavenRoute("raft/disconnectFromCluster")]
-		public Task<HttpResponseMessage> DisconnectFromCluster([FromUri]DisconnectedFromCluster request)
-		{
-			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource);
-			return taskCompletionSource.Task;
-		}
-
-		[HttpGet]
-		[RavenRoute("raft/canInstallSnapshot")]
-		public Task<HttpResponseMessage> CanInstallSnapshot([FromUri]CanInstallSnapshotRequest request)
-		{
-			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
-			Bus.Publish(request, taskCompletionSource);
-			return taskCompletionSource.Task;
-		}
-
-		private static long Read7BitEncodedInt(Stream stream)
+		internal protected long Read7BitEncodedInt(Stream stream)
 		{
 			long count = 0;
 			int shift = 0;
@@ -163,6 +99,42 @@ namespace Raven.Database.Raft.Controllers
 				shift += 7;
 			} while ((b & 0x80) != 0);
 			return count;
+		}
+
+		[HttpGet]
+		[Route("raft/requestVote")]
+		public Task<HttpResponseMessage> RequestVote([FromUri]RequestVoteRequest request)
+		{
+			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
+			_bus.Publish(request, taskCompletionSource);
+			return taskCompletionSource.Task;
+		}
+
+		[HttpGet]
+		[Route("raft/timeoutNow")]
+		public Task<HttpResponseMessage> TimeoutNow([FromUri]TimeoutNowRequest request)
+		{
+			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
+			_bus.Publish(request, taskCompletionSource);
+			return taskCompletionSource.Task;
+		}
+
+		[HttpGet]
+		[Route("raft/disconnectFromCluster")]
+		public Task<HttpResponseMessage> DisconnectFromCluster([FromUri]DisconnectedFromCluster request)
+		{
+			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
+			_bus.Publish(request, taskCompletionSource);
+			return taskCompletionSource.Task;
+		}
+
+		[HttpGet]
+		[Route("raft/canInstallSnapshot")]
+		public Task<HttpResponseMessage> CanInstallSnapshot([FromUri]CanInstallSnapshotRequest request)
+		{
+			var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
+			_bus.Publish(request, taskCompletionSource);
+			return taskCompletionSource.Task;
 		}
 	}
 }

@@ -243,13 +243,14 @@ namespace Raven.Database.TimeSeries
 		{
 			private readonly KeyValueStateMachine _parent;
 
-			private List<FileStream> _files = new List<FileStream>();
+			private string[] files;
+			private int fullBackupIndex;
 
 			public SnapshotWriter(KeyValueStateMachine parent)
 			{
 				_parent = parent;
-				var files = Directory.GetFiles(_parent._storageEnvironment.Options.BasePath, "*.Snapshot");
-				var fullBackupIndex = GetFullBackupIndex(files);
+				files = Directory.GetFiles(_parent._storageEnvironment.Options.BasePath, "*.Snapshot");
+				fullBackupIndex = GetFullBackupIndex(files);
 
 				if (fullBackupIndex == -1)
 					throw new InvalidOperationException("Could not find a full backup file to start the snapshot writing");
@@ -263,32 +264,25 @@ namespace Raven.Database.TimeSeries
 				Index = long.Parse(parts[1]);
 				Term = long.Parse(parts[2]);
 
-				for (int i = fullBackupIndex; i < files.Length; i++)
-				{
-					_files.Add(File.OpenRead(files[i]));
-				}
+				
 			}
-
-			public void Dispose()
-			{
-				foreach (var file in _files)
-				{
-					file.Dispose();
-				}
-			}
-
+			
 			public long Index { get; private set; }
 			public long Term { get; private set; }
 			public void WriteSnapshot(Stream stream)
 			{
 				var writer = new BinaryWriter(stream);
-				writer.Write(_files.Count);
-				foreach (var file in _files)
+				writer.Write(files.Length);
+
+				for (int i = fullBackupIndex; i < files.Length; i++)
 				{
-					writer.Write(file.Name);
-					writer.Write(file.Length);
-					writer.Flush();
-					file.CopyTo(stream);
+					using (var f = File.OpenRead(files[i]))
+					{
+						writer.Write(f.Name);
+						writer.Write(f.Length);
+						writer.Flush();
+						f.CopyTo(stream);
+					}
 				}
 			}
 		}
