@@ -15,6 +15,7 @@ using Owin;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
+using Raven.Database.Server;
 using Voron;
 using Xunit;
 
@@ -40,6 +41,8 @@ namespace Rachis.Tests
 					HeartbeatTimeout = 10 * 1000
 				};
 			_raftEngine = new RaftEngine(engineOptions);
+			
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(9079);
 
 			_server = WebApp.Start(new StartOptions
 			{
