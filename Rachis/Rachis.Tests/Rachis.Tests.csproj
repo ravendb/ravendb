@@ -101,11 +101,14 @@
     <Reference Include="xunit.extensions">
       <HintPath>..\..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
-	<Reference Include="Newtonsoft.Json">
+    <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\Raven.Database\Server\NonAdminHttp.cs">
+      <Link>Utils\NonAdminHttp.cs</Link>
+    </Compile>
     <Compile Include="BasicTests.cs" />
     <Compile Include="CommandsTests.cs" />
     <Compile Include="DictionaryCommand.cs" />
