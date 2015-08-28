@@ -552,7 +552,8 @@ namespace Sparrow.Tests
             Assert.False(v1.IsPrefix(v2));
             Assert.False(v2.IsPrefix(v1));
             Assert.True(v2.IsPrefix(v1, 0));
-            Assert.False(v2.IsPrefix(v1, 1));            
+            Assert.True(v2.IsPrefix(v1, 1));
+            Assert.False(v2.IsPrefix(v1, 2));            
 
             v1 = BitVector.Parse("10000000");
             v2 = BitVector.Parse("10000000");

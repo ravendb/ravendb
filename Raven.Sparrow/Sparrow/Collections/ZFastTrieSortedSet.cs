@@ -18,7 +18,7 @@ namespace Sparrow.Collections
     /// As described in "Dynamic Z-Fast Tries" by Belazzougui, Boldi and Vigna in String Processing and Information
     /// Retrieval. Lecture notes on Computer Science. Volume 6393, 2010, pp 159-172 [1]
     /// </summary>
-    public sealed class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
+    public sealed partial class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
     {
         internal abstract class Node
         {
@@ -318,7 +318,7 @@ namespace Sparrow.Collections
 
         private int size;
 
-        internal readonly Dictionary<uint, List<Internal>> NodesTable = new Dictionary<uint, List<Internal>>();
+        internal readonly ZFastNodesTable NodesTable;
         internal readonly Leaf Head;
         internal readonly Leaf Tail;
         internal Node Root;
@@ -330,6 +330,8 @@ namespace Sparrow.Collections
                 throw new ArgumentException("Cannot continue without knowing how to binarize the key.");
 
             this.binarizeFunc = binarize;
+
+            this.NodesTable = new ZFastNodesTable(this);
 
             this.size = 0;
             this.Root = null;
@@ -424,7 +426,11 @@ namespace Sparrow.Collections
                 
                 newInternal.Right = cutPoint.Exit;
                 newInternal.JumpRightPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpRightPtr : cutPoint.Exit;  
-            }                       
+            }
+
+            // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
+            Debug.Assert(newInternal.IsInternal && newInternal.Left.Name(this)[newInternal.GetExtentLength(this)] == false);
+            Debug.Assert(newInternal.IsInternal && newInternal.Right.Name(this)[newInternal.GetExtentLength(this)] == true); 
 
             // If the exit node is the root
             bool isRightChild = cutPoint.IsRightChild;
@@ -440,7 +446,7 @@ namespace Sparrow.Collections
                     cutPoint.Parent.Right = newInternal;
                 else
                     cutPoint.Parent.Left = newInternal;
-            }
+            }           
                         
             // Update the jump table after the insertion.
             if (exitDirection)
@@ -453,55 +459,27 @@ namespace Sparrow.Collections
                 // If the cut point was low and the exit node internal
                 if (isCutLow && exitNodeAsInternal != null)
                 {
-                    uint hash = CalculateHashForBits(searchKey, hashState, exitNodeAsInternal.GetHandleLength(this));
-                    ReplaceExistingNodeInTable(hash, exitNodeAsInternal, newInternal);
-#if DETAILED_DEBUG
-                    {
-                        int prefixLength = exitNodeHandleLength / BitVector.BitsPerByte;
-                        if (exitNodeHandleLength % BitVector.BitsPerByte != 0)
-                            prefixLength++;
+                    Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
+                    
+                    this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
 
-                        Console.WriteLine(string.Format("\tMap.Replace -> prefix: '{0}', bytes: {1} ", searchKey.SubVector(0, exitNodeHandleLength).ToDebugString(), prefixLength));
-                    }                                       
-#endif
                     exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
 
-                    hash = CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this));
-                    InsertNodeInTable(hash, exitNodeAsInternal);
+                    hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this));                                       
+                    this.NodesTable.Add(exitNodeAsInternal, hash);
 
                     //  We update the jumps for the exit node.                
                     UpdateJumps(exitNodeAsInternal);
-#if DETAILED_DEBUG
-                    {
-                        // DEBUG
-                        int handleLength = exitNodeAsInternal.GetHandleLength(this);
-                        int prefixLength = handleLength / BitVector.BitsPerByte;
-                        if (handleLength % BitVector.BitsPerByte != 0)
-                            prefixLength++;
-
-                        Console.WriteLine(string.Format("\tMap.Add-low -> prefix: '{0}', bytes: {1} ", exitNodeAsInternal.Name(this).SubVector(0, handleLength).ToDebugString(), prefixLength));
-                    }                    
-#endif
                 }
                 else
                 {
                     //  We add the internal node to the jump table.                
                     exitNode.NameLength = cutPoint.LongestPrefix + 1;
 
-                    uint hash = CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));                  
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));                  
 
-                    InsertNodeInTable(hash, newInternal);
-#if DETAILED_DEBUG
-                    {
-                        // DEBUG
-                        int handleLength = newInternal.GetHandleLength(this);
-                        int prefixLength = handleLength / BitVector.BitsPerByte;
-                        if (handleLength % BitVector.BitsPerByte != 0)
-                            prefixLength++;
-
-                        Console.WriteLine(string.Format("\tMap.Add -> prefix: '{0}', bytes: {1} ", newInternal.Handle(this).ToDebugString(), prefixLength));
-                    }
-#endif
+                    this.NodesTable.Add(newInternal, hash);
                 }
             }
 
@@ -514,76 +492,10 @@ namespace Sparrow.Collections
             size++;
 
 #if DETAILED_DEBUG
-            Console.WriteLine(DumpNodesTable());
+            Console.WriteLine(this.NodesTable.DumpNodesTable(this));
 #endif
 
             return true;
-        }
-
-        private static uint CalculateHashForBits(BitVector vector, Hashing.Iterative.XXHash32Block state, int length = int.MaxValue)
-        {
-            length = Math.Min(vector.Count, length); // Ensure we use the proper value.
-
-            int bytes = length / BitVector.BitsPerWord;
-            int remaining = length % BitVector.BitsPerWord;
-
-            ulong remainingWord = 0;
-            if (remaining != 0)
-            {
-                remainingWord = vector.GetWord(bytes); // Zero addressing ensures we get the next byte.
-                remainingWord >>= BitVector.BitsPerWord - remaining;
-            }
-
-            unsafe
-            {
-                fixed (ulong* bitsPtr = vector.Bits)
-                {
-                    uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, bytes, state);
-#if DETAILED_DEBUG
-                    Console.WriteLine(string.Format("\tHash -> Prefix: {0}, Remaining: {2}, Bits({1})", hash, remaining, remainingWord));
-#endif
-                    uint upper = (uint)(remainingWord >> 32);
-                    uint bottom = (uint)remainingWord;
-
-                    return Hashing.CombineInline(hash, Hashing.CombineInline(Hashing.CombineInline(upper, bottom), (uint)length));
-                }
-            }
-        }
-
-        private void InsertNodeInTable(uint hash, Internal node)
-        {
-            List<Internal> values;
-            if (!this.NodesTable.TryGetValue(hash, out values))
-            {
-                values = new List<Internal>();
-                this.NodesTable[hash] = values;
-            }
-
-            if (!values.Contains(node))
-            {
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("\tMap.Add -> Node:{0}, Hash:{1}", node.ToDebugString(this), hash));
-#endif
-                values.Add(node);
-            }
-                
-        }
-
-
-        private void ReplaceExistingNodeInTable(uint hash, Internal oldNode, Internal newNode)
-        {
-            List<Internal> values;
-            if (!this.NodesTable.TryGetValue(hash, out values))
-            {
-                values = new List<Internal>();
-                this.NodesTable[hash] = values;
-            }
-
-            var removed = values.Remove(oldNode);
-            values.Add(newNode);
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("\tMap.Replace -> Add:{0}, ToRemove: {1}, Found: {2}, Hash:{3}", newNode.ToDebugString(this), oldNode.ToDebugString(this), removed, hash));
-#endif
         }
 
         private void UpdateJumps(Internal node)
@@ -989,7 +901,7 @@ namespace Sparrow.Collections
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
-            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, length);
+            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, length, isExact: false);
 
             // Check if the node is either the parex(key) and/or exit(key). 
             Node candidateNode;
@@ -1026,22 +938,22 @@ namespace Sparrow.Collections
                 // Find parex(key) or fail spectacularly (with very low probability). 
                 int stackSize = stack.Count;
 
-                Internal parexNode = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode.NameLength);
+                Internal parexNode = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode.NameLength, isExact: false);
                 if (parexNode.Left == parexOrExitNode || parexNode.Right == parexOrExitNode)
                     return new CutPoint(lcpLength, parexNode, parexOrExitNode, searchKey);
 
                 // It seems we just failed and found an unrelated node, we should restart in exact mode and also clear the stack of what we added during the last search.
                 while (stack.Count > stackSize)
                     stack.Pop();
-                
-                parexNode = FatBinarySearchExact(searchKey, state, stack, startPoint, parexOrExitNode.NameLength);
+
+                parexNode = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode.NameLength, isExact: true);
 
                 return new CutPoint(lcpLength, parexNode, parexOrExitNode, searchKey);
             }
             
             // The search process failed with very low probability.
             stack.Clear();
-            parexOrExitNode = FatBinarySearchExact(searchKey, state, stack, -1, length);
+            parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, length, isExact: true);
 
             if (parexOrExitNode.ExtentLength < length && searchKey[parexOrExitNode.ExtentLength])
                 candidateNode = parexOrExitNode.Right;
@@ -1064,7 +976,7 @@ namespace Sparrow.Collections
             if (startPoint == parexOrExitNode.NameLength - 1)
                 return new CutPoint(lcpLength, stack.Peek(), parexOrExitNode, searchKey);
 
-            Internal parentNode = FatBinarySearchExact(searchKey, state, stack, startPoint, parexOrExitNode.NameLength);
+            Internal parentNode = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode.NameLength, isExact: true);
             return new CutPoint(lcpLength, parentNode, parexOrExitNode, searchKey);
         }
 
@@ -1084,7 +996,7 @@ namespace Sparrow.Collections
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
-            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count);
+            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count, isExact: false);
 
             // Check if the node is either the parex(key) and/or exit(key). 
             Node candidateNode;
@@ -1104,7 +1016,7 @@ namespace Sparrow.Collections
                 return new ExitNode(lcpLength, parexOrExitNode, searchKey);
 
             // With very low priority we screw up and therefore we start again but without skipping anything. 
-            parexOrExitNode = FatBinarySearchExact(searchKey, state, stack, -1, searchKey.Count);
+            parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count, isExact: true);
             if (parexOrExitNode.Extent(this).IsProperPrefix(searchKey))
             {
                 if (parexOrExitNode.ExtentLength < searchKey.Count && searchKey[parexOrExitNode.ExtentLength])
@@ -1120,7 +1032,7 @@ namespace Sparrow.Collections
             return new ExitNode(searchKey.LongestCommonPrefixLength(candidateNode.Extent(this)), candidateNode, searchKey);
         }
 
-        private unsafe Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack, int startBit, int endBit)
+        private unsafe Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack, int startBit, int endBit, bool isExact)
         {
             Contract.Requires(searchKey != null);
             Contract.Requires(state != null);
@@ -1156,155 +1068,35 @@ namespace Sparrow.Collections
                     Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
 #endif
                     // We calculate the hash up to the word it makes sense. 
-                    uint hash = CalculateHashForBits(searchKey, state, current);
-#if DETAILED_DEBUG
-                    {
-                        int prefixLength = current / BitVector.BitsPerByte;
-                        if (current % BitVector.BitsPerByte != 0)
-                            prefixLength++;
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);     
 
-                        Console.WriteLine(string.Format("\tMap.Locate -> key:{0}, bytes:{1}, hash:{2}", searchKey.SubVector(0, current).ToBinaryString(), prefixLength, hash));                
-                    }
-#endif                    
-                    bool found = false;
-
-                    List<Internal> items;
-                    if (NodesTable.TryGetValue(hash, out items))
-                    {
-                        // If we only have a single match there only check we need is the item.ExtentLenght < current
-                        // However, if there are multiple matches, then we should also ensure that the Handle has the same size and 
-                        // that the reference pointer to the leaf share the prefix up to the current query size. 
-                        bool isSingle = items.Count == 1;
-
-                        foreach( var item in items )
-                        {
-                            if ( item.ExtentLength >= current )
-                            {
-                                if (!isSingle && (item.GetHandleLength(this) != current || item.ReferencePtr.Name(this).IsPrefix(searchKey, current))) 
-                                                                                       /// searchKey.CompareTo(item.ReferencePtr.Name(this), current) != 0 ))
-                                    continue;
-#if DETAILED_DEBUG
-                                Console.WriteLine("Found extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
-#endif
-                                // Add it to the stack, update search and continue
-                                top = item;
-                                if (stack != null)
-                                    stack.Push(top);
-
-                                startBit = item.ExtentLength;
-                                found = true;
-
-                                break;
-                            }
-                        }
-                    }
-
-                    if (found == false)
+                    int position = this.NodesTable.GetPosition(searchKey, current, hash, isExact);
+                    
+                    Internal item = position != -1 ? this.NodesTable[position] : null;
+                    if ( item == null || item.ExtentLength < current )
                     {
 #if DETAILED_DEBUG
-                        Console.WriteLine("Missing");
+                        Console.WriteLine("Missing " + ((isExact) ? "exact" : "non exact"));
 #endif
                         endBit = current - 1;
+                    }
+                    else
+                    {
+#if DETAILED_DEBUG
+                        Console.WriteLine("Found " + ((isExact) ? "exact" : "non exact") + " extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
+#endif
+                        // Add it to the stack, update search and continue
+                        top = item;
+                        if (stack != null)
+                            stack.Push(top);
+
+                        startBit = item.ExtentLength;
                     }
                 }
 
                 checkMask >>= 1;
             }
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}; Stack: {3}", startBit, endBit + 1, top.ToDebugString(this), DumpStack(stack)));
-#endif
-            return top;
-        }
-
-        private unsafe Internal FatBinarySearchExact(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack, int startBit, int endBit)
-        {
-            Contract.Requires(searchKey != null);
-            Contract.Requires(state != null);
-            Contract.Requires(stack != null);
-            Contract.Requires(startBit < endBit - 1);
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("FatBinarySearchExact({0},{1},({2}..{3})", searchKey.ToDebugString(), DumpStack(stack), startBit, endBit));
-#endif
-            endBit--;
-
-            Internal top = stack.Count != 0 ? stack.Peek() : null;
-           
-            if ( startBit == -1 )
-            {
-                Contract.Assert(this.Root is Internal);
-
-                top = (Internal) this.Root;
-                stack.Push(top);
-                startBit = top.ExtentLength;
-            }
-
-            int checkMask = -1 << Bits.CeilLog2(endBit - startBit);
-            while (endBit - startBit > 0)
-            {
-                Contract.Assert(checkMask != 0);
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
-#endif
-                int current = endBit & checkMask;
-                if ((startBit & checkMask) != current)
-                {
-#if DETAILED_DEBUG
-                    Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
-#endif
-                    // We calculate the hash up to the word it makes sense. 
-                    uint hash = CalculateHashForBits(searchKey, state, current);
-#if DETAILED_DEBUG
-                    {
-                        int prefixLength = current / BitVector.BitsPerByte;
-                        if (current % BitVector.BitsPerByte != 0)
-                            prefixLength++;
-
-                        Console.WriteLine(string.Format("\tMap.Locate -> key:{0}, bytes:{1}, hash:{2}", searchKey.SubVector(0, current).ToBinaryString(), prefixLength, hash));   
-                    }
-#endif
-
-                    bool found = false;                    
-
-                    List<Internal> items;
-                    if (NodesTable.TryGetValue(hash, out items))
-                    {
-                        // Try all items to find an exact match
-                        foreach (var item in items)
-                        {
-                            // If the node matches the handle length, the reference ptr name is equal and it is not a false positive
-                            if (item.GetHandleLength(this) == current &&
-                                 searchKey.CompareTo(item.ReferencePtr.Name(this), current) == 0 &&
-                                // Make sure it is not a false positive
-                                 item.ExtentLength < current)
-                            {
-#if DETAILED_DEBUG
-                                Console.WriteLine("Found extent of length " + item.ExtentLength);
-#endif
-                                // Add it to the stack, update search and continue
-                                top = item;
-                                if (stack != null)
-                                    stack.Push(top);
-
-                                startBit = item.ExtentLength;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    // We haven't found an exact match. 
-                    if (!found)
-                    {
-#if DETAILED_DEBUG
-                        Console.WriteLine("Missing");
-#endif
-                        endBit = current - 1;
-                    }
-                }
-
-                checkMask >>= 1;
-            }
 #if DETAILED_DEBUG
             Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}; Stack: {3}", startBit, endBit + 1, top.ToDebugString(this), DumpStack(stack)));
 #endif
@@ -1318,30 +1110,7 @@ namespace Sparrow.Collections
             return -1 << Bits.MostSignificantBit(a ^ b) & b;
         }
 
-        private string DumpNodesTable()
-        {
-            var builder = new StringBuilder();
 
-            bool first = true;
-            builder.Append("After Insertion. NodesTable: {");
-            foreach (var item in this.NodesTable)
-            {
-                var node = item.Value.First();
-
-                if (!first )
-                    builder.Append(", ");
-
-                builder.Append(node.Handle(this).ToDebugString())
-                       .Append(" => ")
-                       .Append(node.ToDebugString(this));
-                
-                first = false;
-            }
-            builder.Append("} Root: ")
-                   .Append( this.Root.ToDebugString(this) );
-
-            return builder.ToString();
-        }
 
         private string DumpStack<T>(Stack<T> stack) where T : Node
         {

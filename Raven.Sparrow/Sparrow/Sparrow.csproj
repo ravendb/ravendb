@@ -19,7 +19,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DETAILED_DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;DETAILED_DEBUG_</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -66,6 +66,7 @@
     <Compile Include="Binary\BitVector.cs" />
     <Compile Include="Collections\ConcurrentLruSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
+    <Compile Include="Collections\ZFastNodesTable.cs" />
     <Compile Include="Collections\ZFastTrieSortedSet.cs" />
     <Compile Include="Comparers.cs" />
     <Compile Include="Hashing.cs" />

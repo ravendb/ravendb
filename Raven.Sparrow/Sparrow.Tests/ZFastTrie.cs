@@ -10,7 +10,7 @@ using Xunit.Extensions;
 
 namespace Sparrow.Tests
 {
-    public class ZFastTrieTest
+    public partial class ZFastTrieTest
     {
         private readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
 
@@ -198,8 +198,24 @@ namespace Sparrow.Tests
             tree.Add("7H", "KmGx");
             tree.Add("73", "KmGx");
 
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
             ZFastTrieDebugHelpers.DumpKeys(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_OrderPreservation3()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            tree.Add("6b", "8Jp3");
+            tree.Add("ab", "V6sl");
+            tree.Add("dG", "GX37");
+            tree.Add("3s", "f04o");
+            tree.Add("8u", "KmGx");
+            tree.Add("cI", "KmGx");
+
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);            
         }
 
         [Fact]
@@ -255,16 +271,16 @@ namespace Sparrow.Tests
                 // Or this could read from a file. :)
                 return new[]
                 {
-                    //new object[] { 102, 4, 4 },                    
-                    //new object[] { 100, 4, 8 },
+                    new object[] { 102, 4, 4 },                    
+                    new object[] { 100, 4, 8 },
                     new object[] { 101, 2, 128 },
-                    //new object[] { 100, 8, 5 },
-                    //new object[] { 100, 16, 168 }
+                    new object[] { 100, 8, 5 },
+                    new object[] { 100, 16, 168 }
                 };
             }
         }
 
-        //[Fact]
+        [Fact]
         public void Structure_RandomTester()
         {
             var generator = new Random(100);
@@ -306,36 +322,36 @@ namespace Sparrow.Tests
             }
         }
 
+        [Theory, PropertyData("TreeSize")]
+        public void Structure_CappedSizeInsertion(int seed, int size, int count)
+        {
+            var generator = new Random(seed);
 
-    //    [Theory, PropertyData("TreeSize")]
-    //    public void Structure_CappedSizeInsertion( int seed, int size, int count )
-    //    {
-    //        var generator = new Random(seed);
- 
-    //        var tree = new ZFastTrieSortedSet<string, string>(binarize);
-            
-    //        var keys = new string[count];
-    //        for (int i = 0; i < count; i++)
-    //        {
-    //            string key = GenerateRandomString(generator, size);                
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-    //            if (!tree.Contains(key))
-    //                tree.Add(key, key);
+            var keys = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                string key = GenerateRandomString(generator, size);
 
-    //            keys[i] = key;                
-    //        }
+                if (!tree.Contains(key))
+                    tree.Add(key, key);
 
-    //        Console.WriteLine();
-    //        Console.WriteLine("--- Insert order --- ");
-    //        foreach ( var key in keys )
-    //            Console.WriteLine(key);
+                keys[i] = key;
+            }
 
-    //        Console.WriteLine();
-    //        ZFastTrieDebugHelpers.DumpKeys(tree);
+            Console.WriteLine();
+            Console.WriteLine("--- Insert order --- ");
+            foreach (var key in keys)
+                Console.WriteLine(key);
 
-    //        Console.WriteLine();
-    //        ZFastTrieDebugHelpers.StructuralVerify(tree);
-    //    }
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
+
     }
 
     public static class ZFastTrieDebugHelpers
@@ -399,7 +415,7 @@ namespace Sparrow.Tests
             Assert.Null(tree.Head.Previous);
 
             Assert.True(tree.Root == null || tree.Root.NameLength == 0); // Either the root does not exist or the root is internal and have name length == 0
-            Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.SelectMany(x => x.Value).Count() + 1); 
+            Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.Values.Count() + 1); 
 
             if (tree.Count == 0)
             {
@@ -415,20 +431,17 @@ namespace Sparrow.Tests
             var root = tree.Root;
             var nodes = new HashSet<ZFastTrieSortedSet<T, W>.Node>();
 
-            foreach (var nodesList in tree.NodesTable)
+            foreach (var node in tree.NodesTable.Values)
             {
-                foreach (var node in nodesList.Value)
-                {
-                    int handleLength = node.GetHandleLength(tree);
+                int handleLength = node.GetHandleLength(tree);
 
-                    Assert.True(root == node || root.GetHandleLength(tree) < handleLength); // All handled of lower nodes must be bigger than the root.
-                    Assert.Equal(node, node.ReferencePtr.ReferencePtr); // The reference of the reference should be itself.
+                Assert.True(root == node || root.GetHandleLength(tree) < handleLength); // All handled of lower nodes must be bigger than the root.
+                Assert.Equal(node, node.ReferencePtr.ReferencePtr); // The reference of the reference should be itself.
 
-                    nodes.Add(node);
-                }
+                nodes.Add(node);
             }
 
-            Assert.Equal(tree.NodesTable.SelectMany(x => x.Value).Count(), nodes.Count); // We are ensuring there are no repeated nodes in the hash table. 
+            Assert.Equal(tree.NodesTable.Values.Count(), nodes.Count); // We are ensuring there are no repeated nodes in the hash table. 
 
             if (tree.Count == 1)
             {
@@ -495,7 +508,7 @@ namespace Sparrow.Tests
 
                 var handle = node.Handle(tree);
 
-                var allNodes = tree.NodesTable.SelectMany(x => x.Value)
+                var allNodes = tree.NodesTable.Values
                                               .Select(x => x.Handle(tree));
 
                 Assert.True(allNodes.Contains(handle));
