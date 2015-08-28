@@ -418,7 +418,7 @@ namespace Rachis
 								tcc.Requested, Name);
 						}
 
-						StartTopologyChange(tcc);
+						// StartTopologyChange(tcc); - not sure why it was needed, see RavenDB-3808 for details
 						CommitTopologyChange(tcc);
 					}
 
