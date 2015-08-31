@@ -628,7 +628,7 @@ namespace Sparrow.Collections
                         hash = Hashing.CombineInline(hash, Hashing.CombineInline(Hashing.CombineInline(upper, bottom), (uint)length));
 
 #if DETAILED_DEBUG
-                        Console.WriteLine(string.Format("\tHash -> Prefix: {0}, Remaining: {2}, Bits({1})", hash, remaining, remainingWord));
+                        Console.WriteLine(string.Format("\tHash -> Hash: {0}, Remaining: {2}, Bits({1})", hash, remaining, remainingWord));
 #endif
                         return hash;
                     }

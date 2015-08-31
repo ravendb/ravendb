@@ -144,13 +144,17 @@ namespace Sparrow.Collections
             /// <summary>
             /// The public leaf in the double linked list referred in page 163 of [1].
             /// </summary>
-
             public Leaf Next;
 
+            /// <summary>
+            /// The stored original key used.
+            /// </summary>
             public TKey Key;
 
+            /// <summary>
+            /// The stored original value passed.
+            /// </summary>
             public TValue Value;
-
 
             public override BitVector Name(ZFastTrieSortedSet<TKey, TValue> owner)
             {
@@ -243,7 +247,10 @@ namespace Sparrow.Collections
             }
         }
 
-        internal class CutPoint
+        /// <summary>
+        /// The cutpoint for a string x with respect to the trie is the length of the longest common prefix between x and exit(x).
+        /// </summary>
+        private class CutPoint
         {
             /// <summary>
             /// Longest Common Prefix (or LCP) between the Exit(x) and x
@@ -274,6 +281,10 @@ namespace Sparrow.Collections
                 this.SearchKey = searchKey;
             }
 
+            /// <summary>
+            /// There are two cases. We say that x cuts high if the cutpoint is strictly smaller than |handle(exit(x))|, cuts low otherwise. Page 165 of [1]
+            /// </summary>
+            /// <remarks>Only when the cut is low, the handle(exit(x)) is a prefix of x.</remarks>
             public bool IsCutLow(ZFastTrieSortedSet<TKey, TValue> owner)
             {
                 // Theorem 3: Page 165 of [1]
@@ -287,7 +298,7 @@ namespace Sparrow.Collections
             }
         }
 
-        internal class ExitNode
+        private class ExitNode
         {
             /// <summary>
             /// Longest Common Prefix (or LCP) between the Exit(x) and x
@@ -314,10 +325,17 @@ namespace Sparrow.Collections
             }
         }
 
+        /// <summary>
+        /// The binarize function allows us to convert the key into a prefix free bit vector.
+        /// </summary>
+        /// <remarks>
+        /// If the bit vector is not prefix free, the ZFast Tree will not work. 
+        /// </remarks>
         private readonly Func<TKey, BitVector> binarizeFunc;        
 
         private int size;
 
+        // Pointers to the structure. 
         internal readonly ZFastNodesTable NodesTable;
         internal readonly Leaf Head;
         internal readonly Leaf Tail;
@@ -884,7 +902,7 @@ namespace Sparrow.Collections
         }
 
 
-        internal CutPoint FindParentExitNode(BitVector searchKey, Stack<Internal> stack = null)
+        private CutPoint FindParentExitNode(BitVector searchKey, Stack<Internal> stack = null)
         {
             Contract.Requires(size != 0);
 #if DETAILED_DEBUG
@@ -980,7 +998,7 @@ namespace Sparrow.Collections
             return new CutPoint(lcpLength, parentNode, parexOrExitNode, searchKey);
         }
 
-        internal ExitNode FindExitNode(TKey key, Stack<Internal> stack = null)
+        private ExitNode FindExitNode(TKey key, Stack<Internal> stack = null)
         {
             Contract.Requires(size != 0);
 

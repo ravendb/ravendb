@@ -98,6 +98,8 @@ namespace Sparrow.Tests
             Assert.True(tree.Add(lesserKey, "eini"));
             Assert.True(tree.Add(greaterKey, "Eini"));
 
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
             Assert.Equal(lesserKey, tree.FirstKey());
             Assert.Equal(greaterKey, tree.LastKey());
 
@@ -122,8 +124,6 @@ namespace Sparrow.Tests
             Assert.Equal(lesserKey, tree.PredecessorOrDefault(greaterKey));
             Assert.Null(tree.PredecessorOrDefault(lesserKey));
             Assert.Null(tree.PredecessorOrDefault(smallestKey));
-
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -203,6 +203,21 @@ namespace Sparrow.Tests
         }
 
         [Fact]
+        public void Structure_MultipleBranch_Simple()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            tree.Add("a", "8Jp3");
+            tree.Add("c", "V6sl");
+            tree.Add("h", "GX37");
+            tree.Add("b", "KmGx");
+
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            ZFastTrieDebugHelpers.DumpTree(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
+
+        [Fact]
         public void Structure_MultipleBranch_OrderPreservation3()
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
@@ -215,7 +230,7 @@ namespace Sparrow.Tests
             tree.Add("cI", "KmGx");
 
             ZFastTrieDebugHelpers.DumpKeys(tree);
-            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
