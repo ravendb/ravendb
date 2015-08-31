@@ -4,13 +4,15 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing.Session;
-
+using Microsoft.Owin.Hosting;
 using NDesk.Options;
 
 using Raven.Abstractions;
+using Raven.Monitor.CPU;
 using Raven.Monitor.IO;
+using Raven.Monitor.Memory;
 
 namespace Raven.Monitor
 {
@@ -18,6 +20,13 @@ namespace Raven.Monitor
 	{
 		public static void Main(string[] args)
 		{
+			var program = new Program();
+			program.Initialize();
+			program.ParseArguments(args);
+
+			program.AssertOptions();
+			
+			
 			Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 			Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
@@ -26,23 +35,18 @@ namespace Raven.Monitor
 				Console.WriteLine("Raven.Monitor requires elevated privileges. Please run it as administrator.");
 				Environment.Exit((int)ExitCodes.InsufficientPrivileges);
 			}
-
-			var program = new Program();
-			program.Initialize();
-			program.ParseArguments(args);
-
-			program.AssertOptions();
 		    Console.WriteLine();
 			program.Execute();
 		}
 
-		private readonly MonitorOptions options = new MonitorOptions();
+		internal MonitorOptions options = new MonitorOptions();
 
 		private OptionSet optionSet;
 
 		private void Initialize()
 		{
 			optionSet = new OptionSet();
+			optionSet.Add("run-as-server", OptionCategory.None, "Run as a server, which can accept stop / start commands", _ => options.RunAsServer = true);
 			optionSet.Add("disk-io", OptionCategory.None, "Disk IO monitoring", _ => options.Action = MonitorActions.DiskIo);
 			optionSet.Add("process-id=", OptionCategory.None, "ProcessID to monitor", processId => options.ProcessId = int.Parse(processId));
 			optionSet.Add("server-url=", OptionCategory.None, "ServerUrl to RavenDB server", serverUrl => options.ServerUrl = serverUrl);
@@ -56,74 +60,68 @@ namespace Raven.Monitor
 
 		private void AssertOptions()
 		{
-			switch (options.Action)
+			if (options.Action.HasFlag(MonitorActions.None))
 			{
-				case MonitorActions.None:
-					Console.WriteLine("No action selected.");
+				Console.WriteLine("No action selected.");
+				Environment.Exit((int)ExitCodes.InvalidArguments);
+			}
+			if (options.ProcessId <= 0)
+			{
+				var proc = Process.GetProcessesByName("Raven.Server");
+				switch (proc.Length)
+				{
+					case 0:
+						Console.WriteLine("ProcessID (--process-id) is empty, and no Raven.Server process was found.");
+						Environment.Exit((int)ExitCodes.InvalidArguments);
+						break;
+
+					case 1:
+						NotifyAssumption(string.Format("--process-id was not specified, assuming you meant Raven.Server process {0}", proc[0].Id));
+						options.ProcessId = proc[0].Id;
+						break;
+					default:
+						Console.WriteLine("ProcessID (--process-id) is empty, and there is more than a single Raven.Server process in the system, specify which one to use!");
+						Environment.Exit((int)ExitCodes.InvalidArguments);
+						break;
+				}
+			}
+			if (string.IsNullOrEmpty(options.ServerUrl))
+			{
+				options.ServerUrl = "http://localhost:8080/";
+				bool isValid = true;
+				try
+				{
+					WebRequest.Create(options.ServerUrl + "build/version").GetResponse().Close();
+				}
+				catch (Exception)
+				{
+					isValid = false;
+				}
+
+				if (isValid)
+				{
+					NotifyAssumption("Asuming server url is " + options.ServerUrl);
+				}
+				else
+				{
+					Console.WriteLine("ServerUrl (--server-url) cannot be empty.");
 					Environment.Exit((int)ExitCodes.InvalidArguments);
-					break;
-				case MonitorActions.DiskIo:
-					if (options.ProcessId <= 0)
-					{
-					    var proc = Process.GetProcessesByName("Raven.Server");
-					    switch (proc.Length)
-					    {
-                            case 0:
-					            Console.WriteLine("ProcessID (--process-id) is empty, and no Raven.Server process was found.");
-					            Environment.Exit((int)ExitCodes.InvalidArguments);
-                                break;
-                            
-                            case 1:
-                                NotifyAssumption(string.Format("--process-id was not specified, assuming you meant Raven.Server process {0}", proc[0].Id));
-					            options.ProcessId = proc[0].Id;
-					            break;
-                            default:
-                                Console.WriteLine("ProcessID (--process-id) is empty, and there is more than a single Raven.Server process in the system, specify which one to use!");
-                                Environment.Exit((int)ExitCodes.InvalidArguments);
-					            break;
-					    }
-					}
+				}
+			}
+			try
+			{
+				Process.GetProcessById(options.ProcessId);
+			}
+			catch (Exception)
+			{
+				Console.WriteLine("Invalid processID.");
+				Environment.Exit((int)ExitCodes.InvalidArguments);
+			}
 
-			        if (string.IsNullOrEmpty(options.ServerUrl))
-			        {
-			            options.ServerUrl = "http://localhost:8080/";
-			            bool isValid = true;
-			            try
-			            {
-                            WebRequest.Create(options.ServerUrl +"build/version").GetResponse().Close();
-			            }
-			            catch (Exception)
-			            {
-			                isValid = false;
-			            }
-
-			            if (isValid)
-			            {
-			                NotifyAssumption("Asuming server url is " + options.ServerUrl);
-			            }
-			            else
-			            {
-			                Console.WriteLine("ServerUrl (--server-url) cannot be empty.");
-			                Environment.Exit((int) ExitCodes.InvalidArguments);
-			            }
-			        }
-
-					try
-					{
-						Process.GetProcessById(options.ProcessId);
-					}
-					catch (Exception)
-					{
-						Console.WriteLine("Invalid processID.");
-						Environment.Exit((int)ExitCodes.InvalidArguments);
-					}
-
-					if (options.IoOptions.DurationInMinutes < 1)
-					{
-						Console.WriteLine("Duration (--disk-io-duration) must be at least 1.");
-						Environment.Exit((int)ExitCodes.InvalidArguments);
-					}
-					break;
+			if (options.IoOptions.DurationInMinutes < 1)
+			{
+				Console.WriteLine("Duration (--disk-io-duration) must be at least 1.");
+				Environment.Exit((int)ExitCodes.InvalidArguments);
 			}
 		}
 
@@ -137,15 +135,31 @@ namespace Raven.Monitor
 
 	    private void Execute()
 		{
-			switch (options.Action)
-			{
-				case MonitorActions.DiskIo:
-					using (var monitor = new DiskIoPerformanceMonitor(options))
-						monitor.Start();
-					break;
-				default:
-					throw new NotSupportedException(options.Action.ToString());
-			}
+		    if (options.RunAsServer)
+		    {
+			    options.IoOptions.DurationInMinutes = 0; // should indicate run until stoped
+			    using (var manager = new MonitoringManager(options))
+			    {
+				    manager.Register(new DiskIoPerformanceMonitor(options));
+				    manager.Register(new MemoryPerformanceMonitor(options));
+					manager.Register(new CpuPerformanceMonitoring(options));
+					manager.Register(new DiskQueuePerformanceMonitor(options));
+				    MonitoringManager.MonitorManager = manager;
+				    using (WebApp.Start<MonitorHost>("http://localhost:9091/"))
+				    {
+					    Console.WriteLine("Running as server, press any key to stop...");
+					    Console.ReadLine();
+				    }
+			    }
+			    return;
+		    }
+
+		    if (options.Action.HasFlag(MonitorActions.DiskIo))
+		    {
+			    using (var monitor = new DiskIoPerformanceMonitor(options))
+				    monitor.Start();
+		    }
+
 		}
 
 		private void ParseArguments(string[] args)

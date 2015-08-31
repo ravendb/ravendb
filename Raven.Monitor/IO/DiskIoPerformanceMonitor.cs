@@ -27,7 +27,7 @@ using Raven.Monitor.IO.Data;
 
 namespace Raven.Monitor.IO
 {
-	internal class DiskIoPerformanceMonitor : IDisposable
+	internal class DiskIoPerformanceMonitor : IDisposable, IMonitor
 	{
 		private readonly BlockingCollection<FileOperation> fileOperations = new BlockingCollection<FileOperation>();
 
@@ -50,8 +50,8 @@ namespace Raven.Monitor.IO
 		public DiskIoPerformanceMonitor(MonitorOptions options)
 		{
 			var process = Process.GetProcessById(options.ProcessId);
-
-			store = new DocumentStore { Url = options.ServerUrl }.Initialize();
+			RavenDocumentStore.Init(options.ServerUrl);
+			store = RavenDocumentStore.DocumentStore;
 			var resourcesToMonitor = GetResourcesToMonitor();
 
 			run.StartTime = SystemTime.UtcNow;
@@ -59,8 +59,8 @@ namespace Raven.Monitor.IO
 			run.ProcessName = process.ProcessName;
 			run.DurationInMinutes = options.IoOptions.DurationInMinutes;
 			run.DisplayName = GenerateDisplayName(run);
-
-			timer = new Timer(_ => Stop(), null, TimeSpan.FromMinutes(options.IoOptions.DurationInMinutes), TimeSpan.FromMilliseconds(-1));
+			if (options.IoOptions.DurationInMinutes > 0)
+				timer = new Timer(_ => Stop(), null, TimeSpan.FromMinutes(options.IoOptions.DurationInMinutes), TimeSpan.FromMilliseconds(-1));
 
 			session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
 			session.EnableKernelProvider(KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.FileIO);
@@ -183,7 +183,12 @@ namespace Raven.Monitor.IO
 
 		public void Stop()
 		{
+			PersistRun();
 			DisposeSession();
+		}
+
+		public void OnTimerTick()
+		{			
 		}
 
 		private void PersistRun()
@@ -239,7 +244,7 @@ namespace Raven.Monitor.IO
 
 			StopProcessingOperations();
 
-			PersistRun();
+			//PersistRun();
 
 			if (store != null)
 				store.Dispose();
