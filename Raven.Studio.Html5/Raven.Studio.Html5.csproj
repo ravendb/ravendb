@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.4</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.5</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
@@ -32,6 +32,7 @@
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\forceLicenseUpdate.ts" />
+    <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
     <TypeScriptCompile Include="App\commands\licenseCheckConnectivityCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
@@ -212,6 +213,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
     <TypeScriptCompile Include="App\viewmodels\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
@@ -486,6 +488,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\databaseStudioConfig.html" />
     <Content Include="App\views\fieldRangeFilter.html" />
     <Content Include="App\views\fieldStringFilter.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
@@ -921,7 +924,6 @@
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\spin.min.js" />
     <Content Include="Scripts\bootstrap-multiselect.js" />
-    <Content Include="Scripts\bootstrap-select.js" />
     <Content Include="Scripts\bootstrap-select.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
@@ -973,7 +975,7 @@
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\aceExt.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.selectpicker\bootstrap.selectpicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
@@ -1016,7 +1018,6 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Content\bootstrap-select.css.map" />
-    <Content Include="Scripts\bootstrap-select.js.map" />
     <Content Include="Content\bootstrap.css.map">
       <DependentUpon>bootstrap.css</DependentUpon>
     </Content>

@@ -197,7 +197,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					IsRunning = !shouldPause;
 
-					log.Debug("Replication task found work. Running: " + IsRunning);
+					log.Debug("Replication task found work. Running: {0}", IsRunning);
 
 					if (IsRunning)
 					{
@@ -1049,7 +1049,7 @@ namespace Raven.Bundles.Replication.Tasks
 								foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
 								{
 									IndexDefinition sideBySideIndexDefinition;
-									if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
+									if (sideBySideIndexes.TryGetValue(Constants.SideBySideIndexNamePrefix + indexDefinition.Name, out sideBySideIndexDefinition))
 										ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
 									else
 										ReplicateSingleIndex(destination, indexDefinition);

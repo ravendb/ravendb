@@ -46,7 +46,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			DatabaseName = other.DatabaseName;
 			queryFromPostRequest = other.queryFromPostRequest;
-			Configuration = other.Configuration;
+			if (other.Configuration != null)
+				Configuration = other.Configuration;
 			ControllerContext = other.ControllerContext;
 			ActionContext = other.ActionContext;
 		}
@@ -216,6 +217,12 @@ namespace Raven.Database.Server.Controllers
 
                 return _currentDb = database.Result;
 			}
+		}
+
+		public void SetCurrentDatabase(DocumentDatabase db)
+		{
+			DatabaseName = db.Name;
+			_currentDb = db;
 		}
 
 	    public override InMemoryRavenConfiguration ResourceConfiguration

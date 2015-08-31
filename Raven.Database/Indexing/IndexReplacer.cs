@@ -11,6 +11,7 @@ using System.Threading;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -206,12 +207,15 @@ namespace Raven.Database.Indexing
 			ReplaceIndexes(new List<int> { indexId });
 		}
 
+	    public event Action<string> IndexReplaced;
+
 		private void InternalReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
 		{
 			if (indexes.Count == 0)
 				return;
 
-			try
+            var onIndexReplaced = IndexReplaced;
+            try
 			{
 				using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
 				{
@@ -222,6 +226,8 @@ namespace Raven.Database.Indexing
 						try
 						{
 							ReplaceSingleIndex(indexReplaceInformation);
+						    if (onIndexReplaced != null)
+						        onIndexReplaced(indexReplaceInformation.IndexToReplace);
 						}
 						catch (Exception e)
 						{
@@ -243,9 +249,22 @@ namespace Raven.Database.Indexing
 
 		private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
 		{
+			var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
+			var originalReplaceDocument = Database.Documents.Get(key, null);
+			var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
 			var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
 			if (wasReplaced)
-				Database.Documents.Delete(Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
+			{
+				try
+				{
+					Database.Documents.Delete(key, etag, null);
+				}
+				catch (ConcurrencyException e)
+				{
+					// side by side document changed, probably means that we created a new side by side index and updated the index
+					log.Debug("Failed to delete the side by side document after index replace.");
+				}
+			}
 			else
 				HandleIndexReplaceError(indexReplaceInformation);
 		}

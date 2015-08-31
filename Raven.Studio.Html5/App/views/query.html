@@ -20,7 +20,7 @@
                     <span data-bind="text: selectedIndexLabel"></span>
                     <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu scrollable-menu" role="menu">
+                <ul class="dropdown-menu" role="menu" style="max-height: 300px; overflow-x: hidden;">
                     <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
@@ -74,7 +74,7 @@
                     <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
-            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasEditableIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>

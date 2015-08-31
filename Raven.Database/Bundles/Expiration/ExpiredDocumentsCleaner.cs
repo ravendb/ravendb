@@ -21,116 +21,126 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration
 {
-	[InheritedExport(typeof(IStartupTask))]
-	[ExportMetadata("Bundle", "documentExpiration")]
-	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
-	{
-		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
-		private readonly ILog logger = LogManager.GetCurrentClassLogger();
-		public DocumentDatabase Database { get; set; }
+    [InheritedExport(typeof(IStartupTask))]
+    [ExportMetadata("Bundle", "documentExpiration")]
+    public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
+    {
+        public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
+        private readonly ILog logger = LogManager.GetCurrentClassLogger();
+        public DocumentDatabase Database { get; set; }
 
-		public void Execute(DocumentDatabase database)
-		{
-			Database = database;
+        public void Execute(DocumentDatabase database)
+        {
+            Database = database;
 
 
-			var indexDefinition = database.Indexes.GetIndexDefinition(RavenDocumentsByExpirationDate);
-			if (indexDefinition == null)
-			{
-				database.Indexes.PutIndex(RavenDocumentsByExpirationDate,
-								  new IndexDefinition
-								  {
-									  Map =
-										  @"
+            var indexDefinition = database.Indexes.GetIndexDefinition(RavenDocumentsByExpirationDate);
+            if (indexDefinition == null)
+            {
+                database.Indexes.PutIndex(RavenDocumentsByExpirationDate,
+                                  new IndexDefinition
+                                  {
+                                      Map =
+                                          @"
 	from doc in docs
 	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
 	where expiry != null
 	select new { Expiry = expiry }
 "
-								  });
-			}
+                                  });
+            }
 
-			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
-			logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
-						deleteFrequencyInSeconds);
+            var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
+            logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
+                        deleteFrequencyInSeconds);
 
-			database.TimerManager.NewTimer(state => TimerCallback(), TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
-		}
+            timer = database.TimerManager.NewTimer(state => TimerCallback(), TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+        }
 
-		private object locker = new object();
+        private object locker = new object();
+        private Timer timer;
 
-		public bool TimerCallback()
-		{
-			if (Monitor.TryEnter(locker) == false)
-				return false;
+        public bool TimerCallback()
+        {
+            if (Database.Disposed)
+            {
+                return false;
+            }
 
-			try
-			{
-				DateTime currentTime = SystemTime.UtcNow;
-				string nowAsStr = currentTime.GetDefaultRavenFormat();
-				logger.Debug("Trying to find expired documents to delete");
-				var query = "Expiry:[* TO " + nowAsStr + "]";
+            if (Monitor.TryEnter(locker) == false)
+                return false;
 
-				var list = new List<string>();
-				int start = 0;
-				while (true)
-				{
-					const int pageSize = 1024;
+            try
+            {
 
-					QueryResultWithIncludes queryResult;
-					using(var cts = new CancellationTokenSource())
-					using (Database.DisableAllTriggersForCurrentThread())
-					using (cts.TimeoutAfter(TimeSpan.FromMinutes(5)))
-					{
-						queryResult = Database.Queries.Query(RavenDocumentsByExpirationDate, new IndexQuery
-						{
-							Start = start,
-							PageSize = pageSize,
-							Cutoff = currentTime,
-							Query = query,
-							FieldsToFetch = new[] { "__document_id" }
-						}, cts.Token);
-					}
+                DateTime currentTime = SystemTime.UtcNow;
+                string nowAsStr = currentTime.GetDefaultRavenFormat();
+                logger.Debug("Trying to find expired documents to delete");
+                var query = "Expiry:[* TO " + nowAsStr + "]";
 
-					if(queryResult.Results.Count == 0)
-						break;
+                var list = new List<string>();
+                int start = 0;
+                while (true)
+                {
+                    const int pageSize = 1024;
 
-					list.AddRange(queryResult.Results.Select(result => result.Value<string>("__document_id")).Where(x=>string.IsNullOrEmpty(x) == false));
+                    QueryResultWithIncludes queryResult;
+                    using (var cts = new CancellationTokenSource())
+                    using (Database.DisableAllTriggersForCurrentThread())
+                    using (cts.TimeoutAfter(TimeSpan.FromMinutes(5)))
+                    {
+                        queryResult = Database.Queries.Query(RavenDocumentsByExpirationDate, new IndexQuery
+                        {
+                            Start = start,
+                            PageSize = pageSize,
+                            Cutoff = currentTime,
+                            Query = query,
+                            FieldsToFetch = new[] { "__document_id" }
+                        }, cts.Token);
+                    }
+
+                    if (queryResult.Results.Count == 0)
+                        break;
+
+                    list.AddRange(queryResult.Results.Select(result => result.Value<string>("__document_id")).Where(x => string.IsNullOrEmpty(x) == false));
 
                     if (queryResult.Results.Count < pageSize)
                         break;
 
                     start += pageSize;
-				}
+                }
 
-				if (list.Count == 0)
-					return true;
+                if (list.Count == 0)
+                    return true;
 
-				logger.Debug(
-					() => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
+                logger.Debug(
+                    () => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
 
-				foreach (var id in list)
-				{
-					Database.Documents.Delete(id, null, null);
-				}
-			}
-			catch (Exception e)
-			{
-				logger.ErrorException("Error when trying to find expired documents", e);
-			}
-			finally
-			{
-				Monitor.Exit(locker);
-			}
-			return true;
-		}
+                foreach (var id in list)
+                {
+                    Database.Documents.Delete(id, null, null);
+                }
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException("Error when trying to find expired documents", e);
+            }
+            finally
+            {
+                Monitor.Exit(locker);
+            }
+            return true;
+        }
 
-		/// <summary>
-		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-		/// </summary>
-		/// <filterpriority>2</filterpriority>
-		public void Dispose()
-		{
-		}
-	}
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <filterpriority>2</filterpriority>
+        public void Dispose()
+        {
+            if(timer != null)
+                Database.TimerManager.ReleaseTimer(timer);
+            timer = null;
+        }
+    }
 }

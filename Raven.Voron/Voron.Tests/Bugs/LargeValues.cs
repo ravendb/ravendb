@@ -32,7 +32,7 @@
                         {
                             enumerator.MoveNext();
 
-                            tx.State.Root.Add(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+                            tx.Root.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
                         tx.Commit();
@@ -77,7 +77,7 @@
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.State.GetTree(snapshot.Transaction,tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.CreateTree(snapshot.Transaction,tree).State.EntriesCount);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

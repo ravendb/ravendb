@@ -141,6 +141,7 @@
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
     <Compile Include="RavenDB-3179.cs" />
+    <Compile Include="RavenDB-3758.cs" />
     <Compile Include="RavenDB-3302.cs" />
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
@@ -157,6 +158,7 @@
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB-3632.cs" />
     <Compile Include="RavenDB_3230.cs" />
+    <Compile Include="RavenDB_3400.cs" />
     <Compile Include="RavenDB_3543.cs" />
     <Compile Include="RavenDB_3570.cs" />
     <Compile Include="RavenDB_3573.cs" />

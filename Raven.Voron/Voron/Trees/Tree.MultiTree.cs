@@ -49,6 +49,7 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot add empty value to child tree");
 
 			State.IsModified = true;
+			State.Flags |= TreeFlags.MultiValueTrees;
 
 			Lazy<Cursor> lazy;
 			NodeHeader* node;
@@ -241,6 +242,7 @@ namespace Voron.Trees
 					return;
 				_tx.TryRemoveMultiValueTree(this, key);
 				_tx.FreePage(tree.State.RootPageNumber);
+
 				Delete(key);
 			}
 			else // we use a nested page here

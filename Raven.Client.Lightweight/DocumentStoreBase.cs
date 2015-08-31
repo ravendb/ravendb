@@ -5,7 +5,7 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
-using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -90,7 +90,7 @@ namespace Raven.Client
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
-        
+
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
@@ -101,12 +101,51 @@ namespace Raven.Client
 
 		public virtual void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
 		{
-			var indexesNames = indexCreationTasks.Select(x => x.IndexName).ToArray();
-			var definitions = indexCreationTasks.Select(x => x.CreateIndexDefinition()).ToArray();
-			var priorities = indexCreationTasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+			var indexesToAdd = indexCreationTasks
+				.Select(x => new IndexToAdd
+				{
+					Definition = x.CreateIndexDefinition(),
+					Name = x.IndexName,
+					Priority = x.Priority ?? IndexingPriority.Normal
+				})
+				.ToArray();
 
-			DatabaseCommands.PutIndexes(indexesNames, definitions, priorities);
+			DatabaseCommands.PutIndexes(indexesToAdd);
 
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
+
+		public virtual void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var indexesToAdd = indexCreationTasks
+				.Select(x => new IndexToAdd
+				{
+					Definition = x.CreateIndexDefinition(),
+					Name = x.IndexName,
+					Priority = x.Priority ?? IndexingPriority.Normal
+				})
+				.ToArray();
+
+			DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
+
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
+
+		public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var indexesToAdd = indexCreationTasks
+				.Select(x => new IndexToAdd
+				{
+					Definition = x.CreateIndexDefinition(),
+					Name = x.IndexName,
+					Priority = x.Priority ?? IndexingPriority.Normal
+				})
+				.ToArray();
+
+			await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+			
 			foreach (var task in indexCreationTasks)
 				task.AfterExecute(DatabaseCommands, Conventions);
 		}
@@ -121,11 +160,16 @@ namespace Raven.Client
 
 		public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
 		{
-			var indexesNames = indexCreationTasks.Select(x => x.IndexName).ToArray();
-			var definitions = indexCreationTasks.Select(x => x.CreateIndexDefinition()).ToArray();
-			var priorities = indexCreationTasks.Select(x => x.Priority ?? IndexingPriority.Normal).ToArray();
+			var indexesToAdd = indexCreationTasks
+				.Select(x => new IndexToAdd
+				{
+					Definition = x.CreateIndexDefinition(),
+					Name = x.IndexName,
+					Priority = x.Priority ?? IndexingPriority.Normal
+				})
+				.ToArray();
 
-			await AsyncDatabaseCommands.PutIndexesAsync(indexesNames, definitions, priorities).ConfigureAwait(false);
+			await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
 			foreach (var task in indexCreationTasks)
 				await task.AfterExecuteAsync(AsyncDatabaseCommands, Conventions).ConfigureAwait(false);

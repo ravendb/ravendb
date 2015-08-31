@@ -110,7 +110,7 @@ namespace Raven.Tests.Bugs
 		{
 			public override IndexDefinition CreateIndexDefinition()
 			{
-				return new IndexDefinitionBuilder<Shipment, Shipment>()
+				return new IndexDefinitionBuilder<Shipment, Shipment>(IndexName)
 				{
 					Map = docs => from doc in docs
 								  from product in doc.Items

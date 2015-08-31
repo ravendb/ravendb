@@ -7,12 +7,36 @@
     using System.Linq;
     using Voron.Util;
 
-    public class Cursor 
+    public class Cursor : IDisposable
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(NumericEqualityComparer.Instance);
+
+        private static readonly ObjectPool<Dictionary<long, Page>> _pagesByNumPool = new ObjectPool<Dictionary<long, Page>>(() => new Dictionary<long, Page>(NumericEqualityComparer.Instance), 50);
+
+        private readonly Dictionary<long, Page> _pagesByNum;
 
         private bool _anyOverrides;
+
+        public Cursor()
+        {
+            _pagesByNum = _pagesByNumPool.Allocate();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        // The bulk of the clean-up code is implemented in Dispose(bool)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _pagesByNum.Clear();
+                _pagesByNumPool.Free(_pagesByNum);
+            }
+        }
 
         public void Update(LinkedListNode<Page> node, Page newVal)
         {

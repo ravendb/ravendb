@@ -1,8 +1,6 @@
 ﻿using System;
-
-using System.Linq;
-
 using Raven.Abstractions.Data;
+using Sparrow.Collections;
 
 namespace Raven.Abstractions.Logging
 {
@@ -11,9 +9,9 @@ namespace Raven.Abstractions.Logging
 		public const string FailedToGenerateLogMessage = "Failed to generate log message";
 		private readonly ILog logger;
 		private readonly string loggerName;
-		private readonly Target[] targets;
+		private readonly ConcurrentSet<Target> targets;
 
-		public LoggerExecutionWrapper(ILog logger, string loggerName, Target[] targets)
+		public LoggerExecutionWrapper(ILog logger, string loggerName, ConcurrentSet<Target> targets)
 		{
 			this.logger = logger;
 			this.loggerName = loggerName;
@@ -29,12 +27,12 @@ namespace Raven.Abstractions.Logging
 
 		public bool IsDebugEnabled
 		{
-			get { return logger.IsDebugEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
 		}
 
 		public bool IsWarnEnabled
 		{
-			get { return logger.IsWarnEnabled; }
+            get { return LogManager.EnableDebugLogForTargets || logger.IsWarnEnabled; }
 		}
 
 		public void Log(LogLevel logLevel, Func<string> messageFunc)
@@ -56,7 +54,7 @@ namespace Raven.Abstractions.Logging
                 logger.Log(logLevel, wrappedMessageFunc);
             }
 
-			if (targets.Length == 0)
+			if (targets.Count == 0)
 				return;
 		    var shouldLog = false;
 		    // ReSharper disable once LoopCanBeConvertedToQuery - perf

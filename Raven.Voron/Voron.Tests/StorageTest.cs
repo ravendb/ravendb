@@ -129,30 +129,25 @@ namespace Voron.Tests
 		protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
 		{
 			if (name == null)
-				RenderAndShow(tx, tx.State.Root, showEntries);
+				RenderAndShow(tx, tx.Root);
 			else
-				RenderAndShow(tx, tx.Environment.State.GetTree(tx,name), showEntries);
+				RenderAndShow(tx, tx.Environment.CreateTree(tx,name));
 		}
 
-		protected void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
+		protected void RenderAndShow(Transaction tx, Tree root)
 		{
 			if (Debugger.IsAttached == false)
 				return;
-			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			var rootPageNumber = tx.Environment.State.GetTree(tx,root.Name).State.RootPageNumber;
-			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
+			var rootPageNumber = tx.Environment.CreateTree(tx,root.Name).State.RootPageNumber;
+            DebugStuff.RenderAndShow(root);
 
-			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-			var p = Process.Start(DebugStuff.FindGraphviz() + @"\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
-			p.WaitForExit();
-			Process.Start(output);
 		}
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
 			Lazy<Cursor> lazy;
 		    NodeHeader* node;
-			var p = tx.State.Root.FindPageFor(key, out node, out lazy);
+			var p = tx.Root.FindPageFor(key, out node, out lazy);
 			
 
 			if (node == null)

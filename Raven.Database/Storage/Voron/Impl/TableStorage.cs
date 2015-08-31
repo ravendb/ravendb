@@ -10,6 +10,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Voron.Impl.Paging;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -65,39 +66,12 @@ namespace Raven.Database.Storage.Voron.Impl
 			Initialize();
 		}
 
-		internal Dictionary<string, object> GenerateReportOnStorage()
+		internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
 		{
-			var reportData = new Dictionary<string, object>
-	        {
-	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
-                {"UsedPages", env.State.NextPageNumber-1},
-	            {"MaxNodeSize", AbstractPager.NodeMaxSize},
-	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
-	            {"PageSize", AbstractPager.PageSize},
-                {"Root",  System.Environment.NewLine + env.State.Root.State},
-                {"FreeSpace", System.Environment.NewLine +  env.State.FreeSpaceRoot.State},
-	        };
-
-		    using (var tx = env.NewTransaction(TransactionFlags.Read))
-		    {
-		        var root = env.State.Root;
-
-
-		        using (var it = root.Iterate())
-		        {
-		            if (it.Seek(Slice.BeforeAllKeys))
-		            {
-		                do
-		                {
-		                    var tree = tx.ReadTree(it.CurrentKey.ToString());
-		                    reportData[tree.Name] = System.Environment.NewLine + tree.State.ToString();
-		                } while (it.MoveNext());
-		            }
-		        }
-		    }
-
-			return reportData;
+			using (var tran = env.NewTransaction(TransactionFlags.Read))
+			{
+				return env.GenerateReport(tran, computeExactSizes);
+			}
 		}
 
 		public SnapshotReader CreateSnapshot()
@@ -165,7 +139,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
-				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
+				return tx.ReadTree(table.TableName).State.EntriesCount;
 			}
 		}
 
@@ -185,7 +159,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-			var tree = tx.State.GetTree(tx, table.TableName);
+			var tree = env.CreateTree(tx, table.TableName);
 
 			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
 			var rootPageNumber = tree.State.RootPageNumber;

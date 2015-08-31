@@ -19,13 +19,14 @@ namespace Voron.Platform.Win32
 				int remaining = sizeof(FileHeader);
 				while (remaining > 0)
 				{
-					int read;
-					if (Win32NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
+					int written;
+					if (Win32NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out written, null) == false)
 						throw new Win32Exception();
-					ptr += read;
-					remaining -= read;
+					ptr += written;
+					remaining -= written;
 				}
-				Win32NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
+				if(Win32NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle)==false)
+                    throw new Win32Exception();
 			}
 		}
 

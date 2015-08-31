@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Voron.Util.Conversion;
 
@@ -26,6 +27,12 @@ namespace Voron
             _pos += sizeof(long);
         }
 
+        public void WriteBigEndian(ulong l)
+        {
+            EndianBitConverter.Big.CopyBytes(l, _buffer, _pos);
+            _pos += sizeof(ulong);
+        }
+
         public void WriteBigEndian(short s)
         {
             EndianBitConverter.Big.CopyBytes(s, _buffer, _pos);
@@ -35,6 +42,17 @@ namespace Voron
         public Slice CreateSlice()
         {
             return new Slice(_buffer);
+        }
+
+        public void Write(byte[] bytes)
+        {
+            Write(bytes, 0, bytes.Length);
+        }
+
+        private void Write(byte[] bytes, int offset, int count)
+        {
+            Buffer.BlockCopy(bytes, offset, _buffer, _pos, count);
+            _pos += count;
         }
     }
 }

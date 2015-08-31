@@ -33,7 +33,6 @@ define(function(require, exports, module) {
 
 var keys = require("./keys");
 var useragent = require("./useragent");
-var dom = require("./dom");
 
 exports.addListener = function(elem, type, callback) {
     if (elem.addEventListener) {
@@ -86,7 +85,7 @@ exports.preventDefault = function(e) {
 exports.getButton = function(e) {
     if (e.type == "dblclick")
         return 0;
-    if (e.type == "contextmenu" || (e.ctrlKey && useragent.isMac))
+    if (e.type == "contextmenu" || (useragent.isMac && (e.ctrlKey && !e.altKey && !e.shiftKey)))
         return 2;
 
     // DOM Event
@@ -112,12 +111,37 @@ exports.capture = function(el, eventHandler, releaseCaptureHandler) {
     exports.addListener(document, "mousemove", eventHandler, true);
     exports.addListener(document, "mouseup", onMouseUp, true);
     exports.addListener(document, "dragstart", onMouseUp, true);
+    
+    return onMouseUp;
+};
+
+exports.addTouchMoveListener = function (el, callback) {
+    if ("ontouchmove" in el) {
+        var startx, starty;
+        exports.addListener(el, "touchstart", function (e) {
+            var touchObj = e.changedTouches[0];
+            startx = touchObj.clientX;
+            starty = touchObj.clientY;
+        });
+        exports.addListener(el, "touchmove", function (e) {
+            var factor = 1,
+            touchObj = e.changedTouches[0];
+
+            e.wheelX = -(touchObj.clientX - startx) / factor;
+            e.wheelY = -(touchObj.clientY - starty) / factor;
+
+            startx = touchObj.clientX;
+            starty = touchObj.clientY;
+
+            callback(e);
+        });
+    } 
 };
 
 exports.addMouseWheelListener = function(el, callback) {
     if ("onmousewheel" in el) {
-        var factor = 8;
         exports.addListener(el, "mousewheel", function(e) {
+            var factor = 8;
             if (e.wheelDeltaX !== undefined) {
                 e.wheelX = -e.wheelDeltaX / factor;
                 e.wheelY = -e.wheelDeltaY / factor;
@@ -129,8 +153,19 @@ exports.addMouseWheelListener = function(el, callback) {
         });
     } else if ("onwheel" in el) {
         exports.addListener(el, "wheel",  function(e) {
-            e.wheelX = (e.deltaX || 0) * 5;
-            e.wheelY = (e.deltaY || 0) * 5;
+            var factor = 0.35;
+            switch (e.deltaMode) {
+                case e.DOM_DELTA_PIXEL:
+                    e.wheelX = e.deltaX * factor || 0;
+                    e.wheelY = e.deltaY * factor || 0;
+                    break;
+                case e.DOM_DELTA_LINE:
+                case e.DOM_DELTA_PAGE:
+                    e.wheelX = (e.deltaX || 0) * 5;
+                    e.wheelY = (e.deltaY || 0) * 5;
+                    break;
+            }
+            
             callback(e);
         });
     } else {
@@ -149,7 +184,7 @@ exports.addMouseWheelListener = function(el, callback) {
 
 exports.addMultiMouseDownListener = function(el, timeouts, eventHandler, callbackName) {
     var clicks = 0;
-    var startX, startY, timer;
+    var startX, startY, timer; 
     var eventNames = {
         2: "dblclick",
         3: "tripleclick",
@@ -157,7 +192,7 @@ exports.addMultiMouseDownListener = function(el, timeouts, eventHandler, callbac
     };
 
     exports.addListener(el, "mousedown", function(e) {
-        if (exports.getButton(e) != 0) {
+        if (exports.getButton(e) !== 0) {
             clicks = 0;
         } else if (e.detail > 1) {
             clicks++;
@@ -168,14 +203,19 @@ exports.addMultiMouseDownListener = function(el, timeouts, eventHandler, callbac
         }
         if (useragent.isIE) {
             var isNewClick = Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5;
-            if (isNewClick) {
+            if (!timer || isNewClick)
                 clicks = 1;
-            }
+            if (timer)
+                clearTimeout(timer);
+            timer = setTimeout(function() {timer = null}, timeouts[clicks - 1] || 600);
+
             if (clicks == 1) {
                 startX = e.clientX;
                 startY = e.clientY;
             }
         }
+        
+        e._clicks = clicks;
 
         eventHandler[callbackName]("mousedown", e);
 
@@ -197,69 +237,67 @@ exports.addMultiMouseDownListener = function(el, timeouts, eventHandler, callbac
     }
 };
 
-function normalizeCommandKeys(callback, e, keyCode) {
-    var hashId = 0;
-    if ((useragent.isOpera && !("KeyboardEvent" in window)) && useragent.isMac) {
-        hashId = 0 | (e.metaKey ? 1 : 0) | (e.altKey ? 2 : 0)
-            | (e.shiftKey ? 4 : 0) | (e.ctrlKey ? 8 : 0);
-    } else {
-        hashId = 0 | (e.ctrlKey ? 1 : 0) | (e.altKey ? 2 : 0)
-            | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0);
+var getModifierHash = useragent.isMac && useragent.isOpera && !("KeyboardEvent" in window)
+    ? function(e) {
+        return 0 | (e.metaKey ? 1 : 0) | (e.altKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.ctrlKey ? 8 : 0);
     }
+    : function(e) {
+        return 0 | (e.ctrlKey ? 1 : 0) | (e.altKey ? 2 : 0) | (e.shiftKey ? 4 : 0) | (e.metaKey ? 8 : 0);
+    };
+
+exports.getModifierString = function(e) {
+    return keys.KEY_MODS[getModifierHash(e)];
+};
+
+function normalizeCommandKeys(callback, e, keyCode) {
+    var hashId = getModifierHash(e);
 
     if (!useragent.isMac && pressedKeys) {
         if (pressedKeys[91] || pressedKeys[92])
             hashId |= 8;
         if (pressedKeys.altGr) {
             if ((3 & hashId) != 3)
-                pressedKeys.altGr = 0
+                pressedKeys.altGr = 0;
             else
                 return;
         }
         if (keyCode === 18 || keyCode === 17) {
-            var location = e.location || e.keyLocation;
+            var location = "location" in e ? e.location : e.keyLocation;
             if (keyCode === 17 && location === 1) {
-                ts = e.timeStamp;
+                if (pressedKeys[keyCode] == 1)
+                    ts = e.timeStamp;
             } else if (keyCode === 18 && hashId === 3 && location === 2) {
-                var dt = -ts;
-                ts = e.timeStamp;
-                dt += ts;
-                if (dt < 3)
+                var dt = e.timeStamp - ts;
+                if (dt < 50)
                     pressedKeys.altGr = true;
             }
         }
     }
     
     if (keyCode in keys.MODIFIER_KEYS) {
-        switch (keys.MODIFIER_KEYS[keyCode]) {
-            case "Alt":
-                hashId = 2;
-                break;
-            case "Shift":
-                hashId = 4;
-                break;
-            case "Ctrl":
-                hashId = 1;
-                break;
-            default:
-                hashId = 8;
-                break;
-        }
-        keyCode = 0;
+        keyCode = -1;
     }
 
     if (hashId & 8 && (keyCode === 91 || keyCode === 93)) {
-        keyCode = 0;
+        keyCode = -1;
     }
     
     if (!hashId && keyCode === 13) {
-        if (e.location || e.keyLocation === 3) {
-            callback(e, hashId, -keyCode)
+        var location = "location" in e ? e.location : e.keyLocation;
+        if (location === 3) {
+            callback(e, hashId, -keyCode);
             if (e.defaultPrevented)
                 return;
         }
     }
     
+    if (useragent.isChromeOS && hashId & 8) {
+        callback(e, hashId, keyCode);
+        if (e.defaultPrevented)
+            return;
+        else
+            hashId &= ~8;
+    }
 
     // If there is no hashId and the keyCode is not a function key, then
     // we don't call the callback as we don't handle a command key here
@@ -267,8 +305,6 @@ function normalizeCommandKeys(callback, e, keyCode) {
     if (!hashId && !(keyCode in keys.FUNCTION_KEYS) && !(keyCode in keys.PRINTABLE_KEYS)) {
         return false;
     }
-    
-    
     
     return callback(e, hashId, keyCode);
 }
@@ -295,7 +331,7 @@ exports.addCommandKeyListener = function(el, callback) {
         var lastDefaultPrevented = null;
 
         addListener(el, "keydown", function(e) {
-            pressedKeys[e.keyCode] = true;
+            pressedKeys[e.keyCode] = (pressedKeys[e.keyCode] || 0) + 1;
             var result = normalizeCommandKeys(callback, e, e.keyCode);
             lastDefaultPrevented = e.defaultPrevented;
             return result;
@@ -313,15 +349,16 @@ exports.addCommandKeyListener = function(el, callback) {
         });
 
         if (!pressedKeys) {
-            pressedKeys = Object.create(null);
-            addListener(window, "focus", function(e) {
-                pressedKeys = Object.create(null);
-            });
+            resetPressedKeys();
+            addListener(window, "focus", resetPressedKeys);
         }
     }
 };
+function resetPressedKeys(e) {
+    pressedKeys = Object.create(null);
+}
 
-if (window.postMessage && !useragent.isOldIE) {
+if (typeof window == "object" && window.postMessage && !useragent.isOldIE) {
     var postMessageId = 1;
     exports.nextTick = function(callback, win) {
         win = win || window;
@@ -338,11 +375,11 @@ if (window.postMessage && !useragent.isOldIE) {
 }
 
 
-exports.nextFrame = window.requestAnimationFrame ||
-    window.mozRequestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    window.msRequestAnimationFrame ||
-    window.oRequestAnimationFrame;
+exports.nextFrame = typeof window == "object" && (window.requestAnimationFrame
+    || window.mozRequestAnimationFrame
+    || window.webkitRequestAnimationFrame
+    || window.msRequestAnimationFrame
+    || window.oRequestAnimationFrame);
 
 if (exports.nextFrame)
     exports.nextFrame = exports.nextFrame.bind(window);

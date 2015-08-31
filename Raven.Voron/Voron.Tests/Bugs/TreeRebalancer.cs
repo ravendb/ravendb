@@ -23,7 +23,7 @@ namespace Voron.Tests.Bugs
 					{
 						foreach (var multiTreeName in multiTrees)
 						{
-						    var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
+						    var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
 							var id = Guid.NewGuid().ToString();
 
 							addedIds.Add("test/0/user-" + i, id);
@@ -34,7 +34,7 @@ namespace Voron.Tests.Bugs
 
 					foreach (var multiTreeName in multiTrees)
 					{
-                        var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
+                        var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
 						multiTree.MultiAdd("test/0/user-50", Guid.NewGuid().ToString());
 					}
 
@@ -48,7 +48,7 @@ namespace Voron.Tests.Bugs
 					{
                         foreach (var multiTreeName in multiTrees)
                         {
-                            var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
+                            var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
 					
 							multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
@@ -69,7 +69,7 @@ namespace Voron.Tests.Bugs
 
                         foreach (var multiTreeName in multiTrees)
                         {
-                            var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
+                            var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
 					
 							multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}

@@ -50,6 +50,9 @@ namespace Raven.Database.Config
         [DllImport("Kernel32.dll", SetLastError = true)]
         public static extern bool SetEvent(IntPtr hEvent);
 
+        [DllImport("Kernel32.dll")]
+        public extern static IntPtr GetCurrentProcess();
+
         private static bool failedToGetAvailablePhysicalMemory;
         private static bool failedToGetTotalPhysicalMemory;
         private static int memoryLimit;
@@ -57,6 +60,10 @@ namespace Raven.Database.Config
         private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
         private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
         private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
+
+
+        private static readonly IntPtr currentProcessHandle = GetCurrentProcess();
+
 
         static MemoryStatistics()
         {
@@ -310,6 +317,35 @@ namespace Raven.Database.Config
         }
 
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+      
+        [DllImport("psapi.dll", SetLastError = true)]
+        static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS counters, uint size);
+        [StructLayout(LayoutKind.Sequential)]
+        // ReSharper disable once InconsistentNaming - Win32 API
+        public struct PROCESS_MEMORY_COUNTERS
+        {
+            public uint cb;             // The size of the structure, in bytes (DWORD).
+            public uint PageFaultCount;         // The number of page faults (DWORD).
+            public UIntPtr PeakWorkingSetSize;     // The peak working set size, in bytes (SIZE_T).
+            public UIntPtr WorkingSetSize;         // The current working set size, in bytes (SIZE_T).
+            public UIntPtr QuotaPeakPagedPoolUsage;    // The peak paged pool usage, in bytes (SIZE_T).
+            public UIntPtr QuotaPagedPoolUsage;    // The current paged pool usage, in bytes (SIZE_T).
+            public UIntPtr QuotaPeakNonPagedPoolUsage; // The peak nonpaged pool usage, in bytes (SIZE_T).
+            public UIntPtr QuotaNonPagedPoolUsage;     // The current nonpaged pool usage, in bytes (SIZE_T).
+            public UIntPtr PagefileUsage;          // The Commit Charge value in bytes for this process (SIZE_T). Commit Charge is the total amount of memory that the memory manager has committed for a running process.
+            public UIntPtr PeakPagefileUsage;      // The peak value in bytes of the Commit Charge during the lifetime of this process (SIZE_T).
+        }
+
+        public static unsafe long GetCurrentWorkingSet()
+        {
+            PROCESS_MEMORY_COUNTERS pr = new PROCESS_MEMORY_COUNTERS();
+            pr.cb = (uint)sizeof (PROCESS_MEMORY_COUNTERS);
+
+            if (GetProcessMemoryInfo(currentProcessHandle, out pr, pr.cb) == false)
+                throw new Win32Exception();
+
+            return (long)pr.WorkingSetSize.ToUInt64();
+        }
 
         public static int AvailableMemoryInMb
         {
@@ -344,8 +380,7 @@ namespace Raven.Database.Config
                     // Available Memory (AM) = Total Memory (TM) - UM  = TM - ( LO + LU ) = TM - LO - LU
 
                     long alreadyAvailableMemory = (long)new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
-
-                    long workingSet = Process.GetCurrentProcess().WorkingSet64;
+                    long workingSet = GetCurrentWorkingSet();
                     long liveObjectMemory = GC.GetTotalMemory(false);
 
                     // There is still no way for us to query the amount of unmanaged memory in the working set
@@ -363,13 +398,14 @@ namespace Raven.Database.Config
                     // we are in 32 bits mode, but the _system_ may have more than 4 GB available
                     // so we have to check the _address space_ as well as the available memory
                     // 32bit processes are limited to 1.5GB of heap memory
-                    int workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
+                    int workingSetMb = (int)(workingSet / 1024 / 1024);
                     return memoryLimitSet ? Math.Min(MemoryLimit, Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb)) : Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
                 }
                 catch (Exception e)
                 {
                     Logger.ErrorException("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                     failedToGetAvailablePhysicalMemory = true;
+
                     return 256;
                 }
             }

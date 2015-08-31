@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 using Raven.Abstractions.Data;
@@ -22,6 +23,7 @@ using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Storage.Voron.Schema;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Sparrow.Collections;
@@ -29,6 +31,7 @@ using Sparrow.Collections;
 using Voron;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using Voron.Impl.Paging;
 using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
@@ -229,8 +232,8 @@ namespace Raven.Storage.Voron
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
-					if (Environment.StackTrace.Contains(".Finalize()") == false)
-						throw e;
+					if (System.Environment.StackTrace.Contains(".Finalize()") == false)
+						throw;
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
@@ -590,17 +593,125 @@ namespace Raven.Storage.Voron
             throw new NotSupportedException("Not valid for Voron storage");
         }
 
-		[CLSCompliant(false)]
+	    public StorageEnvironment Environment
+	    {
+	        get { return tableStorage.Environment; }
+	    }
+
+	    [CLSCompliant(false)]
 		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
 		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
 		}
 
-		public IList<string> ComputeDetailedStorageInformation()
+		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
 		{
-		    return tableStorage.GenerateReportOnStorage()
-		                       .Select(kvp => String.Format("{0} -> {1}", kvp.Key, kvp.Value))
-		                       .ToList();
+			var seperator = new String('#', 80);
+			var padding = new String('\t', 1);
+			var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
+			var reportAsList = new List<string>();
+			reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
+			reportAsList.Add(string.Format("Total used db size: {0}", SizeHelper.Humane(report.DataFile.SpaceInUseInBytes)));
+			reportAsList.Add(string.Format("Total Trees Count: {0}", report.Trees.Count));
+			reportAsList.Add("Trees:");
+			foreach (var tree in report.Trees.OrderByDescending(x => x.PageCount))
+			{
+				var sb = new StringBuilder();
+				sb.Append(System.Environment.NewLine);
+				sb.Append(seperator);
+				sb.Append(System.Environment.NewLine);
+				sb.Append(padding);
+				sb.Append(tree.Name);
+				sb.Append(System.Environment.NewLine);
+				sb.Append(seperator);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("Owned Size: ");
+				var ownedSize = AbstractPager.PageSize * tree.PageCount;
+				sb.Append(SizeHelper.Humane(ownedSize));
+				sb.Append(System.Environment.NewLine);
+				if (computeExactSizes)
+				{
+					sb.Append("Used Size: ");
+					sb.Append(SizeHelper.Humane((long)(ownedSize * tree.Density)));
+					sb.Append(System.Environment.NewLine);
+				}
+				sb.Append("Records: ");
+				sb.Append(tree.EntriesCount);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("Depth: ");
+				sb.Append(tree.Depth);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("PageCount: ");
+				sb.Append(tree.PageCount);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("LeafPages: ");
+				sb.Append(tree.LeafPages);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("BranchPages: ");
+				sb.Append(tree.BranchPages);
+				sb.Append(System.Environment.NewLine);
+				sb.Append("OverflowPages: ");
+				sb.Append(tree.OverflowPages);
+				sb.Append(System.Environment.NewLine);
+
+				if (tree.MultiValues != null)
+				{
+					sb.Append("Multi values: ");
+					sb.Append(System.Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("Records: ");
+					sb.Append(tree.MultiValues.EntriesCount);
+					sb.Append(System.Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("PageCount: ");
+					sb.Append(tree.MultiValues.PageCount);
+					sb.Append(System.Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("LeafPages: ");
+					sb.Append(tree.MultiValues.LeafPages);
+					sb.Append(System.Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("BranchPages: ");
+					sb.Append(tree.MultiValues.BranchPages);
+					sb.Append(System.Environment.NewLine);
+
+					sb.Append(padding);
+					sb.Append("OverflowPages: ");
+					sb.Append(tree.MultiValues.OverflowPages);
+					sb.Append(System.Environment.NewLine);
+				}
+
+				reportAsList.Add(sb.ToString());
+			}
+
+			if (report.Journals.Any())
+			{
+				reportAsList.Add("Journals:");
+				foreach (var journal in report.Journals.OrderByDescending(x => x.AllocatedSpaceInBytes))
+				{
+					var sb = new StringBuilder();
+					sb.Append(System.Environment.NewLine);
+					sb.Append(seperator);
+					sb.Append(System.Environment.NewLine);
+					sb.Append(padding);
+					sb.Append("Journal number: ");
+					sb.Append(journal.Number);
+					sb.Append(System.Environment.NewLine);
+					sb.Append(seperator);
+					sb.Append(System.Environment.NewLine);
+					sb.Append("Allocated space: ");
+					sb.Append(SizeHelper.Humane(journal.AllocatedSpaceInBytes));
+					sb.Append(System.Environment.NewLine);
+
+					reportAsList.Add(sb.ToString());
+				}
+			}
+
+			return reportAsList;
 		}
 
 		public List<TransactionContextData> GetPreparedTransactions()

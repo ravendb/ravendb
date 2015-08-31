@@ -98,13 +98,14 @@ namespace Raven.Tests.Core
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20)));
+		    var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
+			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0,to);
 
 			if (spinUntil == false)
 			{
 				var statistics = databaseCommands.GetStatistics();
 				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
+				throw new TimeoutException("The indexes stayed stale for more than " + to + Environment.NewLine + stats);
 			}
 		}
 

@@ -70,8 +70,8 @@ class deleteDatabaseCommand extends commandBase {
         var mergedPromise = $.Deferred();
 
         var combinedPromise = $.when.apply(null, deleteTasks);
-        combinedPromise.done(() => {
-            var deletedResources = [].concat.apply([], arguments);
+        combinedPromise.done((resources) => {
+            var deletedResources = [].concat.apply([], resources);
             this.reportSuccess("Successfully deleted " + deletedResources.length + " resources!");
             mergedPromise.resolve(deletedResources);
         });
@@ -96,7 +96,9 @@ class deleteDatabaseCommand extends commandBase {
             .done((resourceNames: string[]) => {
                 task.resolve(resources.filter(r => resourceNames.contains(r.name)));
             })
-            .fail(() => task.reject(arguments));
+            .fail(function() {
+                task.reject(arguments);
+            });
         return task;
     }
 

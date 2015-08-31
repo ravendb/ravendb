@@ -48,16 +48,14 @@ namespace Voron.Trees
 
         public byte* Execute()
         {
-            Page rightPage = Tree.NewPage(_tx, _page.Flags, 1);
-            _treeState.RecordNewPage(_page, 1);
+            Page rightPage = _tree.NewPage(_page.Flags, 1);
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-				Page newRootPage = Tree.NewPage(_tx, _tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
-                _cursor.Push(newRootPage);
+				Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
+				_cursor.Push(newRootPage);
                 _treeState.RootPageNumber = newRootPage.PageNumber;
                 _treeState.Depth++;
-                _treeState.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page
                 newRootPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, _page.PageNumber);
@@ -126,7 +124,7 @@ namespace Voron.Trees
 					}
 					else
 					{
-						_tx.FreePage(rightPage.PageNumber); // return the unnecessary right page
+						_tree.FreePage(rightPage); // return the unnecessary right page
 						return AddSeparatorToParentPage(_pageNumber, _newKey);
 					}
                 }
@@ -316,7 +314,7 @@ namespace Voron.Trees
 				_cursor.Push(_tx.GetReadOnlyPage(pageRefNumber));
 			}
 
-			_tx.FreePage(page.PageNumber);
+			_tree.FreePage(page);
 		}
 
         private byte* InsertNewKey(Page p)
