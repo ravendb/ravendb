@@ -104,7 +104,6 @@
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
@@ -120,7 +119,6 @@
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesType.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatistics.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeries.ts" />
-    <TypeScriptCompile Include="App\models\counter\counter.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
@@ -989,9 +987,6 @@
     <TypeScriptCompile Include="App\models\counter\counter.ts" />
     <TypeScriptCompile Include="App\models\counter\counterChange.ts" />
     <TypeScriptCompile Include="App\models\counter\counterDto.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
-    <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageStatistics.ts" />
     <TypeScriptCompile Include="App\models\counter\counterSummary.ts" />
     <TypeScriptCompile Include="App\models\counter\serverValue.ts" />
