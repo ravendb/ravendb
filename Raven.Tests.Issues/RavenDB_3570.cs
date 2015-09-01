@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
-using System.IO;
 using System.Net;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -51,13 +49,13 @@ namespace Raven.Tests.Issues
 			try
 			{
 				AddWindowsUser(username, password);
-
+				
 				this.Invoking(x =>
 				{
 					using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
 					{
 					}
-				}).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
+				}).ShouldThrowExactly<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
 
 				this.Invoking(x =>
 				{

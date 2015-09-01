@@ -116,7 +116,7 @@ class editCounter extends viewModelBase {
 
 	deleteCounter() {
 		var summary: counterSummary = new counterSummary({
-			Group: this.groupName(),
+			GroupName: this.groupName(),
 			CounterName: this.counterName(),
 			Total: this.counter().total()
 		});
