@@ -843,14 +843,19 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                 do
                 {
-                    if (count < take)
-                    {
-                        var config = iterator
-                            .CreateReaderForCurrent()
-                            .AsStream()
-                            .ToJObject();
+					var config = iterator
+							.CreateReaderForCurrent()
+							.AsStream()
+							.ToJObject();
 
-                        results.Add(config.Value<string>("name"));
+	                var configName = config.Value<string>("name");
+
+					if (configName.StartsWith(prefix) == false)
+						break;
+
+					if (count < take)
+                    {
+                        results.Add(configName);
                     }
 
                     count++;
