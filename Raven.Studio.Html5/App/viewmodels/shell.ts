@@ -375,7 +375,7 @@ class shell extends viewModelBase {
 
     private preLoadRecentErrorsView() {
         // preload this view as in case of failure server can't serve it.
-        viewLocator.locateView("views/recentErrors");
+        viewLocator.locateView("views/common/recentErrors");
     }
 
     private fecthStudioConfigForDatabase(db: database) {
