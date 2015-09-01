@@ -121,6 +121,7 @@
     <Compile Include="RaftTestsBase.cs" />
     <Compile Include="SnapshotTests.cs" />
     <Compile Include="TopologyChangesTests.cs" />
+    <Compile Include="TopologyChangesUnsafeWay.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

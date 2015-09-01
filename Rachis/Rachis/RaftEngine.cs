@@ -129,6 +129,7 @@ namespace Rachis
 //			Console.ReadLine();
 //#endif
 			_raftEngineOptions = raftEngineOptions;
+			
 			Debug.Assert(raftEngineOptions.Stopwatch != null);
 
 			_log = LogManager.GetLogger(raftEngineOptions.Name + "." + GetType().FullName);
@@ -157,6 +158,8 @@ namespace Rachis
 				SetState(RaftEngineState.Follower);
 			}
 
+			UnsafeOperations = new UnsafeClusterOperations(this);
+
 			_commitIndex = StateMachine.LastAppliedIndex;
 			_eventLoopTask = Task.Factory.StartNew(EventLoop, TaskCreationOptions.LongRunning);
 		}
@@ -165,6 +168,8 @@ namespace Rachis
 		{
 			get { return _raftEngineOptions; }
 		}
+
+		public UnsafeClusterOperations UnsafeOperations { get; private set; }
 
 		protected void EventLoop()
 		{
@@ -274,6 +279,18 @@ namespace Rachis
 
 		public Task RemoveFromClusterAsync(NodeConnectionInfo node)
 		{
+			var requestedTopology = ExcludeFromCurrentTopology(node);
+
+			if (_log.IsInfoEnabled)
+			{
+				_log.Info("RemoveFromClusterAsync, requestedTopology: {0}", requestedTopology);
+			}
+
+			return ModifyTopology(requestedTopology);
+		}
+
+		private Topology ExcludeFromCurrentTopology(NodeConnectionInfo node)
+		{
 			if (_currentTopology.Contains(node.Name) == false)
 				throw new InvalidOperationException("Node " + node + " was not found in the cluster");
 
@@ -285,15 +302,24 @@ namespace Rachis
 				_currentTopology.AllVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
 				_currentTopology.NonVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
 				_currentTopology.PromotableNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false)
-			);
-			if (_log.IsInfoEnabled)
-			{
-				_log.Info("RemoveFromClusterAsync, requestedTopology: {0}", requestedTopology);
-			}
-			return ModifyTopology(requestedTopology);
+				);
+
+			return requestedTopology;
 		}
 
 		public Task AddToClusterAsync(NodeConnectionInfo node, bool nonVoting = false)
+		{
+			var requestedTopology = AddToCurrentTopology(node, nonVoting);
+
+			if (_log.IsInfoEnabled)
+			{
+				_log.Info("AddToClusterClusterAsync, requestedTopology: {0}", requestedTopology);
+			}
+
+			return ModifyTopology(requestedTopology);
+		}
+
+		private Topology AddToCurrentTopology(NodeConnectionInfo node, bool nonVoting)
 		{
 			if (_currentTopology.Contains(node.Name))
 				throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
@@ -301,15 +327,16 @@ namespace Rachis
 			var requestedTopology = new Topology(
 				_currentTopology.TopologyId,
 				_currentTopology.AllVotingNodes,
-				nonVoting ? _currentTopology.NonVotingNodes.Union(new[] { node }) : _currentTopology.NonVotingNodes,
-				nonVoting ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[] { node })
-				);
+				nonVoting ? _currentTopology.NonVotingNodes.Union(new[]
+				{
+					node
+				}) : _currentTopology.NonVotingNodes,
+				nonVoting ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[]
+				{
+					node
+				}));
 
-			if (_log.IsInfoEnabled)
-			{
-				_log.Info("AddToClusterClusterAsync, requestedTopology: {0}", requestedTopology);
-			}
-			return ModifyTopology(requestedTopology);
+			return requestedTopology;
 		}
 
 		internal bool CurrentlyChangingTopology()
@@ -328,8 +355,10 @@ namespace Rachis
 		        throw new InvalidOperationException("No log entry for committed for index " + CommitIndex + ", this is probably a brand new cluster with no committed entries or a serious problem");
 
 		    if (logEntry.Term != PersistentState.CurrentTerm)
-		        throw new InvalidOperationException("Cannot modify the cluster topology when the committed index " + CommitIndex + " is in term " + logEntry.Term + " but the current term is " +
-		                                            PersistentState.CurrentTerm + ". Wait until the leader finishes committing entries from the current term and try again");
+		    {
+			    Debugger.Launch();
+				throw new InvalidOperationException("Cannot modify the cluster topology when the committed index " + CommitIndex + " is in term " + logEntry.Term + " but the current term is " +
+		                                            PersistentState.CurrentTerm + ". Wait until the leader finishes committing entries from the current term and try again");}
 
 		    var tcc = new TopologyChangeCommand
 				{
@@ -843,5 +872,65 @@ namespace Rachis
 			steppingDownCompletionSource.TrySetResult(null);
 		}
 
+		public class UnsafeClusterOperations
+		{
+			private readonly RaftEngine _raft;
+			private readonly Logger _log ;
+
+			public UnsafeClusterOperations(RaftEngine raft)
+			{
+				_raft = raft;
+				_log = raft._log;
+			}
+
+			public void RemoveFromCluster(NodeConnectionInfo node)
+			{
+				var requestedTopology = _raft.ExcludeFromCurrentTopology(node);
+
+				if (_log.IsInfoEnabled)
+				{
+					_log.Info("[Unsafe operation] RemoveFromCluster, requestedTopology: {0}", requestedTopology);
+				}
+
+				ModifyTopologyUnsafe(requestedTopology);
+			}
+
+			public void AddToCluster(NodeConnectionInfo node)
+			{
+				var requestedTopology = _raft.AddToCurrentTopology(node, false);
+
+				if (_log.IsInfoEnabled)
+				{
+					_log.Info("[Unsafe operation] AddToCluster, requestedTopology: {0}", requestedTopology);
+				}
+
+				ModifyTopologyUnsafe(requestedTopology);
+			}
+
+			private void ModifyTopologyUnsafe(Topology requested)
+			{
+				if (Interlocked.CompareExchange(ref _raft._changingTopology, new TaskCompletionSource<object>().Task, null) != null)
+					throw new InvalidOperationException("Cannot change the cluster topology while another topology change is in progress");
+
+				try
+				{
+					_log.Debug("[Unsafe operation] Topology change started");
+
+					Interlocked.Exchange(ref _raft._currentTopology, requested);
+					_raft.PersistentState.SetCurrentTopology(requested, 0L);
+
+					_log.Debug("[Unsafe operation] Topology changed");
+				}
+				catch (Exception ex)
+				{
+					_log.Error(ex, "[Unsafe operation] Could not change topology");
+					throw;
+				}
+				finally
+				{
+					Interlocked.Exchange(ref _raft._changingTopology, null);
+				}
+			}
+		}
 	}
 }
