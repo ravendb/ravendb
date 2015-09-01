@@ -366,20 +366,16 @@ namespace Voron.Trees
             var node = page.GetNode(0);
             Debug.Assert(node->Flags == (NodeFlags.PageRef));
 
-            _tree.State.LeafPages = 1;
-			_tree.State.BranchPages = 0;
-			_tree.State.Depth = 1;
-			_tree.State.PageCount = 1;
-
 			var rootPage = _tx.ModifyPage(node->PageNumber, _tree, null);
 			_tree.State.RootPageNumber = rootPage.PageNumber;
+	        _tree.State.Depth--;
 
             Debug.Assert(rootPage.Dirty);
 
             _cursor.Pop();
             _cursor.Push(rootPage);
 
-            _tx.FreePage(page.PageNumber);
+            _tree.FreePage(page);
         }
     }
 }

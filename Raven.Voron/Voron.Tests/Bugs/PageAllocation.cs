@@ -27,7 +27,7 @@ namespace Voron.Tests.Bugs
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var t1 = tx.State.GetTree(tx, tree1);
+                    var t1 = tx.ReadTree(tree1);
 
                     t1.MultiAdd("key", "value/1");
                     t1.MultiAdd("key", "value/2");
@@ -37,8 +37,8 @@ namespace Voron.Tests.Bugs
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var t1 = tx.State.GetTree(tx, tree1);
-                    var t2 = tx.State.GetTree(tx, tree2);
+                    var t1 = tx.ReadTree(tree1);
+                    var t2 = tx.ReadTree(tree2);
 
                     var buffer = new byte[1000];
 

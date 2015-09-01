@@ -51,7 +51,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 			{
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
 				store.DatabaseCommands.PutIndex("TestIndex",
-												new IndexDefinitionBuilder<Test, Test>
+												new IndexDefinitionBuilder<Test, Test>("TestIndex")
 												{
 													Map = movies => from movie in movies
 																	select new {movie.Name}

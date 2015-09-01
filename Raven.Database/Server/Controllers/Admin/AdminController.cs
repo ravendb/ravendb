@@ -40,7 +40,11 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.Replication.Data;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Commercial;
+using Raven.Database.Counters.Replication;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
@@ -681,7 +685,24 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.StopIndexingWorkers(true);
 		}
 
-		[HttpGet]
+        [HttpPost]
+        [RavenRoute("admin/startReducing")]
+        [RavenRoute("databases/{databaseName}/admin/startReducing")]
+        public void StartReducing()
+        {
+            Database.SpinReduceWorker();
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/stopReducing")]
+        [RavenRoute("databases/{databaseName}/admin/stopReducing")]
+        public void StopReducing()
+        {
+            Database.StopReduceWorkers();
+        }
+
+
+        [HttpGet]
 		[RavenRoute("admin/stats")]
 		public HttpResponseMessage Stats()
 		{
@@ -1054,16 +1075,17 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 				return GetMessageWithObject(connectionState);
 			}
-
+			
 			var watchCatogory = GetQueryStringValues("watch-category");
 			var categoriesToWatch = watchCatogory.Select(
 				x =>
 				{
 					var tokens = x.Split(':');
+				    bool watchStack = tokens.Length == 3 && tokens[2] == "watch-stack";
 					LogLevel level;
 					if (Enum.TryParse(tokens[1], out level))
 					{
-						return Tuple.Create(tokens[0], level);
+                        return Tuple.Create(tokens[0], level, watchStack);
 					}
 					throw new InvalidOperationException("Unable to parse watch-category: " + tokens[1]);
 				}).ToList();
@@ -1076,7 +1098,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			foreach (var categoryAndLevel in categoriesToWatch)
 			{
-				connectionState.EnableLogging(categoryAndLevel.Item1, categoryAndLevel.Item2);
+				connectionState.EnableLogging(categoryAndLevel.Item1, categoryAndLevel.Item2, categoryAndLevel.Item3);
 			}
 
 			return GetMessageWithObject(connectionState);
@@ -1238,8 +1260,139 @@ namespace Raven.Database.Server.Controllers.Admin
 					})
 				})
 			}));
-
-			
 		}
-	}
+
+		[HttpPost]
+		[RavenRoute("admin/replication/topology/global")]
+		public async Task<HttpResponseMessage> GlobalReplicationTopology()
+		{
+			var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>();
+
+			ReplicationTopology databasesTopology = null;
+			SynchronizationTopology filesystemsTopology = null;
+			CountersReplicationTopology counterStoragesTopology = null;
+
+			if (request.Databases)
+				databasesTopology = CollectReplicationTopology();
+
+			if (request.Filesystems)
+				filesystemsTopology = CollectFilesystemSynchronizationTopology();
+
+			if (request.Counters) 
+				counterStoragesTopology = CollectionCountersReplicationTopology();
+
+			return GetMessageWithObject(new
+			{
+				Databases = databasesTopology,
+				FileSystems = filesystemsTopology,
+				Counters = counterStoragesTopology
+			});
+		}
+
+		private ReplicationTopology CollectReplicationTopology()
+		{
+			var mergedTopology = new ReplicationTopology();
+
+			int nextPageStart = 0;
+			var databases = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var databaseNames = databases
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			DatabasesLandlord.ForAllDatabases(db =>
+			{
+				if (db.IsSystemDatabase())
+					return;
+
+				databaseNames.Remove(db.Name);
+				var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
+				var node = replicationSchemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = databaseNames;
+			return mergedTopology;
+		}
+
+		private SynchronizationTopology CollectFilesystemSynchronizationTopology()
+		{
+			var mergedTopology = new SynchronizationTopology();
+
+			int nextPageStart = 0;
+			var filesystems = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(FileSystemsLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var filesystemsNames = filesystems
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(FileSystemsLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			FileSystemsLandlord.ForAllFileSystems(fs =>
+			{
+				filesystemsNames.Remove(fs.Name);
+
+				var synchronizationSchemaDiscoverer = new SynchronizationTopologyDiscoverer(fs, new RavenJArray(), 10, Log);
+				var node = synchronizationSchemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = filesystemsNames;
+
+			return mergedTopology;
+		}
+
+		private CountersReplicationTopology CollectionCountersReplicationTopology()
+		{
+			var mergedTopology = new CountersReplicationTopology();
+
+			int nextPageStart = 0;
+			var counters = DatabasesLandlord.SystemDatabase.Documents
+				.GetDocumentsWithIdStartingWith(CountersLandlord.ResourcePrefix, null, null, 0,
+					int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+			var countersNames = counters
+				.Select(database =>
+					database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(CountersLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+			CountersLandlord.ForAllCountersInCacheOnly(cs =>
+			{
+				countersNames.Remove(cs.Name);
+
+				var schemaDiscoverer = new CountersReplicationTopologyDiscoverer(cs, new RavenJArray(), 10, Log);
+				var node = schemaDiscoverer.Discover();
+				var topology = node.Flatten();
+				topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+				topology.Connections.ForEach(connection =>
+				{
+					if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+					{
+						mergedTopology.Connections.Add(connection);
+					}
+				});
+			});
+
+			mergedTopology.SkippedResources = countersNames;
+
+			return mergedTopology;
+		}
+    }
 }

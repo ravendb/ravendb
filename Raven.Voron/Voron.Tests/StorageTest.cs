@@ -130,7 +130,7 @@ namespace Voron.Tests
 		{
 			Lazy<Cursor> lazy;
 		    NodeHeader* node;
-			var p = tx.State.Root.FindPageFor(key, out node, out lazy);
+			var p = tx.Root.FindPageFor(key, out node, out lazy);
 			
 
 			if (node == null)

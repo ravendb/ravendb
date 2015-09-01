@@ -1,6 +1,7 @@
 define(function(require, exports, module) {
 "use strict";
 
+var Range = require("../range").Range;
 var Document = require("../document").Document;
 var lang = require("../lib/lang");
     
@@ -12,8 +13,22 @@ var Mirror = exports.Mirror = function(sender) {
     
     var _self = this;
     sender.on("change", function(e) {
-        doc.applyDeltas(e.data);
-        deferredUpdate.schedule(_self.$timeout);
+        var data = e.data;
+        if (data[0].start) {
+            doc.applyDeltas(data);
+        } else {
+            for (var i = 0; i < data.length; i += 2) {
+                if (Array.isArray(data[i+1])) {
+                    var d = {action: "insert", start: data[i], lines: data[i+1]};
+                } else {
+                    var d = {action: "remove", start: data[i], end: data[i+1]};
+                }
+                doc.applyDelta(d, true);
+            }
+        }
+        if (_self.$timeout)
+            return deferredUpdate.schedule(_self.$timeout);
+        _self.onUpdate();
     });
 };
 
@@ -36,6 +51,10 @@ var Mirror = exports.Mirror = function(sender) {
     
     this.onUpdate = function() {
         // abstract method
+    };
+    
+    this.isPending = function() {
+        return this.deferredUpdate.isPending();
     };
     
 }).call(Mirror.prototype);

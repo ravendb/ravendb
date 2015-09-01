@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,16 +51,15 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
+            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, 
+						operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
             if (replicationDocument == null)
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
 			                                             .Where(x => x.CanBeFailover())
-			                                             .Select(x => new 
-														 {
-															 Url = string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database),
-			                                             }).ToList();
+			                                             .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
+														 .ToList();
 
 			if (destinationsToCheck.Count == 0)
 				return 0;
@@ -74,11 +74,21 @@ namespace Raven.Client.Document
 			var sourceCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database ?? documentStore.DefaultDatabase);
 			var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
 			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token).ConfigureAwait(false);
+			ThrowTimeoutIfCanceled(cts.Token); //in extreme conditions GetStatisticsAsync can timeout as well
+
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var tasks = destinationsToCheck.Select(destination => WaitForReplicationFromServerAsync(destination.Url, sourceUrl, sourceDbId, etag, cts.Token)).ToArray();
+			var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
+			for (int i = 0; i < destinationsToCheck.Count; i++)
+			{
+				latestEtags[i] = new ReplicatedEtagInfo { DestinationUrl = destinationsToCheck[i] };
+			}
 
-		    try
+			var tasks = destinationsToCheck
+				.Select((url, index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token))
+				.ToArray();
+
+			try
 		    {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
 		        return tasks.Length;
@@ -100,11 +110,12 @@ namespace Raven.Client.Document
 			    }
 
 			    // we have either completed (but not enough) or cancelled, meaning timeout
-		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", 
+		        var message = string.Format("Could only confirm that the specified Etag {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
                     etag,
                     successCount,
                     destinationsToCheck.Count,
-                    sp.Elapsed);
+                    sp.Elapsed,
+                    string.Join<ReplicatedEtagInfo>("; ", latestEtags));
 
 				if(e is OperationCanceledException)
 					throw new TimeoutException(message);
@@ -113,7 +124,13 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
+		private void ThrowTimeoutIfCanceled(CancellationToken token)
+		{
+			if(token.IsCancellationRequested)
+				throw new TimeoutException("Maximum allowed time for the operation has passed.");
+		}
+
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, ReplicatedEtagInfo[] latestEtags, int index, CancellationToken cancellationToken)
 		{
 			while (true)
 			{
@@ -122,6 +139,8 @@ namespace Raven.Client.Document
 					cancellationToken.ThrowIfCancellationRequested();
 
 					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId).ConfigureAwait(false);
+
+				    latestEtags[index] = etags;
 
 					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
@@ -147,10 +166,11 @@ namespace Raven.Client.Document
 				HttpMethods.Get,
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
-
+		    try
+		    {
 		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
 		    {
-			    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
 				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
 				
@@ -161,5 +181,13 @@ namespace Raven.Client.Document
 			    };
 		    }
 		}
+			catch (ErrorResponseException e)
+		    {
+				if(e.StatusCode == HttpStatusCode.ServiceUnavailable)
+					throw new OperationCanceledException("Got 'Service Unavailable' status code on response, aborting operation");
+
+			    throw;
+	}
+}
 	}
 }

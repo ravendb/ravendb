@@ -92,10 +92,6 @@ namespace Voron
                 else // existing db, let us load it
                     LoadExistingDatabase();
 
-
-                State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
-                State.Root.Name = Constants.RootTreeName;
-
                 Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token);
 
                 if (_options.ManualFlushing == false)
@@ -160,7 +156,7 @@ namespace Voron
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
-
+                
                 tx.Commit();
 
 				//since this transaction is never shipped, this is the first previous transaction
@@ -267,7 +263,7 @@ namespace Voron
                 tx.FreePage(page);
             }
 
-            tx.State.Root.Delete((Slice) name);
+            tx.Root.Delete((Slice) name);
 
             tx.RemoveTree(name);
         }
@@ -290,8 +286,8 @@ namespace Voron
 
             Slice key = (Slice)toName;
 
-	        tx.State.Root.Delete((Slice)fromName);
-			var ptr = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
+	        tx.Root.Delete((Slice)fromName);
+			var ptr = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
 		    fromTree.State.CopyTo((TreeRootHeader*) ptr);
 		    fromTree.Name = toName;
 		    fromTree.State.IsModified = true;
@@ -307,34 +303,23 @@ namespace Voron
 
         public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
         {
-            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot create a new tree with a read only transaction");
-
             Tree tree = tx.ReadTree(name);
             if (tree != null)
                 return tree;
 
+            if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return tx.Root;
+            if (name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return tx.FreeSpaceRoot;
 
-	        if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
-	            name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
-		        throw new InvalidOperationException("Cannot create a tree with reserved name: " + name);
+            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+                throw new InvalidOperationException("No such tree: " + name + " and cannot create trees in read transactions");
 
-
-            Slice key = (Slice)name;
-
-            // we are in a write transaction, no need to handle locks
-            var header = (TreeRootHeader*)tx.State.Root.DirectRead(key);
-            if (header != null)
-            {
-                tree = Tree.Open(tx, header);
-                tree.Name = name;
-                tx.AddTree(name, tree);
-                return tree;
-            }
+            Slice key = name;
 
             tree = Tree.Create(tx, keysPrefixing);
             tree.Name = name;
-            var space = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
+            var space = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
@@ -529,8 +514,8 @@ namespace Voron
         {
             var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
-					{"Root", State.Root.AllPages()},
-					{"Free Space Overhead", State.FreeSpaceRoot.AllPages()},
+					{"Root", tx.Root.AllPages()},
+					{"Free Space Overhead", tx.FreeSpaceRoot.AllPages()},
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
@@ -550,19 +535,21 @@ namespace Voron
 		    var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
 
 		    var trees = new List<Tree>();
-		    var rootIterator = tx.State.Root.Iterate();
+			using (var rootIterator = tx.Root.Iterate())
+			{
+				if (rootIterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+						trees.Add(tree);
 
-		    if (rootIterator.Seek(Slice.BeforeAllKeys))
-		    {
-			    do
-			    {
-				    var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
-				    trees.Add(tree);
+					}
+					while (rootIterator.MoveNext());
+				}
+			}
 
-			    } while (rootIterator.MoveNext());
-		    }
-
-		    var generator = new StorageReportGenerator(tx);
+			var generator = new StorageReportGenerator(tx);
 
 		    return generator.Generate(new ReportInput
 		    {
@@ -577,18 +564,22 @@ namespace Voron
 
 		public EnvironmentStats Stats()
 		{
-			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+		    using (var tx = NewTransaction(TransactionFlags.Read))
+		    {
+                var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
-			return new EnvironmentStats
-			{
-				FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
-				RootPages = State.Root.State.PageCount,
-				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-				UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
-				AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
-				NextWriteTransactionId = NextWriteTransactionId,
-				ActiveTransactions = ActiveTransactions 
-			};
+                return new EnvironmentStats
+                {
+                    FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
+                    RootPages = tx.Root.State.PageCount,
+                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
+                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
+                    NextWriteTransactionId = NextWriteTransactionId,
+                    ActiveTransactions = ActiveTransactions
+                };
+
+		    }
 		}
 
 		[HandleProcessCorruptedStateExceptions]

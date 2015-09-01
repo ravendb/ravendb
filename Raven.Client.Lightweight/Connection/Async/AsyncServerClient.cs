@@ -184,7 +184,7 @@ namespace Raven.Client.Connection.Async
 					return json.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter())).ToArray();
 				}
 			}, token);
-		}		
+		}
 
 		public Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken))
 		{
@@ -291,10 +291,17 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
 		}
-		public Task<List<string>> PutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities, CancellationToken token = default(CancellationToken))
+
+		public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
 		{
-			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexesAsync(names, indexDefs, priorities, operationMetadata, token), token);
+			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
 		}
+
+		public Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken))
+		{
+			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutSideBySideIndexesAsync(indexesToAdd, operationMetadata, minimumEtagBeforeReplace, replaceTimeUtc, token), token);
+		}
+
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata, token), token);
@@ -310,11 +317,13 @@ namespace Raven.Client.Connection.Async
 				try
 				{
 					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
-					if (overwrite == false) throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+					if (overwrite == false)
+						throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.NotFound) throw;
+					if (e.StatusCode != HttpStatusCode.NotFound)
+						throw;
 				}
 			}
 
@@ -341,30 +350,52 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		public async Task<List<string>> DirectPutIndexesAsync(string[] names, IndexDefinition[] indexDefs, IndexingPriority[] priorities
-			, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+		public async Task<string[]> DirectPutIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes";
+			return await PutIndexes(operationMetadata, token, requestUri, indexesToAdd);
+		}
+
+		public async Task<string[]> DirectPutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token = default(CancellationToken))
+		{
+			var sideBySideIndexes = new SideBySideIndexes
+			{
+				IndexesToAdd = indexesToAdd,
+				MinimumEtagBeforeReplace = minimumEtagBeforeReplace,
+				ReplaceTimeUtc = replaceTimeUtc
+			};
+
+			var requestUri = operationMetadata.Url + "/side-by-side-indexes";
+			return await PutIndexes(operationMetadata, token, requestUri, sideBySideIndexes);
+		}
+
+		private async Task<string[]> PutIndexes(OperationMetadata operationMetadata, CancellationToken token, string requestUri, object obj)
+		{
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Put, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 			{
-				var serializeObject = JsonConvert.SerializeObject(new MultiplePutIndexParam { Definitions = indexDefs, IndexesNames = names, Priorities = priorities }, Default.Converters);
+				var serializeObject = JsonConvert.SerializeObject(obj, Default.Converters);
 
 				ErrorResponseException responseException;
 				try
 				{
-					await request.WriteAsync(serializeObject).ConfigureAwait(false);
+					await request.WriteAsync(serializeObject).WithCancellation(token).ConfigureAwait(false);
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return result.Value<RavenJArray>("Indexes").Select(x => x.Value<string>()).ToList();
+					return result
+						.Value<RavenJArray>("Indexes")
+						.Select(x => x.Value<string>())
+						.ToArray();
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
+					if (e.StatusCode != HttpStatusCode.BadRequest)
+						throw;
 					responseException = e;
 				}
-				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
-				if (error == null) throw responseException;
+				var error = await responseException.TryReadErrorResponseObject(new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""}).ConfigureAwait(false);
+				if (error == null)
+					throw responseException;
 
-				throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+				throw new IndexCompilationException(error.Message) {IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText};
 			}
 		}
 
@@ -390,12 +421,13 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode != HttpStatusCode.BadRequest) throw;
-
+					if (e.StatusCode != HttpStatusCode.BadRequest)
+						throw;
 					responseException = e;
 				}
 				var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "" }).ConfigureAwait(false);
-				if (error == null) throw responseException;
+				if (error == null)
+					throw responseException;
 
 				throw new TransformCompilationException(error.Message);
 			}
@@ -735,8 +767,17 @@ namespace Raven.Client.Connection.Async
 
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url));
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, 
+					(operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), 
+					HttpMethod.Get, 
+					metadata, 
+					operationMetadata.Credentials, 
+					convention, 
+					GetRequestTimeMetric(operationMetadata.Url));
+
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(
+				createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
+										   .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
 			{
 				Task<JsonDocument> resolveConflictTask;
 				try
@@ -1086,7 +1127,7 @@ namespace Raven.Client.Connection.Async
 				return new GetRequest()
 				{
 					Url = "/facets/" + x.IndexName,
-					Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
+                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
 							x.Query.GetQueryString(),
 							x.PageStart,
 							x.PageSize),
@@ -1164,26 +1205,26 @@ namespace Raven.Client.Connection.Async
 		}
 
 		internal static string SerializeFacetsToFacetsJsonString(List<Facet> facets)
-		{
+	    {
 			var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
-			{
-				NullValueHandling = NullValueHandling.Ignore,
-				DefaultValueHandling = DefaultValueHandling.Ignore,
-			});
-			foreach (var facet in ravenJArray)
-			{
+	        {
+	            NullValueHandling = NullValueHandling.Ignore,
+	            DefaultValueHandling = DefaultValueHandling.Ignore,
+	        });
+	        foreach (var facet in ravenJArray)
+	        {
 				var obj = (RavenJObject)facet;
-				if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
-					obj.Remove("DisplayName");
-				var jArray = obj.Value<RavenJArray>("Ranges");
-				if (jArray != null && jArray.Length == 0)
-					obj.Remove("Ranges");
-			}
-			string facetsJson = ravenJArray.ToString(Formatting.None);
-			return facetsJson;
-		}
+	            if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
+	                obj.Remove("DisplayName");
+	            var jArray = obj.Value<RavenJArray>("Ranges");
+	            if (jArray != null && jArray.Length == 0)
+	                obj.Remove("Ranges");
+	        }
+	        string facetsJson = ravenJArray.ToString(Formatting.None);
+	        return facetsJson;
+	    }
 
-		public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))
+	    public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
@@ -1941,7 +1982,7 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (Exception)
 				{
-
+					
 				}
 				try
 				{
@@ -1949,7 +1990,7 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (Exception)
 				{
-
+					
 				}
 				try
 				{
@@ -1957,7 +1998,7 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (Exception)
 				{
-
+					
 				}
 			}
 
@@ -1986,7 +2027,7 @@ namespace Raven.Client.Connection.Async
 					await TryReadNextPageStart().ConfigureAwait(false);
 
 					await EnsureValidEndOfResponse().ConfigureAwait(false);
-
+					this.Dispose();
 					return false;
 				}
 				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);

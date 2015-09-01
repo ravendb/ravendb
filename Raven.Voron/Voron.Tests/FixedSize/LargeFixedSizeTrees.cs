@@ -27,7 +27,7 @@ namespace Voron.Tests.FixedSize
             var bytes = new byte[48];
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -41,7 +41,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -65,7 +65,7 @@ namespace Voron.Tests.FixedSize
             var slice = new Slice(bytes);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -78,7 +78,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 var total = 0;
                 using (var it = fst.Iterate())
                 {
@@ -104,7 +104,7 @@ namespace Voron.Tests.FixedSize
             var slice = new Slice(bytes);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -117,7 +117,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -129,7 +129,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -151,7 +151,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -166,13 +166,13 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 Assert.Equal(count, fst.NumberOfEntries);
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(4, count - 3);
                 Assert.Equal(count - 6, itemsRemoved.NumberOfEntriesDeleted);
@@ -183,7 +183,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -214,7 +214,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -227,7 +227,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
                 Assert.Equal(count, itemsRemoved.NumberOfEntriesDeleted);
@@ -238,7 +238,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -250,11 +250,11 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(250)]
-        [InlineData(1000)]
-        [InlineData(94000)]
-        [InlineData(300000)]
-        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count)
+        [InlineDataWithRandomSeed(250)]
+        [InlineDataWithRandomSeed(1000)]
+        [InlineDataWithRandomSeed(94000)]
+        [InlineDataWithRandomSeed(300000)]
+        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -262,7 +262,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -274,8 +274,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var tc = Environment.TickCount;
-			var random = new Random(tc);
+			var random = new Random(seed);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
             {
@@ -285,7 +284,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                     for (int j = (int) start; j <= (int) end; j++)
                     {
                         status[j] = false;
@@ -304,7 +303,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 					if (fst.NumberOfEntries == 0)
 						break;
 					for (int j = start; j <= end; j++)
@@ -319,7 +318,7 @@ namespace Voron.Tests.FixedSize
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i < count; i++)
                 {
                     if (status[i] != fst.Contains(i))
@@ -332,12 +331,12 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(1000)]
-        [InlineData(100000)]
-        [InlineData(500000)]
-        [InlineData(1000000)]
-        [InlineData(2000000)]
-        public void CanDeleteRange_RandomRanges(int count)
+        [InlineDataWithRandomSeed(1000)]
+        [InlineDataWithRandomSeed(100000)]
+        [InlineDataWithRandomSeed(500000)]
+        [InlineDataWithRandomSeed(1000000)]
+        [InlineDataWithRandomSeed(2000000)]
+        public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -345,7 +344,7 @@ namespace Voron.Tests.FixedSize
             var status = new BitArray(count + 1);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -357,8 +356,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var tc = Environment.TickCount;
-			var random = new Random(tc);
+			var random = new Random(seed);
 			for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
@@ -366,7 +364,7 @@ namespace Voron.Tests.FixedSize
 
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 					if (fst.NumberOfEntries == 0)
 						break;
 					for (int j = start; j <= end; j++)
@@ -380,7 +378,7 @@ namespace Voron.Tests.FixedSize
             }
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
                     Assert.Equal(status[i], fst.Contains(i));
@@ -389,11 +387,11 @@ namespace Voron.Tests.FixedSize
         }
 
         [Theory]
-        [InlineData(100)]
-        [InlineData(10000)]
-        [InlineData(75000)]
-        [InlineData(300000)]
-        public void CanDeleteRange_RandomRanges_WithGaps(int count)
+        [InlineDataWithRandomSeed(100)]
+        [InlineDataWithRandomSeed(10000)]
+        [InlineDataWithRandomSeed(75000)]
+        [InlineDataWithRandomSeed(300000)]
+        public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];
             var slice = new Slice(bytes);
@@ -401,7 +399,7 @@ namespace Voron.Tests.FixedSize
             var status = new BitArray(count * 3);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i*3, slice);
@@ -410,15 +408,14 @@ namespace Voron.Tests.FixedSize
 
                 tx.Commit();
             }
-            var tc = Environment.TickCount;
-            var random = new Random(tc);
+            var random = new Random(seed);
             for (var i = 0; i < count/10; i++)
             {
                 var start = random.Next(status.Length);
                 var end = random.Next(start, status.Length);
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 	                if (fst.NumberOfEntries == 0)
 		                break;
 	                for (int j = start; j <= end; j++)
@@ -432,7 +429,7 @@ namespace Voron.Tests.FixedSize
             }
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                var fst = tx.State.Root.FixedTreeFor("test", valSize: 48);
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {

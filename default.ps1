@@ -101,7 +101,6 @@ task Test -depends Compile {
 
 	$test_prjs = @( `
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
 		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
@@ -109,7 +108,9 @@ task Test -depends Compile {
 		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
-		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
+		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
+		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+		"$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -199,6 +200,8 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 	New-Item $build_dir\Output\Migration -Type directory | Out-Null
+	New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
+	New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
 	New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
@@ -225,6 +228,17 @@ task CopyBackup {
 task CopyMigration {
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
 	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
+}
+
+task CopyRavenTraffic {
+	Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Raven.Traffic
+	Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Raven.Traffic
+}
+
+task CopyStorageExporter {
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\StorageExporter
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.Database.??? $build_dir\Output\Diag\StorageExporter
+	Copy-Item $base_dir\Raven.StorageExporter\bin\$global:configuration\Raven.StorageExporter.??? $build_dir\Output\Diag\StorageExporter
 }
 
 task CopyClient {
@@ -270,7 +284,12 @@ function SignFile($filePath){
 		return
 	}
 	
+	$signTool = "C:\Program Files (x86)\Windows Kits\8.1\bin\x64\signtool.exe"
+	if (!(Test-Path $signTool)) 
+	{
+		
 	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+	
 	if (!(Test-Path $signTool)) 
 	{
 		$signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
@@ -279,6 +298,7 @@ function SignFile($filePath){
 		{
 			throw "Could not find SignTool.exe under the specified path $signTool"
 		}
+	}
 	}
   
 	$installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
@@ -391,7 +411,9 @@ task DoReleasePart1 -depends Compile, `
 	CopyServer, `
 	SignServer, `
 	CopyRootFiles, `
-	ZipOutput {	
+	ZipOutput, `
+	CopyRavenTraffic, `
+	CopyStorageExporter {	
 	
 	Write-Host "Done building RavenDB"
 }

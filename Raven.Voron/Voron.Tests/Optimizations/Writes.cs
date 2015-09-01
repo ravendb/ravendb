@@ -18,25 +18,25 @@ namespace Voron.Tests.Optimizations
 		    var keySize = 1024;
 		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(new string('9', keySize), new MemoryStream(new byte[3]));
-				DebugStuff.RenderAndShow(tx.State.Root);
-				tx.State.Root.Add(new string('1', keySize), new MemoryStream(new byte[3]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('4', 1000), new MemoryStream(new byte[2]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('5', keySize), new MemoryStream(new byte[2]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('8', keySize), new MemoryStream(new byte[3]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('2', keySize), new MemoryStream(new byte[2]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('6', keySize), new MemoryStream(new byte[2]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('0', keySize), new MemoryStream(new byte[4]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('3', 1000), new MemoryStream(new byte[1]));
-                DebugStuff.RenderAndShow(tx.State.Root);
-                tx.State.Root.Add(new string('7', keySize), new MemoryStream(new byte[1]));
+				tx.Root.Add(new string('9', keySize), new MemoryStream(new byte[3]));
+				DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('1', keySize), new MemoryStream(new byte[3]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('4', 1000), new MemoryStream(new byte[2]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('5', keySize), new MemoryStream(new byte[2]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('8', keySize), new MemoryStream(new byte[3]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('2', keySize), new MemoryStream(new byte[2]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('6', keySize), new MemoryStream(new byte[2]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('0', keySize), new MemoryStream(new byte[4]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('3', 1000), new MemoryStream(new byte[1]));
+                DebugStuff.RenderAndShow(tx.Root);
+				tx.Root.Add(new string('7', keySize), new MemoryStream(new byte[1]));
 				
 				tx.Commit();
 			}
@@ -45,9 +45,9 @@ namespace Voron.Tests.Optimizations
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Delete(new string('0', keySize));
+                tx.Root.Delete(new string('0', keySize));
 
-				tx.State.Root.Add(new string('4', 1000), new MemoryStream(new byte[21]));
+                tx.Root.Add(new string('4', 1000), new MemoryStream(new byte[21]));
 
 				tx.Commit();
 			}
@@ -57,9 +57,9 @@ namespace Voron.Tests.Optimizations
 			// ensure changes were applied
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Null(tx.State.Root.Read(new string('0', keySize)));
+                Assert.Null(tx.Root.Read(new string('0', keySize)));
 
-				var readResult = tx.State.Root.Read(new string('4', 1000));
+                var readResult = tx.Root.Read(new string('4', 1000));
 
 				Assert.Equal(21, readResult.Reader.Length);
 			}

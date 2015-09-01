@@ -1,11 +1,9 @@
-﻿using System;
-
-namespace Raven.Tryouts
+﻿namespace Raven.Tryouts
 {
 	public class Program
 	{
-		private static void Main()
+		public static void Main()
 		{
-				}			
-			}
 		}
+	}
+}

@@ -17,6 +17,7 @@ using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -35,6 +36,72 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
+
+		public class CounterDebugInfo
+		{
+			public int ReplicationActiveTasksCount { get; set; }
+
+			public IDictionary<string,CounterDestinationStats> ReplicationDestinationStats { get; set; }
+
+			public CounterStorageStats Summary { get; set; }
+
+			public DateTime LastWrite { get; set; }
+
+			public Guid ServerId { get; set; }
+
+			public AtomicDictionary<object> ExtensionsState { get; set; }
+		}
+
+		[HttpGet]
+		[RavenRoute("cs/debug/counter-storages")]
+		public HttpResponseMessage GetCounterStoragesInfo()
+		{
+			var infos = new List<CounterDebugInfo>();
+
+			CountersLandlord.ForAllCounters(counterStorage => 
+				infos.Add(new CounterDebugInfo
+				{
+					ReplicationActiveTasksCount = counterStorage.ReplicationTask.GetActiveTasksCount(),
+					ReplicationDestinationStats = counterStorage.ReplicationTask.DestinationStats,
+					LastWrite = counterStorage.LastWrite,
+					ServerId = counterStorage.ServerId,
+					Summary = counterStorage.CreateStats(),
+					ExtensionsState = counterStorage.ExtensionsState
+				}));
+
+			return GetMessageWithObject(infos);
+		}
+
+		[HttpGet]
+		[RavenRoute("cs/{counterStorageName}/debug/")]
+		public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName)
+		{
+			var counter = await CountersLandlord.GetCounterInternal(counterStorageName);
+			if (counter == null)
+				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
+
+			using (var reader = counter.CreateReader())
+			{
+				var groupsAndNames = reader.GetCounterGroups().SelectMany(group => reader.GetCountersSummary(group.Name));					
+
+				return GetMessageWithObject(new
+				{
+					Stats = counter.CreateStats(),
+					GroupsAndNames = groupsAndNames
+				});
+			}
+		}
+
+		[HttpGet]
+		[RavenRoute("cs/{counterStorageName}/debug/metrics")]
+		public async Task<HttpResponseMessage> GetCounterMetrics(string counterStorageName)
+		{
+			var counter = await CountersLandlord.GetCounterInternal(counterStorageName);
+			if (counter == null)
+				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName), HttpStatusCode.NotFound);
+
+			return GetMessageWithObject(counter.CreateMetrics());
+		}
 
 		[HttpGet]
 		[RavenRoute("debug/cache-details")]
@@ -282,6 +349,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		[HttpGet]
+		[RavenRoute("debug/filtered-out-indexes")]
+		[RavenRoute("databases/{databaseName}/debug/filtered-out-indexes")]
+		public HttpResponseMessage FilteredOutIndexes()
+		{
+			return GetMessageWithObject(Database.WorkContext.RecentlyFilteredOutIndexes.ToArray());
+		}
 
 		[HttpGet]
 		[RavenRoute("debug/indexing-batch-stats")]

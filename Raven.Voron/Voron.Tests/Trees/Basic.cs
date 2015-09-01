@@ -20,16 +20,16 @@ namespace Voron.Tests.Trees
             List<long> allPages = null;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add("a", new MemoryStream(buffer));
-                allPages = tx.State.Root.AllPages();
+                tx.Root.Add			("a", new MemoryStream(buffer));
+                allPages = tx.Root.AllPages();
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                Assert.Equal(tx.State.Root.State.PageCount, allPages.Count);
-                Assert.Equal(4, tx.State.Root.State.PageCount);
-                Assert.Equal(3, tx.State.Root.State.OverflowPages);
+                Assert.Equal(tx.Root.State.PageCount, allPages.Count);
+                Assert.Equal(4, tx.Root.State.PageCount);
+                Assert.Equal(3, tx.Root.State.OverflowPages);
             }
         }
 
@@ -38,7 +38,7 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add("test", StreamFor("value"));
+                tx.Root.Add			("test", StreamFor("value"));
             }
         }
 
@@ -47,9 +47,9 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add("b", StreamFor("2"));
-                tx.State.Root.Add("c", StreamFor("3"));
-                tx.State.Root.Add("a", StreamFor("1"));
+                tx.Root.Add			("b", StreamFor("2"));
+                tx.Root.Add			("c", StreamFor("3"));
+                tx.Root.Add			("a", StreamFor("1"));
                 var actual = ReadKey(tx, "a");
 
                 Assert.Equal("a", actual.Item1);
@@ -63,12 +63,12 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Slice key = "test";
-                tx.State.Root.Add(key, StreamFor("value"));
+                tx.Root.Add			(key, StreamFor("value"));
 
                 tx.Commit();
 
-                Assert.Equal(1, tx.State.Root.State.PageCount);
-                Assert.Equal(1, tx.State.Root.State.LeafPages);
+                Assert.Equal(1, tx.Root.State.PageCount);
+                Assert.Equal(1, tx.Root.State.LeafPages);
             }
         }
 
@@ -82,7 +82,7 @@ namespace Voron.Tests.Trees
                 for (int i = 0; i < 256; i++)
                 {
                     stream.Position = 0;
-                    tx.State.Root.Add("test-" + i, stream);
+                    tx.Root.Add			("test-" + i, stream);
 
                 }
 
@@ -91,10 +91,10 @@ namespace Voron.Tests.Trees
 #pragma warning disable 162
                     return;
 #pragma warning restore 162
-                Assert.Equal(4, tx.State.Root.State.PageCount);
-                Assert.Equal(3, tx.State.Root.State.LeafPages);
-                Assert.Equal(1, tx.State.Root.State.BranchPages);
-                Assert.Equal(2, tx.State.Root.State.Depth);
+                Assert.Equal(4, tx.Root.State.PageCount);
+                Assert.Equal(3, tx.Root.State.LeafPages);
+                Assert.Equal(1, tx.Root.State.BranchPages);
+                Assert.Equal(2, tx.Root.State.Depth);
 
             }
         }
@@ -107,7 +107,7 @@ namespace Voron.Tests.Trees
             {
                 for (int i = 0; i < count; i++)
                 {
-                    tx.State.Root.Add("test-" + i.ToString("000"), StreamFor("val-" + i));
+                    tx.Root.Add			("test-" + i.ToString("000"), StreamFor("val-" + i));
 
                 }
 
@@ -140,7 +140,7 @@ namespace Voron.Tests.Trees
                         {
 
                         }
-                        tx.State.Root.Add("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
+                        tx.Root.Add			("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
                     }
                 }
 

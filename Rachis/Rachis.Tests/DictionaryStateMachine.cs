@@ -3,10 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Newtonsoft.Json;
 using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
+
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Tests
 {
@@ -29,10 +30,6 @@ namespace Rachis.Tests
 			{
 				_parent = parent;
 				_snapshot = snapshot;
-			}
-
-			public void Dispose()
-			{
 			}
 
 			public long Index { get; set; }

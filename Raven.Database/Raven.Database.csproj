@@ -100,6 +100,18 @@
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ICSharpCode.NRefactory.Xml, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
@@ -119,11 +131,31 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Mono.Cecil, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Mdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
-    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.0.1\lib\net45\NLog.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NLog, Version=4.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Owin">
@@ -171,32 +203,8 @@
     <Reference Include="HtmlAgilityPack">
       <HintPath>..\packages\HtmlAgilityPack.1.4.9\lib\Net45\HtmlAgilityPack.dll</HintPath>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.Xml">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Reactive.Core">
@@ -236,6 +244,7 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Data\GlobalReplicationTopologyRequest.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterAndTransformSpecifiedCollections.cs" />
@@ -245,6 +254,14 @@
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="Counters\Controllers\CountersReplicationTopologyController.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopologyNode.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopology.cs" />
+    <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Synchronization\SynchronizationTopology.cs" />
     <Compile Include="GplexBuffers.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\RavenStandardFilter.cs" />
@@ -367,7 +384,6 @@
     <Compile Include="FileSystem\Plugins\Builtins\HideDeletingFilesTrigger.cs" />
     <Compile Include="Counters\Controllers\CountersStatsController.cs" />
     <Compile Include="Counters\CounterGroup.cs" />
-    <Compile Include="Counters\ReplicationCounter.cs" />
     <Compile Include="Counters\ValueSign.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
@@ -426,6 +442,7 @@
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
+    <Compile Include="Server\Controllers\DebugVoronController.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -487,6 +504,7 @@
     <Compile Include="Smuggler\ServerValidation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />
+    <Compile Include="Smuggler\SmugglerCounterOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseBetweenOperation.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
@@ -504,6 +522,7 @@
     <Compile Include="Storage\TransactionalStorageHelper.cs" />
     <Compile Include="Storage\StringHelper.cs" />
     <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From12To13.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\DocumentReferencesFields.cs" />
@@ -1001,7 +1020,6 @@
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
-    <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />

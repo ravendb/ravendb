@@ -75,6 +75,7 @@ namespace Raven.Database.Counters.Controllers
 				var serverId = replicationMessage.ServerId;
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
+					writer.RecordSourceNameFor(serverId, replicationMessage.SendingServerName);
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
 

@@ -26,7 +26,7 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.State.Root.Add("items/" + i, new byte[dataSize]);
+					tx.Root.Add			("items/" + i, new byte[dataSize]);
 					tx.Commit();
 				}
 
@@ -39,7 +39,7 @@ namespace Voron.Tests.Bugs
 
 				for (int i = 0; i < itemsCount; i++)
 				{
-					var readResult = tx.State.Root.Read("items/" + i);
+					var readResult = tx.Root.Read("items/" + i);
 
 					Assert.Equal(dataSize, readResult.Reader.Length);
 				}
@@ -49,7 +49,7 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.State.Root.Delete("items/" + i);
+					tx.Root.Delete("items/" + i);
 					tx.Commit();
 				}
 
@@ -61,9 +61,9 @@ namespace Voron.Tests.Bugs
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.State.Root.Add("items/" + i, new byte[dataSize]);
+					tx.Root.Add			("items/" + i, new byte[dataSize]);
 
-					DebugStuff.RenderAndShow(tx, tx.State.Root.State.RootPageNumber);
+					DebugStuff.RenderAndShow(tx, tx.Root.State.RootPageNumber);
 
 					tx.Commit();
 				}
@@ -76,7 +76,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (int i = 0; i < itemsCount; i++)
 				{
-					var readResult = tx.State.Root.Read("items/" + i);
+					var readResult = tx.Root.Read("items/" + i);
 
 					Assert.Equal(dataSize, readResult.Reader.Length);
 				}

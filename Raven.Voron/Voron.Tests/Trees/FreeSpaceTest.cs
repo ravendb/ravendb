@@ -20,7 +20,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Add(i.ToString("0000"), new MemoryStream(buffer));
+					tx.Root.Add			(i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -31,7 +31,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Delete(i.ToString("0000"));
+					tx.Root.Delete(i.ToString("0000"));
 				}
 
 				tx.Commit();
@@ -42,7 +42,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					tx.State.Root.Add(i.ToString("0000"), new MemoryStream(buffer));
+					tx.Root.Add			(i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -201,10 +201,10 @@ namespace Voron.Tests.Trees
 					{
 						pageToFree = random.Next(0, maxPageNumber);
 
-						if (tx.State.Root.AllPages().Contains(pageToFree))
+						if (tx.Root.AllPages().Contains(pageToFree))
 							continue;
 
-						if (tx.State.FreeSpaceRoot.AllPages().Contains(pageToFree))
+						if (tx.FreeSpaceRoot.AllPages().Contains(pageToFree))
 							continue;
 
 						if (freedPages.Add(pageToFree))
@@ -222,7 +222,7 @@ namespace Voron.Tests.Trees
 			{
 				var retrievedFreePages = Env.AllPages(tx)["Free Pages"];
 
-				freedPages.ExceptWith(tx.State.FreeSpaceRoot.AllPages()); // need to take into account that some of free pages might be used for free space handling
+				freedPages.ExceptWith(tx.FreeSpaceRoot.AllPages()); // need to take into account that some of free pages might be used for free space handling
 				var sorted = freedPages.OrderBy(x => x);
 
 				Assert.Equal(sorted, retrievedFreePages);

@@ -56,7 +56,7 @@ namespace Raven.Tests.Common
 	    {
 		    if (!ShowLogs)
 			    return;
-
+            
 		    foreach (var databaseName in DatabaseNames)
 		    {
 				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
@@ -71,7 +71,7 @@ namespace Raven.Tests.Common
 
 				    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
 				    {
-						WriteLine(writer, string.Format("{0},{1},{2},{3},{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
+						WriteLine(writer, string.Format("{0}|{1}|{2}|{3}|{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
 				    }
 
 				    WriteLine(writer);

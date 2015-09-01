@@ -167,7 +167,7 @@ namespace Raven.Tests.Counters
 				isIncremental,
 				new CounterStorageDocument
 				{
-					Id = CounterStorageId
+					StoreName = CounterStorageId
 				});
 		}
 

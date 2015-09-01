@@ -28,6 +28,8 @@ namespace Raven.Database.Indexing
 {
 	public class WorkContext : IDisposable
 	{
+		private readonly SizeLimitedConcurrentSet<FilteredOutIndexStat> recentlyFilteredOutIndexes = new SizeLimitedConcurrentSet<FilteredOutIndexStat>(200);
+
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
@@ -41,7 +43,8 @@ namespace Raven.Database.Indexing
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private volatile bool doIndexing = true;
-		private int workCounter;
+        private volatile bool doReducing = true;
+        private int workCounter;
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>>(() =>
@@ -79,8 +82,11 @@ namespace Raven.Database.Indexing
 		{
 			get { return doWork && doIndexing; }
 		}
-
-		public void UpdateFoundWork()
+        public bool RunReducing
+        {
+            get { return doWork && doReducing; }
+        }
+        public void UpdateFoundWork()
 		{
 		    var now = SystemTime.UtcNow;
 		    var lastWorkTime = LastWorkTime;
@@ -267,6 +273,7 @@ namespace Raven.Database.Indexing
 		{
 			doWork = true;
 			doIndexing = true;
+		    doReducing = true;
 		}
 
 		public void StopWork()
@@ -274,6 +281,7 @@ namespace Raven.Database.Indexing
 			log.Debug("Stopping background workers");
 			doWork = false;
 			doIndexing = false;
+		    doReducing = false;
 			lock (waitForWork)
 			{
 				Monitor.PulseAll(waitForWork);
@@ -434,6 +442,11 @@ namespace Raven.Database.Indexing
 			get { return futureBatchStats; }
 		}
 
+		public SizeLimitedConcurrentSet<FilteredOutIndexStat> RecentlyFilteredOutIndexes
+		{
+			get { return recentlyFilteredOutIndexes; }
+		}
+
 		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
 			get
@@ -477,15 +490,27 @@ namespace Raven.Database.Indexing
 		{
 			log.Debug("Stopping indexing workers");
 			doIndexing = false;
+		    doReducing = false;
 			lock (waitForWork)
 			{
 				Monitor.PulseAll(waitForWork);
 			}
 		}
 
-		public void StartIndexing()
+        public void StopReducing()
+        {
+            log.Debug("Stopping reducing workers");
+            doReducing = false;
+            lock (waitForWork)
+            {
+                Monitor.PulseAll(waitForWork);
+            }
+        }
+
+        public void StartIndexing()
 		{
 			doIndexing = true;
+            doReducing = true;
 		}
 
 		public void MarkAsRemovedFromIndex(HashSet<string> keys)
@@ -510,6 +535,15 @@ namespace Raven.Database.Indexing
         public int GetNextQueryId()
         {
             return Interlocked.Increment(ref nextQueryId);
+        }
+
+		public void MarkIndexFilteredOut(string indexName)
+		{
+			recentlyFilteredOutIndexes.Add(new FilteredOutIndexStat()
+			{
+				IndexName = indexName,
+				Timestamp = SystemTime.UtcNow
+			});
         }
 	}
 }

@@ -1,14 +1,21 @@
 /// <reference path="../../../../../Scripts/typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
 
-
-import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getFilteredOutIndexStatsCommand = require("commands/database/debug/getFilteredOutIndexStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
+import app = require("durandal/app");
 import changeSubscription = require('common/changeSubscription');
+import mapBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/mapBatchInfo");
+import reduceBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceBatchInfo");
+import mapStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/mapStatsInfo");
+import reduceStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceStatsInfo");
+import prefetchInfo = require("viewmodels/database/status/indexing/perfDialogs/prefetchInfo");
+import filteredOutIndexInfo = require("viewmodels/database/status/indexing/perfDialogs/filteredOutIndexInfo");
 
 class dateRange {
     constructor(public start: Date, public end: Date) {
@@ -110,6 +117,7 @@ class metrics extends viewModelBase {
 
     edgeDate: Date;
 
+    mapGroupOffset = 0;
     reduceGroupOffset = 0;
     
     mapJsonData: indexingBatchInfoDto[] = [];
@@ -118,8 +126,15 @@ class metrics extends viewModelBase {
     reduceJsonData: reducingBatchInfoDto[] = [];
     rawReduceJsonData: reducingBatchInfoDto[] = [];
 
+    prefetchJsonData: futureBatchStatsDto[] = [];
+    rawPrefetchJsonData: futureBatchStatsDto[] = [];
+
+    filteredOutIndexesJsonData: filteredOutIndexStatDto[] = [];
+    rawFilteredOutIndexesJsonData: filteredOutIndexStatDto[] = [];
+    
     mapAllIndexNames = ko.observableArray<string>();
     reduceAllIndexNames = ko.observableArray<string>();
+
     allIndexNames = ko.computed(() => d3.set(this.mapAllIndexNames().concat(this.reduceAllIndexNames())).values());
     selectedIndexNames = ko.observableArray<string>();
     selectedMapIndexNames = ko.computed(() => this.selectedIndexNames().filter(x => this.mapAllIndexNames().contains(x)));
@@ -129,6 +144,8 @@ class metrics extends viewModelBase {
 
     color = d3.scale.ordinal().range(metrics.batchesColors);
     margin = { top: 40, right: 20, bottom: 40, left: 200, between: 10 };
+
+    prefetchingLineHeight = this.yBarHeight + this.yBarMargin * 2 + this.margin.between;
 
     private pixelsPerSecond = ko.observable<number>(100);
 
@@ -140,10 +157,12 @@ class metrics extends viewModelBase {
     xScale: D3.Scale.TimeScale;
     yMapScale: D3.Scale.OrdinalScale;
     yReduceScale: D3.Scale.OrdinalScale;
+    yPrefetchScale: D3.Scale.OrdinalScale;
 
     xAxis: D3.Svg.Axis;
     yMapAxis: D3.Svg.Axis;
     yReduceAxis: D3.Svg.Axis;
+    yPrefetchAxis: D3.Svg.Axis;
 
     svg: D3.Selection;
 
@@ -167,6 +186,20 @@ class metrics extends viewModelBase {
 
     fetchReduceJsonData() {
         return new getReducingBatchStatsCommand(this.activeDatabase(), this.lastReducingId).execute();
+    }
+
+    fetchPrefetcherJsonData() {
+        var promise = $.Deferred();
+        new getDatabaseStatsCommand(this.activeDatabase())
+            .execute()
+            .done((result) => promise.resolve(result.Prefetches));
+
+        return promise;
+    }
+
+    fetchFilteredOutJsonData() {
+        return new getFilteredOutIndexStatsCommand(this.activeDatabase())
+            .execute();
     }
 
     activate(args) {
@@ -204,7 +237,7 @@ class metrics extends viewModelBase {
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
-        if (e.Type == "MapCompleted" || e.Type == "ReduceCompleted") {
+        if (e.Type === "MapCompleted" || e.Type === "ReduceCompleted") {
             this.refreshGraphObservable(new Date().getTime());
         }
     }
@@ -212,6 +245,8 @@ class metrics extends viewModelBase {
     filterJsonData() {
         this.mapJsonData = [];
         this.reduceJsonData = [];
+        this.prefetchJsonData = [];
+        this.filteredOutIndexesJsonData = [];
         var selectedIndexes = this.selectedIndexNames();
         this.rawMapJsonData.forEach(rawData => {
             var filteredStats = rawData.PerfStats.filter(p => selectedIndexes.contains(p.indexName));
@@ -227,6 +262,14 @@ class metrics extends viewModelBase {
                 var rawCopy: reducingBatchInfoDto = $.extend(false, {}, rawData);
                 rawCopy.PerfStats = filteredStats; 
                 this.reduceJsonData.push(rawCopy);
+            }
+        });
+        this.rawPrefetchJsonData.forEach(rawData => {
+            this.prefetchJsonData.push(rawData);
+        });
+        this.rawFilteredOutIndexesJsonData.forEach(rawData => {
+            if (selectedIndexes.contains(rawData.IndexName)) {
+                this.filteredOutIndexesJsonData.push(rawData);
             }
         });
     }
@@ -251,9 +294,11 @@ class metrics extends viewModelBase {
     refresh() {
         var mapTask = this.fetchMapJsonData();
         var reduceTask = this.fetchReduceJsonData();
+        var prefetchTask = this.fetchPrefetcherJsonData();
+        var filterTask = this.fetchFilteredOutJsonData();
 
-        $.when(mapTask, reduceTask)
-            .done((mapResult: any[], reduceResult: any[]) => {
+        $.when(mapTask, reduceTask, prefetchTask, filterTask)
+            .done((mapResult: any[], reduceResult: any[], prefetches: futureBatchStatsDto[], filteredOutIndexes: filteredOutIndexStatDto[]) => {
                 var oldAllIndexes = this.allIndexNames();
 
                 if (mapResult.length > 0) {
@@ -261,17 +306,21 @@ class metrics extends viewModelBase {
                 }
                 if (reduceResult.length > 0) {
                     this.lastReducingId = d3.max(reduceResult, x => x.Id);
-                } 
+                }
 
-                if (oldAllIndexes.length == 0) {
+                if (oldAllIndexes.length === 0) {
                     if (mapResult.length > 0) {
                         this.edgeDate = d3.min(mapResult, r => r.StartedAtDate);
                     } else if (reduceResult.length > 0) {
                         this.edgeDate = d3.min(reduceResult, r => r.StartedAtDate);
                     }
-                } 
+                }
                 mapResult = mapResult.filter(r => r.StartedAtDate >= this.edgeDate);
                 reduceResult = reduceResult.filter(r => r.StartedAtDate >= this.edgeDate);
+                filteredOutIndexes = filteredOutIndexes.filter(r => r.TimestampParsed >= this.edgeDate);
+
+                this.rawFilteredOutIndexesJsonData = this.mergeFilteredOutIndexesJsonData(this.rawFilteredOutIndexesJsonData, filteredOutIndexes);
+                this.rawPrefetchJsonData = this.mergePrefetchJsonData(this.rawPrefetchJsonData, prefetches);
 
                 this.rawMapJsonData = this.mergeMapJsonData(this.rawMapJsonData, mapResult);
                 var mapIndexes = this.findIndexNames(this.rawMapJsonData);
@@ -292,6 +341,52 @@ class metrics extends viewModelBase {
                 // refresh multiselect widget:
                 $("#visibleIndexesSelector").multiselect('rebuild');
             });
+    }
+
+    private createFilteredOutCacheKey(input: filteredOutIndexStatDto) {
+        return input.Timestamp + "$" + input.IndexName;
+    }
+
+    private mergeFilteredOutIndexesJsonData(currentData: filteredOutIndexStatDto[], incomingData: filteredOutIndexStatDto[]) {
+        // create lookup map to avoid O(n^2)
+        var dateLookup = d3.map();
+
+        currentData.forEach((d, i) => {
+            dateLookup.set(this.createFilteredOutCacheKey(d), i);
+        });
+
+        incomingData.forEach(d => {
+            var cacheKey = this.createFilteredOutCacheKey(d);
+            if (dateLookup.has(cacheKey)) {
+                var index = dateLookup.get(cacheKey);
+                currentData[index] = d;
+            } else {
+                currentData.push(d);
+            }
+        });
+
+        return currentData;
+    }
+
+    private mergePrefetchJsonData(currentData: futureBatchStatsDto[], incomingData: futureBatchStatsDto[]) {
+        // create lookup map to avoid O(n^2)
+        var dateLookup = d3.map();
+        currentData.forEach((d, i) => {
+            dateLookup.set(d.Timestamp, i);
+        });
+
+        incomingData.forEach(d => {
+
+            this.computePrefetchCache(d);
+            if (dateLookup.has(d.Timestamp)) {
+                var index = dateLookup.get(d.Timestamp);
+                currentData[index] = d;
+            } else {
+                currentData.push(d);
+            }
+        });
+
+        return currentData;
     }
 
     private mergeMapJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
@@ -381,6 +476,13 @@ class metrics extends viewModelBase {
         }
     }
 
+    computePrefetchCache(input: futureBatchStatsDto) {
+        var inputAny = <any>input;
+
+        inputAny.CacheTimestamp = this.isoFormat.parse(input.Timestamp);
+        inputAny.DurationMs = this.parseTimespan(input.Duration);
+    }
+
     computeParallelOpsCache(mtGroup: parallelPefromanceStatsDto) {
         for (var thread = 0; thread < mtGroup.BatchedOperations.length; thread++) {
             var perThreadInfo = mtGroup.BatchedOperations[thread];
@@ -399,11 +501,13 @@ class metrics extends viewModelBase {
 
     graphScrolled() {
         var leftScroll = $("#metricsContainer").scrollLeft();
-        var self = this;
         this.svg.select('.y.axis.map')
             .attr("transform", "translate(" + leftScroll + ",0)");
 
         this.svg.select('.y.axis.reduce')
+            .attr("transform", "translate(" + leftScroll + ",0)");
+
+        this.svg.select('.y.axis.prefetch')
             .attr("transform", "translate(" + leftScroll + ",0)");
 
         this.svg.select('#dataClip rect')
@@ -427,7 +531,10 @@ class metrics extends viewModelBase {
         var reduceDateRange = this.reduceJsonData.map(
             j => new dateRange(j.StartedAtDate, new Date(j.StartedAtDate.getTime() + j.TotalDurationMs)));
 
-        var mergedDateRange = mapDateRange.concat(reduceDateRange).sort((a, b) => a.start.getTime() - b.start.getTime());
+        var filteredOutDateRange = this.filteredOutIndexesJsonData.map(
+            j => new dateRange(j.TimestampParsed, new Date(j.TimestampParsed.getTime() + 10)));
+
+        var mergedDateRange = mapDateRange.concat(reduceDateRange).concat(filteredOutDateRange).sort((a, b) => a.start.getTime() - b.start.getTime());
 
         var gapsFinder = new gapFinder(mergedDateRange, self.pixelsPerSecond(), metrics.minGapTime);
 
@@ -440,9 +547,9 @@ class metrics extends viewModelBase {
 
         totalWidthWithMargins = Math.max(totalWidthWithMargins, this.width);
         
-
         var totalHeight =
-            self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
+            self.prefetchingLineHeight
+            + self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.between
             + self.selectedReduceIndexes().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.top
@@ -456,7 +563,8 @@ class metrics extends viewModelBase {
             .style('width', totalWidthWithMargins + 'px')
             .attr("viewBox", "0 0 " + totalWidthWithMargins + " " + totalHeight);
 
-        self.reduceGroupOffset = self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between;
+        self.mapGroupOffset = self.prefetchingLineHeight;
+        self.reduceGroupOffset = self.mapGroupOffset + self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between;
 
         this.svg.selectAll('.map_group')
             .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
@@ -541,6 +649,16 @@ class metrics extends viewModelBase {
         reduceGroup.append('g')
             .attr('class', 'ops');
 
+        svgEnter.append('g')
+            .attr('class', 'prefetch_group')
+            .attr('clip-path', "url(#dataClip)")
+            .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
+
+        svgEnter.append('g')
+            .attr('class', 'filtered_out_group')
+            .attr('clip-path', "url(#dataClip)")
+            .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
+
         var controllsEnter = this.svg
             .selectAll(".controlls")
             .data([null]).enter()
@@ -552,10 +670,13 @@ class metrics extends viewModelBase {
         this.updateXAxis(controllsEnter, gapsFinder.totalWidth);
         this.updateYMapAxis(controllsEnter);
         this.updateYReduceAxis(controllsEnter);
+        this.updateYPrefetchAxis(controllsEnter);
         this.updateMapBatchesRanges();
         this.updateReduceBatchesRanges();
         this.updateMapOperations();
         this.updateReduceOperations();
+        this.updatePrefetchOperations();
+        this.updateFilteredOutIndexesOperations();
         this.updateGaps(gapsFinder.gapsPositions);
         this.showHideNoData(this.rawMapJsonData.length == 0 && this.rawReduceJsonData.length == 0);
     }
@@ -566,7 +687,7 @@ class metrics extends viewModelBase {
         var reduceHeight = self.selectedReduceIndexes().length * (self.yBarHeight + self.yBarMargin * 2);
         self.svg.select('.map_text')
             .transition()
-            .attr('x', -mapHeight / 2)
+            .attr('x', -self.mapGroupOffset - mapHeight / 2)
             .style('opacity', mapHeight > 0 ? 1 : 0);
             
         self.svg.select('.reduce_text')
@@ -581,7 +702,7 @@ class metrics extends viewModelBase {
             .attr('class', 'map_text')
             .attr("transform", "rotate(-90)")
             .attr("dy", ".71em")
-            .attr('x', -mapHeight / 2)
+            .attr('x', -self.mapGroupOffset - mapHeight / 2)
             .attr('y',  -self.margin.left)
             .style("text-anchor", "middle")
             .text('Map')
@@ -597,6 +718,15 @@ class metrics extends viewModelBase {
             .text('Reduce')
             .style('opacity', reduceHeight > 0 ? 1 : 0);
 
+        textsEnter.append('text')
+            .attr('class', 'prefetch_text')
+            .attr("transform", "rotate(-90)")
+            .attr("dy", ".71em")
+            .attr('x', -self.margin.top)
+            .attr('y', -self.margin.left)
+            .style("text-anchor", "middle")
+            .text('Prefetch')
+            .style('opacity', self.prefetchJsonData.length > 0 ? 1 : 0); 
     }
 
     private updateXAxis(controllsEnter, totalWidth:number) {
@@ -632,7 +762,7 @@ class metrics extends viewModelBase {
 
         self.yMapScale = d3.scale.ordinal()
             .domain(self.selectedMapIndexNames())
-            .rangeBands([0, indexCount * (self.yBarHeight + self.yBarMargin * 2)]);
+            .rangeBands([self.mapGroupOffset, self.mapGroupOffset + indexCount * (self.yBarHeight + self.yBarMargin * 2)]);
 
         self.yMapAxis = d3.svg.axis()
             .scale(self.yMapScale)
@@ -663,6 +793,26 @@ class metrics extends viewModelBase {
         self.svg.select(".y.axis.reduce")
             .transition()
             .call(self.yReduceAxis);
+    }
+
+    private updateYPrefetchAxis(controllsEnter) {
+        var self = this;
+
+        controllsEnter.append('g')
+            .attr('class', 'y axis prefetch')
+            .attr("transform", "translate(0,0)");
+
+        self.yPrefetchScale = d3.scale.ordinal()
+            .domain([ "Prefetching "])
+            .rangeBands([0, (self.yBarHeight + self.yBarMargin * 2)]);
+
+        self.yPrefetchAxis = d3.svg.axis()
+            .scale(self.yPrefetchScale)
+            .orient("left");
+
+        self.svg.select(".y.axis.prefetch")
+            .transition()
+            .call(self.yPrefetchAxis);
     }
 
     // uses optimalization which assumes that both start and start + size falls into continuous region
@@ -866,7 +1016,7 @@ class metrics extends viewModelBase {
 
         batches.exit().remove();
 
-        var enteringOpsGroups = batches
+        batches
             .enter()
             .append('g')
             .attr('class', 'opGroup');
@@ -986,6 +1136,64 @@ class metrics extends viewModelBase {
             .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
+    private updatePrefetchOperations() {
+        var self = this; 
+        var batches = self.svg.select('.prefetch_group')
+            .selectAll(".prefetch_op")
+            .data(self.prefetchJsonData, d => d.CacheTimestamp);
+
+        batches.exit().remove();
+
+        batches
+            .select('rect')
+            .transition()
+            .attr('width', d => self.xScaleExtent(d.DurationMs));
+
+        var enteringOps = batches
+            .enter()
+            .append('g')
+            .attr('class', 'prefetch_op');
+
+        enteringOps
+            .append('rect')
+            .attr('class', 'prefetch_box')
+            .attr('x', d => self.xScale(d.CacheTimestamp))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .on('click', self.prefetchStatClicked.bind(self))
+            .transition()
+            .attr('width', d => self.xScaleExtent(d.DurationMs));
+    }
+
+    updateFilteredOutIndexesOperations() {
+        var self = this;
+        var batches = self.svg.select('.filtered_out_group')
+            .selectAll('.filter_op')
+            .data(self.filteredOutIndexesJsonData, d => this.createFilteredOutCacheKey(d));
+
+        batches.exit().remove();
+
+        var radius = 5;
+
+        batches
+            .transition()
+            .attr('cx', d => self.xScale(d.TimestampParsed))
+            .attr('cy', d => self.yMapScale(d.IndexName) + self.yBarHeight / 2 + radius / 2 + self.yBarMargin);
+            
+        batches
+            .enter()
+            .append('circle')
+            .attr('class', 'filter_op')
+            .attr('r', 0)
+            .attr('cx', d => self.xScale(d.TimestampParsed))
+            .attr('cy', d => self.yMapScale(d.IndexName) + self.yBarHeight / 2 + radius / 2 + self.yBarMargin)
+            .style('stroke', 'black')
+            .on('click', self.filterOutIndexClicked.bind(self))
+            .transition()
+            .attr('r', radius);
+    }
+
     private updateGaps(gapsPositions: timeGap[]) {
         var self = this;
         var gaps = self.svg.select('.gaps').selectAll('.gap')
@@ -994,7 +1202,7 @@ class metrics extends viewModelBase {
         gaps.exit().remove();
 
         var patternWidth = 20;
-        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between;
+        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch */) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
 
         gaps.select('text')
             .transition()
@@ -1026,6 +1234,28 @@ class metrics extends viewModelBase {
             .attr("dy", 5)
             .style("text-anchor", "middle")
             .text(d => self.timeSpanFormat(d.timespan));
+    }
+
+    private parseTimespan(span: string) {
+        var dotSplit = span.split(".");
+        var milis = 0;
+        if (dotSplit.length === 2) {
+            milis = parseInt(dotSplit[1].substr(0, 3).replace("/^(0+)", ""));
+            span = dotSplit[0];
+        }
+
+        var tokens = span.split(":").reverse();
+        if (tokens.length > 0) {
+            milis += parseInt(tokens[0]) * 1000;
+        }
+        if (tokens.length > 1) {
+            milis += parseInt(tokens[1]) * 1000 * 60;
+        }
+        if (tokens.length > 2) {
+            milis += parseInt(tokens[2]) * 1000 * 60 * 60;
+        }
+
+        return milis;
     }
 
     private timeSpanFormat(milis: number) {
@@ -1075,22 +1305,30 @@ class metrics extends viewModelBase {
 
     }
 
+    private filterOutIndexClicked(data: filteredOutIndexStatDto) {
+        app.showDialog(new filteredOutIndexInfo(data));
+    }
+
     private indexStatClicked(data: indexNameAndMapPerformanceStats) {
         data.CacheThreadCount = this.findMaxThreadCountInMap(data);
-        this.showTooltip(data, 'index-stat-template');
+        app.showDialog(new mapStatsInfo(data));
     }
 
     private reduceStatClicked(data: reduceLevelPeformanceStatsDto) {
         data.CacheThreadCount = this.findMaxThreadCountInReduce(data);
-        this.showTooltip(data, 'reduce-stat-template');
+        app.showDialog(new reduceStatsInfo(data));
     }
 
     private mapBatchInfoClicked(data: indexingBatchInfoDto) {
-        this.showTooltip(data, 'map-batch-info-template');
+        app.showDialog(new mapBatchInfo(data));
     }
 
     private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
-        this.showTooltip(data, 'reduce-batch-info-template');
+        app.showDialog(new reduceBatchInfo(data));
+    }
+
+    private prefetchStatClicked(data: futureBatchStatsDto) {
+        app.showDialog(new prefetchInfo(data));
     }
 
     onWindowHeightChanged() {

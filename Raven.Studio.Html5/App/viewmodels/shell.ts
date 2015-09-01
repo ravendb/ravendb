@@ -53,20 +53,24 @@ import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesSta
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
+import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class shell extends viewModelBase {
+    private router = router;
+    static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
+    static originalEnviromentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
     selectedColor = shell.selectedEnvironmentColorStatic;
     selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
     canShowEnviromentText = ko.computed(() => this.selectedColor().name !== "Default");
 
-    private router = router;
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
@@ -371,10 +375,24 @@ class shell extends viewModelBase {
 
     private preLoadRecentErrorsView() {
         // preload this view as in case of failure server can't serve it.
-        viewLocator.locateView("views/recentErrors");
+        viewLocator.locateView("views/common/recentErrors");
+    }
+
+    private fecthStudioConfigForDatabase(db: database) {
+        new getStudioConfig(db)
+            .execute()
+            .done((doc: documentClass) => {
+                var envColor = doc["EnvironmentColor"];
+                if (envColor != null) {
+                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
+                }
+            })
+            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
     }
 
     private activateDatabase(db: database) {
+        this.fecthStudioConfigForDatabase(db);
+
         var changeSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
@@ -395,6 +413,8 @@ class shell extends viewModelBase {
     }
 
     private activateFileSystem(fs: fileSystem) {
+        this.fecthStudioConfigForDatabase(new database(fs.name));
+
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
@@ -616,7 +636,7 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
             this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/StudioConfig", () => this.fetchStudioConfig()),
+            this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => this.fetchStudioConfig()),
             this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
@@ -633,6 +653,8 @@ class shell extends viewModelBase {
                     resourceObservableArray.remove(resourceToDelete);
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+                    if (resourceType == TenantType.Database)
+						recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
@@ -841,14 +863,15 @@ class shell extends viewModelBase {
     }
 
     fetchStudioConfig() {
-        new getDocumentWithMetadataCommand("Raven/StudioConfig", this.systemDatabase)
+        new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, this.systemDatabase)
             .execute()
             .done((doc: documentClass) => {
                 appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
-                    //selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8", "#000000"));
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
+                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
+                    shell.selectedEnvironmentColorStatic(color);
+                    shell.originalEnviromentColor(color);
                 }
             });
     }

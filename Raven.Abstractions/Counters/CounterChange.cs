@@ -15,6 +15,8 @@ namespace Raven.Abstractions.Counters
 		public string Group { get; set; }
 		public long Delta { get; set; }
 
+		public bool IsReset { get; set; }
+
 		[JsonIgnore]
 		public TaskCompletionSource<object> Done { get; set; }
 	}

@@ -98,14 +98,14 @@ namespace Raven.Tests.Core
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			var timeSpan = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
-			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeSpan);
+		    var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
+			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0,to);
 
 			if (spinUntil == false)
 			{
 				var statistics = databaseCommands.GetStatistics();
 				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-				throw new TimeoutException("The indexes stayed stale for more than " + timeSpan + Environment.NewLine + stats);
+				throw new TimeoutException("The indexes stayed stale for more than " + to + Environment.NewLine + stats);
 			}
 		}
 
@@ -202,14 +202,14 @@ namespace Raven.Tests.Core
 			}
 		}
 
-        public static IEnumerable<object[]> InsertOptions
-        {
-            get
-            {
-                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
-                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
-                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
-            }
-        }
+		public static IEnumerable<object[]> InsertOptions
+		{
+			get
+			{
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+				yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+			}
+		}
 	}
 }

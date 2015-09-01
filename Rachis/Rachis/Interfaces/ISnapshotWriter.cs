@@ -1,9 +1,8 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
 namespace Rachis.Interfaces
 {
-	public interface ISnapshotWriter : IDisposable
+	public interface ISnapshotWriter
 	{
 		long Index { get; 	}
 		long Term { get; }

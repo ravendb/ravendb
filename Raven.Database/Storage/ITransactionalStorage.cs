@@ -62,5 +62,12 @@ namespace Raven.Database.Storage
 		/// The reset must occur while there are no map/reduce indexing activity going on.
 		/// </summary>
 		void ResetScheduledReductionsTracking();
+
+		void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler);
+	}
+
+	public interface ITransactionalStorageNotificationHandler
+	{
+		void HandleTransactionalStorageNotification();
 	}
 }

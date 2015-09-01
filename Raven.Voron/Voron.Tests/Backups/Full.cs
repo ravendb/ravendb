@@ -33,6 +33,62 @@ namespace Voron.Tests.Backups
 			    Directory.Delete(_recoveredStoragePath, true);
 	    }
 
+        [PrefixesFact]
+        public void CanBackupAndRestoreSmall()
+        {
+            RequireFileBasedPager();
+            var random = new Random();
+            var buffer = new byte[8192];
+            random.NextBytes(buffer);
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    tx.Root.Add("items/" + i, new MemoryStream(buffer));
+                }
+
+                tx.Commit();
+            }
+
+            Env.FlushLogToDataFile(); // force writing data to the data file
+
+            // add more data to journal files
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                for (int i = 2; i < 4; i++)
+                {
+                    tx.Root.Add("items/" + i, new MemoryStream(buffer));
+                }
+
+                tx.Commit();
+            }
+
+            Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+
+            BackupMethods.Full.ToFile(Env, _backupFile);
+
+            BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
+
+            var options = StorageEnvironmentOptions.ForPath(_recoveredStoragePath);
+            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+            using (var env = new StorageEnvironment(options))
+            {
+                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var readResult = tx.Root.Read("items/" + i);
+                        Assert.NotNull(readResult);
+                        var memoryStream = new MemoryStream();
+                        readResult.Reader.CopyTo(memoryStream);
+                        Assert.Equal(memoryStream.ToArray(), buffer);
+                    }
+                }
+            }
+        }
+
 	    [PrefixesFact]
         public void CanBackupAndRestore()
         {
@@ -45,7 +101,7 @@ namespace Voron.Tests.Backups
 			{
 				for (int i = 0; i < 500; i++)
 				{
-					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+					tx.Root.Add			("items/" + i, new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -60,7 +116,7 @@ namespace Voron.Tests.Backups
 			{
 				for (int i = 500; i < 1000; i++)
 				{
-					tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+					tx.Root.Add			("items/" + i, new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -81,7 +137,7 @@ namespace Voron.Tests.Backups
 				{
 					for (int i = 0; i < 1000; i++)
 					{
-						var readResult = tx.State.Root.Read("items/" + i);
+						var readResult = tx.Root.Read("items/" + i);
 						Assert.NotNull(readResult);
 						var memoryStream = new MemoryStream();
 						readResult.Reader.CopyTo(memoryStream);

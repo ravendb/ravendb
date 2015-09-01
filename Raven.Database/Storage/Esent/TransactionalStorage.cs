@@ -121,7 +121,12 @@ namespace Raven.Storage.Esent
 	    {
 			scheduledReductionsPerViewAndLevel.Clear();
 	    }
-        public TableColumnsCache TableColumnsCache
+
+	    public void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler)
+	    {
+	    }
+
+	    public TableColumnsCache TableColumnsCache
         {
             get { return tableColumnsCache; }
         }
@@ -463,7 +468,7 @@ namespace Raven.Storage.Esent
             });
         }
 
-		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
+        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
         {
             return StorageSizes.ReportOn(this);
         }

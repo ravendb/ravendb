@@ -16,7 +16,6 @@ using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
-using Raven.Unix.Native;
 
 namespace Voron
 {
@@ -35,6 +34,8 @@ namespace Voron
 
 			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
+
+		public Action<long> OnScratchBufferSizeChanged = delegate { };
 
 		public long? InitialFileSize { get; set; }
 
@@ -103,7 +104,6 @@ namespace Voron
 			ScratchBufferOverflowTimeout = 5000;
 
 			MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
-
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
@@ -192,6 +192,7 @@ namespace Voron
 
                 return new Win32MemoryMapPager(filename);
             }
+
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
@@ -298,7 +299,10 @@ namespace Voron
 					throw new InvalidOperationException("No such journal " + path);
 				if (RunningOnPosix)
 					return new PosixMemoryMapPager(path);
-				return new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
+			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
+                    options:Win32NativeFileAttributes.SequentialScan);
+			    win32MemoryMapPager.TryPrefetchingWholeFile();
+			    return win32MemoryMapPager;
 			}
 		}
 
@@ -474,6 +478,5 @@ namespace Voron
 				}
 			}
 		}
-
 	}
 }

@@ -34,11 +34,11 @@ namespace Raven.Tests.Issues
 			public UserIndex()
 			{
 				Map = users => from user in users
-							   select new
-							   {
-								   user.Name,
-								   Date = new DateTime(2015, 1, 1)
-							   };
+					select new
+					{
+						user.Name,
+						Date = new DateTime(2015,1,1)
+					};
 			}
 		}
 
@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task Side_by_side_index_should_be_replicated()
 		{
-			using (var source = CreateStore())
+			using(var source = CreateStore())
 			using (var destination = CreateStore())
 			{
 				var testIndex = new UserIndex();
@@ -93,10 +93,7 @@ namespace Raven.Tests.Issues
 				sourceReplicationTask.IndexReplication.Execute(); //now the old index replicated to destination
 
 				var sideBySideIndexReplicated = new ManualResetEventSlim();
-
-				testIndex.SideBySideExecute(source);
-
-				var replaceIndexName = "ReplacementOf/" + testIndex.IndexName;
+				var replaceIndexName = Constants.SideBySideIndexNamePrefix + testIndex.IndexName;
 				destinationDatabase.Notifications.OnIndexChange += (database, notification) =>
 				{
 					if (notification.Type == IndexChangeTypes.IndexAdded &&
@@ -104,15 +101,17 @@ namespace Raven.Tests.Issues
 						sideBySideIndexReplicated.Set();
 				};
 
+				testIndex.SideBySideExecute(source);
+
 				sourceReplicationTask.IndexReplication.Execute();
 
 				Assert.True(sideBySideIndexReplicated.Wait(2000));
 
 				var definition = destination.DatabaseCommands.GetIndex(replaceIndexName);
 				Assert.NotNull(definition);
-				Assert.True(definition.Equals(testIndex.CreateIndexDefinition(), false));
+				Assert.True(definition.Equals(testIndex.CreateIndexDefinition(),false));
 
-				var replacementIndexName = "ReplacementOf/" + testIndex.IndexName;
+				var replacementIndexName = Constants.SideBySideIndexNamePrefix + testIndex.IndexName;
 				VerifyReplacementDocumentIsThere(replacementIndexName, destinationDatabase);
 			}
 		}
@@ -190,7 +189,7 @@ namespace Raven.Tests.Issues
 				Assert.NotNull(originalDefinition);
 				Assert.True(originalDefinition.Equals(oldIndexDef, false));
 
-				var sideBySideDefinition = destination.DatabaseCommands.GetIndex("ReplacementOf/" + testIndex.IndexName);
+				var sideBySideDefinition = destination.DatabaseCommands.GetIndex(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
 				Assert.NotNull(sideBySideDefinition);
 				Assert.True(sideBySideDefinition.Equals(testIndex.CreateIndexDefinition(), false));
 			}
@@ -214,7 +213,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = source.OpenSession())
 				{
-					for (int i = 0; i < 10; i++)
+					for(int i = 0; i < 10; i++)
 						session.Store(new User
 						{
 							Name = "User - " + i
@@ -242,9 +241,9 @@ namespace Raven.Tests.Issues
 
 				destinationDatabase.StopBackgroundWorkers();
 
-				testIndex.SideBySideExecute(source, sourceDatabase.Statistics.LastDocEtag);
+				testIndex.SideBySideExecute(source,sourceDatabase.Statistics.LastDocEtag);
 
-				var replacementIndexName = "ReplacementOf/" + testIndex.IndexName;
+				var replacementIndexName = Constants.SideBySideIndexNamePrefix + testIndex.IndexName;
 
 				//do side-by-side index replication -> since in the destination there is original index, 
 				//simply create the side-by-side index as so it will replace the original when it catches up
@@ -307,17 +306,17 @@ namespace Raven.Tests.Issues
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index
 
 				//sanity check
-				Assert.NotNull(destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName));
+				Assert.NotNull(destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName));
 
-				sourceDatabase.Indexes.DeleteIndex("ReplacementOf/" + testIndex.IndexName);
-
+				sourceDatabase.Indexes.DeleteIndex(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+				
 				source.SideBySideExecuteIndex(testIndex2); //replaces the testIndex side-by-side index on source
 
 				sourceReplicationTask.IndexReplication.Execute(); //should replicate the replaced side-by-sude index to destination
 
-				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName);
+				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
 				Assert.NotNull(sideBySideIndex);
-				Assert.True(sideBySideIndex.Equals(testIndex2.CreateIndexDefinition(), false));
+				Assert.True(sideBySideIndex.Equals(testIndex2.CreateIndexDefinition(),false));
 			}
 		}
 
@@ -368,26 +367,26 @@ namespace Raven.Tests.Issues
 
 				source.SideBySideExecuteIndex(testIndex);
 
-				sourceReplicationTask.IndexReplication.Execute();//replicate the side-by-side index
+				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index
 
 				destinationDatabase.Indexes.DeleteIndex(testIndex.IndexName); //delete the original index
 
-				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName);
+				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
 				Assert.NotNull(sideBySideIndex);
 
-				VerifyReplacementDocumentIsThere("ReplacementOf/" + testIndex.IndexName, destinationDatabase);
+				VerifyReplacementDocumentIsThere(Constants.SideBySideIndexNamePrefix + testIndex.IndexName, destinationDatabase);
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index again
 
 				var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
 				Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));
 
-				sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition("ReplacementOf/" + testIndex.IndexName);
+				sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
 				Assert.Null(sideBySideIndex);
-				Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + "ReplacementOf/" + testIndex.IndexName, null));
+				Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + testIndex.IndexName, null));
 			}
 		}
 
-		private static void VerifyReplacementDocumentIsThere(string replacementIndexName, DocumentDatabase destinationDatabase, bool shouldVerifyEtag = false)
+		private static void VerifyReplacementDocumentIsThere(string replacementIndexName, DocumentDatabase destinationDatabase,bool shouldVerifyEtag = false)
 		{
 			var id = Constants.IndexReplacePrefix + replacementIndexName;
 			var documentInfo = destinationDatabase.Documents.Get(id, null);

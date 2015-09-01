@@ -22,7 +22,7 @@ interface counterTotalDto {
 }
 
 interface counterSummaryDto {
-    Group: string;
+    GroupName: string;
     CounterName: string;
     Total: number;
 }

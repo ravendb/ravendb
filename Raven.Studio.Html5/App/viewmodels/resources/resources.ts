@@ -178,6 +178,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
+        super.attached();
         this.updateHelpLink("Z8DC3Q");
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();
@@ -271,9 +272,9 @@ class resources extends viewModelBase {
     private onResourceDeleted(resourceToDelete: resource) {
         var resourcesArray = this.getResources(resourceToDelete.type);
 
-        var resuorceInArray = resourcesArray.first((db: resource) => db.name === resourceToDelete.name);
-        if (!!resuorceInArray) {
-            resourcesArray.remove(resuorceInArray);
+        var resourceInArray = resourcesArray.first((db: resource) => db.name === resourceToDelete.name);
+        if (!!resourceInArray) {
+            resourcesArray.remove(resourceInArray);
         }
 
         if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
@@ -381,6 +382,7 @@ class resources extends viewModelBase {
     navigateToAdminSettings() {
         this.navigate(this.appUrls.adminSettings());
         shell.disconnectFromResourceChangesApi();
+        shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor());
     }
 
 	navigateToCreateCluster() {

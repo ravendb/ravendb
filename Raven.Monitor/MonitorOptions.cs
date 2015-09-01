@@ -23,6 +23,7 @@ namespace Raven.Monitor
 		public string ServerUrl { get; set; }
 
 		public IoOptions IoOptions { get; private set; }
+		public bool RunAsServer { get; set; }
 	}
 
 	internal class IoOptions

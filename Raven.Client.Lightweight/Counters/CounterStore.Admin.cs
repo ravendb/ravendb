@@ -19,13 +19,26 @@ namespace Raven.Client.Counters
 			internal CounterStoreAdminOperations(CounterStore parent)
 			{
 				this.parent = parent;
-			}
+			}			
 
-			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName, CancellationToken token = default(CancellationToken))
+			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}", parent.Url, counterStorageName);
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names", parent.Url, counterStorageName ?? parent.Name);
+
+				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.ToObject<CounterNameGroupPair[]>(parent.JsonSerializer);
+				}
+			}
+
+			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary", parent.Url, counterStorageName ?? parent.Name);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -39,11 +52,20 @@ namespace Raven.Client.Counters
 			/// </summary>
 			/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
+			/// <param name="shouldUpateIfExists">If the storage already there, should we update it</param>
+			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, 
+				string counterStorageName, 
+				bool shouldUpateIfExists = false,
+				OperationCredentials credentials = null, 
+				CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
 					throw new ArgumentNullException("counterStorageDocument");
+
 				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
+
+				if (String.IsNullOrWhiteSpace(counterStorageDocument.StoreName))
+					counterStorageDocument.StoreName = counterStorageName;
 
 				parent.AssertInitialized();
 
@@ -62,7 +84,7 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
+							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
 
 						throw;
 					}

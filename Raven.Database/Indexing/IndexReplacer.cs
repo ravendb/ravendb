@@ -11,6 +11,7 @@ using System.Threading;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -92,12 +93,12 @@ namespace Raven.Database.Indexing
 
 			var replaceIndexId = replaceIndex.IndexId;
 
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
-			if (!indexDefinition.IsSideBySideIndex)
-			{
-				indexDefinition.IsSideBySideIndex = true;
-				Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
-			}
+		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
+            if (!indexDefinition.IsSideBySideIndex)
+            {
+                indexDefinition.IsSideBySideIndex = true;
+                Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
+            }
 
 			var indexReplaceInformation = document.DataAsJson.JsonDeserialization<IndexReplaceInformation>();
 			indexReplaceInformation.ReplaceIndex = replaceIndexName;
@@ -111,7 +112,7 @@ namespace Raven.Database.Indexing
 			if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
 			{
 				var dueTime = indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow;
-				if (dueTime.TotalSeconds < 0)
+				if (dueTime.TotalSeconds < 0) 
 					dueTime = TimeSpan.Zero;
 
 				indexReplaceInformation.ReplaceTimer = Database.TimerManager.NewTimer(state => InternalReplaceIndexes(new Dictionary<int, IndexReplaceInformation> { { replaceIndexId, indexReplaceInformation } }), dueTime, TimeSpan.FromDays(7));
@@ -140,7 +141,7 @@ namespace Raven.Database.Indexing
 			if (indexesToReplace.TryRemove(pair.Key, out indexReplaceInformation) && indexReplaceInformation.ReplaceTimer != null)
 				Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
 
-			Database.Indexes.DeleteIndex(replaceIndexName);
+            Database.Indexes.DeleteIndex(replaceIndexName);
 		}
 
 		public void ReplaceIndexes(ICollection<int> indexIds)
@@ -169,7 +170,7 @@ namespace Raven.Database.Indexing
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				if (indexReplaceInformation.Forced
-					|| Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
+				    || Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
 					shouldReplace = true; // always replace non-stale or forced indexes
 				else
 				{
@@ -206,11 +207,14 @@ namespace Raven.Database.Indexing
 			ReplaceIndexes(new List<int> { indexId });
 		}
 
+	    public event Action<string> IndexReplaced;
+
 		private void InternalReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
 		{
 			if (indexes.Count == 0)
 				return;
 
+            var onIndexReplaced = IndexReplaced;
 			try
 			{
 				using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
@@ -218,10 +222,12 @@ namespace Raven.Database.Indexing
 					foreach (var pair in indexes)
 					{
 						var indexReplaceInformation = pair.Value;
-						ReplaceSingleIndex(indexReplaceInformation);
+							ReplaceSingleIndex(indexReplaceInformation);
+						    if (onIndexReplaced != null)
+						        onIndexReplaced(indexReplaceInformation.IndexToReplace);
+						}
+						}
 					}
-				}
-			}
 			catch (InvalidOperationException)
 			{
 				// could not get lock, ignore?
@@ -230,9 +236,22 @@ namespace Raven.Database.Indexing
 
 		private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
 		{
+			var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
+			var originalReplaceDocument = Database.Documents.Get(key, null);
+			var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
 			var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
 			if (wasReplaced)
-				Database.Documents.Delete(Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex, null, null);
+			{
+				try
+				{
+					Database.Documents.Delete(key, etag, null);
+				}
+				catch (ConcurrencyException e)
+				{
+					// side by side document changed, probably means that we created a new side by side index and updated the index
+					log.Debug("Failed to delete the side by side document after index replace.");
+				}
+			}
 			else
 				HandleIndexReplaceError(indexReplaceInformation);
 		}

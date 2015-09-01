@@ -91,10 +91,19 @@ interface databaseStatisticsDto {
     Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
-    Prefetches: any[];
+    LastIndexingDateTime: string;
+    Prefetches: futureBatchStatsDto[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
 	Is64Bit: boolean;
+}
+
+interface futureBatchStatsDto {
+    Timestamp: string;
+    Duration: string;
+    Size: number;
+    Retries: number;
+    PrefetchingUser: string;
 }
 
 interface indexStatisticsDto {
@@ -300,6 +309,7 @@ interface logDto {
     LoggerName: string;
     Level: string;
     Exception: string;
+    StackTrace: string;
 }
 
 interface queryResultDto {
@@ -1205,9 +1215,28 @@ interface importOperationStatusDto extends operationStatusDto{
     ExceptionDetails: string;
 }
 
+interface globalTopologyDto {
+    Databases: replicationTopologyDto;
+    FileSystems: synchronizationTopologyDto;
+    Counters: countersReplicationTopologyDto;
+}
+
 interface replicationTopologyDto {
     Servers: string[];
     Connections: replicationTopologyConnectionDto[];
+    SkippedResources: string[];
+}
+
+interface synchronizationTopologyDto {
+    Servers: string[];
+    Connections: synchronizationTopologyConnectionDto[];
+    SkippedResources: string[];
+}
+
+interface countersReplicationTopologyDto {
+    Servers: string[];
+    Connections: countersReplicationTopologyConnectionDto[];
+    SkippedResources: string[];
 }
 
 interface replicationTopologyConnectionDto {
@@ -1221,6 +1250,31 @@ interface replicationTopologyConnectionDto {
     Source: string;
     SourceToDestinationState: string;
     StoredServerId: string;
+    UiType: string;
+}
+
+interface synchronizationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastSourceFileEtag: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+    UiType: string;
+}
+
+interface countersReplicationTopologyConnectionDto {
+    Destination: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    LastEtag: string;
+    SendServerId: string;
+    Source: string;
+    SourceToDestinationState: string;
+    StoredServerId: string;
+    UiType: string;
 }
 
 interface runningTaskDto {
@@ -1237,6 +1291,7 @@ interface runningTaskDto {
 interface adminLogsConfigEntryDto {
     category: string;
     level: string;
+    includeStackTrace: boolean;
 }
 
 interface fileSystemSettingsDto {
@@ -1445,4 +1500,11 @@ interface diskIoPerformanceRunIoResultDto extends documentDto {
 interface performanceRunItemDto {
     displayName: string;
     documentId: string;
+}
+
+
+interface filteredOutIndexStatDto {
+    Timestamp: string;
+    TimestampParsed?: Date;
+    IndexName: string;
 }

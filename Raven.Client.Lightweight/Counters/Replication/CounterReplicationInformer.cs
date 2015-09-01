@@ -87,7 +87,10 @@ namespace Raven.Client.Counters.Replication
 			currentlyExecuting = true;
 			try
 			{
-				var operationCredentials = new OperationCredentials(counterStore.Credentials.ApiKey, counterStore.Credentials.Credentials);
+				var operationCredentials = counterStore.Credentials != null ? 
+					new OperationCredentials(counterStore.Credentials.ApiKey, counterStore.Credentials.Credentials) : 
+					new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials);
+
 				var localReplicationDestinations = ReplicationDestinationsAccordingToFailover; // thread safe copy
 
 				//check for supported flags
@@ -309,7 +312,7 @@ namespace Raven.Client.Counters.Replication
 							var r = await TryExecuteOperationAsync<object>(counterStoreUrl,null, async (url, counterStoreName) =>
 							{
 								var serverCheckUrl = GetServerCheckUrl(url);
-								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, CountersConventions.ShouldCacheRequest);
+								var requestParams = new CreateHttpJsonRequestParams(null, serverCheckUrl, HttpMethods.Get, credentials, CountersConventions);
 								using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 								{
 									await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);

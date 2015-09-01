@@ -26,6 +26,7 @@ class adminSettings extends viewModelBase {
         var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };
         var restoreRoute = { route: 'admin/settings/restore', moduleId: 'viewmodels/manage/restore', title: 'Restore', nav: true, hash: appUrl.forRestore() };
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/manage/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
+        var topologyRoute = { route: 'admin/settings/topology', moduleId: 'viewmodels/manage/topology', title: 'Server topology', nav: true, hash: appUrl.forServerTopology() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/manage/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
         var ioTestRoute = { route: 'admin/settings/ioTest', moduleId: 'viewmodels/manage/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest() };
@@ -43,7 +44,8 @@ class adminSettings extends viewModelBase {
 		    backupRoute,
 		    compactRoute,
 		    restoreRoute,
-		    adminLogsRoute,
+            adminLogsRoute,
+            topologyRoute,
 		    trafficWatchRoute,
 		    licenseInformation,
 		    debugInfoRoute,

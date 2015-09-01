@@ -196,7 +196,7 @@ namespace Raven.Tests.Storage.Voron
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				IEnumerable<AttachmentInformation> attachmentInformationList = null;
-				storage.Batch(viewer => attachmentInformationList = viewer.Attachments.GetAttachmentsAfter(Etag.InvalidEtag, 25, 500));
+				storage.Batch(viewer => attachmentInformationList = viewer.Attachments.GetAttachmentsAfter(Etag.InvalidEtag, 25, 500).ToList());
 
 				Assert.NotNull(attachmentInformationList);
 				Assert.Empty(attachmentInformationList);

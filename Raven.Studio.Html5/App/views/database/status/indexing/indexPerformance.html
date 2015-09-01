@@ -9,6 +9,7 @@
         width: 15px;
         height: 15px;
         border: solid 1px black;
+	    display: inline-block;
     }
     .op {
         cursor: pointer;
@@ -28,6 +29,16 @@
     .op:hover rect {
         opacity: 0.8;
     }
+	.filter_op {
+		fill: #aaa;
+		opacity: 0.4;
+		cursor: pointer;
+	}
+
+	.filter_op:hover {
+		opacity: 1;
+	}
+
     .batchRange {
         cursor: pointer;
     }
@@ -46,6 +57,15 @@
         stroke-width: 1;
         opacity: 0.5;
     }
+
+	.prefetch_op rect {
+		opacity: 0.6;
+		fill: #2ca02c;
+		cursor: pointer;
+	}
+	.prefetch_op rect:hover {
+		opacity: 0.7;
+	}
 
     .LoadDocument { fill: #17becf; background-color: #17becf }
 
@@ -78,7 +98,7 @@
        background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
     }
 
-    .nvtooltip .mto_indent {
+    #reduceStatsInfo .mto_indent, #mapStatsInfo .mto_indent {
         padding-left: 25px;
     }
 
@@ -89,254 +109,6 @@
 
 </style>
 
-<script type="text/html" id="map-batch-info-template">
-    <div style="padding: 10px">
-        <form>
-             <div class="handle"><i class="fa fa-arrows"></i> Map batch information</div>
-            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
-            <div class="clearfix"></div>
-        </form>
-        
-        <hr class="tight" />
-        <table class="table table-condensed table-striped" data-bind="with: data">
-            <thead>
-                <tr>
-                    <th>Batch type</th>
-                    <th data-bind="text: BatchType"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Indexes to work on</td>
-                    <td>
-                        <ul data-bind="foreach: IndexesToWorkOn">
-                            <li data-bind="text: $data"></li>
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Total document count</td>
-					<td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Total document size</td>
-					<td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Started at</td>
-                    <td data-bind="text: StartedAt"></td>
-                </tr>
-                <tr>
-                    <td>Total duration [ms]</td>
-					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</script>
-
-
-<script type="text/html" id="reduce-batch-info-template">
-    <div style="padding: 10px">
-        <form>
-             <div class="handle"><i class="fa fa-arrows"></i> Reduce batch information</div>
-            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
-            <div class="clearfix"></div>
-        </form>
-        
-        <hr class="tight" />
-        <table class="table table-condensed table-striped" data-bind="with: data">
-            <tbody>
-                <tr>
-                    <td>Indexes to work on</td>
-                    <td>
-                        <ul data-bind="foreach: IndexesToWorkOn">
-                            <li data-bind="text: $data"></li>
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Started at</td>
-                    <td data-bind="text: StartedAt"></td>
-                </tr>
-                <tr>
-                    <td>Total duration [ms]</td>
-					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Time since first reduce<br />in batch completed [ms]</td>
-					<td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs.toLocaleString(2)"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</script>
-
-<script type="text/html" id="index-stat-template">
-    <div style="padding: 10px">
-        <form>
-            <div class="handle"><i class="fa fa-arrows"></i> Indexing information</div>
-            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
-            <div class="clearfix"></div>
-        </form>
-        <hr class="tight" />
-
-        <table class="table table-condensed table-striped" data-bind="with: data">
-            <thead>
-                <tr>
-                    <th>Index stats:</th>
-                    <th data-bind="text: indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
-                </tr>
-            </thead>
-            <tbody data-bind="with: stats">
-                <tr>
-                    <td>Operation</td>
-                    <td data-bind="text: Operation, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Input count</td>
-                    <td data-bind="text: InputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Items count</td>
-                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Output count</td>
-                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Duration</td>
-                    <td data-bind="text: Duration, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Started</td>
-                    <td data-bind="text: Started, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <!-- ko foreach: Operations -->
-                <!-- ko if:CacheIsSingleThread -->
-                <tr class="sto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
-                    <td data-bind="text: DurationMs, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <!-- /ko -->
-                <!-- ko if:!CacheIsSingleThread -->
-                <tr>
-                    <td><span class="rect_legend ParallelBlock"></span> Parallel block</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: 'Thread #' + ( 1 + $index())"></td>
-                    <!-- /ko -->
-                </tr>
-                <tr class="mto">
-                    <td class="mto_indent">Thread start delay [ms]</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: StartDelay"></td>
-                    <!-- /ko -->
-                </tr>
-                <!-- ko foreach: BatchedOperations[0].Operations -->
-                <tr class="mto">
-                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
-                    <!-- ko foreach: $parent.BatchedOperations -->
-                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
-                    <!-- /ko -->
-                </tr>
-                <!-- /ko -->
-                <!-- /ko -->
-                <!-- /ko -->
-                <tr>
-                    <td>Waiting time since<br /> last batch completed</td>
-                    <td data-bind="text: WaitingTimeSinceLastBatchCompleted, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</script>
-
-<script type="text/html" id="reduce-stat-template">
-    <div style="padding: 10px">
-        <form>
-             <div class="handle"><i class="fa fa-arrows"></i> Reducing information</div>
-            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
-            <div class="clearfix"></div>
-        </form>
-        
-        <hr class="tight" />
-
-        <table class="table table-condensed table-striped" data-bind="with: data">
-            <thead>
-                <tr>
-                    <th>Reduce of index stats:</th>
-                    <th data-bind="text: parent.indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- ko if: parent.stats.ReduceType == 'None' -->
-                <tr data-bind="if: parent.stats.ReduceType == 'None'">
-                    <td>Operation</td>
-                    <td>Post reduce operation</td>
-                </tr>
-                <!-- /ko -->
-                <!-- ko if: parent.stats.ReduceType != 'None' -->
-                <tr>
-                    <td>Reduce type</td>
-                    <td data-bind="text: parent.stats.ReduceType, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <tr data-bind="if: parent.stats.ReduceType != 'None'">
-                    <td>Level</td>
-                    <td data-bind="text: Level, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <tr data-bind="if: parent.stats.ReduceType != 'None'">
-                    <td>Items count</td>
-                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <tr data-bind="if: parent.stats.ReduceType != 'None'">
-                    <td>Output count</td>
-                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <!-- /ko -->
-                <tr>
-                    <td>Duration</td>
-                    <td data-bind="text: Duration, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Started</td>
-                    <td data-bind="text: Started, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <!-- ko foreach: Operations -->
-                <!-- ko if:CacheIsSingleThread -->
-                <tr class="sto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
-                    <td data-bind="text: DurationMs, attr: { colspan: $root.data.CacheThreadCount }"></td>
-                </tr>
-                <!-- /ko -->
-                <!-- ko if:!CacheIsSingleThread -->
-                <tr>
-                    <td>Parallel block</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: 'Thread #' + (1 + $index())"></td>
-                    <!-- /ko -->
-                </tr>
-                <tr class="mto">
-                    <td class="mto_indent">Thread start delay [ms]</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: StartDelay"></td>
-                    <!-- /ko -->
-                </tr>
-                <!-- ko foreach: BatchedOperations[0].Operations -->
-                <tr class="mto">
-                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
-                    <!-- ko foreach: $parent.BatchedOperations -->
-                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
-                    <!-- /ko -->
-                </tr>
-                <!-- /ko -->
-                <!-- /ko -->
-                <!-- /ko -->
-                
-            </tbody>
-        </table>
-    </div>
-</script>
 <section id="indexingPerformance" style="position: relative">
     <div>
         <div class="btn-group">

@@ -115,16 +115,16 @@ namespace Rachis.Behaviors
 					if (_snapshotsPendingInstallation.ContainsKey(peer.Name))
 						return;
 
-					using (var snapshotWriter = Engine.StateMachine.GetSnapshotWriter())
+					var snapshotWriter = Engine.StateMachine.GetSnapshotWriter();
+
+					Engine.Transport.Send(peer, new CanInstallSnapshotRequest
 					{
-						Engine.Transport.Send(peer, new CanInstallSnapshotRequest
-						{
-							From = Engine.Name,
-							ClusterTopologyId = Engine.CurrentTopology.TopologyId,
-							Index = snapshotWriter.Index,
-							Term = snapshotWriter.Term,
-						});
-					}
+						From = Engine.Name,
+						ClusterTopologyId = Engine.CurrentTopology.TopologyId,
+						Index = snapshotWriter.Index,
+						Term = snapshotWriter.Term,
+					});
+
 					return;
 				}
 			}
@@ -174,24 +174,24 @@ namespace Rachis.Behaviors
 			try
 			{
 				var sp = Stopwatch.StartNew();
-				using (var snapshotWriter = Engine.StateMachine.GetSnapshotWriter())
+				var snapshotWriter = Engine.StateMachine.GetSnapshotWriter();
+				
+				_log.Info("Streaming snapshot to {0} - term {1}, index {2}", peer,
+					snapshotWriter.Term,
+					snapshotWriter.Index);
+
+				Engine.Transport.Stream(peer, new InstallSnapshotRequest
 				{
-					_log.Info("Streaming snapshot to {0} - term {1}, index {2}", peer,
-						snapshotWriter.Term,
-						snapshotWriter.Index);
+					Term = Engine.PersistentState.CurrentTerm,
+					LastIncludedIndex = snapshotWriter.Index,
+					LastIncludedTerm = snapshotWriter.Term,
+					From = Engine.Name,
+					Topology = Engine.CurrentTopology,
+					ClusterTopologyId = Engine.CurrentTopology.TopologyId,
+				}, stream => snapshotWriter.WriteSnapshot(stream));
 
-					Engine.Transport.Stream(peer, new InstallSnapshotRequest
-					{
-						Term = Engine.PersistentState.CurrentTerm,
-						LastIncludedIndex = snapshotWriter.Index,
-						LastIncludedTerm = snapshotWriter.Term,
-						From = Engine.Name,
-						ClusterTopologyId = Engine.CurrentTopology.TopologyId,
-					}, stream => snapshotWriter.WriteSnapshot(stream));
-
-					_log.Info("Finished snapshot streaming -> to {0} - term {1}, index {2} in {3}", peer, snapshotWriter.Index,
-						snapshotWriter.Term, sp.Elapsed);
-				}
+				_log.Info("Finished snapshot streaming -> to {0} - term {1}, index {2} in {3}", peer, snapshotWriter.Index,
+					snapshotWriter.Term, sp.Elapsed);
 
 			}
 			catch (Exception e)

@@ -48,6 +48,7 @@ interface computedAppUrls {
     editSqlReplication: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
     customFunctionsEditor: KnockoutComputed<string>;
+    databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
     statusDebugMetrics: KnockoutComputed<string>;

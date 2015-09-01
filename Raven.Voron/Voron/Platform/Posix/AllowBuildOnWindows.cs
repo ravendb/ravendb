@@ -120,6 +120,19 @@ namespace Raven.Unix.Native
             return sys_pwritev(fd, iov, iov.Length, offset);
         }
 
+
+        // pwrite(2)
+        //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_pwrite")]
+        public static extern long pwrite(int fd, IntPtr buf, ulong count, long offset);
+
+        public static unsafe long pwrite(int fd, void* buf, ulong count, long offset)
+        {
+            return pwrite(fd, (IntPtr)buf, count, offset);
+        }
+
+
         // write(2)
         //    ssize_t write(int fd, const void *buf, size_t count);
         [DllImport(MPH, SetLastError = true,

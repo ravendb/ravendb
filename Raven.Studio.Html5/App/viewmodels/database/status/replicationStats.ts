@@ -15,6 +15,14 @@ import dagre = require('dagre');
 
 class replicationStats extends viewModelBase {
 
+    static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
+                        " path.link.error {  stroke: #df382c; } " +
+" svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
+" path.link.hidden {  stroke-width: 0; } " +
+" rect.node {  stroke-width: 1.5px;  fill: rgba(243, 101, 35, 0.15); stroke: #d74c0c;  } " + 
+" text { font: 12px sans-serif;  pointer-events: none;  } " +
+" text.id { text-anchor: middle;  font-weight: bold;  }";
+
     panelBodyPadding = 20;
 
     topology = ko.observable<replicationTopologyDto>(null);
@@ -92,12 +100,15 @@ class replicationStats extends viewModelBase {
 
     attached() {
 		super.attached();
-        this.resize();
         d3.select(window).on("resize", this.resize.bind(this));
         $("#replicationTopologySection").scroll(() => this.graphScrolled());
         this.checkIfHasReplicationEnabled();
         $("#replicationStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();
+    }
+
+    compositionComplete() {
+        this.resize();
     }
 
     resize() {
@@ -285,11 +296,11 @@ class replicationStats extends viewModelBase {
     }
 
     saveAsPng() {
-        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', svgDownloader.extractInlineCss);
+        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', () => replicationStats.inlineCss);
     }
 
     saveAsSvg() {
-        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', svgDownloader.extractInlineCss);
+        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', () => replicationStats.inlineCss);
     }
 
     saveAsJson() {

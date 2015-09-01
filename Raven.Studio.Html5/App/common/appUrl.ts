@@ -79,6 +79,7 @@ class appUrl {
         sqlReplicationsConnections: ko.computed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
         customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
+        databaseStudioConfig: ko.computed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
         statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
         statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
@@ -284,6 +285,10 @@ class appUrl {
 
     static forAdminLogs(): string {
         return "#admin/settings/adminLogs";
+    }
+
+    static forServerTopology(): string { 
+        return "#admin/settings/topology";
     }
 
     static forTrafficWatch(): string {
@@ -573,6 +578,9 @@ class appUrl {
 
     static forCustomFunctionsEditor(db: database): string {
         return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
+    }
+    static forDatabaseStudioConfig(db: database): string {
+        return "#databases/settings/databaseStudioConfig?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDocuments(collection: string, db: database): string {

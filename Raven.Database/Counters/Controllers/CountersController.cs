@@ -15,7 +15,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage Counters(bool getAdditionalData = false)
 		{
-			return Resources<CounterStorageData>(Constants.Counter.Prefix, GetCounterStoragesData, getAdditionalData);
+			return Resources(Constants.Counter.Prefix, GetCounterStoragesData, getAdditionalData);
 		}
 
 		private class CounterStorageData : TenantData
