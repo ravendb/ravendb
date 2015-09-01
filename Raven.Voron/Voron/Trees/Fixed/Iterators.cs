@@ -182,7 +182,6 @@ namespace Voron.Trees.Fixed
 	        public bool SeekToLast()
 	        {
 				_currentPage = _parent.FindPageFor(long.MaxValue);
-		        _currentPage.LastSearchPosition--;
 		        return true;
 	        }
 

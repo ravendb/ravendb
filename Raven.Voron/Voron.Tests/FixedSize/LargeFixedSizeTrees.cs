@@ -16,7 +16,6 @@ namespace Voron.Tests.FixedSize
 {
     public class LargeFixedSizeTrees : StorageTest
     {
-
         [Theory]
         [InlineData(8)]
         [InlineData(16)]
@@ -435,6 +434,41 @@ namespace Voron.Tests.FixedSize
                 {
                     Assert.Equal(status[i * 3], fst.Contains(i * 3));
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(8)]
+        [InlineData(12)]
+        [InlineData(16)]
+        [InlineData(100)]
+        [InlineData(10000)]
+        public void SeekToLast_ShouldWork(int count)
+        {
+            var bytes = new byte[48];
+            var slice = new Slice(bytes);
+
+	        int lastId = -1;
+	        using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
+                for (var i = 1; i < count; i++)
+                {
+                    fst.Add(i, slice);
+	                lastId = i;
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var fst = tx.Root.FixedTreeFor("test", valSize: 48);
+	            using (var it = fst.Iterate())
+	            {
+		            Assert.True(it.SeekToLast(), "Failed to seek to last");
+		            Assert.Equal(lastId, it.CurrentKey);
+	            }
             }
         }
     }
