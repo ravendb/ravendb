@@ -406,7 +406,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/points/{type}")]
 		[HttpGet]
-		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20)
+		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null)
 		{
 			if (skip < 0)
 				throw new ArgumentException("Bad argument", "skip");
@@ -416,7 +416,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
-				var points = reader.GetPoints(type, key, skip).Take(take);
+				var points = reader.GetPoints(type, key, start ?? DateTimeOffset.MinValue, end ?? DateTimeOffset.MaxValue, skip).Take(take);
 				return GetMessageWithObject(points);
 			}
 		}

@@ -25,6 +25,9 @@ class timeSeriesPoints extends viewModelBase {
     pointsCount = ko.observable<number>();
     minPoint = ko.observable<string>();
     maxPoint = ko.observable<string>();
+    isFilterActive = ko.observable<boolean>(false);
+    startPointFilter = ko.observable<string>();
+    endPointFilter = ko.observable<string>();
 
     pointsList = ko.observable<pagedList>();
     selectedPointsIndices = ko.observableArray<number>();
@@ -74,7 +77,19 @@ class timeSeriesPoints extends viewModelBase {
                 return checkbox.SomeChecked;
             return checkbox.UnChecked;
         });
-    }
+
+	    this.isFilterActive.subscribe(() => {
+            this.refresh();
+        });
+
+        this.startPointFilter.subscribe(() => {
+            this.refresh();
+        });
+
+        this.endPointFilter.subscribe(() => {
+            this.refresh();
+        });
+	}
 
     activate(args) {
         super.activate(args);
@@ -90,7 +105,9 @@ class timeSeriesPoints extends viewModelBase {
                 this.key(result.Key);
                 this.pointsCount(result.PointsCount);
                 this.minPoint(result.MinPoint);
+                this.startPointFilter(result.MinPoint);
                 this.maxPoint(result.MaxPoint);
+                this.endPointFilter(result.MaxPoint);
                 if (!this.pointsList()) {
                     this.pointsList(this.createPointsPagedList());
                 }
@@ -100,14 +117,16 @@ class timeSeriesPoints extends viewModelBase {
     }
 
     private createPointsPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchPoints(skip, take);
+        var fetcher = (skip: number, take: number) => this.fetchPoints(skip, take,
+            this.isFilterActive() ? this.startPointFilter() : null,
+            this.isFilterActive() ? this.endPointFilter() : null);
         var list = new pagedList(fetcher);
         list.collectionName = this.key();
         return list;
     }
 
-    private fetchPoints(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        return new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), this.pointsCount()).execute();
+    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet> {
+        return new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), this.pointsCount(), start, end).execute();
     }
 
     attached() {
@@ -160,8 +179,14 @@ class timeSeriesPoints extends viewModelBase {
     }
 
     refresh() {
-        this.getPointsGrid().refreshCollectionData();
-        this.pointsList().invalidateCache();
+        var grid = this.getPointsGrid();
+        if (grid) {
+            grid.refreshCollectionData();
+        }
+        var pointsList = this.pointsList();
+        if (pointsList) {
+            pointsList.invalidateCache();
+        }
         this.selectNone();
 	}
 

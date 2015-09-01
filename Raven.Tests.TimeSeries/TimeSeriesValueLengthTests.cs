@@ -44,26 +44,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.Query(
-						new TimeSeriesQuery
-						{
-							Type = "3Value",
-							Key = "Time",
-							Start = start.AddYears(-1),
-							End = start.AddYears(1),
-						},
-						new TimeSeriesQuery
-						{
-							Type = "3Value",
-							Key = "Money",
-							Start = DateTimeOffset.MinValue,
-							End = DateTimeOffset.MaxValue
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
-
+					var time = r.GetPoints("3Value", "Time", start.AddYears(-1), start.AddYears(1)).ToArray();
+					var money = r.GetPoints("3Value", "Money", DateTimeOffset.MinValue, DateTimeOffset.MaxValue).ToArray();
 					Assert.Equal(3, time.Length);
 					Assert.Equal(3, money.Length);
 

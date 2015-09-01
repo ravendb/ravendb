@@ -62,11 +62,6 @@ namespace Raven.Database.TimeSeries
 			return hashCode;
 		}
 
-		public DateTime InRange(TimeSeriesQuery query)
-		{
-			throw new NotImplementedException();
-		}
-
 		public DateTimeOffset AddToDateTime(DateTimeOffset start)
 		{
 			switch (Type)

@@ -46,7 +46,7 @@
                         <span data-bind="text: pointsCount"></span>
                     </div>
                 </div>
-                <div style="float: right; margin-right: 20px">
+                <div style="float: left; margin-right: 20px">
                     <div>
                         <span class="time-series-label">Min</span>
                         <span data-bind="text: minPoint"></span>
@@ -54,6 +54,22 @@
                     <div>
                         <span class="time-series-label">Max</span>
                         <span data-bind="text: maxPoint"></span>
+                    </div>
+                </div>
+                <div style="float: left; margin-right: 20px">
+                    <div>
+                        <label>
+                            <input type="checkbox" data-bind="checked: isFilterActive">
+                            Filter
+                        </label>
+                    </div>
+                    <div>
+                        <span class="time-series-label">Start</span>
+                        <input type="text" class="form-control" data-bind="value: startPointFilter, attr: { placeholder: minPoint }, enable: isFilterActive">
+                    </div>
+                    <div>
+                        <span class="time-series-label">End</span>
+                        <input type="text" class="form-control" data-bind="value: endPointFilter, attr: { placeholder: maxPoint }, enable: isFilterActive">
                     </div>
                 </div>
             </div>

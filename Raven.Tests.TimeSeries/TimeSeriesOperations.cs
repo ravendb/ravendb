@@ -110,7 +110,6 @@ namespace Raven.Tests.TimeSeries
 			}
 		}
 
-
 		[Fact]
 		public async Task DeletePoints()
 		{

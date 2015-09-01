@@ -134,21 +134,6 @@ namespace Raven.Database.TimeSeries
 			return new Writer(this);
 		}
 
-		public class Point
-		{
-#if DEBUG
-			public string DebugKey { get; set; }
-#endif
-			public DateTimeOffset At { get; set; }
-
-			public double[] Values { get; set; }
-			
-			public double Value
-			{
-				get { return Values[0]; }
-			}
-		}
-
 		internal const string SeriesTreePrefix = "series-";
 		internal const string PeriodTreePrefix = "periods-";
 		internal const char PeriodsKeySeparator = '\uF8FF';
@@ -164,21 +149,6 @@ namespace Raven.Database.TimeSeries
 			{
 				this.storage = storage;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
-			}
-
-			public IEnumerable<Point> Query(TimeSeriesQuery query)
-			{
-				return GetRawQueryResult(query);
-			}
-
-			public IEnumerable<Point>[] Query(params TimeSeriesQuery[] queries)
-			{
-				var result = new IEnumerable<Point>[queries.Length];
-				for (int i = 0; i < queries.Length; i++)
-				{
-					result[i] = GetRawQueryResult(queries[i]);
-				}
-				return result;
 			}
 
 			public IEnumerable<Range> QueryRollup(TimeSeriesRollupQuery query)
@@ -289,7 +259,7 @@ namespace Raven.Database.TimeSeries
 							foreach (var range in GetRanges(query, type.Fields.Length))
 							{
 								// seek period tree iterator, if found exact match!!, add and move to the next
-								var startTicks = range.StartAt.ToUniversalTime().Ticks;
+								var startTicks = range.StartAt.UtcTicks;
 								if (periodTreeIterator.Seek(startTicks))
 								{
 									if (periodTreeIterator.CurrentKey == startTicks)
@@ -353,7 +323,7 @@ namespace Raven.Database.TimeSeries
 					if (ticks >= endTicks)
 						return;
 
-					var point = new Point
+					var point = new TimeSeriesPoint
 					{
 #if DEBUG
 						DebugKey = range.DebugKey,
@@ -420,68 +390,13 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			private IEnumerable<Point> GetRawQueryResult(TimeSeriesQuery query)
-			{
-				if (string.IsNullOrWhiteSpace(query.Type))
-					throw new InvalidOperationException("Type cannot be empty");
-
-				var tree = tx.ReadTree(SeriesTreePrefix + query.Type);
-				if (tree == null)
-					return Enumerable.Empty<Point>();
-
-				var type = storage.GetType(tx, query.Type);
-				if (type == null)
-					throw new InvalidOperationException("Type does not exist");
-				var numberOfValues = type.Fields.Length;
-
-				var buffer = new byte[numberOfValues * sizeof(double)];
-
-				var fixedTree = tree.FixedTreeFor(query.Key, (byte) (numberOfValues*sizeof (double)));
-				return IterateOnTree(query, fixedTree, it =>
-				{
-					var point = new Point
-					{
-#if DEBUG
-						DebugKey = fixedTree.Name.ToString(),
-#endif
-						At = new DateTimeOffset(it.CurrentKey, TimeSpan.Zero),
-						Values = new double[numberOfValues],
-					};
-					
-					var reader = it.CreateReaderForCurrent();
-					reader.Read(buffer, 0, numberOfValues * sizeof (double));
-					for (int i = 0; i < numberOfValues; i++)
-					{
-						point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
-					}
-					return point;
-				});
-			}
-
-			public static IEnumerable<T> IterateOnTree<T>(TimeSeriesQuery query, FixedSizeTree fixedTree, Func<FixedSizeTree.IFixedSizeIterator, T> iteratorFunc)
-			{
-				using (var it = fixedTree.Iterate())
-				{
-					if (it.Seek(query.Start.ToUniversalTime().Ticks) == false)
-						yield break;
-
-					do
-					{
-						if (it.CurrentKey > query.End.ToUniversalTime().Ticks)
-							yield break;
-
-						yield return iteratorFunc(it);
-					} while (it.MoveNext());
-				}
-			}
-
 			public void Dispose()
 			{
 				if (tx != null)
 					tx.Dispose();
 			}
 
-			public IEnumerable<TimeSeriesPoint> GetPoints(string typeName, string key, int skip)
+			public IEnumerable<TimeSeriesPoint> GetPoints(string typeName, string key, DateTimeOffset start, DateTimeOffset end, int skip = 0)
 			{
 				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				if (tree == null)
@@ -495,26 +410,34 @@ namespace Raven.Database.TimeSeries
 				var fixedTree = tree.FixedTreeFor(key, (byte) (type.Fields.Length*sizeof (double)));
 				using (var fixedIt = fixedTree.Iterate())
 				{
-					if (fixedIt.Seek(DateTimeOffset.MinValue.Ticks) && (skip == 0 || fixedIt.Skip(skip)))
+					if (fixedIt.Seek(start.UtcTicks) == false || 
+						(skip != 0 && fixedIt.Skip(skip) == false))
+						yield break;
+
+					do
 					{
-						do
+						var currentKey = fixedIt.CurrentKey;
+						if (currentKey > end.UtcTicks)
+							yield break;
+
+						var point = new TimeSeriesPoint
 						{
-							var point = new TimeSeriesPoint
-							{
-								At = new DateTimeOffset(fixedIt.CurrentKey, TimeSpan.Zero),
-								Values = new double[type.Fields.Length],
-							};
+#if DEBUG
+							DebugKey = fixedTree.Name.ToString(),
+#endif
+							At = new DateTimeOffset(currentKey, TimeSpan.Zero),
+							Values = new double[type.Fields.Length],
+						};
 
-							var reader = fixedIt.CreateReaderForCurrent();
-							reader.Read(buffer, 0, type.Fields.Length * sizeof(double));
-							for (int i = 0; i < type.Fields.Length; i++)
-							{
-								point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
-							}
+						var reader = fixedIt.CreateReaderForCurrent();
+						reader.Read(buffer, 0, type.Fields.Length * sizeof(double));
+						for (int i = 0; i < type.Fields.Length; i++)
+						{
+							point.Values[i] = EndianBitConverter.Big.ToDouble(buffer, i * sizeof(double));
+						}
 
-							yield return point;
-						} while (fixedIt.MoveNext());
-					}
+						yield return point;
+					} while (fixedIt.MoveNext());
 				}
 			}
 
@@ -664,7 +587,7 @@ namespace Raven.Database.TimeSeries
 				{
 					storage.UpdateKeysCount(tx, 1);
 				}
-				var newPointWasAppended = fixedTree.Add(time.ToUniversalTime().Ticks, valBuffer);
+				var newPointWasAppended = fixedTree.Add(time.UtcTicks, valBuffer);
 				if (newPointWasAppended)
 				{
 					storage.UpdatePointsCount(tx, 1);
@@ -711,17 +634,19 @@ namespace Raven.Database.TimeSeries
 							continue;
 
 						var duration = GetDurationFromTreeName(periodTreeName);
-						var keysToDelete = Reader.IterateOnTree(new TimeSeriesQuery
+						using (var fixedIt = periodFixedTree.Iterate())
 						{
-							Type = typeName,
-							Key = key,
-							Start = duration.GetStartOfRangeForDateTime(start),
-							End = duration.GetStartOfRangeForDateTime(end),
-						}, periodFixedTree, fixedIterator => fixedIterator.CurrentKey).ToArray();
+							if (fixedIt.Seek(duration.GetStartOfRangeForDateTime(start).UtcTicks) == false)
+								continue;
 
-						foreach (var keyToDelete in keysToDelete)
-						{
-							periodFixedTree.Delete(keyToDelete);
+							do
+							{
+								var currentKey = fixedIt.CurrentKey;
+								if (currentKey > duration.GetStartOfRangeForDateTime(end).UtcTicks)
+									break;
+
+								periodFixedTree.Delete(currentKey);
+							} while (fixedIt.MoveNext());
 						}
 					} while (it.MoveNext());
 				}
@@ -763,7 +688,7 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + point.Type);
 
 				var fixedTree = tree.FixedTreeFor(point.Key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.Delete(point.At.ToUniversalTime().Ticks);
+				var result = fixedTree.Delete(point.At.UtcTicks);
 				if (result.NumberOfEntriesDeleted > 0)
 				{
 					storage.UpdatePointsCount(tx, -1);
@@ -816,7 +741,7 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.DeleteRange(start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
+				var result = fixedTree.DeleteRange(start.UtcTicks, end.UtcTicks);
 				storage.UpdatePointsCount(tx, -result.NumberOfEntriesDeleted);
 				if (result.TreeRemoved)
 					storage.UpdateKeysCount(tx, -1);
@@ -853,7 +778,7 @@ namespace Raven.Database.TimeSeries
 					}
 				}
 
-				tree.Add(time.ToUniversalTime().Ticks, valBuffer);
+				tree.Add(time.UtcTicks, valBuffer);
 			}
 
 			public void Dispose()

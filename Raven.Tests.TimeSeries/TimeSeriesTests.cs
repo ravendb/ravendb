@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions.TimeSeries;
 using Raven.Database.TimeSeries;
 using Voron;
 using Xunit;
@@ -19,33 +21,16 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.Query(
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddYears(-1),
-							End = start.AddYears(1),
-						},
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = DateTimeOffset.MinValue,
-							End = DateTimeOffset.MaxValue
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetPoints("Simple", "Time", start.AddYears(-1), start.AddYears(1)).ToArray();
+					var money = r.GetPoints("Simple", "Money", DateTimeOffset.MinValue, DateTimeOffset.MaxValue).ToArray();
 
 					Assert.Equal(3, time.Length);
 					Assert.Equal(new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero), time[0].At);
 					Assert.Equal(new DateTimeOffset(2015, 4, 1, 1, 0, 0, TimeSpan.Zero), time[1].At);
 					Assert.Equal(new DateTimeOffset(2015, 4, 1, 2, 0, 0, TimeSpan.Zero), time[2].At);
-					Assert.Equal(10, time[0].Value);
-					Assert.Equal(19, time[1].Value);
-					Assert.Equal(50, time[2].Value);
+					Assert.Equal(10, time[0].Values[0]);
+					Assert.Equal(19, time[1].Values[0]);
+					Assert.Equal(50, time[2].Values[0]);
 #if DEBUG
 					Assert.Equal("Time", time[0].DebugKey);
 					Assert.Equal("Time", time[1].DebugKey);
@@ -71,16 +56,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.Query(
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = DateTimeOffset.MinValue,
-							End = DateTimeOffset.MaxValue
-						});
-
-					var money = result.ToArray();
+					var money = r.GetPoints("Simple", "Money", DateTimeOffset.MinValue, DateTimeOffset.MaxValue).ToArray();
 					Assert.Equal(3, money.Length);
 #if DEBUG
 					Assert.Equal("Money", money[0].DebugKey);
@@ -568,33 +544,9 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.Query(
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddSeconds(1),
-							End = start.AddMinutes(30),
-						},
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddSeconds(1),
-							End = start.AddMinutes(30),
-						},
-						new TimeSeriesQuery
-						{
-							Type = "Simple",
-							Key = "Is",
-							Start = start.AddSeconds(1),
-							End = start.AddMinutes(30),
-						}).ToArray();
-
-					Assert.Equal(3, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
-					var Is = result[2].ToArray();
+					var time = r.GetPoints("Simple", "Time", start.AddSeconds(1), start.AddMinutes(30)).ToArray();
+					var money = r.GetPoints("Simple", "Money", start.AddSeconds(1), start.AddMinutes(30)).ToArray();
+					var Is = r.GetPoints("Simple", "Is", start.AddSeconds(1), start.AddMinutes(30)).ToArray();
 
 					Assert.Equal(0, time.Length);
 					Assert.Equal(0, money.Length);
