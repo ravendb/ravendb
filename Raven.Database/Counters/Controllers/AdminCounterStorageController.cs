@@ -342,7 +342,7 @@ namespace Raven.Database.Counters.Controllers
 				{
 					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 					CountersLandlord.Unprotect(backupRequest.CounterStorageDocument);
-					backupRequest.CounterStorageDocument.StoreName = Storage.Name;
+					backupRequest.CounterStorageDocument.Id = Storage.Name;
 				}
 			}
 

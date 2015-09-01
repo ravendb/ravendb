@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Counters;
 using Raven.Database.Counters.Backup;
@@ -167,7 +168,7 @@ namespace Raven.Tests.Counters
 				isIncremental,
 				new CounterStorageDocument
 				{
-					StoreName = CounterStorageId
+					Id = CounterStorageId
 				});
 		}
 

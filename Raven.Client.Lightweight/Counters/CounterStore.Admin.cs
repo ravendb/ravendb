@@ -64,9 +64,6 @@ namespace Raven.Client.Counters
 
 				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
 
-				if (String.IsNullOrWhiteSpace(counterStorageDocument.StoreName))
-					counterStorageDocument.StoreName = counterStorageName;
-
 				parent.AssertInitialized();
 
 				var urlTemplate = "{0}/admin/cs/{1}";
