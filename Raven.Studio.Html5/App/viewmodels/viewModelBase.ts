@@ -57,7 +57,8 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-	    setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
+        var self = this;
+	    setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
 
 		var resource = appUrl.getResource();
         if (resource instanceof filesystem) {

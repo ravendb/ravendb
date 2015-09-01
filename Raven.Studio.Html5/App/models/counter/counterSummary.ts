@@ -1,13 +1,11 @@
 ﻿class counterSummary implements documentBase {
     static separator = "/";
-    //Id: string;
     Group: string;
     Name: string;
     Total: number; 
 
     constructor(dto: counterSummaryDto) {
-        //this.Id = dto.Group + counterSummary.separator + dto.CounterName;
-        this.Group = dto.Group;
+        this.Group = dto.GroupName;
         this.Name = dto.CounterName;
         this.Total = dto.Total;
     }
