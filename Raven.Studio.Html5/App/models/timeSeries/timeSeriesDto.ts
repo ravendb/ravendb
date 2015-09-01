@@ -10,6 +10,14 @@ interface timeSeriesKeyDto {
     PointsCount: number;
 }
 
+interface timeSeriesKeySummaryDto {
+    Type: timeSeriesTypeDto;
+    Key: string;
+    PointsCount: number;
+    MinPoint: string;
+    MaxPoint: string;
+}
+
 interface pointIdDto {
     Type: string;
     Key: string;

@@ -307,7 +307,7 @@ namespace Raven.Client.TimeSeries.Operations
 			}
 		}
 
-		public void ScheduleAppend(string type, string key, DateTime time, params double[] values)
+		public void ScheduleAppend(string type, string key, DateTimeOffset time, params double[] values)
 		{
 			if (values.Length < 1)
 			{

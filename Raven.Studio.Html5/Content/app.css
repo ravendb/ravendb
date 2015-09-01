@@ -8526,3 +8526,8 @@ a.global_help_link:focus {
   font-weight: bold;
   color: red;
 }
+.time-series-label {
+    width: 55px;
+    display: inline-block;
+    font-weight: bold;
+}
