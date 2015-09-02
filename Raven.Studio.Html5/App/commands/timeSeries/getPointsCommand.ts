@@ -10,7 +10,8 @@ class getPointsCommand extends commandBase {
     * @param take - number of entries to take
     */
     constructor(private ts: timeSeries, private skip: number, private take: number, private type: string, private fields: string[],
-        private key: string, private pointsCount: number) {
+        private key: string, private pointsCount: number,
+        private start: string, private end: string) {
         super();
     }
 
@@ -18,14 +19,17 @@ class getPointsCommand extends commandBase {
         var url = "/points/" + this.type + "?key=" + this.key;
         var doneTask = $.Deferred();
         var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.type, this.fields, this.key, d.At, d.Values));
-        var task = this.query(url, {
+        var args = {
             skip: this.skip,
-            take: this.take
-        }, this.ts, selector);
+            take: this.take,
+            start: this.start,
+            end: this.end
+        };
+        var task = this.query(url, args, this.ts, selector);
         task.done((points: pointDto[]) => doneTask.resolve(new pagedResultSet(points, this.pointsCount)));
         task.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
 }
 
-export = getPointsCommand;  
+export = getPointsCommand;

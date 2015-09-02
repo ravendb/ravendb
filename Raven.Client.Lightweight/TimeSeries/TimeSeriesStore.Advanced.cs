@@ -38,7 +38,7 @@ namespace Raven.Client.TimeSeries
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
 				{
-					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/{2}/keys",
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/keys/{2}",
 						url, timeSeriesName, type);
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{

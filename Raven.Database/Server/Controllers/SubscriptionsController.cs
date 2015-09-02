@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			Database.Subscriptions.DeleteSubscription(id);
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]

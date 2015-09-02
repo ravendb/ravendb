@@ -30,7 +30,7 @@ namespace Raven.Tests.TimeSeries
 					.ToTask();
 
 				changes.WaitForAllPendingSubscriptions();
-				var at = new DateTime(2015, 1, 1);
+				var at = new DateTimeOffset(2015, 1, 1, 0, 0, 0, TimeSpan.Zero);
 				await store.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
@@ -53,7 +53,7 @@ namespace Raven.Tests.TimeSeries
 				timeSeriesChange = await notificationTask;
 				Assert.Equal("Simple", timeSeriesChange.Type);
 				Assert.Equal("Time", timeSeriesChange.Key);
-				Assert.Equal(DateTime.MinValue, timeSeriesChange.At);
+				Assert.Equal(DateTimeOffset.MinValue, timeSeriesChange.At);
 				Assert.Equal(TimeSeriesChangeAction.Delete, timeSeriesChange.Action);
 				Assert.Equal(null, timeSeriesChange.Values);
 			}
@@ -76,7 +76,7 @@ namespace Raven.Tests.TimeSeries
 
 				changesB.WaitForAllPendingSubscriptions();
 
-				var at = DateTime.Now;
+				var at = DateTimeOffset.Now;
 				await storeA.AppendAsync("Simple", "Time", at, 3d);
 
 				var timeSeriesChange = await notificationTask;
@@ -94,7 +94,7 @@ namespace Raven.Tests.TimeSeries
 
 				changesA.WaitForAllPendingSubscriptions();
 
-				var at2 = DateTime.Now.AddMinutes(6);
+				var at2 = DateTimeOffset.Now.AddMinutes(6);
 				await storeB.AppendAsync("Simple", "Is", at2, 6d);
 
 				timeSeriesChange = await notificationTask;
@@ -137,7 +137,7 @@ namespace Raven.Tests.TimeSeries
 
 					for (var i = 0; i < actionsCount; i++)
 					{
-						batchOperation.ScheduleAppend("Simple", "Time", DateTime.Today.AddMinutes(i), 234D);
+						batchOperation.ScheduleAppend("Simple", "Time", DateTimeOffset.Now.AddMinutes(i), 234D);
 					}
 				}
 

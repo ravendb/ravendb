@@ -3,11 +3,13 @@ import file = require("models/filesystem/file");
 import counterSummary = require("models/counter/counterSummary");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
+import timeSeriesType = require("models/timeSeries/timeSeriesType");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import deleteFilesCommand = require("commands/filesystem/deleteFilesCommand");
 import deleteCountersCommand = require("commands/counter/deleteCountersCommand");
 import deletePointsCommand = require("commands/timeSeries/deletePointsCommand");
+import deleteTypesCommand = require("commands/timeSeries/deleteTypesCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
@@ -57,6 +59,11 @@ class deleteItems extends dialogViewModelBase {
             deleteCommand = new deletePointsCommand(points, appUrl.getTimeSeries());
         } else if (firstItem instanceof timeSeriesKey) {
             debugger 
+        } else if (firstItem instanceof timeSeriesType) {
+            var types = this.items().map((type: timeSeriesType) => {
+                return type.name;
+            });
+            deleteCommand = new deleteTypesCommand(types, appUrl.getTimeSeries());
         } else {
             debugger 
         }

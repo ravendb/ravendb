@@ -6,10 +6,8 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import timeSeries = require("models/timeSeries/timeSeries");
 import editPointDialog = require("viewmodels/timeSeries/editPointDialog");
-import editTypeDialog = require("viewmodels/timeSeries/editTypeDialog");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
 import pointChange = require("models/timeSeries/pointChange");
-import typeChange = require("models/timeSeries/typeChange");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 import getTypesCommand = require("commands/timeSeries/getTypesCommand");
 import putPointCommand = require("commands/timeSeries/putPointCommand");
@@ -147,16 +145,6 @@ class timeSeriesTypes extends viewModelBase {
                 allTypes[0].activate();
             }
         }
-    }
-
-    newType() {
-        var changeVm = new editTypeDialog(new typeChange(new timeSeriesType("", [""], 0, this.activeTimeSeries()), true), true);
-        changeVm.updateTask.done((change: typeChange) => {
-            new putTypeCommand(change.type(), change.fields(), this.activeTimeSeries())
-                .execute()
-                .done(() => this.refresh());
-        });
-        app.showDialog(changeVm);
     }
 
 	newPoint() {

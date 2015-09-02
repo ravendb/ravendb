@@ -34,11 +34,22 @@ namespace Raven.Client.TimeSeries
 
 		Task AppendAsync(string type, string key, DateTimeOffset at, double value, CancellationToken token = default(CancellationToken));
 
+		[Obsolete("You must use DateTimeOffset", true)]
+		Task AppendAsync(string type, string key, DateTime at, double value, CancellationToken token = default(CancellationToken));
+
 		Task AppendAsync(string type, string key, DateTimeOffset at, CancellationToken token, params double[] values);
+
+		[Obsolete("You must use DateTimeOffset", true)]
+		Task AppendAsync(string type, string key, DateTime at, CancellationToken token, params double[] values);
 
 		Task AppendAsync(string type, string key, DateTimeOffset at, double[] values, CancellationToken token = default(CancellationToken));
 
+		[Obsolete("You must use DateTimeOffset", true)]
+		Task AppendAsync(string type, string key, DateTime at, double[] values, CancellationToken token = default(CancellationToken));
+
 		Task DeleteKeyAsync(string type, string key, CancellationToken token = default(CancellationToken));
+
+		Task DeletePointsAsync(IEnumerable<TimeSeriesPointId> points, CancellationToken token = default(CancellationToken));
 
 		Task DeletePointAsync(string type, string key, DateTimeOffset at, CancellationToken token = default(CancellationToken));
 

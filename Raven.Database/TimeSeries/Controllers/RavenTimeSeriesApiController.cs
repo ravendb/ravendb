@@ -198,7 +198,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
 						msg = "The time series " + tenantId +
-								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
+								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, time series loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}

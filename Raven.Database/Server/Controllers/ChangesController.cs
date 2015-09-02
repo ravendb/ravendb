@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-            var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
+            var name = (!string.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : string.Empty;
 			var globalConnectionState = Database.TransportState.For(id, this);
 			var connectionState = globalConnectionState.DocumentStore;
 

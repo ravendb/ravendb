@@ -72,7 +72,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]

@@ -57,7 +57,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			Storage.DeleteType(type);
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 
-			return new HttpResponseMessage(HttpStatusCode.Created);
+			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
 
 		[RavenRoute("ts/{timeSeriesName}/append/{type}")]
@@ -205,7 +205,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private IEnumerable<IEnumerable<TimeSeriesAppend>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
@@ -314,6 +314,11 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				foreach (var point in points)
 				{
+					if (string.IsNullOrEmpty(point.Type))
+						throw new InvalidOperationException("Point type cannot be empty");
+					if (string.IsNullOrEmpty(point.Key))
+						throw new InvalidOperationException("Point key cannot be empty");
+
 					if (writer.DeletePoint(point))
 						deletedCount++;
 					writer.DeletePointInRollups(point);
@@ -334,31 +339,32 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/delete-range/{type}")]
 		[HttpDelete]
-		public HttpResponseMessage DeleteRange(string type, string key, DateTimeOffset start, DateTimeOffset end)
+		public async Task<HttpResponseMessage> DeleteRange()
 		{
-			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
+			var range = await ReadJsonObjectAsync<TimeSeriesDeleteRange>();
+            if (range == null || string.IsNullOrEmpty(range.Type) || string.IsNullOrEmpty(range.Key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			if (start > end)
+			if (range.Start > range.End)
 				throw new InvalidOperationException("start cannot be greater than end");
 
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.DeleteRange(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
-				writer.DeleteRangeInRollups(type, key, start.ToUniversalTime().Ticks, end.ToUniversalTime().Ticks);
+				writer.DeleteRange(range.Type, range.Key, range.Start, range.End);
+				writer.DeleteRangeInRollups(range.Type, range.Key, range.Start, range.End);
 				writer.Commit();
 
 				Storage.MetricsTimeSeries.Deletes.Mark();
 				Storage.Publisher.RaiseNotification(new KeyChangeNotification
 				{
-					Type = type,
-					Key = key,
+					Type = range.Type,
+					Key = range.Key,
 					Action = TimeSeriesChangeAction.DeleteInRange,
-					Start = start,
-					End = end,
+					Start = range.Start,
+					End = range.End,
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return new HttpResponseMessage(HttpStatusCode.NoContent);
 			}
 		}
 
@@ -370,7 +376,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var types = reader.GetTypes(skip).Take(take).ToArray();
-				return Request.CreateResponse(HttpStatusCode.OK, types);
+				return GetMessageWithObject(types);
 			}
 		}
 
@@ -382,7 +388,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var result = reader.GetKey(type, key);
-				return Request.CreateResponse(HttpStatusCode.OK, result);
+				return GetMessageWithObject(result);
 			}
 		}
 
@@ -394,23 +400,23 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var keys = reader.GetKeys(type, skip).Take(take).ToArray();
-				return Request.CreateResponse(HttpStatusCode.OK, keys);
+				return GetMessageWithObject(keys);
 			}
 		}
 
 		[RavenRoute("ts/{timeSeriesName}/points/{type}")]
 		[HttpGet]
-		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20)
+		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null)
 		{
 			if (skip < 0)
-				throw new ArgumentException("Bad argument", "skip");
+				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
 			if (take <= 0)
-				throw new ArgumentException("Bad argument", "take");
+				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
 
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
-				var points = reader.GetPoints(type, key, skip).Take(take);
+				var points = reader.GetPoints(type, key, start ?? DateTimeOffset.MinValue, end ?? DateTimeOffset.MaxValue, skip).Take(take);
 				return GetMessageWithObject(points);
 			}
 		}

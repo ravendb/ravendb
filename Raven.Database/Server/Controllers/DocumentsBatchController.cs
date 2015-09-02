@@ -228,7 +228,7 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = index
                                                  }, out id, timeout.CancellationTokenSource);
 
-            return GetMessageWithObject(new { OperationId = id });
+            return GetMessageWithObject(new { OperationId = id }, HttpStatusCode.Accepted);
         }
 
         public class BulkOperationStatus : IOperationState

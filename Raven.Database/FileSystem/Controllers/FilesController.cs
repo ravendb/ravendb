@@ -227,7 +227,6 @@ namespace Raven.Database.FileSystem.Controllers
 				SynchronizationTask.Context.NotifyAboutWork();
 			});
 
-			//Hack needed by jquery on the client side. We need to find a better solution for this
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 

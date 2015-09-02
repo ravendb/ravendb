@@ -89,7 +89,7 @@ namespace Raven.Database.Counters.Controllers
 	                }
                 }
 
-	            return new HttpResponseMessage(HttpStatusCode.OK);
+	            return GetEmptyMessage();
             }
         }
 
@@ -121,9 +121,9 @@ namespace Raven.Database.Counters.Controllers
 
 				if (replicationData == null || replicationData.Destinations.Count == 0)
 				{
-					return Request.CreateResponse(HttpStatusCode.NotFound);
+					return GetEmptyMessage(HttpStatusCode.NotFound);
 				}
-				return Request.CreateResponse(HttpStatusCode.OK, replicationData);
+				return GetMessageWithObject(replicationData);
 			}
 		}
 
@@ -137,7 +137,7 @@ namespace Raven.Database.Counters.Controllers
 				writer.UpdateReplications(newReplicationDocument);
 				writer.Commit();
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 		}
     }
