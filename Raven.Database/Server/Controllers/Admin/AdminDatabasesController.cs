@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -182,7 +182,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (message.ErrorCode != HttpStatusCode.OK)
                 return GetMessageWithString(message.Message, message.ErrorCode);
 
-			return GetMessageWithObject(new { });
+	        return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
 		[HttpGet]
@@ -302,7 +302,10 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (document.IsClusterDatabase())
 				{
 					await ClusterManager.Client.SendDatabaseDeleteAsync(databaseId, isHardDeleteNeeded).ConfigureAwait(false);
-					return new MessageWithStatusCode();
+					return new MessageWithStatusCode
+					{
+						ErrorCode = HttpStatusCode.NoContent
+					};
 				}
 			}
 

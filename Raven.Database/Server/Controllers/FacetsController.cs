@@ -144,17 +144,6 @@ namespace Raven.Database.Server.Controllers
             return null;
         }
 
-        private Etag GetMultiFacetEtag(string[] indexes, byte[] additionalEtagBytes)
-        {
-            var multiFacetByteArray = new byte[0];
-            foreach (var index in indexes)
-            {
-                multiFacetByteArray = multiFacetByteArray.Concat(Database.Indexes.GetIndexEtag(index, null).ToByteArray()).ToArray();
-            }
-            var etagBytes = Encryptor.Current.Hash.Compute16(multiFacetByteArray.Concat(additionalEtagBytes).ToArray());
-            return Etag.Parse(etagBytes);
-        }
-
         private Etag GetFacetsEtag(string index, byte[] additionalEtagBytes)
         {
             var etagBytes = Encryptor.Current.Hash.Compute16(Database.Indexes.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());

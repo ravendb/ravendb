@@ -11,7 +11,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		[RavenRoute("ts/{timeSeriesName}/stats")]
 		public HttpResponseMessage TimeSeriesStats()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateStats());
+			return GetMessageWithObject(Storage.CreateStats());
 		}
     }
 }

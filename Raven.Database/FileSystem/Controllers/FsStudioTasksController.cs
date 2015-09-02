@@ -113,7 +113,7 @@ namespace Raven.Database.FileSystem.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		[HttpPost]
@@ -150,7 +150,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}
 			});
 
-			var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+			var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
 				string.Format("Dump of {0}, {1}", this.FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
 				smugglerOptions.NoneDefualtFileName;
 			result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")

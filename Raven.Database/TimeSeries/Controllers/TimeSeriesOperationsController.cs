@@ -57,7 +57,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			Storage.DeleteType(type);
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
 
 		[RavenRoute("ts/{timeSeriesName}/append/{type}")]
@@ -205,7 +205,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private IEnumerable<IEnumerable<TimeSeriesAppend>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeTimeSeriesFunc)
@@ -364,7 +364,7 @@ namespace Raven.Database.TimeSeries.Controllers
 					End = range.End,
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return new HttpResponseMessage(HttpStatusCode.NoContent);
 			}
 		}
 
@@ -376,7 +376,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var types = reader.GetTypes(skip).Take(take).ToArray();
-				return Request.CreateResponse(HttpStatusCode.OK, types);
+				return GetMessageWithObject(types);
 			}
 		}
 
@@ -388,7 +388,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var result = reader.GetKey(type, key);
-				return Request.CreateResponse(HttpStatusCode.OK, result);
+				return GetMessageWithObject(result);
 			}
 		}
 
@@ -400,7 +400,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			{
 				Storage.MetricsTimeSeries.ClientRequests.Mark();
 				var keys = reader.GetKeys(type, skip).Take(take).ToArray();
-				return Request.CreateResponse(HttpStatusCode.OK, keys);
+				return GetMessageWithObject(keys);
 			}
 		}
 
@@ -409,9 +409,9 @@ namespace Raven.Database.TimeSeries.Controllers
 		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null)
 		{
 			if (skip < 0)
-				throw new ArgumentException("Bad argument", "skip");
+				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
 			if (take <= 0)
-				throw new ArgumentException("Bad argument", "take");
+				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
 
 			Storage.MetricsTimeSeries.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())

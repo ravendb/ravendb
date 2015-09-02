@@ -69,7 +69,7 @@ namespace Raven.Database.Server.Controllers.Admin
             return AdditionalSupportedRoles.Any(role => user.IsInRole(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, role));
         }
 
-        protected static bool IsValidName(string name, string dataDirectory,out MessageWithStatusCode errorMessageWithStatusCode)
+        protected static bool IsValidName(string name, string dataDirectory, out MessageWithStatusCode errorMessageWithStatusCode)
         {
             string errorMessage = null;
 	        bool isValid = true;

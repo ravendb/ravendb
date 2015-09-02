@@ -363,7 +363,7 @@ namespace Raven.Database.Server.Controllers
 
 			var isReplication = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
 			if (Database.Indexes.DeleteIndex(index) &&
-				!String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+				!string.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
 			{
 				const string emptyFrom = "<no hostname>";
 				var from = Uri.UnescapeDataString(GetQueryStringValue("from") ?? emptyFrom);
@@ -437,7 +437,7 @@ namespace Raven.Database.Server.Controllers
 				}, out taskId);
 			}
 
-			return GetEmptyMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.Accepted);
 		}
 
 		[HttpGet]
