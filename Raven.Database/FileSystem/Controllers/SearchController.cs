@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -29,7 +30,7 @@ namespace Raven.Database.FileSystem.Controllers
                 string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
                                     .Where(x => x.IndexOf(query, 0, StringComparison.InvariantCultureIgnoreCase) != -1).ToArray();
 
-                return this.GetMessageWithObject(result);
+                return GetMessageWithObject(result);
             }
         }
 
@@ -52,7 +53,7 @@ namespace Raven.Database.FileSystem.Controllers
 				FileCount = results
 			};
 
-            return this.GetMessageWithObject(result);
+            return GetMessageWithObject(result);
 		}
 
 		[HttpDelete]
@@ -111,7 +112,7 @@ namespace Raven.Database.FileSystem.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private void DeleteFiles(IEnumerable<string> keys, int totalResults, Action<string> progress)

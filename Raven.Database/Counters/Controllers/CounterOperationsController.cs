@@ -46,14 +46,15 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
 			using (var writer = Storage.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
 				if (delta == 0 && counterChangeAction != CounterChangeAction.Add)
-					return new HttpResponseMessage(HttpStatusCode.OK);
+					return GetEmptyMessage();
 
 				writer.Commit();
 
@@ -67,7 +68,7 @@ namespace Raven.Database.Counters.Controllers
 					Total = writer.GetCounterTotal(groupName, counterName)
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 		}
 
@@ -138,8 +139,9 @@ namespace Raven.Database.Counters.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								VerifyNameCorrect(change.Group);
-								VerifyNameCorrect(change.Name);
+								var verificationResult = VerifyGroupAndCounterName(change.Group, change.Name);
+								if (verificationResult != null)
+									throw new ArgumentException("Missing group or counter name");
 								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
@@ -203,7 +205,7 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeCounterFunc)
@@ -278,8 +280,9 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -300,7 +303,7 @@ namespace Raven.Database.Counters.Controllers
 					});
 				}
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 		}
 
@@ -308,8 +311,9 @@ namespace Raven.Database.Counters.Controllers
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
 			using (var writer = Storage.CreateWriter())
 			{
@@ -327,7 +331,7 @@ namespace Raven.Database.Counters.Controllers
 					Total = 0
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage(HttpStatusCode.NoContent);
 			}
 		}
 
@@ -379,9 +383,9 @@ namespace Raven.Database.Counters.Controllers
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
 			if (skip < 0)
-				throw new ArgumentException("Bad argument", "skip");
+				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
 			if (take <= 0)
-				throw new ArgumentException("Bad argument", "take");
+				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -396,8 +400,9 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
         {
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -411,8 +416,9 @@ namespace Raven.Database.Counters.Controllers
         [HttpGet]
         public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
@@ -424,10 +430,19 @@ namespace Raven.Database.Counters.Controllers
 
 // ReSharper disable once UnusedParameter.Local
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void VerifyNameCorrect(string name)
+		private HttpResponseMessage VerifyGroupAndCounterName(string groupName, string counterName)
 		{
-			if (string.IsNullOrEmpty(name))
-				throw new ArgumentException("A name can't be null");
+			if (string.IsNullOrEmpty(groupName))
+			{
+				return GetMessageWithString("Group name is mandatory.", HttpStatusCode.BadRequest);
+			}
+
+			if (string.IsNullOrEmpty(counterName))
+			{
+				return GetMessageWithString("Counter name is mandatory.", HttpStatusCode.BadRequest);
+			}
+
+			return null;
 		}
 	}
 }

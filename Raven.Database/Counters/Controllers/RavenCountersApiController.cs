@@ -92,8 +92,8 @@ namespace Raven.Database.Counters.Controllers
             if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
-			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CounterStorageName);
-			if (fileSystemInternal == null)
+			var counterInternal = await CountersLandlord.GetCounterInternal(CounterStorageName);
+			if (counterInternal == null)
 			{
 				var msg = "Could not find a counters named: " + CounterStorageName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
@@ -198,7 +198,7 @@ namespace Raven.Database.Counters.Controllers
                     if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(30))) != resourceStoreTask)
 					{
 						msg = "The counter " + tenantId +
-								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
+								  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, counter storage loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
 					}

@@ -77,7 +77,7 @@ namespace Raven.Database.Counters.Controllers
 	    {
 		    var op = GetQueryStringValue("op");
 		    if (string.IsNullOrWhiteSpace(op))
-			    return GetMessageWithString("mandatory 'op' query parameter is missing",HttpStatusCode.BadRequest);
+			    return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
 		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
 			    return await GetNamesAndGroups(currentCounterStorageName);
@@ -222,7 +222,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -260,7 +260,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]
@@ -373,7 +373,7 @@ namespace Raven.Database.Counters.Controllers
 
 			Task.Factory.StartNew(backupOperation.Execute);
 
-			return GetEmptyMessage(HttpStatusCode.Created);
+			return GetEmptyMessage(HttpStatusCode.Accepted);
 		}
 
 		[HttpPost]
