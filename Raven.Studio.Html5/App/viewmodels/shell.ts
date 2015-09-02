@@ -267,7 +267,7 @@ class shell extends viewModelBase {
             { route: "timeseries/types", title: "Types", moduleId: "viewmodels/timeSeries/timeSeriesTypes", nav: true, hash: this.appUrls.timeSeriesType },
             { route: "timeseries/points", title: "Points", moduleId: "viewmodels/timeSeries/timeSeriesPoints", nav: true, hash: this.appUrls.timeSeriesPoints },
             { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
-            { route: "timeseries/configuration", title: "Configuration", moduleId: "viewmodels/timeSeries/timeSeriesConfiguration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
+            { route: "timeseries/configuration*details", title: "Configuration", moduleId: "viewmodels/timeSeries/configuration/configuration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -375,7 +375,7 @@ class shell extends viewModelBase {
 
     private preLoadRecentErrorsView() {
         // preload this view as in case of failure server can't serve it.
-        viewLocator.locateView("views/recentErrors");
+        viewLocator.locateView("views/common/recentErrors");
     }
 
     private fecthStudioConfigForDatabase(db: database) {

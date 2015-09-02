@@ -145,7 +145,7 @@ namespace Raven.Database.FileSystem.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -259,7 +259,7 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage ResetIndex ()
         {
             FileSystem.Search.ForceIndexReset();
-            return GetEmptyMessage(HttpStatusCode.OK);
+            return GetEmptyMessage();
         }
 
         [HttpPost]
@@ -409,7 +409,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private static bool IsUpdateMessage(string msg)
@@ -588,7 +588,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private string FindFilesystemDocument(string rootBackupPath)

@@ -223,7 +223,7 @@ for(var customFunction in customFunctions) {{
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 	    public class ExportData
@@ -681,7 +681,7 @@ for(var customFunction in customFunctions) {{
 			return GetMessageWithObjectAsTask(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)

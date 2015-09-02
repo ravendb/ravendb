@@ -363,7 +363,8 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 catch (Exception e)
                 {
-                    msg = "Could not open file system named: " + tenantId + ", " + e.InnerException.Message;
+	                var exceptionMessage = e.InnerException == null ? e.Message : e.InnerException.Message;
+	                msg = "Could not open file system named: " + tenantId + ", " + exceptionMessage;
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 } 

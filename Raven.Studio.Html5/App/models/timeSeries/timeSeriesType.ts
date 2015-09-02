@@ -14,6 +14,9 @@ class timeSeriesType implements ICollectionBase {
     constructor(public name: string, public fields: string[], keysCount: number, private ownerTimeSeries: timeSeries) {
         this.keysCount(keysCount);
         this.colorClass = timeSeriesType.getTypeCssClass(this.name, ownerTimeSeries);
+        this["Name"] = name;
+        this["Fields"] = fields.join(', ');
+        this["Keys"] = keysCount;
     }
 
     activate() {
@@ -45,6 +48,22 @@ class timeSeriesType implements ICollectionBase {
 
     private fetchKeys(skip: number, take: number): JQueryPromise<pagedResultSet> {
         return new getKeysCommand(this.ownerTimeSeries, skip, take, this.name, this.keysCount()).execute();
+    }
+
+    getEntityName() {
+        return this.getId();
+    }
+
+    getDocumentPropertyNames(): Array<string> {
+        return ["Name", "Fields", "Keys"];
+    }
+
+    getId() {
+        return this.name;
+    }
+
+    getUrl() {
+        return this.getId();
     }
 }
 

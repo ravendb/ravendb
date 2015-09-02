@@ -8,9 +8,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
 using Raven.Database.Extensions;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -121,7 +123,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -191,7 +193,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (message.ErrorCode != HttpStatusCode.OK)
 				return GetMessageWithString(message.Message, message.ErrorCode);
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]
@@ -204,7 +206,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 		[HttpPost]
         [RavenRoute("admin/databases-toggle-reject-clients")]
@@ -214,7 +216,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (message.ErrorCode != HttpStatusCode.OK)
                 return GetMessageWithString(message.Message, message.ErrorCode);
 
-			return GetEmptyMessage();
+	        return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
 		[HttpGet]
@@ -334,7 +336,10 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (document.IsClusterDatabase())
 				{
 					await ClusterManager.Client.SendDatabaseDeleteAsync(databaseId, isHardDeleteNeeded).ConfigureAwait(false);
-					return new MessageWithStatusCode();
+					return new MessageWithStatusCode
+					{
+						ErrorCode = HttpStatusCode.NoContent
+					};
 				}
 			}
 
