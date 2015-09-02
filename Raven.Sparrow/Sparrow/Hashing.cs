@@ -324,7 +324,10 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CombineInline(int x, int y)
         {
-            long key = x << 32 | y;
+            ulong ex = (ulong)x;
+            ulong ey = (ulong)y;
+
+            ulong key = ex << 32 | ey;
 
             key = (~key) + (key << 18); // key = (key << 18) - key - 1;
             key = key ^ (key >> 31);
@@ -339,7 +342,10 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint CombineInline(uint x, uint y)
         {
-            long key = x << 32 | y;
+            ulong ex = (ulong)x;
+            ulong ey = (ulong)y;
+
+            ulong key = ex << 32 | ey;
 
             key = (~key) + (key << 18); // key = (key << 18) - key - 1;
             key = key ^ (key >> 31);

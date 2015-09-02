@@ -24,7 +24,7 @@ namespace Sparrow.Collections
             private const uint kDeletedHash = 0xFFFFFFFE;
 
             private const uint kUnusedSignature = 0;
-            private const uint kSignatureMask = 0x7FFFFFFF;
+            private const uint kSignatureMask = 0x7FFFFFFE;
             private const uint kDuplicatedMask = 0x80000000;
 
             /// <summary>
@@ -151,10 +151,11 @@ namespace Sparrow.Collections
 
             public void Replace(Internal oldNode, Internal newNode, uint signature)
             {
-                // We shrink the signature to the proper size (31 bits)
+                // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
-                int pos = GetInternalHashCode(signature) % _capacity;
+                int hash = GetInternalHashCode(signature);
+                int pos = hash % _capacity;
 
                 int numProbes = 1;
 
@@ -165,6 +166,7 @@ namespace Sparrow.Collections
                 }
 
                 Debug.Assert(this._entries[pos].Node != null);
+                Debug.Assert(this._entries[pos].Hash == (uint) hash );
                 Debug.Assert(oldNode.Handle(this.owner).CompareTo(newNode.Handle(this.owner)) == 0);
 
                 this._entries[pos].Node = newNode;
@@ -315,7 +317,7 @@ namespace Sparrow.Collections
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private int GetInternalHashCode(uint hash)
             {
-                return (int)(hash & kHashMask);
+                return (int)(hash.GetHashCode() & kHashMask);
             }
 
             private void Rehash(Entry[] entries)

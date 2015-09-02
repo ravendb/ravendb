@@ -102,6 +102,7 @@ namespace Sparrow.Binary
             set { Set(idx, value); }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx)
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
@@ -112,6 +113,7 @@ namespace Sparrow.Binary
             Bits[word] |= mask;                
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx, bool value)
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
@@ -124,6 +126,7 @@ namespace Sparrow.Binary
                 Bits[word] ^= mask;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Get(int idx)
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
@@ -133,6 +136,7 @@ namespace Sparrow.Binary
             return (Bits[word] & mask) != 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetByte(int idx)
         {
             int positionInWord = idx % BitVector.BytesPerWord;
@@ -144,6 +148,7 @@ namespace Sparrow.Binary
             return (int)word;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ulong GetWord(int wordIdx)
         {            
             return Bits[wordIdx];
@@ -416,6 +421,17 @@ namespace Sparrow.Binary
             return new BitVector(values.Length * BitVector.BitsPerWord, values);
         }
 
+        public static BitVector Of(bool prefixFree, params long[] values)
+        {
+            int prefixAdjustment = (prefixFree ? 1 : 0);
+
+            ulong[] newValue = new ulong[values.Length + prefixAdjustment];
+            for( int i = 0; i < values.Length; i++ )
+                newValue[i] = (ulong) values[i];
+
+            return new BitVector((values.Length + prefixAdjustment) * BitVector.BitsPerWord, newValue);
+        }
+
         public static BitVector Of(params long[] values)
         {
             ulong[] newValue = new ulong[values.Length];
@@ -526,11 +542,13 @@ namespace Sparrow.Binary
             return vector;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BitInWord(int idx)
         {
             return 0x8000000000000000UL >> (idx % (int)BitVector.BitsPerWord);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Bit(int idx)
         {
             Contract.Requires(idx < BitVector.BitsPerWord);
@@ -538,11 +556,13 @@ namespace Sparrow.Binary
             return WordMask & (uint)idx;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint WordForBit(int idx)
         {
             return (uint)(idx >> (int)Log2BitsPerWord);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int NumberOfWordsForBits(int size)
         {
             return (int)((size + WordMask) >> (int)Log2BitsPerWord);
@@ -589,8 +609,8 @@ namespace Sparrow.Binary
                     {
                         // TODO: We can try use a fast Rank0 function to find leading zeros after an XOR to achieve peak performance at the byte level. 
                         //       See Broadword Implementation of Rank/Select Queries by Sebastiano Vigna http://vigna.di.unimi.it/ftp/papers/Broadword.pdf
-                        bool thisBit = this[from];
-                        bool otherBit = other[from];
+                        bool thisBit = this.Get(from);
+                        bool otherBit = other.Get(from);
 
                         if (thisBit != otherBit)
                         {
