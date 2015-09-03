@@ -637,8 +637,9 @@ namespace Sparrow.Tests
             v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000100);
             v2 = BitVector.Of(0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00);
 
-            Assert.Equal(1, v1.CompareTo(v2));
-            Assert.Equal(-1, v2.CompareTo(v1));
+            Assert.Equal(0, v1.SubVector(0, 12).CompareTo(BitVector.Of(0xFF, 0xFF, 0xFF)));
+            Assert.Equal(0, v1.SubVector(1, 12).CompareTo(BitVector.Parse("11111111111")));
+            Assert.Equal(0, v1.SubVector(0, 10).CompareTo(BitVector.Parse("111111111")));
         }
 
         private static ulong[] GenerateRandomArray(int vectorSize, Random rnd = null)

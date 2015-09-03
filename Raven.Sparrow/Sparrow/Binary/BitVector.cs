@@ -598,29 +598,38 @@ namespace Sparrow.Binary
 
                     for (int i = 0; i < wholeBytes; i++, bpx += 1, bpy += 1)
                     {
-                        if (*((long*)bpx) != *((long*)bpy))
+                        if (*((ulong*)bpx) != *((ulong*)bpy))
                             break;
                     }
 
                     // We always finish the last extent with a bit-wise comparison (bit vector is stored in big endian).
                     int from = (int)(bpx - srcPtr) * BitsPerWord;
                     int leftover = length - from;
-                    while (leftover > 0)
+                    if ( leftover == 0 )
                     {
-                        // TODO: We can try use a fast Rank0 function to find leading zeros after an XOR to achieve peak performance at the byte level. 
-                        //       See Broadword Implementation of Rank/Select Queries by Sebastiano Vigna http://vigna.di.unimi.it/ftp/papers/Broadword.pdf
-                        bool thisBit = this.Get(from);
-                        bool otherBit = other.Get(from);
-
-                        if (thisBit != otherBit)
-                        {
-                            equalBits = from;
-                            return thisBit ? 1 : -1;
-                        }
-
-                        from++;
-                        leftover--;
+                        equalBits = length;
+                        return 0;
                     }
+
+                    if (leftover > BitVector.BitsPerWord)
+                        leftover = BitVector.BitsPerWord;
+
+                    int shift = BitVector.BitsPerWord - leftover;
+
+                    ulong thisWord = ((*bpx) >> shift);
+                    ulong otherWord = ((*bpy) >> shift);
+
+                    ulong cmp = thisWord ^ otherWord;
+                    if (cmp == 0)
+                    {
+                        equalBits = length;
+                        return 0;
+                    }
+
+                    int differentBit = Sparrow.Binary.Bits.MostSignificantBit(cmp);
+
+                    equalBits = from + leftover - (differentBit + 1);
+                    return thisWord > otherWord ? 1 : -1;
                 }
             }
 
@@ -642,7 +651,35 @@ namespace Sparrow.Binary
             Contract.Requires(length >= 0 && start + length < this.Count);
 
             var subVector = new BitVector(length);
-            BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
+            if ( start % BitsPerWord == 0 )
+            {
+                int startWord = start / BitsPerWord;
+                int totalWords = length / BitsPerWord;
+
+                unsafe
+                {
+                    fixed (ulong* sourcePtr = this.Bits)
+                    fixed (ulong* destPtr = subVector.Bits)
+                    {
+                        Memory.Copy((byte*)destPtr, (byte*)(sourcePtr + startWord), totalWords * sizeof(ulong));
+                    }
+                }
+
+                int remainder = length % BitsPerWord;
+                if ( remainder != 0 )
+                {
+                    int shift = BitsPerWord - remainder;
+                    ulong value = this.Bits[startWord + totalWords];
+                    value = (value >> shift) << shift;
+
+                    subVector.Bits[totalWords] = value;
+                }                
+            }
+            else
+            {
+                // The cost to optimize this case is high and we are not using it. 
+                BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
+            }            
             return subVector;
         }
 

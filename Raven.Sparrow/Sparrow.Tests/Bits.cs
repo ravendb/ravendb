@@ -29,6 +29,27 @@ namespace Sparrow.Tests
             Assert.Equal(15, Bits.MostSignificantBit((uint)0x0000FF00));
             Assert.Equal(31, Bits.MostSignificantBit((uint)0xFFFF0000));
             Assert.Equal(30, Bits.MostSignificantBit((uint)0x40B79DF0));
+
+            Assert.Equal(0, Bits.MostSignificantBit((long)0));
+            Assert.Equal(0, Bits.MostSignificantBit((long)1));
+            Assert.Equal(1, Bits.MostSignificantBit((long)2));
+            Assert.Equal(1, Bits.MostSignificantBit((long)3));
+            Assert.Equal(2, Bits.MostSignificantBit((long)4));
+            Assert.Equal(15, Bits.MostSignificantBit((long)0x0000FF00));
+            Assert.Equal(31, Bits.MostSignificantBit((long)0xFFFF0000));
+            Assert.Equal(30, Bits.MostSignificantBit((long)0x40B79DF0));
+            Assert.Equal(62, Bits.MostSignificantBit((long)0x40B79DF0FFFF0000));
+
+            Assert.Equal(0, Bits.MostSignificantBit((ulong)0));
+            Assert.Equal(0, Bits.MostSignificantBit((ulong)1));
+            Assert.Equal(1, Bits.MostSignificantBit((ulong)2));
+            Assert.Equal(1, Bits.MostSignificantBit((ulong)3));
+            Assert.Equal(2, Bits.MostSignificantBit((ulong)4));
+            Assert.Equal(15, Bits.MostSignificantBit((ulong)0x0000FF00));
+            Assert.Equal(31, Bits.MostSignificantBit((ulong)0xFFFF0000));
+            Assert.Equal(30, Bits.MostSignificantBit((ulong)0x40B79DF0));
+            Assert.Equal(62, Bits.MostSignificantBit((ulong)0x40B79DF0FFFF0000));
+
         }
 
         [Fact]

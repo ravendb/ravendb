@@ -339,6 +339,45 @@ namespace Sparrow
             return (int)key;
         }
 
+        private static readonly ulong kMul = 0x9ddfea08eb382d69UL;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CombineInline(ulong x, ulong y)
+        {
+            // This is the Hash128to64 function from Google's CityHash (available
+            // under the MIT License).  We use it to reduce multiple 64 bit hashes
+            // into a single hash.
+
+            // Murmur-inspired hashing.
+            ulong a = (y ^ x) * kMul;
+            a ^= (a >> 47);
+            ulong b = (x ^ a) * kMul;
+            b ^= (b >> 47);
+            b *= kMul;
+
+            return b;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CombineInline(long upper, long lower)
+        {
+            // This is the Hash128to64 function from Google's CityHash (available
+            // under the MIT License).  We use it to reduce multiple 64 bit hashes
+            // into a single hash.
+
+            ulong x = (ulong)upper;
+            ulong y = (ulong)lower;
+
+            // Murmur-inspired hashing.
+            ulong a = (y ^ x) * kMul;
+            a ^= (a >> 47);
+            ulong b = (x ^ a) * kMul;
+            b ^= (b >> 47);
+            b *= kMul;
+
+            return b;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint CombineInline(uint x, uint y)
         {

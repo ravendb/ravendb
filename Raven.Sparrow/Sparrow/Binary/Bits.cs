@@ -44,6 +44,78 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int MostSignificantBit(long nn)
+        {
+            unchecked
+            {                
+                if (nn == 0) return 0;
+
+                ulong n = (ulong) nn;
+                int msb = 0;
+
+                if ((n & 0xFFFFFFFF00000000L) != 0)
+                {
+                    n >>= (1 << 5);
+                    msb += (1 << 5);
+                }
+
+                if ((n & 0xFFFF0000) != 0)
+                {
+                    n >>= (1 << 4);
+                    msb += (1 << 4);
+                }
+
+                // Now we find the most significant bit in a 16-bit word.
+
+                n |= n << 16;
+                n |= n << 32;
+
+                ulong y = n & 0xFF00F0F0CCCCAAAAL;
+
+                ulong t = 0x8000800080008000L & (y | ((y | 0x8000800080008000L) - (n ^ y)));
+
+                t |= t << 15;
+                t |= t << 30;
+                t |= t << 60;
+
+                return (int)((ulong)msb + (t >> 60));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int MostSignificantBit(ulong n)
+        {
+		    if ( n == 0 ) return 0;
+		
+		    ulong msb = 0;
+		
+		    if ( ( n & 0xFFFFFFFF00000000L ) != 0 ) {
+			    n >>= ( 1 << 5 );
+			    msb += ( 1 << 5 );
+		    }
+		
+		    if ( ( n & 0xFFFF0000 ) != 0 ) {
+			    n >>= ( 1 << 4 );
+			    msb += ( 1 << 4 );
+		    }
+		
+		    // Now we find the most significant bit in a 16-bit word.
+		
+		    n |= n << 16;
+		    n |= n << 32;
+		
+		    ulong y = n & 0xFF00F0F0CCCCAAAAL;
+		
+		    ulong t = 0x8000800080008000L & ( y | (( y | 0x8000800080008000L ) - ( n ^ y )));
+		
+		    t |= t << 15;
+		    t |= t << 30;
+		    t |= t << 60;
+		
+		    return (int)( msb + ( t >> 60 ) );
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeadingZeroes(int n)
         {
             if (n == 0)
