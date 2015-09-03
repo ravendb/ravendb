@@ -909,8 +909,11 @@ namespace Rachis
 
 			private void ModifyTopologyUnsafe(Topology requested)
 			{
-				if (Interlocked.CompareExchange(ref _raft._changingTopology, new TaskCompletionSource<object>().Task, null) != null)
-					throw new InvalidOperationException("Cannot change the cluster topology while another topology change is in progress");
+				var topologyChangeInProgress = Interlocked.CompareExchange(ref _raft._changingTopology, new TaskCompletionSource<object>().Task, null);
+				if (topologyChangeInProgress != null && topologyChangeInProgress.Wait(TimeSpan.FromSeconds(5)) == false)
+				{
+					Interlocked.Exchange(ref _raft._changingTopology, new TaskCompletionSource<object>().Task);
+				}
 
 				try
 				{
@@ -918,6 +921,9 @@ namespace Rachis
 
 					Interlocked.Exchange(ref _raft._currentTopology, requested);
 					_raft.PersistentState.SetCurrentTopology(requested, 0L);
+
+					if(_raft.State == RaftEngineState.Leader)
+						_raft.SetState(RaftEngineState.CandidateByRequest);
 
 					_log.Debug("[Unsafe operation] Topology changed");
 				}

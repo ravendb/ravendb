@@ -6,8 +6,8 @@
 using System;
 using System.Linq;
 using System.Threading;
-using FluentAssertions;
 using Rachis.Transport;
+using Xunit;
 using Xunit.Extensions;
 
 namespace Rachis.Tests
@@ -18,33 +18,95 @@ namespace Rachis.Tests
 		[InlineData(3)]
 		[InlineData(4)]
 		[InlineData(5)]
-		public void Can_remove_nodes_from_topology_even_if_there_is_no_quorum__Unsafe_operation(int clusterSize)
+		public void can_remove_nodes_from_topology_even_if_there_is_no_majority(int clusterSize)
 		{
 			var leader = CreateNetworkAndGetLeader(clusterSize);
 
-			var cmd = new DictionaryCommand.Set
-			{
-				Key = "a",
-				Value = 1
-			};
-
-			var waitForCommitsOnCluster = WaitForCommitsOnCluster(machine => machine.LastAppliedIndex == cmd.AssignedIndex);
-
-			leader.AppendCommand(cmd);
-
-			waitForCommitsOnCluster.Wait(3000).Should().BeTrue();
-			
 			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
 			
 			foreach (var node in nodesToShutdown)
 			{
 				DisconnectNode(node.Name);
-				ForceTimeout(node.Name);
+				node.Dispose();
 			}
 
-			Thread.Sleep(5000);
+			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
+			}
+
+			foreach (var nodeDown in nodesToShutdown)
+			{
+				foreach (var nodeRunning in runningNodes)
+				{
+					nodeRunning.UnsafeOperations.RemoveFromCluster(new NodeConnectionInfo { Name = nodeDown.Name });
+				}
+			}
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				nodesToShutdown.ForEach(x => Assert.False(nodeRunning.CurrentTopology.Contains(x.Name)));
+			}
+		}
+
+		[Theory]
+		[InlineData(3)]
+		[InlineData(4)]
+		[InlineData(5)]
+		public void can_add_nodes_to_topology_even_if_there_is_no_majority(int clusterSize)
+		{
+			var leader = CreateNetworkAndGetLeader(clusterSize);
+
+			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+
+			foreach (var node in nodesToShutdown)
+			{
+				DisconnectNode(node.Name);
+				node.Dispose();
+			}
 
 			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
+			}
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				nodeRunning.UnsafeOperations.AddToCluster(new NodeConnectionInfo { Name = "new-node" });
+			}
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				Assert.True(nodeRunning.CurrentTopology.Contains("new-node"));
+			}
+		}
+
+		[Theory]
+		[InlineData(3)]
+		[InlineData(4)]
+		[InlineData(5)]
+		public void new_leader_is_selected_after_removing_dead_nodes(int clusterSize)
+		{
+			var leader = CreateNetworkAndGetLeader(clusterSize);
+
+			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+
+			foreach (var node in nodesToShutdown)
+			{
+				DisconnectNode(node.Name);
+				node.Dispose();
+			}
+
+			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
+			}
 
 			var newLeaderTask = WaitForNewLeaderAsync();
 
@@ -55,38 +117,146 @@ namespace Rachis.Tests
 					nodeRunning.UnsafeOperations.RemoveFromCluster(new NodeConnectionInfo { Name = nodeDown.Name });
 				}
 			}
-			
-			newLeaderTask.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
 
+			Assert.True(newLeaderTask.Wait(TimeSpan.FromSeconds(10)));
+
+			Assert.Equal(RaftEngineState.Leader, newLeaderTask.Result.State);
+		}
+
+		[Theory]
+		[InlineData(3)]
+		[InlineData(4)]
+		[InlineData(5)]
+		public void new_leader_is_selected_after_adding_new_nodes_and_removing_dead_onces(int clusterSize)
+		{
+			var leader = CreateNetworkAndGetLeader(clusterSize);
+
+			var quorumSize = leader.CurrentTopology.QuorumSize;
+
+			var nodesToShutdown = GetRandomNodes(quorumSize);
+
+			foreach (var node in nodesToShutdown)
+			{
+				DisconnectNode(node.Name);
+				node.Dispose();
+			}
+
+			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
+			}
+
+			var newNodes = Enumerable.Range(0, quorumSize).Select(x =>
+			{
+				Thread.Sleep(new Random().Next(2000));
+				return NewNodeFor(leader);
+			}).ToList();
+
+			var newLeaderTask = WaitForNewLeaderAsync(runningNodes.Union(newNodes).ToList());
+
+			foreach (var newNode in newNodes)
+			{
+				foreach (var nodeRunning in runningNodes)
+				{
+					nodeRunning.UnsafeOperations.AddToCluster(new NodeConnectionInfo { Name = newNode.Name });
+				}
+			}
+
+			foreach (var nodeDown in nodesToShutdown)
+			{
+				foreach (var nodeRunning in runningNodes)
+				{
+					nodeRunning.UnsafeOperations.RemoveFromCluster(new NodeConnectionInfo { Name = nodeDown.Name });
+				}
+			}
+
+			Assert.True(newLeaderTask.Wait(TimeSpan.FromSeconds(10)));
+
+			Assert.Equal(RaftEngineState.Leader, newLeaderTask.Result.State);
+
+			Assert.True(runningNodes.Contains(newLeaderTask.Result)); // leader should be selected from already running nodes
+		}
+
+		[Theory]
+		[InlineData(3)]
+		[InlineData(4)]
+		[InlineData(5)]
+		public void after_retrieving_majority_can_operate_as_usual(int clusterSize)
+		{
+			var leader = CreateNetworkAndGetLeader(clusterSize);
+
+			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+
+			foreach (var node in nodesToShutdown)
+			{
+				DisconnectNode(node.Name);
+				node.Dispose();
+			}
+
+			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
+			}
+
+			var newLeaderTask = WaitForNewLeaderAsync();
+
+			foreach (var nodeDown in nodesToShutdown)
+			{
+				foreach (var nodeRunning in runningNodes)
+				{
+					nodeRunning.UnsafeOperations.RemoveFromCluster(new NodeConnectionInfo { Name = nodeDown.Name });
+				}
+			}
+
+			Assert.True(newLeaderTask.Wait(TimeSpan.FromSeconds(10)));
+			
 			leader = newLeaderTask.Result;
-			
-			leader.State.Should().Be(RaftEngineState.Leader);
 
-			cmd = new DictionaryCommand.Set
+			Assert.Equal(RaftEngineState.Leader, leader.State);
+
+			var cmd = new DictionaryCommand.Set
 			{
 				Key = "b",
 				Value = 1
 			};
 
-			waitForCommitsOnCluster = WaitForCommitsOnCluster(machine => machine.LastAppliedIndex == cmd.AssignedIndex, runningNodes);
+			var waitForCommitsOnCluster = WaitForCommitsOnCluster(machine => machine.LastAppliedIndex == cmd.AssignedIndex, runningNodes);
 
 			leader.AppendCommand(cmd);
 
-			waitForCommitsOnCluster.Wait(3000).Should().BeTrue();
+			Assert.True(waitForCommitsOnCluster.Wait(3000));
 
 			using (var additionalNode = NewNodeFor(leader))
 			{
-				var waitForToplogyChangeOnCluster = WaitForToplogyChangeOnCluster(runningNodes.Union(new [] {additionalNode}).ToList());
+				var additinalNodeHasAllRunningNodesInTopology = new ManualResetEventSlim();
+
+				additionalNode.TopologyChanged += x =>
+				{
+					foreach (var runningNode in runningNodes)
+					{
+						if (x.Requested.Contains(runningNode.Name) == false)
+							return;
+					}
+
+					additinalNodeHasAllRunningNodesInTopology.Set();
+				};
+
+				var additionalNodeAddedToCluster = WaitForToplogyChangeOnCluster(runningNodes);
 
 				leader.AddToClusterAsync(new NodeConnectionInfo { Name = additionalNode.Name }).Wait();
 
-				waitForToplogyChangeOnCluster.Wait(3000).Should().BeTrue();
+				Assert.True(additionalNodeAddedToCluster.Wait(3000));
 
 				foreach (var node in runningNodes)
 				{
-					node.CurrentTopology.Contains(additionalNode.Name).Should().BeTrue();
-					additionalNode.CurrentTopology.Contains(node.Name).Should().BeTrue(); // TODO arek - need to wait for 2 topology changed events on this node?
+					Assert.True(node.CurrentTopology.Contains(additionalNode.Name));
 				}
+
+				Assert.True(additinalNodeHasAllRunningNodesInTopology.Wait(3000));
 			}
 		}
 	}

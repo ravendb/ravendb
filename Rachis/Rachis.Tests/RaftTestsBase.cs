@@ -197,10 +197,10 @@ namespace Rachis.Tests
 			return cde;
 		}
 
-		protected Task<RaftEngine> WaitForNewLeaderAsync()
+		protected Task<RaftEngine> WaitForNewLeaderAsync(List<RaftEngine> raftNodes = null)
 		{
 			var rcs = new TaskCompletionSource<RaftEngine>();
-			foreach (var node in _nodes)
+			foreach (var node in raftNodes ?? _nodes)
 			{
 				var n = node;
 
