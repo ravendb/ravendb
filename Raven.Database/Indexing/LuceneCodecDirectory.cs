@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Lucene.Net.Store;
@@ -124,14 +125,16 @@ namespace Raven.Database.Indexing
 		    private readonly byte* basePtr;
             private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
-		    public class MmapStream : Stream
+		    private class MmapStream : Stream
 		    {
+		        private readonly string name;
 		        private readonly byte* ptr;
 		        private readonly long len;
 		        private long pos;
 
-		        public MmapStream(byte* ptr, long len)
+		        public MmapStream(string name, byte* ptr, long len)
 		        {
+		            this.name = name;
 		            this.ptr = ptr;
 		            this.len = len;
 		        }
@@ -164,14 +167,23 @@ namespace Raven.Database.Indexing
                     throw new NotSupportedException();
 		        }
 
+                [HandleProcessCorruptedStateExceptions]
 		        public override int ReadByte()
 		        {
 		            if (Position == len)
 		                return -1;
-		            return ptr[pos++];
+                    try
+                    {
+                        return ptr[pos++];
+                    }
+                    catch (AccessViolationException)
+                    {
+                        throw new ObjectDisposedException("MmapStream", "Cannot access '"+name+"' because the index input has been disposed");
+                    }
 		        }
 
-		        public override int Read(byte[] buffer, int offset, int count)
+                [HandleProcessCorruptedStateExceptions]
+                public override int Read(byte[] buffer, int offset, int count)
 		        {
 		            if (pos == len)
 		                return 0;
@@ -179,10 +191,17 @@ namespace Raven.Database.Indexing
 		            {
 		                count = (int) (len - pos);
 		            }
-		            fixed (byte* dst = buffer)
-		            {
-		                Memory.CopyInline(dst + offset, ptr + pos, count);
-		            }
+                    try
+                    {
+                        fixed (byte* dst = buffer)
+                        {
+                            Memory.CopyInline(dst + offset, ptr + pos, count);
+                        }
+                    }
+                    catch (AccessViolationException)
+                    {
+                        throw new ObjectDisposedException("MmapStream", "Cannot access '" + name + "' because the index input has been disposed");
+                    }
 		            pos += count;
 		            return count;
 		        }
@@ -247,7 +266,7 @@ namespace Raven.Database.Indexing
                     if (basePtr == null)
                         throw new Win32Exception();
 
-                    stream = applyCodecs(new MmapStream(basePtr, file.Length));
+                    stream = applyCodecs(new MmapStream(file.FullName, basePtr, file.Length));
 		        }
 		        catch (Exception)
 		        {
@@ -264,7 +283,7 @@ namespace Raven.Database.Indexing
                 var clone = (CodecIndexInput) base.Clone();
                 GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
-                clone.stream = applyCodecs(new MmapStream(basePtr, file.Length));
+                clone.stream = applyCodecs(new MmapStream(file.FullName, basePtr, file.Length));
 		        clone.stream.Position = stream.Position;
                 return clone;
 		    }

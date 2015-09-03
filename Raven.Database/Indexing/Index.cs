@@ -1914,14 +1914,14 @@ namespace Raven.Database.Indexing
 		        // user has specifically configured this value, but we don't trust it.
            
 		        var actualIndexOutput = maxActualIndexOutput;
-		        if (actualIndexOutput > numberOfAlreadyProducedOutputs)
+		        if (actualIndexOutput < numberOfAlreadyProducedOutputs)
 		        {
 		            // okay, now let verify that this is indeed the case, in thread safe manner,
                     // this way, most of the time we don't need volatile reads, and other sync operations
                     // in the code ensure we don't have too stale a view on the data (beside, stale view have
                     // to mean a smaller number, which we then verify).
 		            actualIndexOutput = Thread.VolatileRead(ref maxActualIndexOutput);
-		            while (actualIndexOutput > numberOfAlreadyProducedOutputs)
+		            while (actualIndexOutput < numberOfAlreadyProducedOutputs)
 		            {
                         // if it changed, we don't care, it is just another max, and another thread probably
                         // set it for us, so we only retry if this is still smaller
