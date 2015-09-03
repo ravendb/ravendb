@@ -477,14 +477,23 @@ namespace Sparrow.Collections
                 // If the cut point was low and the exit node internal
                 if (isCutLow && exitNodeAsInternal != null)
                 {
-                    Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Replace Cut-Low");
+#endif
                     uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
+
+                    Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
+                    Debug.Assert(hash == ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Handle(this), hashState, exitNodeHandleLength));
                     
                     this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
 
                     exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
 
-                    hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this));                                       
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Insert Cut-Low");
+#endif
+
+                    hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this), cutPoint.LongestPrefix);                                       
                     this.NodesTable.Add(exitNodeAsInternal, hash);
 
                     //  We update the jumps for the exit node.                
@@ -494,7 +503,9 @@ namespace Sparrow.Collections
                 {
                     //  We add the internal node to the jump table.                
                     exitNode.NameLength = cutPoint.LongestPrefix + 1;
-
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Insert Cut-High");
+#endif
                     uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));                  
 
                     this.NodesTable.Add(newInternal, hash);
@@ -937,7 +948,7 @@ namespace Sparrow.Collections
             // We need to find the length of the longest common prefix between the key and the extent of the parex(key).
             lcpLength = Math.Min(parexOrExitNode.ExtentLength, lcpLength);
 
-            Contract.Assert(lcpLength == searchKey.LongestCommonPrefixLength(parexOrExitNode.Extent(this)));
+            Debug.Assert(lcpLength == searchKey.LongestCommonPrefixLength(parexOrExitNode.Extent(this)));
 
             int startPoint;
             if ( parexOrExitNode.IsExitNodeOf(this, length, lcpLength) )

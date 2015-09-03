@@ -245,7 +245,56 @@ namespace Sparrow.Tests
 
             ZFastTrieDebugHelpers.DumpKeys(tree);
             Console.WriteLine();
-            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
+
+        [Fact]
+        public void Hashing_CalculatePartial_Issue()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            BitVector v1 = BitVector.Parse("000000000110");
+            var v1State = Hashing.Iterative.XXHash32.Preprocess(v1.Bits);
+
+            BitVector v2 = BitVector.Parse("0000000000110");
+            var v2State = Hashing.Iterative.XXHash32.Preprocess(v2.Bits);
+
+            uint v1Hash = ZFastTrieSortedSet<string, string>.ZFastNodesTable.CalculateHashForBits(v1, v1State, 12);
+            uint v2Hash = ZFastTrieSortedSet<string, string>.ZFastNodesTable.CalculateHashForBits(v2, v2State, 13);
+
+            Assert.NotEqual(v1Hash, v2Hash);
+
+
+            v1 = BitVector.Of(0xDEAD, 0xBEEF, 0xDEAD);
+            v1State = Hashing.Iterative.XXHash32.Preprocess(v1.Bits);
+
+            v2 = BitVector.Of(0xDEAD, 0xBEEF, 0xBEAF);
+            v2State = Hashing.Iterative.XXHash32.Preprocess(v2.Bits);
+
+            v1Hash = ZFastTrieSortedSet<string, string>.ZFastNodesTable.CalculateHashForBits(v1, v1State, v1.Count);
+            v2Hash = ZFastTrieSortedSet<string, string>.ZFastNodesTable.CalculateHashForBits(v2, v2State, v2.Count);
+
+            Assert.NotEqual(v1Hash, v2Hash);
+
+        }
+
+        [Fact]
+        public void Structure_NodesTable_FailedTableVerify()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            tree.Add("R", "1q");
+            tree.Add("F", "3n");
+            tree.Add("O", "6e");
+            tree.Add("E", "Fs");
+            tree.Add("Lr", "LD");
+            tree.Add("L5", "MU");
+
+            Console.WriteLine();
+            Console.WriteLine(tree.NodesTable.DumpTable());
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -261,8 +310,11 @@ namespace Sparrow.Tests
 
             ZFastTrieDebugHelpers.DumpKeys(tree);
             Console.WriteLine();
-            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
+
+
+
 
 
 
@@ -300,8 +352,8 @@ namespace Sparrow.Tests
         {
             var generator = new Random(100);
 
-            int count = 4;
-            int size = 1;
+            int count = 1000;
+            int size = 5;
             for ( int i = 0; i < 1; i++ )
             {
                 var keys = new string[count];
@@ -310,7 +362,7 @@ namespace Sparrow.Tests
 
                 try
                 {                  
-                    for (int j = 0; j < count; i++)
+                    for (int j = 0; j < count; j++)
                     {
                         string key = GenerateRandomString(generator, size);
 
@@ -496,6 +548,8 @@ namespace Sparrow.Tests
             }
 
             Assert.Equal(0, nodes.Count);
+
+            Assert.DoesNotThrow(() => tree.NodesTable.VerifyStructure());
         }
 
         private static int VisitNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node,
@@ -558,6 +612,6 @@ namespace Sparrow.Tests
 
                 return 1;
             }
-        }
+        }       
     }
 }

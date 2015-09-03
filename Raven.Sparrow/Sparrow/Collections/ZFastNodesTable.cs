@@ -19,18 +19,17 @@ namespace Sparrow.Collections
 
             public const int InvalidNodePosition = -1;
 
-            private const uint kHashMask = 0xFFFFFFFE;
-            private const uint kUnusedHash = 0xFFFFFFFF;
-            private const uint kDeletedHash = 0xFFFFFFFE;
+            private const uint kDeleted = 0xFFFFFFFE;
+            private const uint kUnused = 0xFFFFFFFF;            
 
-            private const uint kUnusedSignature = 0;
+            private const uint kHashMask = 0xFFFFFFFE;            
             private const uint kSignatureMask = 0x7FFFFFFE;
             private const uint kDuplicatedMask = 0x80000000;
 
             /// <summary>
             /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinCapacity.
             /// </summary>
-            private const int kInitialCapacity = 64;
+            private const int kInitialCapacity = 64;            
 
             /// <summary>
             /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinCapacity.
@@ -93,7 +92,7 @@ namespace Sparrow.Collections
 
                 // Initialization
                 this._entries = new Entry[newCapacity];
-                BlockCopyMemoryHelper.Memset(this._entries, new Entry(kUnusedHash, kUnusedSignature, default(Internal)));
+                BlockCopyMemoryHelper.Memset(this._entries, new Entry(kUnused, kUnused, default(Internal)));
 
                 this._capacity = newCapacity;
 
@@ -107,10 +106,10 @@ namespace Sparrow.Collections
 
             public void Add(Internal node, uint signature)
             {
-                ResizeIfNeeded();
+                ResizeIfNeeded();                
 
                 // We shrink the signature to the proper size (31 bits)
-                signature = signature & kSignatureMask;
+                signature = signature & kSignatureMask;                
 
                 int hash = GetInternalHashCode(signature);
                 int bucket = hash % _capacity;
@@ -123,14 +122,14 @@ namespace Sparrow.Collections
                         _entries[bucket].Signature |= kDuplicatedMask;
 
                     uint nHash = _entries[bucket].Hash;
-                    if (nHash == kUnusedHash)
+                    if (nHash == kUnused)
                     {
                         _numberOfUsed++;
                         _size++;
 
                         goto SET;
                     }
-                    else if (nHash == kDeletedHash)
+                    else if (nHash == kDeleted)
                     {
                         _numberOfDeleted--;
                         _size++;
@@ -147,10 +146,17 @@ namespace Sparrow.Collections
                 this._entries[bucket].Hash = uhash;
                 this._entries[bucket].Signature = signature;
                 this._entries[bucket].Node = node;
+
+#if DETAILED_DEBUG_H
+                Console.WriteLine(string.Format("Add: {0}, Bucket: {1}, Signature: {2}", node.ToDebugString(this.owner), bucket, signature));
+#endif
+#if VERIFY
+                VerifyStructure();
+#endif
             }
 
             public void Replace(Internal oldNode, Internal newNode, uint signature)
-            {
+            {                
                 // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
@@ -159,7 +165,7 @@ namespace Sparrow.Collections
 
                 int numProbes = 1;
 
-                while (this._entries[pos].Node != oldNode )
+                while (this._entries[pos].Node != oldNode)
                 {
                     pos = (pos + numProbes) % _capacity;
                     numProbes++;
@@ -167,21 +173,37 @@ namespace Sparrow.Collections
 
                 Debug.Assert(this._entries[pos].Node != null);
                 Debug.Assert(this._entries[pos].Hash == (uint) hash );
-                Debug.Assert(oldNode.Handle(this.owner).CompareTo(newNode.Handle(this.owner)) == 0);
+                Debug.Assert(this._entries[pos].Node.Handle(this.owner).CompareTo(newNode.Handle(this.owner)) == 0);
 
                 this._entries[pos].Node = newNode;
+
+#if DETAILED_DEBUG_H
+                Console.WriteLine(string.Format("Old: {0}, Bucket: {1}, Signature: {2}", oldNode.ToDebugString(this.owner), pos, hash, signature));
+                Console.WriteLine(string.Format("New: {0}", newNode.ToDebugString(this.owner)));
+#endif
+
+#if VERIFY
+                VerifyStructure();
+#endif
+
             }
 
             public int GetPosition(BitVector key, int prefixLength, uint signature, bool isExact)
             {
+                // We shrink the signature to the proper size (30 bits)
+                signature = signature & kSignatureMask;
+
+                int position;
                 if (isExact)
                 {
-                    return GetExactPosition(key, prefixLength, signature & kSignatureMask);
+                    position = GetExactPosition(key, prefixLength, signature);
                 }
                 else
                 {
-                    return GetPosition(key, prefixLength, signature & kSignatureMask);
+                    position = GetPosition(key, prefixLength, signature);
                 }
+
+                return position;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -194,12 +216,11 @@ namespace Sparrow.Collections
                 uint nSignature;
                 do
                 {
-                    nSignature = this._entries[pos].Signature;
-
-                    var node = this._entries[pos].Node;
+                    nSignature = this._entries[pos].Signature;                    
 
                     if ((nSignature & kSignatureMask) == signature)
                     {
+                        var node = this._entries[pos].Node;
                         if (node.GetHandleLength(this.owner) == prefixLength && key.IsPrefix(node.ReferencePtr.Name(this.owner), prefixLength))
                             return pos;
                     }
@@ -209,7 +230,7 @@ namespace Sparrow.Collections
 
                     Debug.Assert(numProbes < 100);
                 }
-                while (nSignature != kUnusedSignature);
+                while (nSignature != kUnused);
 
                 return -1;
             }
@@ -242,7 +263,7 @@ namespace Sparrow.Collections
 
                     Debug.Assert(numProbes < 100);
                 }
-                while (nSignature != kUnusedSignature);
+                while (nSignature != kUnused);
 
                 return -1;
             }
@@ -278,6 +299,38 @@ namespace Sparrow.Collections
                 return builder.ToString();
             }
 
+            internal string DumpTable()
+            {
+                var builder = new StringBuilder();
+
+                bool first = true;
+                builder.AppendLine("NodesTable: {");
+
+                for ( int i = 0; i < this._entries.Length; i++ )
+                {  
+                    var entry = this._entries[i];
+                    if (entry.Hash != kUnused)
+                    {
+                        var node = entry.Node;
+
+                        builder.Append("Signature:")
+                               .Append(entry.Signature & kSignatureMask)
+                               .Append((entry.Signature & kDuplicatedMask) != 0 ? "-dup" : string.Empty)
+                               .Append(" Hash: ")
+                               .Append(entry.Hash)
+                               .Append(" Node: ")
+                               .Append(node.Handle(this.owner).ToDebugString())
+                               .Append(" => ")
+                               .Append(node.ToDebugString(this.owner))
+                               .AppendLine();
+                    }
+                }
+
+                builder.AppendLine("}");
+
+                return builder.ToString();
+            }
+
             public KeyCollection Keys
             {
                 get { return new KeyCollection(this); }
@@ -308,7 +361,7 @@ namespace Sparrow.Collections
                 Contract.Ensures((_capacity & (_capacity - 1)) == 0);
 
                 var entries = new Entry[newCapacity];
-                BlockCopyMemoryHelper.Memset(entries, new Entry(kUnusedHash, kUnusedSignature, default(Internal)));
+                BlockCopyMemoryHelper.Memset(entries, new Entry(kUnused, kUnused, default(Internal)));
 
                 Rehash(entries);
             }
@@ -329,25 +382,25 @@ namespace Sparrow.Collections
                 for (int it = 0; it < _entries.Length; it++)
                 {
                     uint hash = _entries[it].Hash;
-                    if (hash >= kDeletedHash) // No interest for the process of rehashing, we are skipping it.
+                    if (hash >= kDeleted) // No interest for the process of rehashing, we are skipping it.
                         continue;
 
-                    uint signature = _entries[it].Hash & kSignatureMask;
+                    uint signature = _entries[it].Signature & kSignatureMask;
 
                     uint bucket = hash % capacity;
 
-                    uint numProbes = 0;
-                    while (!(entries[bucket].Hash == kUnusedHash))
+                    uint numProbes = 1;
+                    while (!(entries[bucket].Hash == kUnused))
                     {                        
                         if (entries[bucket].Signature == signature)
                             entries[bucket].Signature |= kDuplicatedMask;
-
-                        numProbes++;
+                       
                         bucket = (bucket + numProbes) % capacity;
+                        numProbes++;
                     }
 
                     entries[bucket].Hash = hash;
-                    entries[bucket].Signature = _entries[it].Signature;
+                    entries[bucket].Signature = signature;
                     entries[bucket].Node = _entries[it].Node;
 
                     size++;
@@ -396,7 +449,7 @@ namespace Sparrow.Collections
 
                     for (int i = 0; i < count; i++)
                     {
-                        if (entries[i].Hash < kDeletedHash)
+                        if (entries[i].Hash < kDeleted)
                             array[index++] = entries[i].Node.Handle(dictionary.owner);
                     }
                 }
@@ -443,7 +496,7 @@ namespace Sparrow.Collections
                         var entries = dictionary._entries;
                         while (index < count)
                         {
-                            if (entries[index].Hash < kDeletedHash)
+                            if (entries[index].Hash < kDeleted)
                             {
                                 currentKey = entries[index].Node.Handle(dictionary.owner);
                                 index++;
@@ -518,7 +571,7 @@ namespace Sparrow.Collections
                     var entries = dictionary._entries;
                     for (int i = 0; i < count; i++)
                     {
-                        if (entries[i].Hash < kDeletedHash)
+                        if (entries[i].Hash < kDeleted)
                             array[index++] = entries[i].Node;
                     }
                 }
@@ -564,7 +617,7 @@ namespace Sparrow.Collections
                         var entries = dictionary._entries;
                         while (index < count)
                         {
-                            if (entries[index].Hash < kDeletedHash)
+                            if (entries[index].Hash < kDeleted)
                             {
                                 currentValue = entries[index].Node;
                                 index++;
@@ -604,7 +657,7 @@ namespace Sparrow.Collections
                 }
             }
 
-            internal static uint CalculateHashForBits(BitVector vector, Hashing.Iterative.XXHash32Block state, int length = int.MaxValue)
+            internal static uint CalculateHashForBits(BitVector vector, Hashing.Iterative.XXHash32Block state, int length = int.MaxValue, int lcp = int.MaxValue)
             {
                 length = Math.Min(vector.Count, length); // Ensure we use the proper value.
 
@@ -612,29 +665,126 @@ namespace Sparrow.Collections
                 int remaining = length % BitVector.BitsPerWord;
 
                 ulong remainingWord = 0;
+                int shift = 0;
                 if (remaining != 0)
                 {
                     remainingWord = vector.GetWord(bytes); // Zero addressing ensures we get the next byte.
-                    remainingWord >>= BitVector.BitsPerWord - remaining;
+                    shift = BitVector.BitsPerWord - remaining;
                 }
 
                 unsafe
                 {
                     fixed (ulong* bitsPtr = vector.Bits)
                     {
-                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, bytes, state);
+                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, bytes, state, lcp / BitVector.BitsPerByte);
 
-                        uint upper = (uint)(remainingWord >> 32);
-                        uint bottom = (uint)remainingWord;
+                        uint* combine = stackalloc uint[4];
+                        ((ulong*)combine)[0] = ((remainingWord) >> shift) << shift;
+                        combine[2] = (uint)remaining;
+                        combine[3] = hash;
 
-                        hash = Hashing.CombineInline(hash, Hashing.CombineInline(Hashing.CombineInline(upper, bottom), (uint)length));
-
-#if DETAILED_DEBUG
-                        Console.WriteLine(string.Format("\tHash -> Hash: {0}, Remaining: {2}, Bits({1})", hash, remaining, remainingWord));
+                        hash = Hashing.XXHash32.Calculate((byte*)combine, 4 * sizeof(uint));
+#if DETAILED_DEBUG_H
+                        Console.WriteLine(string.Format("\tHash -> Hash: {0}, Remaining: {2}, Bits({1}), Vector:{3}", hash, remaining, remainingWord, vector.SubVector(0, length).ToBinaryString()));
 #endif
                         return hash;
                     }
                 }
+            }
+
+            private void Verify(Func<bool> action)
+            {
+                
+                if (action() == false)
+                    throw new Exception("Fail");
+            }
+
+            internal void VerifyStructure ()
+            {
+                int count = 0;
+                for ( int i = 0; i < this._entries.Length; i++ )
+                {
+                    if ( this._entries[i].Node != null )
+                    {
+                        var handle = this._entries[i].Node.Handle ( this.owner);                        
+                        var hashState = Hashing.Iterative.XXHash32.Preprocess(handle.Bits);
+                        
+                        uint hash = CalculateHashForBits( handle, hashState );
+
+                        int position = GetExactPosition(handle, handle.Count, hash & kSignatureMask);
+
+                        Verify(() => position != -1);
+                        Verify(() => this._entries[i].Node == this._entries[position].Node);
+                        Verify(() => this._entries[i].Hash == GetInternalHashCode(hash & kSignatureMask));
+                        Verify(() => i == position);
+
+                        count++;
+                    }
+                }
+
+                Verify(() => count == this.Count);
+
+                if (count == 0)
+                    return;
+
+                var overallHashes = new HashSet<uint>();
+                int start = 0;
+                int first = -1;
+                while (this._entries[start].Node != null)
+                {
+                    Verify(() => this._entries[start].Hash != kUnused);
+                    Verify(() => this._entries[start].Signature != kUnused);
+
+                    start = (start + 1) % _capacity;
+                }
+
+                do
+                {
+                    while (this._entries[start].Node == null)
+                    {
+                        Verify(() => this._entries[start].Hash == kUnused);
+                        Verify(() => this._entries[start].Signature == kUnused);
+
+                        start = (start + 1) % _capacity;
+                    }
+
+                    if (first == -1)
+                        first = start;
+                    else if (first == start)
+                        break;
+
+                    int end = start;
+                    while (this._entries[end].Node != null)
+                    {
+                        Verify(() => this._entries[end].Hash != kUnused);
+                        Verify(() => this._entries[end].Signature != kUnused && this._entries[end].Signature != kDuplicatedMask);
+
+                        end = (end + 1) % _capacity;
+                    }
+
+                    var hashesSeen = new HashSet<uint>();
+                    var signaturesSeen = new HashSet<uint>();
+
+                    for ( int pos = end; pos != start; )
+                    {
+                        pos = (pos - 1) % _capacity;
+                        if (pos < 0)
+                            break;
+
+                        bool newSignature = signaturesSeen.Add(this._entries[pos].Signature & kSignatureMask);
+                        Verify(() => newSignature != ((this._entries[pos].Signature & kDuplicatedMask) != 0));
+                        hashesSeen.Add(this._entries[pos].Hash);
+                    }
+
+                    foreach (var hash in hashesSeen)
+                    {
+                        bool added = overallHashes.Add(hash);
+                        Verify(() => added);
+                    }
+
+                    start = end;
+                }
+                while (true);
             }
 
             private class BlockCopyMemoryHelper
