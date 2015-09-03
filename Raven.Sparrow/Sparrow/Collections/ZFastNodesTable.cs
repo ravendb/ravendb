@@ -661,14 +661,14 @@ namespace Sparrow.Collections
             {
                 length = Math.Min(vector.Count, length); // Ensure we use the proper value.
 
-                int bytes = length / BitVector.BitsPerWord;
+                int words = length / BitVector.BitsPerWord;
                 int remaining = length % BitVector.BitsPerWord;
 
                 ulong remainingWord = 0;
                 int shift = 0;
                 if (remaining != 0)
                 {
-                    remainingWord = vector.GetWord(bytes); // Zero addressing ensures we get the next byte.
+                    remainingWord = vector.GetWord(words); // Zero addressing ensures we get the next byte.
                     shift = BitVector.BitsPerWord - remaining;
                 }
 
@@ -676,7 +676,7 @@ namespace Sparrow.Collections
                 {
                     fixed (ulong* bitsPtr = vector.Bits)
                     {
-                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, bytes, state, lcp / BitVector.BitsPerByte);
+                        uint hash = Hashing.Iterative.XXHash32.Calculate((byte*)bitsPtr, words * sizeof(ulong), state, lcp / BitVector.BitsPerByte);
 
                         uint* combine = stackalloc uint[4];
                         ((ulong*)combine)[0] = ((remainingWord) >> shift) << shift;

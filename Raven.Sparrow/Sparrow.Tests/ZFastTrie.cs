@@ -313,11 +313,36 @@ namespace Sparrow.Tests
             ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
+        [Fact]
+        public void Addition_FailureToPass_QuickPath()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
+            tree.Add("lJCn3J", string.Empty);
+            tree.Add("4wLolJ", string.Empty);
+            tree.Add("FZt4Dp", string.Empty);
+            tree.Add("8NSagc", string.Empty);
+            tree.Add("9eI05C", string.Empty);
+            tree.Add("C4gnS4", string.Empty);
+            tree.Add("PRjxjs", string.Empty);
+            tree.Add("3M7Oxy", string.Empty);
+            tree.Add("boKWpa", string.Empty);
+            tree.Add("FLnjoZ", string.Empty);
+            tree.Add("AE1Jlq", string.Empty);
+            tree.Add("mbHypw", string.Empty);
+            tree.Add("FLnjhT", string.Empty);
+            tree.Add("fvrTYR", string.Empty);
+            tree.Add("2pOGiH", string.Empty);
+            tree.Add("RpmKwf", string.Empty);
+            tree.Add("1ulQmV", string.Empty);
+            tree.Add("rn8YRe", string.Empty);
+            tree.Add("wfnTE2", string.Empty);
+            tree.Add("rqqjR5", string.Empty);
 
-
-
-
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+            Console.WriteLine();
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
 
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
