@@ -20,6 +20,8 @@ namespace Sparrow.Collections
     /// </summary>
     public sealed partial class ZFastTrieSortedSet<TKey, TValue> where TKey : IEquatable<TKey>
     {
+        private readonly static ObjectPool<Stack<Internal>> nodesStackPool = new ObjectPool<Stack<Internal>>(() => new Stack<Internal>());
+
         internal abstract class Node
         {
             public int NameLength;
@@ -395,136 +397,144 @@ namespace Sparrow.Collections
             }
 
             var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
-           
-            // We look for the parent of the exit node for the key.
-            Stack<Internal> stack = new Stack<Internal>();
-            var cutPoint = FindParentExitNode(searchKey, stack);
 
-            var exitNode = cutPoint.Exit;
+            // We look for the parent of the exit node for the key.
+            var stack = nodesStackPool.Allocate();
+            try
+            {
+                var cutPoint = FindParentExitNode(searchKey, hashState, stack);
+
+                var exitNode = cutPoint.Exit;
 
 #if DETAILED_DEBUG        
-            Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
+                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
 #endif
 
-            // If the exit node is a leaf and the key is equal to the LCP 
-            var exitNodeAsLeaf = exitNode as Leaf;
-            if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == cutPoint.LongestPrefix)
-                return false; // Then we are done (we found the key already).
+                // If the exit node is a leaf and the key is equal to the LCP 
+                var exitNodeAsLeaf = exitNode as Leaf;
+                if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == cutPoint.LongestPrefix)
+                    return false; // Then we are done (we found the key already).
 
-            var exitNodeAsInternal = exitNode as Internal; // Is the exit node internal?  
+                var exitNodeAsInternal = exitNode as Internal; // Is the exit node internal?  
 
-            int exitNodeHandleLength = exitNode.GetHandleLength(this);
-            bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
-            bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
+                int exitNodeHandleLength = exitNode.GetHandleLength(this);
+                bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
+                bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
 
 #if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
+                Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
 #endif
 
-            // Create a new internal node that will hold the new leaf.            
-            var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
-            var newInternal = new Internal(exitNode.NameLength, cutPoint.LongestPrefix);
+                // Create a new internal node that will hold the new leaf.            
+                var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
+                var newInternal = new Internal(exitNode.NameLength, cutPoint.LongestPrefix);
 
-            newInternal.ReferencePtr = newLeaf;
-            newLeaf.ReferencePtr = newInternal;            
+                newInternal.ReferencePtr = newLeaf;
+                newLeaf.ReferencePtr = newInternal;
 
-            // Link the internal and the leaf according to its exit direction.
-            if ( exitDirection )
-            {
-                newInternal.Right = newLeaf;
-                newInternal.JumpRightPtr = newLeaf;                
-
-                newInternal.Left = cutPoint.Exit;                
-                newInternal.JumpLeftPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpLeftPtr : cutPoint.Exit;  
-            }
-            else
-            {
-                newInternal.Left = newLeaf;
-                newInternal.JumpLeftPtr = newLeaf;
-                
-                newInternal.Right = cutPoint.Exit;
-                newInternal.JumpRightPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpRightPtr : cutPoint.Exit;  
-            }
-
-            // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
-            Debug.Assert(newInternal.IsInternal && newInternal.Left.Name(this)[newInternal.GetExtentLength(this)] == false);
-            Debug.Assert(newInternal.IsInternal && newInternal.Right.Name(this)[newInternal.GetExtentLength(this)] == true); 
-
-            // If the exit node is the root
-            bool isRightChild = cutPoint.IsRightChild;
-            if (exitNode == this.Root)
-            {
-                // Then update the root
-                this.Root = newInternal;
-            }
-            else
-            {
-                // Else update the parent exit node.
-                if ( isRightChild )
-                    cutPoint.Parent.Right = newInternal;
-                else
-                    cutPoint.Parent.Left = newInternal;
-            }           
-                        
-            // Update the jump table after the insertion.
-            if (exitDirection)
-                UpdateRightJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
-            else
-                UpdateLeftJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
-
-            unsafe
-            {
-                // If the cut point was low and the exit node internal
-                if (isCutLow && exitNodeAsInternal != null)
+                // Link the internal and the leaf according to its exit direction.
+                if (exitDirection)
                 {
-#if DETAILED_DEBUG_H
-                    Console.WriteLine("Replace Cut-Low");
-#endif
-                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
+                    newInternal.Right = newLeaf;
+                    newInternal.JumpRightPtr = newLeaf;
 
-                    Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
-                    Debug.Assert(hash == ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Handle(this), hashState, exitNodeHandleLength));
-                    
-                    this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
-
-                    exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
-
-#if DETAILED_DEBUG_H
-                    Console.WriteLine("Insert Cut-Low");
-#endif
-
-                    hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this), cutPoint.LongestPrefix);                                       
-                    this.NodesTable.Add(exitNodeAsInternal, hash);
-
-                    //  We update the jumps for the exit node.                
-                    UpdateJumps(exitNodeAsInternal);
+                    newInternal.Left = cutPoint.Exit;
+                    newInternal.JumpLeftPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpLeftPtr : cutPoint.Exit;
                 }
                 else
                 {
-                    //  We add the internal node to the jump table.                
-                    exitNode.NameLength = cutPoint.LongestPrefix + 1;
-#if DETAILED_DEBUG_H
-                    Console.WriteLine("Insert Cut-High");
-#endif
-                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));                  
+                    newInternal.Left = newLeaf;
+                    newInternal.JumpLeftPtr = newLeaf;
 
-                    this.NodesTable.Add(newInternal, hash);
+                    newInternal.Right = cutPoint.Exit;
+                    newInternal.JumpRightPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpRightPtr : cutPoint.Exit;
                 }
-            }
 
-            // Link the new leaf with it's predecessor and successor.
-            if ( exitDirection )
-                AddAfter(exitNode.GetRightLeaf(), newLeaf);
-            else
-                AddBefore(exitNode.GetLeftLeaf(), newLeaf);
+                // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
+                Debug.Assert(newInternal.IsInternal && newInternal.Left.Name(this)[newInternal.GetExtentLength(this)] == false);
+                Debug.Assert(newInternal.IsInternal && newInternal.Right.Name(this)[newInternal.GetExtentLength(this)] == true);
 
-            size++;
+                // If the exit node is the root
+                bool isRightChild = cutPoint.IsRightChild;
+                if (exitNode == this.Root)
+                {
+                    // Then update the root
+                    this.Root = newInternal;
+                }
+                else
+                {
+                    // Else update the parent exit node.
+                    if (isRightChild)
+                        cutPoint.Parent.Right = newInternal;
+                    else
+                        cutPoint.Parent.Left = newInternal;
+                }
+
+                // Update the jump table after the insertion.
+                if (exitDirection)
+                    UpdateRightJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
+                else
+                    UpdateLeftJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
+
+                unsafe
+                {
+                    // If the cut point was low and the exit node internal
+                    if (isCutLow && exitNodeAsInternal != null)
+                    {
+#if DETAILED_DEBUG_H
+                        Console.WriteLine("Replace Cut-Low");
+#endif
+                        uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
+
+                        Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
+                        Debug.Assert(hash == ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Handle(this), hashState, exitNodeHandleLength));
+
+                        this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
+
+                        exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
+
+#if DETAILED_DEBUG_H
+                        Console.WriteLine("Insert Cut-Low");
+#endif
+
+                        hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this), cutPoint.LongestPrefix);
+                        this.NodesTable.Add(exitNodeAsInternal, hash);
+
+                        //  We update the jumps for the exit node.                
+                        UpdateJumps(exitNodeAsInternal);
+                    }
+                    else
+                    {
+                        //  We add the internal node to the jump table.                
+                        exitNode.NameLength = cutPoint.LongestPrefix + 1;
+#if DETAILED_DEBUG_H
+                        Console.WriteLine("Insert Cut-High");
+#endif
+                        uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));
+
+                        this.NodesTable.Add(newInternal, hash);
+                    }
+                }
+
+                // Link the new leaf with it's predecessor and successor.
+                if (exitDirection)
+                    AddAfter(exitNode.GetRightLeaf(), newLeaf);
+                else
+                    AddBefore(exitNode.GetLeftLeaf(), newLeaf);
+
+                size++;
 
 #if DETAILED_DEBUG
-            Console.WriteLine(this.NodesTable.DumpNodesTable(this));
+                Console.WriteLine(this.NodesTable.DumpNodesTable(this));
 #endif
 
-            return true;
+                return true;
+            }
+            finally
+            {
+                stack.Clear();
+                nodesStackPool.Free(stack);
+            }
         }
 
         private void UpdateJumps(Internal node)
@@ -913,7 +923,7 @@ namespace Sparrow.Collections
         }
 
 
-        private CutPoint FindParentExitNode(BitVector searchKey, Stack<Internal> stack = null)
+        private CutPoint FindParentExitNode(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack)
         {
             Contract.Requires(size != 0);
 #if DETAILED_DEBUG
@@ -921,13 +931,9 @@ namespace Sparrow.Collections
 #endif
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
-                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);
-            
-            if (stack == null)
-                stack = new Stack<Internal>();
+                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);                          
 
             int length = searchKey.Count;
-            var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
             Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, length, isExact: false);
@@ -1009,7 +1015,7 @@ namespace Sparrow.Collections
             return new CutPoint(lcpLength, parentNode, parexOrExitNode, searchKey);
         }
 
-        private ExitNode FindExitNode(TKey key, Stack<Internal> stack = null)
+        private ExitNode FindExitNode(TKey key)
         {
             Contract.Requires(size != 0);
 
@@ -1019,13 +1025,11 @@ namespace Sparrow.Collections
             if (size == 1)
                 return new ExitNode(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), this.Root, searchKey);
 
-            if (stack == null)
-                stack = new Stack<Internal>();
-
+            // We look for the parent of the exit node for the key.
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
-            Internal parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count, isExact: false);
+            Internal parexOrExitNode = FatBinarySearch(searchKey, state, -1, searchKey.Count, isExact: false);
 
             // Check if the node is either the parex(key) and/or exit(key). 
             Node candidateNode;
@@ -1040,12 +1044,12 @@ namespace Sparrow.Collections
             if (candidateNode.IsExitNodeOf(this, searchKey.Count, lcpLength))
                 return new ExitNode(lcpLength, candidateNode, searchKey);
 
-            lcpLength = Math.Min( parexOrExitNode.ExtentLength, lcpLength );
+            lcpLength = Math.Min(parexOrExitNode.ExtentLength, lcpLength);
             if (parexOrExitNode.IsExitNodeOf(this, searchKey.Count, lcpLength))
                 return new ExitNode(lcpLength, parexOrExitNode, searchKey);
 
             // With very low priority we screw up and therefore we start again but without skipping anything. 
-            parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, searchKey.Count, isExact: true);
+            parexOrExitNode = FatBinarySearch(searchKey, state, -1, searchKey.Count, isExact: true);
             if (parexOrExitNode.Extent(this).IsProperPrefix(searchKey))
             {
                 if (parexOrExitNode.ExtentLength < searchKey.Count && searchKey[parexOrExitNode.ExtentLength])
@@ -1067,6 +1071,7 @@ namespace Sparrow.Collections
             Contract.Requires(state != null);
             Contract.Requires(stack != null);
             Contract.Requires(startBit < endBit - 1);
+
 #if DETAILED_DEBUG
             Console.WriteLine(string.Format("FatBinarySearch({0},{1},({2}..{3})", searchKey.ToDebugString(), DumpStack(stack), startBit, endBit));
 #endif
@@ -1083,10 +1088,13 @@ namespace Sparrow.Collections
                 startBit = top.ExtentLength;
             }
 
+            var nodesTable = this.NodesTable;
+
             uint checkMask = (uint)(-1 << Bits.CeilLog2(endBit - startBit));
             while (endBit - startBit > 0)
             {
                 Contract.Assert(checkMask != 0);
+
 #if DETAILED_DEBUG
                 Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
 #endif
@@ -1097,12 +1105,13 @@ namespace Sparrow.Collections
                     Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
 #endif
                     // We calculate the hash up to the word it makes sense. 
-                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);     
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);
 
-                    int position = this.NodesTable.GetPosition(searchKey, current, hash, isExact);
-                    
-                    Internal item = position != -1 ? this.NodesTable[position] : null;
-                    if ( item == null || item.ExtentLength < current )
+                    int position = isExact ? nodesTable.GetExactPosition(searchKey, current, hash)
+                                           : nodesTable.GetPosition(searchKey, current, hash);
+
+                    Internal item = position != -1 ? nodesTable[position] : null;
+                    if (item == null || item.ExtentLength < current)
                     {
 #if DETAILED_DEBUG
                         Console.WriteLine("Missing " + ((isExact) ? "exact" : "non exact"));
@@ -1116,8 +1125,7 @@ namespace Sparrow.Collections
 #endif
                         // Add it to the stack, update search and continue
                         top = item;
-                        if (stack != null)
-                            stack.Push(top);
+                        stack.Push(top);
 
                         startBit = item.ExtentLength;
                     }
@@ -1132,6 +1140,77 @@ namespace Sparrow.Collections
             return top;
         }
 
+        private unsafe Internal FatBinarySearch(BitVector searchKey, Hashing.Iterative.XXHash32Block state, int startBit, int endBit, bool isExact)
+        {
+            Contract.Requires(searchKey != null);
+            Contract.Requires(state != null);
+            Contract.Requires(startBit < endBit - 1);
+
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("FatBinarySearch({0},({1}..{2})", searchKey.ToDebugString(), startBit, endBit));
+#endif
+            endBit--;
+
+            Internal top = null;
+
+            if (startBit == -1)
+            {
+                Contract.Assert(this.Root is Internal);
+
+                top = (Internal)this.Root;
+                startBit = top.ExtentLength;
+            }
+
+            var nodesTable = this.NodesTable;
+
+            uint checkMask = (uint)(-1 << Bits.CeilLog2(endBit - startBit));
+            while (endBit - startBit > 0)
+            {
+                Contract.Assert(checkMask != 0);
+
+#if DETAILED_DEBUG
+                Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
+#endif
+                int current = endBit & (int)checkMask;
+                if ((startBit & checkMask) != current)
+                {
+#if DETAILED_DEBUG
+                    Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
+#endif
+                    // We calculate the hash up to the word it makes sense. 
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);
+
+                    int position = isExact ? nodesTable.GetExactPosition(searchKey, current, hash)
+                                           : nodesTable.GetPosition(searchKey, current, hash);
+
+                    Internal item = position != -1 ? nodesTable[position] : null;
+                    if (item == null || item.ExtentLength < current)
+                    {
+#if DETAILED_DEBUG
+                        Console.WriteLine("Missing " + ((isExact) ? "exact" : "non exact"));
+#endif
+                        endBit = current - 1;
+                    }
+                    else
+                    {
+#if DETAILED_DEBUG
+                        Console.WriteLine("Found " + ((isExact) ? "exact" : "non exact") + " extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
+#endif
+                        // Add it to the stack, update search and continue
+                        top = item;                   
+
+                        startBit = item.ExtentLength;
+                    }
+                }
+
+                checkMask >>= 1;
+            }
+
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}", startBit, endBit + 1, top.ToDebugString(this)));
+#endif
+            return top;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int TwoFattest( int a, int b)

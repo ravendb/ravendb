@@ -109,9 +109,9 @@ namespace Sparrow.Collections
                 ResizeIfNeeded();                
 
                 // We shrink the signature to the proper size (31 bits)
-                signature = signature & kSignatureMask;                
+                signature = signature & kSignatureMask;
 
-                int hash = GetInternalHashCode(signature);
+                int hash = (int)(signature & kHashMask);
                 int bucket = hash % _capacity;
 
                 uint uhash = (uint)hash;
@@ -160,7 +160,7 @@ namespace Sparrow.Collections
                 // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
-                int hash = GetInternalHashCode(signature);
+                int hash = (int)(signature & kHashMask);
                 int pos = hash % _capacity;
 
                 int numProbes = 1;
@@ -188,28 +188,12 @@ namespace Sparrow.Collections
 
             }
 
-            public int GetPosition(BitVector key, int prefixLength, uint signature, bool isExact)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetExactPosition(BitVector key, int prefixLength, uint signature)
             {
-                // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
-                int position;
-                if (isExact)
-                {
-                    position = GetExactPosition(key, prefixLength, signature);
-                }
-                else
-                {
-                    position = GetPosition(key, prefixLength, signature);
-                }
-
-                return position;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int GetExactPosition(BitVector key, int prefixLength, uint signature)
-            {
-                int pos = GetInternalHashCode(signature) % _capacity;
+                int pos = (int)(signature & kHashMask) % _capacity;
                 
                 int numProbes = 1;
 
@@ -237,9 +221,11 @@ namespace Sparrow.Collections
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int GetPosition(BitVector key, int prefixLength, uint signature)
+            public int GetPosition(BitVector key, int prefixLength, uint signature)
             {
-                int pos = GetInternalHashCode(signature) % _capacity;
+                signature = signature & kSignatureMask;
+
+                int pos = (int)(signature & kHashMask) % _capacity;
 
                 int numProbes = 1;
 
@@ -269,7 +255,7 @@ namespace Sparrow.Collections
             }
 
             public Internal this[int position]
-            {
+            {                
                 get
                 {
                     return this._entries[position].Node;
@@ -364,13 +350,6 @@ namespace Sparrow.Collections
                 BlockCopyMemoryHelper.Memset(entries, new Entry(kUnused, kUnused, default(Internal)));
 
                 Rehash(entries);
-            }
-
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int GetInternalHashCode(uint hash)
-            {
-                return (int)(hash.GetHashCode() & kHashMask);
             }
 
             private void Rehash(Entry[] entries)
@@ -723,7 +702,7 @@ namespace Sparrow.Collections
 
                         Verify(() => position != -1);
                         Verify(() => this._entries[i].Node == this._entries[position].Node);
-                        Verify(() => this._entries[i].Hash == GetInternalHashCode(hash & kSignatureMask));
+                        Verify(() => this._entries[i].Hash == (hash & kHashMask & kSignatureMask));
                         Verify(() => i == position);
 
                         count++;

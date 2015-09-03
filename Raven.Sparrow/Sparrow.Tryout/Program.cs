@@ -14,6 +14,7 @@ namespace Sparrow.Tryout
     {
         private static readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
         private static readonly Func<long, BitVector> binarizeLong = x => BitVector.Of(true, x);
+        private static readonly Func<BitVector, BitVector> binarizeIdentity = x => x;
 
 
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -67,33 +68,34 @@ namespace Sparrow.Tryout
 
         static unsafe void Main(string[] args)
         {
-            int keySize = 5;
-            int keysToInsert = 20000;
+            int keySize = 10;
+            int keysToInsert = 3000000;
             var generator = new Random(100);
             // var generator = new Random();
 
-
             var values = new HashSet<string>();
+            var valuesAsBitVectors = new HashSet<BitVector>();
             for (int i = 0; i < keysToInsert; i++)
             {
                 //long key = generator.Next() << 32 | generator.Next();
                 string key = GenerateRandomString(generator, keySize);
                 values.Add(key);
+                valuesAsBitVectors.Add(BitVector.Of(key));
             }
 
 
-            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            var tree = new ZFastTrieSortedSet<BitVector, string>(binarizeIdentity);
 
             var watch = Stopwatch.StartNew();
-            foreach (var key in values)
+            foreach (var key in valuesAsBitVectors)
             {
-                tree.Add(key, key);
+                tree.Add(key, string.Empty);
             }
             watch.Stop();
             Console.WriteLine(string.Format("ZFAST: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
 
             watch = Stopwatch.StartNew();
-            foreach (var key in values)
+            foreach (var key in valuesAsBitVectors)
             {
                 tree.Contains(key);
             }
@@ -146,13 +148,14 @@ namespace Sparrow.Tryout
             //Exception smallerEx = null;
             //List<string> smallerSet = null;
             //ZFastTrieSortedSet<string, string> smallerTree = null;
-            
 
-            //for (int i = 0; i < 10000; i++)
+
+            //for (int i = 0; i < 1000000; i++)
             //{
             //    var keys = new List<string>();
 
             //    var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            //    //var tree = new ZFastTrieSortedSet<long, long>(binarizeLong);
 
             //    if (i % 1000 == 0)
             //        Console.WriteLine("Try: " + i);
@@ -165,14 +168,14 @@ namespace Sparrow.Tryout
             //            //long key = generator.Next() << 32 | generator.Next();                        
             //            string key = GenerateRandomString(generator, keySize);
 
-            //            if ( values.Add(key) )
+            //            if (values.Add(key))
             //            {
             //                keys.Add(key); // Add it before trying it.
-            //                tree.Add(key, key);                            
-            //            }                        
+            //                tree.Add(key, key);
+            //            }
             //        }
 
-            //        ZFastTrieDebugHelpers.StructuralVerify(tree);
+            //        //ZFastTrieDebugHelpers.StructuralVerify(tree);
             //    }
             //    catch (Exception ex)
             //    {
@@ -187,7 +190,7 @@ namespace Sparrow.Tryout
             //    }
             //}
 
-            //if ( smallerSet != null )
+            //if (smallerSet != null)
             //{
             //    Console.WriteLine();
             //    Console.WriteLine("--- Insert order for error --- ");
