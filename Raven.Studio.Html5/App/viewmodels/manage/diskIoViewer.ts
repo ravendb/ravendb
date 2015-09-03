@@ -7,10 +7,13 @@ import nv = require("nvd3");
 import appUrl = require("common/appUrl");
 import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 
 class diskIoViewer extends viewModelBase {
 
     isoFormat = d3.time.format.iso;
+
+    showChart = ko.observable<boolean>(true);
 
     performanceRuns = ko.observableArray<performanceRunItemDto>([]);
     currentPerformanceRun = ko.observable<performanceRunItemDto>();
@@ -57,6 +60,12 @@ class diskIoViewer extends viewModelBase {
     constructor() {
         super();
         this.currentPerformanceRun.subscribe(v => {
+            this.showChart(!!v);
+            if (!v) {
+                this.perDbReports([]);
+                this.currentDbReport(undefined);
+                return;
+            }
             new getDocumentWithMetadataCommand(v.documentId, appUrl.getSystemDatabase())
                 .execute()
                 .done((doc: diskIoPerformanceRunDto) => {
@@ -196,6 +205,18 @@ class diskIoViewer extends viewModelBase {
     
     private switchDatabase(report: diskIoPerformanceRunResultDto) {
         this.currentDbReport(report);
+    }
+
+    deleteReport() {
+        this.confirmationMessage("Are you sure?", "You are removing Disk IO Report: " + this.currentPeformanceRunLabel())
+            .done(() => {
+                var currentRun = this.currentPerformanceRun();
+                new deleteDocumentCommand(this.currentPerformanceRun().documentId, appUrl.getSystemDatabase())
+                    .execute();
+                this.performanceRuns.remove(currentRun);
+                this.currentPerformanceRun(null);
+                this.showChart(false);
+            });
     }
 }
 
