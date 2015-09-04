@@ -89,7 +89,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		private async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, ISynchronizationServerClient synchronizationServerClient, string localServerUrl, ILog log)
 		{
-			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, synchronizationServerClient.BaseUrl);
+			if (log.IsDebugEnabled)
+				log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, synchronizationServerClient.BaseUrl);
 
 			try
 			{

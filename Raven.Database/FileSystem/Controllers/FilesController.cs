@@ -131,7 +131,8 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 			{
-				log.Debug("File '{0}' is not accessible to get (Raven-Delete-Marker set)", name);
+				if (log.IsDebugEnabled)
+					log.Debug("File '{0}' is not accessible to get (Raven-Delete-Marker set)", name);
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 			}
 
@@ -144,7 +145,8 @@ namespace Raven.Database.FileSystem.Controllers
             fileAndPages.Metadata.Remove(Constants.MetadataEtagField);
             WriteHeaders(fileAndPages.Metadata, etag, result);
 
-            log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
+			if (log.IsDebugEnabled)
+				log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
 
             return result.WithNoCache();
 		}
@@ -194,7 +196,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 			if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 			{
-				log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
+				if (log.IsDebugEnabled)
+					log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
 				throw new FileNotFoundException();
 			}
             
@@ -275,7 +278,8 @@ namespace Raven.Database.FileSystem.Controllers
 				Files.ExecuteCopyOperation(operation);
 			});
 
-			Log.Debug("File '{0}' was copied to '{1}'", name, targetFilename);
+			if (Log.IsDebugEnabled)
+				Log.Debug("File '{0}' was copied to '{1}'", name, targetFilename);
 
 			FileSystem.Synchronizations.StartSynchronizeDestinationsInBackground();
 
@@ -292,7 +296,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 		    if (rename.Length > SystemParameters.KeyMost)
 		    {
-				Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
+				if (Log.IsDebugEnabled)
+					Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
 				return GetMessageWithString(string.Format("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename),HttpStatusCode.BadRequest);
 		    }
 
@@ -333,7 +338,8 @@ namespace Raven.Database.FileSystem.Controllers
 				Files.ExecuteRenameOperation(operation);
 			});
 
-			Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
+			if (Log.IsDebugEnabled)
+				Log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
 			SynchronizationTask.Context.NotifyAboutWork();
 
@@ -349,7 +355,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 			if (name.Length > SystemParameters.KeyMost)
 			{
-				Log.Debug("File '{0}' was not created due to illegal name length", name);
+				if (Log.IsDebugEnabled)
+					Log.Debug("File '{0}' was not created due to illegal name length", name);
 				return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
 			}
 

@@ -19,7 +19,8 @@ namespace Raven.Bundles.Replication.Tasks
 			if (IsSystemDocumentId(key))
 			{
 				reason = string.Format("Will not replicate document '{0}' to '{1}' because it is a system document", key, destinationId);
-				Log.Debug(reason);
+				if (Log.IsDebugEnabled)
+					Log.Debug(reason);
 				return false;
 			}
 
@@ -27,7 +28,8 @@ namespace Raven.Bundles.Replication.Tasks
 				// not explicitly marked to skip
 			{
 				reason = string.Format("Will not replicate document '{0}' to '{1}' because it was marked as not for replication", key, destinationId);
-				Log.Debug(reason); 
+				if (Log.IsDebugEnabled)
+					Log.Debug(reason); 
 				return false;
 			}
 
@@ -35,14 +37,16 @@ namespace Raven.Bundles.Replication.Tasks
 				// don't replicate conflicted documents, that just propagate the conflict
 			{
 				reason = string.Format("Will not replicate document '{0}' to '{1}' because it a conflict document", key, destinationId);
-				Log.Debug(reason); 
+				if (Log.IsDebugEnabled)
+					Log.Debug(reason); 
 				return false;
 			}
 
 			if (OriginsFromDestination(destinationId, metadata)) // prevent replicating back to source
 			{
 				reason = string.Format("Will not replicate document '{0}' to '{1}' because the destination server is the same server it originated from", key, destinationId);
-				Log.Debug(reason); 
+				if (Log.IsDebugEnabled)
+					Log.Debug(reason); 
 				return false;
 			}
 			
@@ -53,14 +57,16 @@ namespace Raven.Bundles.Replication.Tasks
 			        if (value != null &&  (value != CurrentDatabaseId))
 			        {
 				        reason = string.Format("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
-						Log.Debug(reason);
+						if (Log.IsDebugEnabled)
+							Log.Debug(reason);
 					    return false;
 					}
 			        break;
 			}
 
 			reason = string.Format("Will replicate '{0}' to '{1}'", key, destinationId);
-			Log.Debug(reason);
+			if (Log.IsDebugEnabled)
+				Log.Debug(reason);
 
 			return true;
 		}

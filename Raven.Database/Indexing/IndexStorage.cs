@@ -144,7 +144,8 @@ namespace Raven.Database.Indexing
 					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				log.Debug("Start opening indexes. There are {0} indexes that need to be loaded", indexDefinitionStorage.IndexNames.Length);
+				if (log.IsDebugEnabled)
+					log.Debug("Start opening indexes. There are {0} indexes that need to be loaded", indexDefinitionStorage.IndexNames.Length);
 
 				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext, indexDefinitionStorage.IndexNames,
 					name =>
@@ -153,11 +154,11 @@ namespace Raven.Database.Indexing
 
 						if(index != null)
 							indexes.TryAdd(index.IndexId, index);
-
-						startupLog.Debug("{0}/{1} indexes loaded", indexes.Count, indexDefinitionStorage.IndexNames.Length);
+						if (startupLog.IsDebugEnabled)
+							startupLog.Debug("{0}/{1} indexes loaded", indexes.Count, indexDefinitionStorage.IndexNames.Length);
 					});
-
-				log.Debug("Index storage initialized. All indexes have been opened.");
+				if (log.IsDebugEnabled)
+					log.Debug("Index storage initialized. All indexes have been opened.");
 			}
 			catch (Exception e)
 			{
@@ -178,8 +179,8 @@ namespace Raven.Database.Indexing
 		{
 			if (indexName == null)
 				throw new ArgumentNullException("indexName");
-
-			startupLog.Debug("Loading saved index {0}", indexName);
+			if (startupLog.IsDebugEnabled)
+				startupLog.Debug("Loading saved index {0}", indexName);
 
 			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
@@ -983,12 +984,14 @@ namespace Raven.Database.Indexing
 			var value = GetIndexInstance(id);
 			if (value == null)
 			{
-				log.Debug("Ignoring delete for non existing index {0}", id);
+				if (log.IsDebugEnabled)
+					log.Debug("Ignoring delete for non existing index {0}", id);
 				return;
 			}
 			documentDatabase.TransactionalStorage.Batch(accessor =>
 			  accessor.Lists.Remove("Raven/Indexes/QueryTime", value.PublicName));
-			log.Debug("Deleting index {0}", value.PublicName);
+			if (log.IsDebugEnabled)
+				log.Debug("Deleting index {0}", value.PublicName);
 			value.Dispose();
 			Index ignored;
 
@@ -1022,7 +1025,8 @@ namespace Raven.Database.Indexing
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			log.Debug("Creating index {0} with id {1}", indexDefinition.IndexId, indexDefinition.Name);
+			if (log.IsDebugEnabled)
+				log.Debug("Creating index {0} with id {1}", indexDefinition.IndexId, indexDefinition.Name);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 
@@ -1053,7 +1057,8 @@ namespace Raven.Database.Indexing
 			var value = TryIndexByName(index);
 			if (value == null)
 			{
-				log.Debug("Query on non existing index {0}", index);
+				if (log.IsDebugEnabled)
+					log.Debug("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], false, null);
@@ -1079,7 +1084,8 @@ namespace Raven.Database.Indexing
 			Index value = TryIndexByName(index);
 			if (value == null)
 			{
-				log.Debug("Query on non existing index '{0}'", index);
+				if (log.IsDebugEnabled)
+					log.Debug("Query on non existing index '{0}'", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 
@@ -1164,7 +1170,8 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
-				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
+				if (log.IsDebugEnabled)
+					log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return null;
 			}
 			using (CultureHelper.EnsureInvariantCulture())
@@ -1195,7 +1202,8 @@ namespace Raven.Database.Indexing
 			Index value = indexes[index];
 			if (value == null)
 			{
-				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
+				if (log.IsDebugEnabled)
+					log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return null;
 			}
 			var mapReduceIndex = value as MapReduceIndex;

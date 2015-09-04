@@ -531,8 +531,9 @@ namespace Raven.Database.Server.WebApi
 				logHttpRequestStatsParams.ResponseStatusCode,
 				logHttpRequestStatsParams.RequestUri,
 				databaseName);
-			Logger.Debug(message);
-			if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+			if (Logger.IsDebugEnabled)
+				Logger.Debug(message);
+			if (Logger.IsDebugEnabled && string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
 			{
 				Logger.Debug(logHttpRequestStatsParams.CustomInfo);
 			}

@@ -731,7 +731,8 @@ namespace Raven.Client.FileSystem
         {
             Session.IncrementRequestCount();
 
-            log.Debug("Executing query on file system '{0}' in '{1}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
+			if (log.IsDebugEnabled)
+				log.Debug("Executing query on file system '{0}' in '{1}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
             var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize);
 

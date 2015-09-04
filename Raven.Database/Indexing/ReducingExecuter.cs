@@ -266,14 +266,16 @@ namespace Raven.Database.Indexing
 							{
                                 if (persistedResults.Count > 0)
                                 {
-                                    Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+									if (Log.IsDebugEnabled)
+										Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
                                         persistedResults.Count,
                                         string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
                                         index.IndexId, level, batchTimeWatcher.Elapsed));
                                 }
 								else
                                 {
-                                    Log.Debug("No reduce keys found for {0}", index.IndexId);
+									if (Log.IsDebugEnabled)
+										Log.Debug("No reduce keys found for {0}", index.IndexId);
                                 }									
 							}
 

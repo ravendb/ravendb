@@ -104,7 +104,8 @@ namespace Raven.Database
 
 			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			{
-				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
+				if (Log.IsDebugEnabled)
+					Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
 				initializer = new DocumentDatabaseInitializer(this, configuration);
                 initializer.ValidateLicense();
@@ -206,9 +207,8 @@ namespace Raven.Database
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
 					ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
-					
-
-					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+					if (Log.IsDebugEnabled)
+						Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
 				catch (Exception e)
 				{
@@ -660,7 +660,8 @@ namespace Raven.Database
 				{
 					Stopwatch sp = Stopwatch.StartNew();
 					BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
-					Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+					if (Log.IsDebugEnabled)
+						Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
 					return result;
 				}
 
@@ -679,7 +680,8 @@ namespace Raven.Database
 				try
 				{
 					inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
-					Log.Debug("Prepare of tx {0} completed", txId);
+					if (Log.IsDebugEnabled)
+						Log.Debug("Prepare of tx {0} completed", txId);
 				}
 				catch (Exception e)
 				{
@@ -702,7 +704,8 @@ namespace Raven.Database
 					try
 					{
 						inFlightTransactionalState.Commit(txId);
-						Log.Debug("Commit of tx {0} completed", txId);
+						if (Log.IsDebugEnabled)
+							Log.Debug("Commit of tx {0} completed", txId);
 						workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
 					}
 					finally
@@ -780,7 +783,8 @@ namespace Raven.Database
 			if (disposed)
 				return;
 
-			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
 			var metrics = WorkContext.MetricsCounters;
 
@@ -907,7 +911,8 @@ namespace Raven.Database
 				}
 			}
 
-			Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 		}
 
 		/// <summary>

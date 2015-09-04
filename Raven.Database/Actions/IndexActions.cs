@@ -604,7 +604,8 @@ namespace Raven.Database.Actions
                         return;
                     }
 
-                    Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
+					if (Log.IsDebugEnabled)
+						Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
                               op.Header.TotalResults);
                     op.Execute(document =>
                     {

@@ -120,8 +120,8 @@ namespace Raven.Database.FileSystem.Actions
 
 					Search.Index(name, metadata, putResult.Etag);
 				});
-
-				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
+				if (Log.IsDebugEnabled)
+					Log.Debug("Inserted a new file '{0}' with ETag {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
 				using (var contentStream = await streamAsync())
 				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, metadata))
@@ -139,8 +139,8 @@ namespace Raven.Database.FileSystem.Actions
 
 					if (options.PreserveTimestamps == false)
 						Historian.UpdateLastModified(metadata); // update with the final file size.
-
-					Log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
+					if (Log.IsDebugEnabled)
+						Log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
 					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
@@ -152,8 +152,8 @@ namespace Raven.Database.FileSystem.Actions
 
 					Search.Index(name, metadata, updateMetadata.Etag);
 					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = name });
-
-					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
+					if (Log.IsDebugEnabled)
+						Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 				}
 			}
 			catch (Exception ex)
@@ -233,7 +233,8 @@ namespace Raven.Database.FileSystem.Actions
 				Action = FileChangeAction.Update
 			});
 
-			Log.Debug("Metadata of a file '{0}' was updated", name);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Metadata of a file '{0}' was updated", name);
 		}
 
 		public void ExecuteRenameOperation(RenameFileOperation operation)
@@ -377,7 +378,8 @@ namespace Raven.Database.FileSystem.Actions
 					accessor.UpdateFileMetadata(deletingFileName, metadata, null);
 					accessor.DecrementFileCount(deletingFileName);
 
-					Log.Debug("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName);
+					if (Log.IsDebugEnabled)
+						Log.Debug("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName);
 
 					var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
 					var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
@@ -387,8 +389,9 @@ namespace Raven.Database.FileSystem.Actions
 
 					Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
 					Publisher.Publish(new FileChangeNotification { File = fileName, Action = FileChangeAction.Delete });
-					
-					Log.Debug("File '{0}' was deleted", fileName);
+
+					if (Log.IsDebugEnabled)
+						Log.Debug("File '{0}' was deleted", fileName);
 				}
 				else
 				{
@@ -460,7 +463,8 @@ namespace Raven.Database.FileSystem.Actions
 						continue;
 				}
 
-				Log.Debug("Starting to delete file '{0}' from storage", deletingFileName);
+				if (Log.IsDebugEnabled)
+					Log.Debug("Starting to delete file '{0}' from storage", deletingFileName);
 
 				var deleteTask = Task.Run(() =>
 				{
@@ -482,8 +486,8 @@ namespace Raven.Database.FileSystem.Actions
 						Name = configName,
 						Action = ConfigurationChangeAction.Delete
 					});
-
-					Log.Debug("File '{0}' was deleted from storage", deletingFileName);
+					if (Log.IsDebugEnabled)
+						Log.Debug("File '{0}' was deleted from storage", deletingFileName);
 				});
 
 				deleteFileTasks.AddOrUpdate(deletingFileName, deleteTask, (file, oldTask) => deleteTask);
@@ -517,7 +521,8 @@ namespace Raven.Database.FileSystem.Actions
 				if (IsRenameInProgress(renameOperation.Name))
 					continue;
 
-				Log.Debug("Starting to resume a rename operation of a file '{0}' to '{1}'", renameOperation.Name,
+				if (Log.IsDebugEnabled)
+					Log.Debug("Starting to resume a rename operation of a file '{0}' to '{1}'", renameOperation.Name,
 						  renameOperation.Rename);
 
 				var renameTask = Task.Run(() =>
@@ -525,8 +530,8 @@ namespace Raven.Database.FileSystem.Actions
 					try
 					{
 						ExecuteRenameOperation(renameOperation);
-						Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
-
+						if (Log.IsDebugEnabled)
+							Log.Debug("File '{0}' was renamed to '{1}'", renameOperation.Name, renameOperation.Rename);
 					}
 					catch (Exception e)
 					{
@@ -566,7 +571,8 @@ namespace Raven.Database.FileSystem.Actions
 				if (IsCopyInProgress(copyOperation.SourceFilename))
 					continue;
 
-				Log.Debug("Starting to resume a copy operation of a file '{0}' to '{1}'", copyOperation.SourceFilename,
+				if (Log.IsDebugEnabled)
+					Log.Debug("Starting to resume a copy operation of a file '{0}' to '{1}'", copyOperation.SourceFilename,
 						  copyOperation.TargetFilename);
 
 				var copyTask = Task.Run(() =>
@@ -574,8 +580,8 @@ namespace Raven.Database.FileSystem.Actions
 					try
 					{
 						ExecuteCopyOperation(copyOperation);
-						Log.Debug("File '{0}' was copyied to '{1}'", copyOperation.SourceFilename, copyOperation.TargetFilename);
-
+						if (Log.IsDebugEnabled)
+							Log.Debug("File '{0}' was copyied to '{1}'", copyOperation.SourceFilename, copyOperation.TargetFilename);
 					}
 					catch (Exception e)
 					{

@@ -143,8 +143,8 @@ namespace Raven.Database.Bundles.Encryption.Settings
 				}
 				if (settings.Codec.UsingSha1)
 					throw;
-				
-				log.Debug("Couldn't decrypt the database using MD5. Trying with SHA1.");
+				if (log.IsDebugEnabled)
+					log.Debug("Couldn't decrypt the database using MD5. Trying with SHA1.");
 				settings.Codec.UseSha1();
 				VerifyEncryptionKey(database, settings);
 				return;

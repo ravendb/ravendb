@@ -137,7 +137,7 @@ namespace Raven.Database.Config
         }
 
 		private static void MemoryStatisticsForPosix()
-        {
+		{
 			int clearInactiveHandlersCounter = 0;
 			new Thread(() =>
 			{
@@ -148,7 +148,8 @@ namespace Raven.Database.Config
 					switch (waitRC)
 					{
 						case 0: // stopLowMemThreadEvent
-							Log.Debug("MemoryStatisticsForPosix : stopLowMemThreadEvent triggered");
+							if (Log.IsDebugEnabled)
+								Log.Debug("MemoryStatisticsForPosix : stopLowMemThreadEvent triggered");
 							return;
 						case 1: // lowMemorySimulationEvent
 							LowPosixMemorySimulationEvent.Reset();
@@ -159,30 +160,30 @@ namespace Raven.Database.Config
 
 							LowPosixMemorySimulationEvent.Reset();
 							if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
-        {
+							{
 								clearInactiveHandlersCounter = 0;
 								ClearInactiveHandlers();
 								break;
-        }
+							}
 							sysinfo_t info = new sysinfo_t();
 							if (Syscall.sysinfo(ref info) != 0)
-        {
+							{
 								Log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 							}
 							else
-            {
+							{
 								RavenConfiguration configuration = new RavenConfiguration();
 								ulong availableMem = info.AvailableRam / (1024L * 1024);
 								if (availableMem < (ulong)configuration.LowMemoryForLinuxDetectionInMB)
-                {
+								{
 									clearInactiveHandlersCounter = 0;
 									Log.Warn("Low memory detected, will try to reduce memory usage...");
 									RunLowMemoryHandlers();
 									Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
-                    }
-                    }
+								}
+							}
 							break;
-                }
+					}
 				}
 			})
 			{

@@ -68,7 +68,8 @@ namespace Raven.Database.Server.Connections
 					catch (Exception e)
 					{
 						Connected = false;
-						log.DebugException("Error when using events transport", e);
+						if (log.IsDebugEnabled)
+							log.DebugException("Error when using events transport", e);
 						Disconnected();
 						try
 						{

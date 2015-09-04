@@ -31,7 +31,8 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             var canonicalFilename = FileHeader.Canonize(id);
 
-			Log.Debug("Got signatures of a file '{0}' request", id);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Got signatures of a file '{0}' request", id);
 
             using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename, FileSystem.Configuration))
 			{
@@ -83,7 +84,8 @@ namespace Raven.Database.FileSystem.Controllers
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
 
-				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", id, signatureManifest.Signatures.Count);
+				if (Log.IsDebugEnabled)
+					Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", id, signatureManifest.Signatures.Count);
 
                 return GetMessageWithObject(signatureManifest)
                            .WithNoCache();

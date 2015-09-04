@@ -248,8 +248,8 @@ namespace Raven.Database.Indexing
 				}
 				catch (ConcurrencyException e)
 				{
-					// side by side document changed, probably means that we created a new side by side index and updated the index
-					log.Debug("Failed to delete the side by side document after index replace.");
+					if (log.IsDebugEnabled) // side by side document changed, probably means that we created a new side by side index and updated the index
+						log.Debug("Failed to delete the side by side document after index replace.");
 				}
 			}
 			else

@@ -1438,7 +1438,9 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
+  </ItemGroup>
   <ItemGroup Label="LuceneQuery-Raven-Database-IndexingFiles">
     <Compile Include="Indexing\LuceneQuery.Parser.cs">
       <DependentUpon>LuceneQuery.parser</DependentUpon>
