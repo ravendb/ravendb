@@ -115,7 +115,8 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 			this.context = context;
-			logIndexing.Debug("Creating index for {0}", indexId);
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Creating index for {0}", indexId);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
@@ -1123,7 +1124,8 @@ namespace Raven.Database.Indexing
 					.AppendLine();
 			}
 
-			logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, indexId,
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, indexId,
 				sb.ToString());
 		}
 
@@ -1878,7 +1880,8 @@ namespace Raven.Database.Indexing
 					HashSet<string> set;
 					if (merged.TryGetValue(kvp.Key, out set))
 					{
-						logIndexing.Debug("Merging references for key = {0}, references = {1}", kvp.Key, String.Join(",", set));
+						if (logIndexing.IsDebugEnabled)
+							logIndexing.Debug("Merging references for key = {0}, references = {1}", kvp.Key, String.Join(",", set));
 						set.UnionWith(kvp.Value);
 					}
 					else
@@ -1914,8 +1917,8 @@ namespace Raven.Database.Indexing
 						continue;
 					task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
 				}
-				if (task.ReferencesToCheck.Count > 0)
-					logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
+				if (logIndexing.IsDebugEnabled && task.ReferencesToCheck.Count > 0)
+					logIndexing.Debug("Scheduled to touch documents: {0}", string.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
 			}
 			if (task.ReferencesToCheck.Count == 0)
 				return;

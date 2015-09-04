@@ -29,7 +29,8 @@ namespace Raven.Database.Actions
 
 		public void InitializeBasedOnIndexingResults()
 		{
-			Log.Debug("Starting to initialize last collection etags based on indexes ...");
+			if (Log.IsDebugEnabled)
+				Log.Debug("Starting to initialize last collection etags based on indexes ...");
 
 			var indexDefinitions = context.IndexDefinitionStorage.IndexDefinitions.Values.ToList();
 

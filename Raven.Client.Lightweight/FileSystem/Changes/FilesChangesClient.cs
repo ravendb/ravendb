@@ -187,7 +187,8 @@ namespace Raven.Client.FileSystem.Changes
 
                                 if (t.Result)
                                 {
-                                    Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
+									if (Logger.IsDebugEnabled)
+										Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
                                 }
                             }).ConfigureAwait(false);
                     }

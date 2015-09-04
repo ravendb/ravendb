@@ -42,7 +42,8 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 				string script;
 				if (string.IsNullOrEmpty(collection) || strategy.SpecifiedCollections.TryGetValue(collection, out script) == false)
 				{
-					Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because the replication of specified collection is turned on while the document does not belong to any of them", doc.Key, destinationId));
+					if (Log.IsDebugEnabled)
+						Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because the replication of specified collection is turned on while the document does not belong to any of them", doc.Key, destinationId));
 					return null;
 				}
 
@@ -64,7 +65,8 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 
 						if (scope.ActualPatchResult == JsValue.Null) // null means that document should be skip
 						{
-							Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because a collection specific script filtered it out", doc.Key, destinationId));
+							if (Log.IsDebugEnabled)
+								Log.Debug(string.Format("Will not replicate document '{0}' to '{1}' because a collection specific script filtered it out", doc.Key, destinationId));
 							return null;
 						}
 

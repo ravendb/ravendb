@@ -299,7 +299,8 @@ namespace Owin
                 }
                 catch (Exception ex)
                 {
-                    Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+					if (Log.IsDebugEnabled)
+						Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
 				// Post request stuff
 			}
@@ -320,8 +321,8 @@ namespace Owin
                 }
                 catch (Exception ex)
                 {
-                   
-                    Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+					if (Log.IsDebugEnabled)
+						Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
             }
         }

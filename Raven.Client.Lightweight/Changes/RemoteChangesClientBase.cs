@@ -281,8 +281,8 @@ namespace Raven.Client.Changes
             var ravenJObject = RavenJObject.Parse(dataFromConnection);
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
-
-            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
+			if (logger.IsDebugEnabled)
+				logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
             switch (type)
             {
