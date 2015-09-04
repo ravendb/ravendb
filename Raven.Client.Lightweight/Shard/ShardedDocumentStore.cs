@@ -295,7 +295,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");
 		}
 
-		public  ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+		public ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
 		{
 			return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
 		}
