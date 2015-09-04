@@ -208,6 +208,13 @@ namespace Rachis.Tests
 				}
 
 				Assert.True(additinalNodeHasAllRunningNodesInTopology.Wait(3000));
+
+				foreach (var nodeDown in nodesToShutdown)
+				{
+					Assert.False(additionalNode.CurrentTopology.Contains(nodeDown.Name));
+				}
+
+				Assert.True(additionalNode.CurrentTopology.Contains(additionalNode.Name));
 			}
 		}
 
