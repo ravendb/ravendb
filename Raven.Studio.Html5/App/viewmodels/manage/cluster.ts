@@ -11,6 +11,8 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
+import removeFromClusterUnsafeCommand = require("commands/database/cluster/removeFromClusterUnsafeCommand");
+import addToClusterUnsafeCommand = require("commands/database/cluster/addToClusterUnsafeCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import clusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
@@ -82,7 +84,7 @@ class cluster extends viewModelBase {
 
     addAnotherServerToCluster() {
         var newNode = nodeConnectionInfo.empty();
-        var dialog = new editNodeConnectionInfoDialog(newNode, false);
+        var dialog = new editNodeConnectionInfoDialog(newNode, false, false);
         dialog
             .onExit()
             .done(nci => {
@@ -97,7 +99,7 @@ class cluster extends viewModelBase {
         var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
-        var dialog = new editNodeConnectionInfoDialog(newNode, false);
+        var dialog = new editNodeConnectionInfoDialog(newNode, false, false);
         dialog
             .onExit()
             .done(nci => {
@@ -115,7 +117,7 @@ class cluster extends viewModelBase {
     }
 
 	editNode(node: nodeConnectionInfo) {
-		var dialog = new editNodeConnectionInfoDialog(node, true);
+		var dialog = new editNodeConnectionInfoDialog(node, true, false);
 		dialog.onExit()
 			.done(nci => {
 				new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
@@ -133,7 +135,29 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-	}
+    }
+
+    removeFromClusterUnsafe(node: nodeConnectionInfo) {
+        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster in unsafe way.")
+            .done(() => {
+            new removeFromClusterUnsafeCommand(appUrl.getSystemDatabase(), node.toDto())
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+            });
+    }
+
+    addAnotherServerToClusterUnsafe() {
+        var newNode = nodeConnectionInfo.empty();
+        var dialog = new editNodeConnectionInfoDialog(newNode, false, true);
+        dialog
+            .onExit()
+            .done(nci => {
+                new addToClusterUnsafeCommand(appUrl.getSystemDatabase(), nci.toDto())
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+            });
+        app.showDialog(dialog);
+    }
 }
 
 export = cluster;

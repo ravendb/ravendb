@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -279,6 +280,12 @@ namespace Rachis
 
 		public Task RemoveFromClusterAsync(NodeConnectionInfo node)
 		{
+			if (_currentTopology.Contains(node.Name) == false)
+				throw new InvalidOperationException("Node " + node + " was not found in the cluster");
+
+			if (string.Equals(node.Name, Name, StringComparison.OrdinalIgnoreCase))
+				throw new InvalidOperationException("You cannot remove the current node from the cluster, step down this node and then remove it from the new leader");
+
 			var requestedTopology = ExcludeFromCurrentTopology(node);
 
 			if (_log.IsInfoEnabled)
@@ -291,12 +298,6 @@ namespace Rachis
 
 		private Topology ExcludeFromCurrentTopology(NodeConnectionInfo node)
 		{
-			if (_currentTopology.Contains(node.Name) == false)
-				throw new InvalidOperationException("Node " + node + " was not found in the cluster");
-
-			if (string.Equals(node.Name, Name, StringComparison.OrdinalIgnoreCase))
-				throw new InvalidOperationException("You cannot remove the current node from the cluster, step down this node and then remove it from the new leader");
-
 			var requestedTopology = new Topology(
 				_currentTopology.TopologyId,
 				_currentTopology.AllVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
@@ -309,6 +310,9 @@ namespace Rachis
 
 		public Task AddToClusterAsync(NodeConnectionInfo node, bool nonVoting = false)
 		{
+			if (_currentTopology.Contains(node.Name))
+				throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
+
 			var requestedTopology = AddToCurrentTopology(node, nonVoting);
 
 			if (_log.IsInfoEnabled)
@@ -321,9 +325,6 @@ namespace Rachis
 
 		private Topology AddToCurrentTopology(NodeConnectionInfo node, bool nonVoting)
 		{
-			if (_currentTopology.Contains(node.Name))
-				throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
-
 			var requestedTopology = new Topology(
 				_currentTopology.TopologyId,
 				_currentTopology.AllVotingNodes,
@@ -883,8 +884,12 @@ namespace Rachis
 				_log = raft._log;
 			}
 
+			[MethodImpl(MethodImplOptions.Synchronized)]
 			public void RemoveFromCluster(NodeConnectionInfo node)
 			{
+				if (_raft._currentTopology.Contains(node.Name) == false)
+					return;
+
 				var requestedTopology = _raft.ExcludeFromCurrentTopology(node);
 
 				if (_log.IsInfoEnabled)
@@ -895,8 +900,12 @@ namespace Rachis
 				ModifyTopologyUnsafe(requestedTopology);
 			}
 
+			[MethodImpl(MethodImplOptions.Synchronized)]
 			public void AddToCluster(NodeConnectionInfo node)
 			{
+				if (_raft._currentTopology.Contains(node.Name))
+					return;
+
 				var requestedTopology = _raft.AddToCurrentTopology(node, false);
 
 				if (_log.IsInfoEnabled)
