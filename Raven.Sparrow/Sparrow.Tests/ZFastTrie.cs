@@ -158,17 +158,74 @@ namespace Sparrow.Tests
         }
 
         [Fact]
+        public void Structure_SingleBranchDeletion()
+        {
+            string lesserKey = "Oren";
+            string greaterKey = "oren";
+
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            Assert.True(tree.Add(lesserKey, "eini"));
+            Assert.True(tree.Add(greaterKey, "Eini"));
+
+            Assert.True(tree.Remove(lesserKey));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.True(tree.Remove(greaterKey));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+        }
+
+        [Fact]
         public void Structure_MultipleBranchInsertion()
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-            Assert.True(tree.Add("8Jp3","8Jp3"));
+            Assert.True(tree.Add("8Jp3", "8Jp3"));
             Assert.True(tree.Add("GX37", "GX37"));
             Assert.True(tree.Add("f04o", "f04o"));
-            Assert.True(tree.Add("KmGx","KmGx"));
+            Assert.True(tree.Add("KmGx", "KmGx"));
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
-            ZFastTrieDebugHelpers.DumpKeys(tree);            
+            ZFastTrieDebugHelpers.DumpKeys(tree);
+        }
+
+        [Fact]
+        public void Structure_MultipleBranchDeletion()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            Assert.True(tree.Add("8Jp3", "8Jp3"));
+            Assert.True(tree.Add("GX37", "GX37"));
+            Assert.True(tree.Add("f04o", "f04o"));
+            Assert.True(tree.Add("KmGx", "KmGx"));
+
+            Assert.True(tree.Remove("8Jp3"));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.True(tree.Remove("GX37"));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.True(tree.Remove("f04o"));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.True(tree.Remove("KmGx"));
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
+
+        [Fact]
+        public void Structure_MultipleBranchDeletion2()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            Assert.True(tree.Add("CDb", "8Jp3"));
+            Assert.True(tree.Add("tCK", "GX37"));
+            Assert.True(tree.Add("B25", "f04o"));
+            Assert.True(tree.Add("2mW", "KmGx"));
+            Assert.True(tree.Add("gov", string.Empty));
+            ZFastTrieDebugHelpers.DumpTree(tree);
+
+            Assert.True(tree.Remove("CDb"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -374,19 +431,20 @@ namespace Sparrow.Tests
 
         [Fact]
         public void Structure_RandomTester()
-        {
-            var generator = new Random(100);
-
+        {            
             int count = 1000;
             int size = 5;
-            for ( int i = 0; i < 1; i++ )
+            for (int i = 0; i < 1; i++)
             {
                 var keys = new string[count];
 
                 var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
+                var insertedKeys = new HashSet<string>();
+
+                var generator = new Random(i + size);
                 try
-                {                  
+                {                    
                     for (int j = 0; j < count; j++)
                     {
                         string key = GenerateRandomString(generator, size);
@@ -395,6 +453,7 @@ namespace Sparrow.Tests
                             tree.Add(key, key);
 
                         keys[j] = key;
+                        insertedKeys.Add(key);
                     }
 
                     ZFastTrieDebugHelpers.StructuralVerify(tree);
@@ -410,7 +469,27 @@ namespace Sparrow.Tests
                     ZFastTrieDebugHelpers.DumpKeys(tree);
 
                     throw new Exception("Fail", ex);
-                }             
+                }
+
+                generator = new Random(i + size + 1);
+                for (int j = 0; j < count; j++)
+                {
+                    string key = GenerateRandomString(generator, size);
+
+                    if (!insertedKeys.Contains(key))
+                        Assert.False(tree.Remove(key));          
+                }
+
+                generator = new Random(i + size);
+                for (int j = 0; j < count; j++)
+                {
+                    string key = GenerateRandomString(generator, size);
+
+                    bool removed = tree.Remove(key);
+                    Assert.True(removed);                    
+                }
+
+                Assert.Equal(0, tree.Count);
             }
         }
 

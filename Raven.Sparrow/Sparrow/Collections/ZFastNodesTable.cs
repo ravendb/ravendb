@@ -155,8 +155,64 @@ namespace Sparrow.Collections
 #endif
             }
 
+            public void Remove(Internal node, uint signature)
+            {
+                // We shrink the signature to the proper size (30 bits)
+                signature = signature & kSignatureMask;
+
+                int hash = (int)(signature & kHashMask);
+                int bucket = hash % _capacity;
+
+                var entries = _entries;
+
+                int lastDuplicated = -1;
+                uint numProbes = 1; // how many times we've probed
+
+                uint nHash;
+                do
+                {
+                    if ((entries[bucket].Signature & kSignatureMask) == signature)
+                        lastDuplicated = bucket;
+
+                    if (entries[bucket].Node == node)
+                    {
+                        // This is the last element and is not a duplicate, therefore the last one is not a duplicate anymore. 
+                        if ((entries[bucket].Signature & kDuplicatedMask) == 0 && lastDuplicated != -1)
+                            entries[bucket].Signature &= kSignatureMask;
+
+                        if (entries[bucket].Hash < kDeleted)
+                        {
+                            entries[bucket].Hash = kDeleted;
+                            entries[bucket].Signature = kUnused;
+                            entries[bucket].Node = default(Internal);
+
+                            _numberOfDeleted++;
+                            _size--;
+                        }                        
+
+                        Contract.Assert(_numberOfDeleted >= Contract.OldValue<int>(_numberOfDeleted));
+                        Contract.Assert(entries[bucket].Hash == kDeleted);
+                        Contract.Assert(entries[bucket].Signature == kUnused);
+
+                        if (3 * this._numberOfDeleted / 2 > this._capacity - this._numberOfUsed)
+                        {
+                            // We will force a rehash with the growth factor based on the current size.
+                            Shrink(Math.Max(_initialCapacity, _size * 2));
+                        }
+
+                        return;
+                    }
+
+                    bucket = (int)((bucket + numProbes) % _capacity);
+                    numProbes++;
+
+                    Debug.Assert(numProbes < 100);
+                }
+                while (entries[bucket].Hash != kUnused);                
+            }
+
             public void Replace(Internal oldNode, Internal newNode, uint signature)
-            {                
+            {
                 // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
@@ -345,6 +401,20 @@ namespace Sparrow.Collections
             {
                 Contract.Requires(newCapacity >= _capacity);
                 Contract.Ensures((_capacity & (_capacity - 1)) == 0);
+
+                var entries = new Entry[newCapacity];
+                BlockCopyMemoryHelper.Memset(entries, new Entry(kUnused, kUnused, default(Internal)));
+
+                Rehash(entries);
+            }
+
+            private void Shrink(int newCapacity)
+            {
+                Contract.Requires(newCapacity > _size);
+                Contract.Ensures(this._numberOfUsed < this._capacity);
+
+                // Calculate the next power of 2.
+                newCapacity = Math.Max(Bits.NextPowerOf2(newCapacity), _initialCapacity);
 
                 var entries = new Entry[newCapacity];
                 BlockCopyMemoryHelper.Memset(entries, new Entry(kUnused, kUnused, default(Internal)));
@@ -719,7 +789,7 @@ namespace Sparrow.Collections
                 int first = -1;
                 while (this._entries[start].Node != null)
                 {
-                    Verify(() => this._entries[start].Hash != kUnused);
+                    Verify(() => this._entries[start].Hash != kUnused || this._entries[start].Hash != kDeleted);
                     Verify(() => this._entries[start].Signature != kUnused);
 
                     start = (start + 1) % _capacity;
@@ -729,7 +799,7 @@ namespace Sparrow.Collections
                 {
                     while (this._entries[start].Node == null)
                     {
-                        Verify(() => this._entries[start].Hash == kUnused);
+                        Verify(() => this._entries[start].Hash == kUnused || this._entries[start].Hash == kDeleted);
                         Verify(() => this._entries[start].Signature == kUnused);
 
                         start = (start + 1) % _capacity;
@@ -743,7 +813,7 @@ namespace Sparrow.Collections
                     int end = start;
                     while (this._entries[end].Node != null)
                     {
-                        Verify(() => this._entries[end].Hash != kUnused);
+                        Verify(() => this._entries[end].Hash != kUnused || this._entries[start].Hash != kDeleted);
                         Verify(() => this._entries[end].Signature != kUnused && this._entries[end].Signature != kDuplicatedMask);
 
                         end = (end + 1) % _capacity;

@@ -116,6 +116,15 @@ namespace Sparrow.Collections
 
                 return string.Format("{0}{2}, {4}, {3}{1}", openBracket, closeBracket, extentBinary, jumpInfo, lenghtInformation);
             }
+
+            public bool Intersects(int x)
+            {
+                Internal thisAsInternal = this as Internal;
+                if (thisAsInternal != null)
+                    return x >= thisAsInternal.NameLength && x <= thisAsInternal.ExtentLength;
+                else 
+                    return x >= this.NameLength;
+            }
         }
 
         /// <summary>
@@ -539,16 +548,24 @@ namespace Sparrow.Collections
 
         private void UpdateJumps(Internal node)
         {
+
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("UpdateJumps: {0}", node.ToDebugString(this)));
+#endif
             int jumpLength = node.GetJumpLength(this);
 
             Node jumpNode;
             for (jumpNode = node.Left; jumpNode is Internal && jumpLength > ((Internal)jumpNode).ExtentLength; )
                 jumpNode = ((Internal)jumpNode).JumpLeftPtr;
 
+            Contract.Assert(jumpNode.Intersects(jumpLength));
+
             node.JumpLeftPtr = jumpNode;
 
             for (jumpNode = node.Right; jumpNode is Internal && jumpLength > ((Internal)jumpNode).ExtentLength; )
                 jumpNode = ((Internal)jumpNode).JumpRightPtr;
+
+            Contract.Assert(jumpNode.Intersects(jumpLength));
 
             node.JumpRightPtr = jumpNode;
         }
@@ -562,11 +579,18 @@ namespace Sparrow.Collections
             if (size == 0)
                 return false;
 
+            // We prepare the signature to compute incrementally.
+            BitVector searchKey = binarizeFunc(key);
+
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("Remove(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
+#endif
+
             if ( size == 1 )
             {                
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
                 var leaf = (Leaf)this.Root;
-                if (leaf.Key.Equals(key))
+                if (leaf.Name(this).CompareTo(searchKey) != 0)
                     return false;
 
                 RemoveLeaf(leaf);
@@ -578,38 +602,116 @@ namespace Sparrow.Collections
                 return true;
             }
 
-            // We prepare the signature to compute incrementally.
-            BitVector v = binarizeFunc(key);
-            var state = Hashing.Iterative.XXHash32.Preprocess(v.Bits); 
+            var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
-            // We look for the parent of the exit node for the key.            
-            // If the exit node is not a leaf or the key is not equal to the LCP 
-            // Then we are done (The key does not exist).
+            // We look for the parent of the exit node for the key.
+            var stack = nodesStackPool.Allocate();
+            try
+            {
+                // We look for the parent of the exit node for the key.            
+                var cutPoint = FindParentExitNode(searchKey, hashState, stack);
 
-            // If the parentExitNode is not null and not the root
-            // Then we need to fix the grand parent child pointer.
+                var exitNode = cutPoint.Exit;
+                var parentExitNode = cutPoint.Parent;
 
-            // If the parent node is the root, then the child becomes the root.
+#if DETAILED_DEBUG        
+                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
+#endif
+                // If the exit node is not a leaf or the key is not equal to the LCP                
+                var exitNodeAsLeaf = exitNode as Leaf;
+                if (exitNodeAsLeaf == null || binarizeFunc(exitNodeAsLeaf.Key).Count != cutPoint.LongestPrefix)
+                    return false;  // Then we are done (The key does not exist).
 
-            // If the exit node (which should be a leaf) reference is not null 
-            // Then fix the parent and grandparent references.
-            // Else set to null the grandparent of the exit node's reference.
+                bool isRightLeaf = parentExitNode != null && parentExitNode.Right == exitNode;
 
-            // Delete the leaf and fix it's predecessor and successor references.
+                // If the parentExitNode is not null and not the root
+                var otherNode = isRightLeaf ? parentExitNode.Left : parentExitNode.Right;
+                var otherNodeAsInternal = otherNode as Internal;
 
-            // Update the jump table after the deletion.
+                // Then we need to fix the grand parent child pointer.
+                if ( parentExitNode != null && parentExitNode != this.Root )
+                {
+                    var grandParentExitNode = FindGrandParentExitNode(searchKey, hashState, stack);
+#if DETAILED_DEBUG        
+                    Console.WriteLine(string.Format("GrandParex Node: {0}", grandParentExitNode.ToDebugString(this)));
+#endif
+                    isRightLeaf = grandParentExitNode.Right == parentExitNode;
+                    if (isRightLeaf)
+                        grandParentExitNode.Right = otherNode;
+                    else
+                        grandParentExitNode.Left = otherNode;
+                }
 
-            // If the cut point was low and the child is internal
-            // Then
-            //   We remove the existing child node from the jump table
-            //   We replace the parent exit node
-            //   We update the jumps table for the child node.
-            // Else
-            //   We remove the parent node from the jump table.
+                int parentExitNodeHandleLength = parentExitNode.GetHandleLength(this);
+                int otherNodeHandleLength = otherNode.GetHandleLength(this);
 
-            size--;
+                // If the parent node is the root, then the child becomes the root.
+                if (parentExitNode == Root)
+                    Root = otherNode;
 
-            throw new NotImplementedException();
+                // If the exit node (which should be a leaf) reference is not null 
+                var toExitNodePtr = (Internal)exitNode.ReferencePtr;
+                if (toExitNodePtr != null)
+                {
+                    // Then fix the parent and grandparent references.                    
+                    toExitNodePtr.ReferencePtr = parentExitNode.ReferencePtr;
+                    toExitNodePtr.ReferencePtr.ReferencePtr = toExitNodePtr;
+                }
+                else
+                {
+                    parentExitNode.ReferencePtr.ReferencePtr = null;
+                }
+                                
+                // Delete the leaf and fix it's predecessor and successor references.
+                RemoveLeaf(exitNodeAsLeaf);
+
+                int t = parentExitNodeHandleLength | otherNodeHandleLength;
+                bool isCutLow = (t & -t & otherNodeHandleLength) != 0;  // Is this cut point low or high? 
+
+#if DETAILED_DEBUG
+                Console.WriteLine(string.Format("Cut {0}; leaf on the {1}; other node is {2}", isCutLow ? "low" : "high", isRightLeaf ? "right" : "left", otherNodeAsInternal == null ? "leaf" : "internal"));
+#endif
+
+                // Update the jump table after the deletion.
+                if (isRightLeaf)
+                    UpdateRightJumpsAfterDeletion(parentExitNode, exitNodeAsLeaf, otherNode, isRightLeaf, stack);
+                else
+                    UpdateLeftJumpsAfterDeletion(parentExitNode, exitNodeAsLeaf, otherNode, isRightLeaf, stack);
+                
+
+                // If the cut point was low and the child is internal
+                if ( isCutLow && otherNodeAsInternal != null)
+                {                    
+                    //   We remove the existing child node from the jump table
+                    uint hash = ZFastNodesTable.CalculateHashForBits(otherNode.Name(this), hashState, otherNodeHandleLength, parentExitNode.ExtentLength);
+                    this.NodesTable.Remove(otherNodeAsInternal, hash);
+                    otherNode.NameLength = parentExitNode.NameLength;
+                    
+                    //   We replace the parent exit node
+                    hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, parentExitNodeHandleLength);
+                    this.NodesTable.Replace(parentExitNode, otherNodeAsInternal, hash);
+                    
+                    //   We update the jumps table for the child node.
+                    UpdateJumps(otherNodeAsInternal);
+                }
+                else
+                {                 
+                    //   We remove the parent node from the jump table.
+                    otherNode.NameLength = parentExitNode.NameLength;
+
+                    uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, parentExitNodeHandleLength);
+                    this.NodesTable.Remove(parentExitNode, hash);
+                }
+
+                size--;
+
+                return true;
+            }
+            finally
+            {
+                stack.Clear();
+                nodesStackPool.Free(stack);
+            }
         }
 
         public bool TryGet(TKey key, out TValue value)
@@ -922,6 +1024,93 @@ namespace Sparrow.Collections
             }
         }
 
+        private void UpdateRightJumpsAfterDeletion(Internal parentExitNode, Leaf deletedLeaf, Node otherNode, bool isRightChild, Stack<Internal> stack)
+        {
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("UpdateRightJumpsAfterDeletion({0}, {1}, {2}, {3}, {4})", parentExitNode.ToDebugString(this), deletedLeaf.ToDebugString(this), otherNode.ToDebugString(this), isRightChild, DumpStack(stack)));
+#endif
+
+            if (!isRightChild)
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: we need to
+                // update all nodes jumping left which point to the parent exit node. 
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Pop();
+                    if (toFix.JumpLeftPtr != parentExitNode)
+                        break;
+                    toFix.JumpLeftPtr = otherNode;
+                }
+            }
+            else
+            {
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Peek();
+                    if (toFix.JumpRightPtr != parentExitNode)
+                        break;
+
+                    toFix.JumpRightPtr = otherNode;
+                    stack.Pop();
+                }
+
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Pop();
+                    if (toFix.JumpRightPtr != deletedLeaf)
+                        break;
+
+                    while (!otherNode.Intersects(toFix.GetJumpLength(this)))
+                        otherNode = ((Internal)otherNode).JumpRightPtr;
+
+                    toFix.JumpRightPtr = otherNode;
+                }
+            }            
+        }
+
+        private void UpdateLeftJumpsAfterDeletion(Internal parentExitNode, Leaf deletedLeaf, Node otherNode, bool isRightChild, Stack<Internal> stack)
+        {
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("UpdateLeftJumpsAfterDeletion({0}, {1}, {2}, {3}, {4})", parentExitNode.ToDebugString(this), deletedLeaf.ToDebugString(this), otherNode.ToDebugString(this), isRightChild, DumpStack(stack)));
+#endif
+
+            if (isRightChild)
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: we need to
+                // update all nodes jumping right which point to the parent exit node. 
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Pop();
+                    if (toFix.JumpRightPtr != parentExitNode)
+                        break;
+                    toFix.JumpRightPtr = otherNode;
+                }
+            }
+            else
+            {
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Peek();
+                    if (toFix.JumpLeftPtr != parentExitNode)
+                        break;
+
+                    toFix.JumpLeftPtr = otherNode;
+                    stack.Pop();
+                }
+
+                while (stack.Count != 0)
+                {
+                    var toFix = stack.Pop();
+                    if (toFix.JumpLeftPtr != deletedLeaf)
+                        break;
+
+                    while (!otherNode.Intersects(toFix.GetJumpLength(this)))
+                        otherNode = ((Internal)otherNode).JumpLeftPtr;
+
+                    toFix.JumpLeftPtr = otherNode;
+                }
+            }
+        }
 
         private CutPoint FindParentExitNode(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack)
         {
@@ -931,7 +1120,7 @@ namespace Sparrow.Collections
 #endif
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
-                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);                          
+                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);
 
             int length = searchKey.Count;
 
@@ -945,7 +1134,7 @@ namespace Sparrow.Collections
             else
                 candidateNode = parexOrExitNode.Left;
 
-            int lcpLength = searchKey.LongestCommonPrefixLength(candidateNode.Extent(this));            
+            int lcpLength = searchKey.LongestCommonPrefixLength(candidateNode.Extent(this));
 
             // Fat Binary Search just worked with high probability and gave use the parex(key) node. 
             if (candidateNode.IsExitNodeOf(this, searchKey.Count, lcpLength))
@@ -957,7 +1146,7 @@ namespace Sparrow.Collections
             Debug.Assert(lcpLength == searchKey.LongestCommonPrefixLength(parexOrExitNode.Extent(this)));
 
             int startPoint;
-            if ( parexOrExitNode.IsExitNodeOf(this, length, lcpLength) )
+            if (parexOrExitNode.IsExitNodeOf(this, length, lcpLength))
             {
                 // We have the correct exit node, we then must pop it and probably restart the search to find the parent.
                 stack.Pop();
@@ -985,7 +1174,7 @@ namespace Sparrow.Collections
 
                 return new CutPoint(lcpLength, parexNode, parexOrExitNode, searchKey);
             }
-            
+
             // The search process failed with very low probability.
             stack.Clear();
             parexOrExitNode = FatBinarySearch(searchKey, state, stack, -1, length, isExact: true);
@@ -1013,6 +1202,40 @@ namespace Sparrow.Collections
 
             Internal parentNode = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode.NameLength, isExact: true);
             return new CutPoint(lcpLength, parentNode, parexOrExitNode, searchKey);
+        }
+
+        private Internal FindGrandParentExitNode(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack)
+        {
+            Contract.Requires(size != 0);
+#if DETAILED_DEBUG
+            Console.WriteLine(string.Format("FindGrandParentExitNode({0})", searchKey.ToBinaryString()));
+#endif
+            var parentExitNode = stack.Pop();
+
+            // The parent is the root, therefore there is no grandparent. 
+            if (parentExitNode == this.Root)
+                return null;
+
+            var top = stack.Peek();
+            int start = top.ExtentLength;
+            if (start == parentExitNode.NameLength - 1)
+                return top;
+
+            int stackSize = stack.Count;
+
+            // We will find the proper grand parent exit node with very high probability.
+            Internal grandParentExitNode = FatBinarySearch(searchKey, state, stack, start, parentExitNode.NameLength, false);
+            if (grandParentExitNode.Right == parentExitNode || grandParentExitNode.Left == parentExitNode)
+                return grandParentExitNode;
+
+            // We had failed spectacularly. Ensure there is no garbage on the stack and clean it up.
+            while (stack.Count > stackSize)
+                stack.Pop();
+
+            Contract.Assert(stack.Count == stackSize);
+            
+            // Restart the search with the exact costly version.             
+            return FatBinarySearch(searchKey, state, stack, start, parentExitNode.NameLength, true);            
         }
 
         private ExitNode FindExitNode(TKey key)
