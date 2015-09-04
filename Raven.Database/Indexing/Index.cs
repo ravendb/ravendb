@@ -969,7 +969,7 @@ namespace Raven.Database.Indexing
 																(currentAnalyzer, generator) =>
 																{
 																	Analyzer generateAnalyzer =
-																		generator.Value.GenerateAnalyzerForIndexing(indexId.ToString(), luceneDoc,
+																		generator.Value.GenerateAnalyzerForIndexing(PublicName, luceneDoc,
 																											currentAnalyzer);
 																	if (generateAnalyzer != currentAnalyzer &&
 																		currentAnalyzer != analyzer)
@@ -1598,7 +1598,7 @@ namespace Raven.Database.Indexing
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
-							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.indexId.ToString(), indexQuery.Query, currentAnalyzer);
+							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.PublicName, indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
