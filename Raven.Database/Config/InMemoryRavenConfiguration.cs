@@ -85,7 +85,7 @@ namespace Raven.Database.Config
 
 			IndexingClassifier = new DefaultIndexingClassifier();
 
-			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
+			Catalog = new AggregateCatalog(CurrentAssemblyCatalog);
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
@@ -985,6 +985,9 @@ namespace Raven.Database.Config
 		private string indexStoragePath;
 		
 		private int? maxNumberOfParallelIndexTasks;
+
+		//this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
+		private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
 
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
