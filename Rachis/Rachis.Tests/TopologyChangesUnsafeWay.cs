@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Rachis.Transport;
@@ -14,28 +15,21 @@ namespace Rachis.Tests
 {
 	public class TopologyChangesUnsafeWay : RaftTestsBase
 	{
+		private RaftEngine leader;
+		private List<RaftEngine> nodesToShutdown;
+		private List<RaftEngine> runningNodes;
+
 		[Theory]
 		[InlineData(3)]
 		[InlineData(4)]
 		[InlineData(5)]
 		public void can_remove_nodes_from_topology_even_if_there_is_no_majority(int clusterSize)
 		{
-			var leader = CreateNetworkAndGetLeader(clusterSize);
+			CreateCluster(clusterSize);
 
-			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
-			
-			foreach (var node in nodesToShutdown)
-			{
-				DisconnectNode(node.Name);
-				node.Dispose();
-			}
+			ShutDownMajorityOfNodes();
 
-			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
-
-			foreach (var nodeRunning in runningNodes)
-			{
-				ForceTimeout(nodeRunning.Name);
-			}
+			ForceTimeoutsOnRunningNodes();
 
 			foreach (var nodeDown in nodesToShutdown)
 			{
@@ -57,17 +51,11 @@ namespace Rachis.Tests
 		[InlineData(5)]
 		public void can_add_nodes_to_topology_even_if_there_is_no_majority(int clusterSize)
 		{
-			var leader = CreateNetworkAndGetLeader(clusterSize);
+			CreateCluster(clusterSize);
 
-			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+			ShutDownMajorityOfNodes();
 
-			foreach (var node in nodesToShutdown)
-			{
-				DisconnectNode(node.Name);
-				node.Dispose();
-			}
-
-			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
+			ForceTimeoutsOnRunningNodes();
 
 			foreach (var nodeRunning in runningNodes)
 			{
@@ -91,22 +79,11 @@ namespace Rachis.Tests
 		[InlineData(5)]
 		public void new_leader_is_selected_after_removing_dead_nodes(int clusterSize)
 		{
-			var leader = CreateNetworkAndGetLeader(clusterSize);
+			CreateCluster(clusterSize);
 
-			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+			ShutDownMajorityOfNodes();
 
-			foreach (var node in nodesToShutdown)
-			{
-				DisconnectNode(node.Name);
-				node.Dispose();
-			}
-
-			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
-
-			foreach (var nodeRunning in runningNodes)
-			{
-				ForceTimeout(nodeRunning.Name);
-			}
+			ForceTimeoutsOnRunningNodes();
 
 			var newLeaderTask = WaitForNewLeaderAsync();
 
@@ -129,26 +106,13 @@ namespace Rachis.Tests
 		[InlineData(5)]
 		public void new_leader_is_selected_after_adding_new_nodes_and_removing_dead_onces(int clusterSize)
 		{
-			var leader = CreateNetworkAndGetLeader(clusterSize);
+			CreateCluster(clusterSize);
 
-			var quorumSize = leader.CurrentTopology.QuorumSize;
+			ShutDownMajorityOfNodes();
 
-			var nodesToShutdown = GetRandomNodes(quorumSize);
+			ForceTimeoutsOnRunningNodes();
 
-			foreach (var node in nodesToShutdown)
-			{
-				DisconnectNode(node.Name);
-				node.Dispose();
-			}
-
-			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
-
-			foreach (var nodeRunning in runningNodes)
-			{
-				ForceTimeout(nodeRunning.Name);
-			}
-
-			var newNodes = Enumerable.Range(0, quorumSize).Select(x =>
+			var newNodes = Enumerable.Range(0, leader.CurrentTopology.QuorumSize).Select(x =>
 			{
 				Thread.Sleep(new Random().Next(2000));
 				return NewNodeFor(leader);
@@ -185,22 +149,11 @@ namespace Rachis.Tests
 		[InlineData(5)]
 		public void after_retrieving_majority_can_operate_as_usual(int clusterSize)
 		{
-			var leader = CreateNetworkAndGetLeader(clusterSize);
+			CreateCluster(clusterSize);
 
-			var nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+			ShutDownMajorityOfNodes();
 
-			foreach (var node in nodesToShutdown)
-			{
-				DisconnectNode(node.Name);
-				node.Dispose();
-			}
-
-			var runningNodes = Nodes.Except(nodesToShutdown).ToList();
-
-			foreach (var nodeRunning in runningNodes)
-			{
-				ForceTimeout(nodeRunning.Name);
-			}
+			ForceTimeoutsOnRunningNodes();
 
 			var newLeaderTask = WaitForNewLeaderAsync();
 
@@ -215,8 +168,6 @@ namespace Rachis.Tests
 			Assert.True(newLeaderTask.Wait(TimeSpan.FromSeconds(10)));
 			
 			leader = newLeaderTask.Result;
-
-			Assert.Equal(RaftEngineState.Leader, leader.State);
 
 			var cmd = new DictionaryCommand.Set
 			{
@@ -257,6 +208,31 @@ namespace Rachis.Tests
 				}
 
 				Assert.True(additinalNodeHasAllRunningNodesInTopology.Wait(3000));
+			}
+		}
+
+		private void CreateCluster(int clusterSize)
+		{
+			leader = CreateNetworkAndGetLeader(clusterSize);
+		}
+
+		private void ShutDownMajorityOfNodes()
+		{
+			nodesToShutdown = GetRandomNodes(leader.CurrentTopology.QuorumSize);
+			runningNodes = Nodes.Except(nodesToShutdown).ToList();
+
+			foreach (var node in nodesToShutdown)
+			{
+				DisconnectNode(node.Name);
+				node.Dispose();
+			}
+		}
+
+		private void ForceTimeoutsOnRunningNodes()
+		{
+			foreach (var nodeRunning in runningNodes)
+			{
+				ForceTimeout(nodeRunning.Name);
 			}
 		}
 	}
