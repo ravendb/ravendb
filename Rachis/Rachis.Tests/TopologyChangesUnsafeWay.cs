@@ -183,7 +183,7 @@ namespace Rachis.Tests
 
 			using (var additionalNode = NewNodeFor(leader))
 			{
-				var additinalNodeHasAllRunningNodesInTopology = new ManualResetEventSlim();
+				var additinalNodeHasAllRunningNodesAndNoDownNodeInTopology = new ManualResetEventSlim();
 
 				additionalNode.TopologyChanged += x =>
 				{
@@ -191,9 +191,12 @@ namespace Rachis.Tests
 					{
 						if (x.Requested.Contains(runningNode.Name) == false)
 							return;
+
+						if (nodesToShutdown.Any(downNode => x.Requested.Contains(downNode.Name)))
+							return;
 					}
 
-					additinalNodeHasAllRunningNodesInTopology.Set();
+					additinalNodeHasAllRunningNodesAndNoDownNodeInTopology.Set();
 				};
 
 				var additionalNodeAddedToCluster = WaitForToplogyChangeOnCluster(runningNodes);
@@ -202,19 +205,22 @@ namespace Rachis.Tests
 
 				Assert.True(additionalNodeAddedToCluster.Wait(3000));
 
-				foreach (var node in runningNodes)
-				{
-					Assert.True(node.CurrentTopology.Contains(additionalNode.Name));
-				}
+				Assert.True(additinalNodeHasAllRunningNodesAndNoDownNodeInTopology.Wait(3000));
 
-				Assert.True(additinalNodeHasAllRunningNodesInTopology.Wait(3000));
+				var persistentTopology = additionalNode.PersistentState.GetCurrentTopology();
+
+				foreach (var running in runningNodes)
+				{
+					Assert.True(persistentTopology.Contains(running.Name));
+				}
 
 				foreach (var nodeDown in nodesToShutdown)
 				{
-					Assert.False(additionalNode.CurrentTopology.Contains(nodeDown.Name));
+					Assert.False(persistentTopology.Contains(nodeDown.Name));
 				}
 
 				Assert.True(additionalNode.CurrentTopology.Contains(additionalNode.Name));
+				Assert.True(persistentTopology.Contains(additionalNode.Name));
 			}
 		}
 
