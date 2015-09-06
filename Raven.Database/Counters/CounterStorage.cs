@@ -846,8 +846,8 @@ namespace Raven.Database.Counters
 				var sign = delta >= 0 ? ValueSign.Positive : ValueSign.Negative;
 				var doesCounterExist = Store(groupName, counterName, parent.ServerId, sign, counterKeySlice =>
 				{
-					if (sign == ValueSign.Negative)
-						delta = -Math.Abs(delta);
+					if (sign == ValueSign.Negative && delta > 0) //precaution
+						delta = -delta;
 					counters.Increment(counterKeySlice, delta);
 				});
 

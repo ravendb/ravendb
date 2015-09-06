@@ -22,7 +22,7 @@ namespace Raven.Tests.Counters
 {
 	public class RavenBaseCountersTest : RavenTestBase
 	{
-		protected readonly IDocumentStore ravenStore;
+		protected readonly Lazy<IDocumentStore> ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
 		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
@@ -31,7 +31,7 @@ namespace Raven.Tests.Counters
 			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
 				IOExtensions.DeleteDirectory(folder);
 
-			ravenStore = NewRemoteDocumentStore(fiddler:true);
+			ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
 			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
 		}
@@ -67,7 +67,7 @@ namespace Raven.Tests.Counters
 
 		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
 		{
-			ravenStore = ravenStore ?? this.ravenStore;
+			ravenStore = ravenStore ?? this.ravenStore.Value;
 			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
 	
 			var counterStore = new CounterStore
@@ -82,7 +82,7 @@ namespace Raven.Tests.Counters
 
 		public override void Dispose()
 		{
-			if (ravenStore != null) ravenStore.Dispose();
+			if (ravenStore.IsValueCreated && ravenStore.Value != null) ravenStore.Value.Dispose();
 
 			try
 			{

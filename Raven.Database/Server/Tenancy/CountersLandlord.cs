@@ -291,12 +291,25 @@ namespace Raven.Database.Server.Tenancy
 
 				foreach (var doc in counterDocs)
 				{
-					Debug.Assert(((IEnumerable<KeyValuePair<string, RavenJToken>>)doc).Any(x => x.Key == "StoreName"));
+					var id = GetCounterIdFromDocumentKey(doc);
+					Debug.Assert(String.IsNullOrWhiteSpace(id) == false,"key of counter should not be empty");
 
-					var counter = AsyncHelpers.RunSync(() => GetCounterInternal(doc.Value<string>("StoreName")));
+					var counter = AsyncHelpers.RunSync(() => GetCounterInternal(id));
 					action(counter);
 				}
 			}
+		}
+
+		private static string GetCounterIdFromDocumentKey(RavenJToken doc)
+		{
+			var metadata = doc.Value<RavenJObject>("@metadata");
+			var docKey = metadata.Value<string>("@id");
+			var startIndex = docKey.LastIndexOf('/') + 1;
+			if (startIndex >= docKey.Length)
+				throw new InvalidOperationException(string.Format("Counter document key is invalid. (got {0})", docKey));
+
+			var id = docKey.Substring(startIndex);
+			return id;
 		}
 
 
