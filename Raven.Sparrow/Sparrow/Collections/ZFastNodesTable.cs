@@ -182,6 +182,11 @@ namespace Sparrow.Collections
 
                         if (entries[bucket].Hash < kDeleted)
                         {
+
+#if DETAILED_DEBUG_H
+                            Console.WriteLine(string.Format("Remove: {0}, Bucket: {1}, Signature: {2}", node.ToDebugString(this.owner), bucket, signature));
+#endif
+
                             entries[bucket].Hash = kDeleted;
                             entries[bucket].Signature = kUnused;
                             entries[bucket].Node = default(Internal);
@@ -270,7 +275,7 @@ namespace Sparrow.Collections
 
                     Debug.Assert(numProbes < 100);
                 }
-                while (nSignature != kUnused);
+                while (this._entries[pos].Hash != kUnused);
 
                 return -1;
             }
@@ -305,7 +310,7 @@ namespace Sparrow.Collections
 
                     Debug.Assert(numProbes < 100);
                 }
-                while (nSignature != kUnused);
+                while (this._entries[pos].Hash != kUnused);
 
                 return -1;
             }

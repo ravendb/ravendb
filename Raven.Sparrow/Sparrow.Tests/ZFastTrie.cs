@@ -228,6 +228,27 @@ namespace Sparrow.Tests
             ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
+
+
+
+
+
+        [Fact]
+        public void Structure_MultipleBranchDeletion3()
+        {
+            var tree = new ZFastTrieSortedSet<string, string>(binarize);
+
+            Assert.True(tree.Add("0tA", "0tA"));
+            Assert.True(tree.Add("UUa", "UUa"));
+            Assert.True(tree.Add("0b5", "0b5"));
+            Assert.True(tree.Add("8ll", "8ll"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
+
+            Assert.True(tree.Remove("0tA"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+        }
+
         [Fact]
         public void Structure_MultipleBranch_OrderPreservation()
         {
