@@ -65,62 +65,101 @@ namespace Sparrow.Tryout
             return new String(stringChars);
         }        
 
+        private class Operation
+        {
+            public bool IsInsert;
+            public string Key;
+            public BitVector KeyAsBinary;
+        }
 
         static unsafe void Main(string[] args)
         {
-            int keySize = 3;
-            int keysToInsert = 4;
-            var generator = new Random(100);
-            // var generator = new Random();
+            int keySize = 8;
+            int keysToInsert = 1000000;
+            //var generator = new Random(100);
+            var generator = new Random();
 
-            //var values = new HashSet<string>();
-            //var valuesAsBitVectors = new HashSet<BitVector>();
-            //for (int i = 0; i < keysToInsert; i++)
-            //{
-            //    //long key = generator.Next() << 32 | generator.Next();
-            //    string key = GenerateRandomString(generator, keySize);
-            //    values.Add(key);
-            //    valuesAsBitVectors.Add(BitVector.Of(key));
-            //}
+            var values = new HashSet<string>();
+            var valuesAsBitVectors = new HashSet<BitVector>();
 
-            //var watch = Stopwatch.StartNew();
-            //TimeSpan totalTime = TimeSpan.Zero;
+            var withDeletes = new List<string>();
+            var operations = new List<Operation>();
 
-            //var tree = new ZFastTrieSortedSet<BitVector, string>(binarizeIdentity);
+            for (int i = 0; i < keysToInsert; i++)
+            {
+                if ( generator.Next(5) == 0 )
+                {
+                    if (withDeletes.Count == 0)
+                        continue;
 
-            //int count = 0;
-            //foreach (var key in valuesAsBitVectors)
-            //{
-            //    tree.Add(key, string.Empty);
-            //    if ( count > 90000 )
-            //        tree.NodesTable.VerifyStructure();
+                    int position = generator.Next(withDeletes.Count);
+                    
+                    var key = withDeletes[position];
+                    operations.Add(new Operation { IsInsert = false, Key = key, KeyAsBinary = binarize(key) });                    
+                    withDeletes.RemoveAt(position);
+                }
+                else
+                {
+                    //long key = generator.Next() << 32 | generator.Next();
+                    string key = GenerateRandomString(generator, keySize);
+                    withDeletes.Add(key);
+                    operations.Add(new Operation { IsInsert = true, Key = key, KeyAsBinary = binarize(key) });
 
-            //    count++;
-            //}
-            //watch.Stop();
+                    values.Add(key);
+                    valuesAsBitVectors.Add(binarize(key));
+                }
+            }
 
-            //totalTime += watch.Elapsed;
-            //Console.WriteLine(string.Format("ZFAST: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+            var watch = Stopwatch.StartNew();
+            TimeSpan totalTime = TimeSpan.Zero;
 
-            //watch = Stopwatch.StartNew();
-            //foreach (var key in valuesAsBitVectors)
-            //{
-            //    tree.Contains(key);
-            //}
-            //watch.Stop();
+            var tree = new ZFastTrieSortedSet<BitVector, string>(binarizeIdentity);
 
-            //totalTime += watch.Elapsed;
-            //Console.WriteLine(string.Format("ZFAST: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
-            //Console.WriteLine(string.Format("ZFAST: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
+            int count = 0;
+            foreach (var op in operations)
+            {
+                if ( op.IsInsert )
+                {
+                    tree.Add(op.KeyAsBinary, op.Key);
+                }
+                else
+                {
+                    tree.Remove(op.KeyAsBinary);
+                }                
+
+                count++;
+            }
+            watch.Stop();
+
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("ZFAST: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+
+            watch = Stopwatch.StartNew();
+            foreach (var key in valuesAsBitVectors)
+            {
+                tree.Contains(key);
+            }
+            watch.Stop();
+
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("ZFAST: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+            Console.WriteLine(string.Format("ZFAST: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
 
             //tree.NodesTable.VerifyStructure();
 
             //var list = new SortedList<string, string>();
 
             //watch = Stopwatch.StartNew();
-            //foreach (var key in values)
+            //foreach (var op in operations)
             //{
-            //    list.Add(key, key);
+            //    if( op.IsInsert )
+            //    {
+            //        list.Add(op.Key, op.Key);
+            //    }
+            //    else
+            //    {
+            //        list.Remove(op.Key);
+            //    }                
             //}
             //watch.Stop();
             //Console.WriteLine(string.Format("SortedList: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
@@ -134,110 +173,117 @@ namespace Sparrow.Tryout
             //watch.Stop();
             //Console.WriteLine(string.Format("SortedList: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
 
-            //var dictionary = new SortedDictionary<string, string>();
+            var dictionary = new SortedDictionary<string, string>();
 
-            //totalTime = TimeSpan.Zero;
+            totalTime = TimeSpan.Zero;
 
-            //watch = Stopwatch.StartNew();
-            //foreach (var key in values)
-            //{
-            //    dictionary.Add(key, key);
-            //}
-            //watch.Stop();
-
-            //totalTime += watch.Elapsed;
-            //Console.WriteLine(string.Format("SortedDictionary: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
-
-
-            //watch = Stopwatch.StartNew();
-            //foreach (var key in values)
-            //{
-            //    dictionary.ContainsKey(key);
-            //}
-            //watch.Stop();
-
-            //totalTime += watch.Elapsed;
-            //Console.WriteLine(string.Format("SortedDictionary: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
-            //Console.WriteLine(string.Format("SortedDictionary: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
-
-
-            Exception smallerEx = null;
-            List<string> smallerRemoveSet = null;
-            List<string> smallerInsertSet = null;
-            ZFastTrieSortedSet<string, string> smallerTree = null;
-
-
-            for (int i = 0; i < 100; i++)
+            watch = Stopwatch.StartNew();
+            foreach (var op in operations)
             {
-                var insertKeys = new List<string>();
-                var removedKeys = new List<string>();
+                if ( op.IsInsert )
+                {
+                    dictionary.Add(op.Key, op.Key);
+                }
+                else
+                {
+                    dictionary.Remove(op.Key);
+                }                
+            }
+            watch.Stop();
 
-                var tree = new ZFastTrieSortedSet<string, string>(binarize);
-                //var tree = new ZFastTrieSortedSet<long, long>(binarizeLong);
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("SortedDictionary: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
 
-                if (i % 1000 == 0)
-                    Console.WriteLine("Try: " + i);
 
-                try
-                {                    
+            watch = Stopwatch.StartNew();
+            foreach (var key in values)
+            {
+                dictionary.ContainsKey(key);
+            }
+            watch.Stop();
 
-                    var values = new HashSet<string>();
-                    for (int j = 0; j < keysToInsert; j++)
-                    {
-                        //long key = generator.Next() << 32 | generator.Next();                        
-                        string key = GenerateRandomString(generator, keySize);
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("SortedDictionary: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+            Console.WriteLine(string.Format("SortedDictionary: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
+
+
+            //Exception smallerEx = null;
+            //List<string> smallerRemoveSet = null;
+            //List<string> smallerInsertSet = null;
+            //ZFastTrieSortedSet<string, string> smallerTree = null;
+
+
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    var insertKeys = new List<string>();
+            //    var removedKeys = new List<string>();
+
+            //    var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            //    //var tree = new ZFastTrieSortedSet<long, long>(binarizeLong);
+
+            //    if (i % 1000 == 0)
+            //        Console.WriteLine("Try: " + i);
+
+            //    try
+            //    {                    
+
+            //        var values = new HashSet<string>();
+            //        for (int j = 0; j < keysToInsert; j++)
+            //        {
+            //            //long key = generator.Next() << 32 | generator.Next();                        
+            //            string key = GenerateRandomString(generator, keySize);
                                                 
-                        if (values.Add(key))
-                        {
-                            insertKeys.Add(key);
-                            tree.Add(key, key);
-                        }
+            //            if (values.Add(key))
+            //            {
+            //                insertKeys.Add(key);
+            //                tree.Add(key, key);
+            //            }
                             
-                    }
+            //        }
 
-                    foreach ( var key in values )
-                    {
-                        removedKeys.Add(key); // Add it before trying it.
+            //        foreach ( var key in values )
+            //        {
+            //            removedKeys.Add(key); // Add it before trying it.
 
-                        var removed = tree.Remove(key);
-                        ZFastTrieDebugHelpers.StructuralVerify(tree);
+            //            var removed = tree.Remove(key);
+            //            ZFastTrieDebugHelpers.StructuralVerify(tree);
 
-                        if (!removed) throw new Exception("Fail!");
-                    }                    
+            //            if (!removed) throw new Exception("Fail!");
+            //        }                    
 
                     
-                }
-                catch (Exception ex)
-                {                    
-                    Console.WriteLine("Failed: " + removedKeys.Count);
+            //    }
+            //    catch (Exception ex)
+            //    {                    
+            //        Console.WriteLine("Failed: " + removedKeys.Count);
 
-                    if (smallerRemoveSet == null || smallerRemoveSet.Count > removedKeys.Count)
-                    {
-                        smallerInsertSet = insertKeys;
-                        smallerRemoveSet = removedKeys;
-                        smallerTree = tree;
-                        smallerEx = ex;
-                    }
-                }
-            }
+            //        if (smallerRemoveSet == null || smallerRemoveSet.Count > removedKeys.Count)
+            //        {
+            //            smallerInsertSet = insertKeys;
+            //            smallerRemoveSet = removedKeys;
+            //            smallerTree = tree;
+            //            smallerEx = ex;
+            //        }
+            //    }
+            //}
 
-            if (smallerRemoveSet != null)
-            {
-                Console.WriteLine();
-                Console.WriteLine("--- Insert order --- ");
-                foreach (var key in smallerInsertSet)
-                    Console.WriteLine(key);
+            //if (smallerRemoveSet != null)
+            //{
+            //    Console.WriteLine();
+            //    Console.WriteLine("--- Insert order --- ");
+            //    foreach (var key in smallerInsertSet)
+            //        Console.WriteLine(key);
 
-                Console.WriteLine();
-                Console.WriteLine("--- Removed order --- ");
-                foreach (var key in smallerRemoveSet)
-                    Console.WriteLine(key);
+            //    Console.WriteLine();
+            //    Console.WriteLine("--- Removed order --- ");
+            //    foreach (var key in smallerRemoveSet)
+            //        Console.WriteLine(key);
 
-                Console.WriteLine();
-                ZFastTrieDebugHelpers.DumpKeys(smallerTree);
+            //    Console.WriteLine();
+            //    ZFastTrieDebugHelpers.DumpKeys(smallerTree);
 
-                Console.WriteLine(smallerEx.StackTrace);
-            }
+            //    Console.WriteLine(smallerEx.StackTrace);
+            //}
         }
     }
 }

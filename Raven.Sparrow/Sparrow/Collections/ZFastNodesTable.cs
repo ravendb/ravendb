@@ -732,19 +732,19 @@ namespace Sparrow.Collections
                     {
                         uint hash = Hashing.Iterative.XXHash32.CalculateInline((byte*)bitsPtr, words * sizeof(ulong), state, lcp / BitVector.BitsPerByte);
 
-#if ALTERNATIVE_HASHING
+// #if ALTERNATIVE_HASHING
                         remainingWord = ((remainingWord) >> shift) << shift;
                         ulong intermediate = Hashing.CombineInline(remainingWord, ((ulong)remaining) << 32 | (ulong)hash);
 
                         hash = (uint)intermediate ^ (uint)(intermediate >> 32);
-#else
-                        uint* combine = stackalloc uint[4];
-                        ((ulong*)combine)[0] = ((remainingWord) >> shift) << shift;
-                        combine[2] = (uint)remaining;
-                        combine[3] = hash;
+//#else
+//                        uint* combine = stackalloc uint[4];
+//                        ((ulong*)combine)[0] = ((remainingWord) >> shift) << shift;
+//                        combine[2] = (uint)remaining;
+//                        combine[3] = hash;
 
-                        hash = Hashing.XXHash32.CalculateInline((byte*)combine, 4 * sizeof(uint));
-#endif
+//                        hash = Hashing.XXHash32.CalculateInline((byte*)combine, 4 * sizeof(uint));
+//#endif
 
 #if DETAILED_DEBUG_H
                         Console.WriteLine(string.Format("\tHash -> Hash: {0}, Remaining: {2}, Bits({1}), Vector:{3}", hash, remaining, remainingWord, vector.SubVector(0, length).ToBinaryString()));
