@@ -52,14 +52,14 @@ namespace Raven.Tests.Issues
 			{
 				AddWindowsUser(username, password);
 
-				this.Invoking(x =>
+                this.Invoking(x =>
 				{
 					using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
 					{
 					}
 				}).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
 
-				this.Invoking(x =>
+                this.Invoking(x =>
 				{
 					using (NewStore(enableAuthentication: true))
 					{
