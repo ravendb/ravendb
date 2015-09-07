@@ -745,6 +745,10 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
     }
 
+    static forReportingRawData(db: database, indexName: string) {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
+    }
+
     static forTransformersRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
     }
