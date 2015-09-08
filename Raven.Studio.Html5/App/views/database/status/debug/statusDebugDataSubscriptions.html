@@ -52,14 +52,21 @@
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="visible: PropertiesNotMatch !== null">
-                            <label class="col-md-3 col-md-offset-2">Properties cannot match values</label>
-                            <div class="col-md-7" data-bind="foreach: PropertiesNotMatch">
-                                <p>
-                                    <span data-bind="text: Key"></span> : <span data-bind="text: Value"></span>
-                                </p>
-                            </div>
-                        </div>
+	                    <div class="form-group" data-bind="visible: PropertiesNotMatch !== null">
+		                    <label class="col-md-3 col-md-offset-2">Properties cannot match values</label>
+		                    <div class="col-md-7" data-bind="foreach: PropertiesNotMatch">
+			                    <p>
+				                    <span data-bind="text: Key"></span> : <span data-bind="text: Value"></span>
+			                    </p>
+		                    </div>
+	                    </div>
+
+						<div class="form-group">
+							<label class="col-md-3 col-md-offset-2">Start ETag</label>
+							<div class="col-md-7">
+								<p data-bind="text: StartEtag"></p>
+							</div>
+						</div>
                     </div>
 
                     <div class="form-group">
@@ -81,13 +88,25 @@
                                     <p data-bind="text: ConnectionId"></p>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-md-3 col-md-offset-2">Client alive notification interval</label>
-                                <div class="col-md-7">
-                                    <p data-bind="text: ClientAliveNotificationInterval"></p>
-                                </div>
-                            </div>
-                            <div class="form-group">
+	                        <div class="form-group">
+		                        <label class="col-md-3 col-md-offset-2">Client alive notification interval</label>
+		                        <div class="col-md-7">
+			                        <p data-bind="text: ClientAliveNotificationInterval"></p>
+		                        </div>
+	                        </div>
+	                        <div class="form-group">
+		                        <label class="col-md-3 col-md-offset-2">Time to wait before connection retry</label>
+		                        <div class="col-md-7">
+			                        <p data-bind="text: TimeToWaitBeforeConnectionRetry"></p>
+		                        </div>
+	                        </div>
+							<div class="form-group">
+								<label class="col-md-3 col-md-offset-2">Opening strategy</label>
+								<div class="col-md-7">
+									<p data-bind="text: Strategy"></p>
+								</div>
+							</div>
+	                        <div class="form-group">
                                 <label class="col-md-3 col-md-offset-2">Ignore subscribers errors</label>
                                 <div class="col-md-7">
                                     <p data-bind="text: IgnoreSubscribersErrors"></p>
