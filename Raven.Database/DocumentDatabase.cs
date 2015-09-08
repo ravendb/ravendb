@@ -560,10 +560,12 @@ namespace Raven.Database
                     disposable.Dispose();
             });
 
-            if (TransactionalStorage != null)
+			if (IndexStorage != null)
+				exceptionAggregator.Execute(IndexStorage.Dispose);
+
+			if (TransactionalStorage != null)
                 exceptionAggregator.Execute(TransactionalStorage.Dispose);
-            if (IndexStorage != null)
-                exceptionAggregator.Execute(IndexStorage.Dispose);
+           
 
             if (Configuration != null)
                 exceptionAggregator.Execute(Configuration.Dispose);
