@@ -153,7 +153,8 @@ namespace Sparrow
         /// <<remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         public static class XXHash64
         {
-            public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static unsafe ulong CalculateInline(byte* buffer, int len, ulong seed = 0)
             {
                 ulong h64;
 
@@ -259,20 +260,25 @@ namespace Sparrow
                 return h64;
             }
 
+            public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            {
+                return CalculateInline(buffer, len, seed);
+            }
+
             public static ulong Calculate(string value, Encoding encoder, ulong seed = 0)
             {
                 var buf = encoder.GetBytes(value);
 
                 fixed (byte* buffer = buf)
                 {
-                    return Calculate(buffer, buf.Length, seed);
+                    return CalculateInline(buffer, buf.Length, seed);
                 }
             }
             public static ulong CalculateRaw(string buf, ulong seed = 0)
             {
                 fixed (char* buffer = buf)
                 {
-                    return Calculate((byte*)buffer, buf.Length * sizeof(char), seed);
+                    return CalculateInline((byte*)buffer, buf.Length * sizeof(char), seed);
                 }
             }
 
@@ -283,7 +289,7 @@ namespace Sparrow
 
                 fixed (byte* buffer = buf)
                 {
-                    return Calculate(buffer, len, seed);
+                    return CalculateInline(buffer, len, seed);
                 }
             }
 
@@ -294,7 +300,7 @@ namespace Sparrow
 
                 fixed (int* buffer = buf)
                 {
-                    return Calculate((byte*)buffer, len * sizeof(int), seed);
+                    return CalculateInline((byte*)buffer, len * sizeof(int), seed);
                 }
             }
 
