@@ -289,7 +289,7 @@ namespace Raven.Database.Indexing
                 GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
                 if(file.Length != 0)
-                    clone.stream = applyCodecs(new MmapStream(basePtr, file.Length));
+                    clone.stream = applyCodecs(new MmapStream(file.Name,basePtr, file.Length));
                 else
                     clone.stream = applyCodecs(Stream.Null);
                 clone.stream.Position = stream.Position;
