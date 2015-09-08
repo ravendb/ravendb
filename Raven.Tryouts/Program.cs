@@ -5,9 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Database.Storage.Voron.Impl;
+using Raven.Tests.MailingList;
 
 namespace ConsoleApplication4
 {
@@ -19,19 +21,29 @@ namespace ConsoleApplication4
         }
         private static void Main(string[] args)
         {
-            var ds = new DocumentStore
-            {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "mr"
-            }.Initialize();
+			var transformResults = @"results.Select(order => new {
+    order = order,
+    merchantOrders = order.MerchantOrders.Select((((Func < dynamic, dynamic > )(LoadDocument))))
+}).Select(this0 => new {
+    Id = this0.order.Id,
+    MerchantOrders = this0.merchantOrders.Select(mo => new {
+        mo = mo,
+        merchant = this.LoadDocument(mo.MerchantId)
+    }).Select(this0 => new {
+        MerchantId = this0.merchant.Id,
+        MerchantName = this0.merchant.Name,
+        MerchantOrderId = this0.mo.Id,
+        Items = this0.mo.Items.Select(i => new {
+            Id = i.Id,
+            Name = i.Name
+        })
+    })
+})";
+			Console.WriteLine(new BadTransformer.UserOrderSummaryTransformer().CreateTransformerDefinition(true).TransformResults == transformResults);
+			Console.WriteLine(new BadTransformer.UserOrderSummaryTransformer().CreateTransformerDefinition(true).TransformResults);
+			Console.WriteLine(IndexPrettyPrinter.TryFormat(transformResults));
 
-            using (var bulk = ds.BulkInsert())
-            {
-                for (int i = 0; i < 1000 * 1000; i++)
-                {
-                    bulk.Store(new Item { Number = 1 });
-                }
-            }
+
 
         }
 

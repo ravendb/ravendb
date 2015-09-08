@@ -177,7 +177,7 @@ namespace Raven.Client.Indexes
                 };
 
                 if (convention.PrettifyGeneratedLinqExpressions)
-                    indexDefinition.Reduce = IndexPrettyPrinter.Format(indexDefinition.Reduce);
+                    indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
 
                 foreach (var indexesString in IndexesStrings)
                 {
@@ -227,7 +227,7 @@ namespace Raven.Client.Indexes
                         Map, convention, querySource, translateIdentityProperty: true);
 
                     if (convention.PrettifyGeneratedLinqExpressions)
-                        indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
+                        indexDefinition.Map = IndexPrettyPrinter.TryFormat(indexDefinition.Map);
                 }
                 return indexDefinition;
             }
