@@ -33,6 +33,8 @@ namespace Raven.Abstractions.Smuggler
 
         private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
+	    private Reference<DateTime> lastTimeDocumentWasPut;
+
         protected SmugglerDatabaseApiBase(SmugglerDatabaseOptions options)
 		{
 			Options = options;
@@ -1112,113 +1114,123 @@ namespace Raven.Abstractions.Smuggler
 			int skippedDocuments = 0;
 			long skippedDocumentsSize = 0;
 
-			Etag tempLastEtag = Etag.Empty;
+			var tempLastEtag = Etag.Empty;
 
 			var affectedCollections = new List<string>();
 			Options.Filters.ForEach(filter =>
 			{
 				if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
 				{
-					filter.Values.ForEach(collectionName =>
-					{
-						affectedCollections.Add(collectionName);
-					});
+					filter.Values.ForEach(affectedCollections.Add);
 				}
 			});
 
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			lastTimeDocumentWasPut = new Reference<DateTime>
 			{
-				Options.CancelToken.Token.ThrowIfCancellationRequested();
+				Value = DateTime.MinValue
+			};
 
-				RavenJObject document = null;
-				try
+			//fire only once
+			using (new Timer(_ => Heartbeat(), null, TimeSpan.Zero, Options.HeartbeatLatencyInMilliseconds))
+			{
+				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 				{
-					document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-					var size = DocumentHelpers.GetRoughSize(document);
-					if (size > 1024 * 1024)
+					Options.CancelToken.Token.ThrowIfCancellationRequested();
+
+					RavenJObject document = null;
+					try
 					{
-						Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
-								(double)size / 1024,
-											document["@metadata"].Value<string>("@id"));
-					}
-					if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
-						continue;
-
-					if (Options.MatchFilters(document) == false)
-					{
-						if (affectedCollections.Count <= 0)
-							continue;
-
-						if (document.ContainsKey("@metadata") == false)
-							continue;
-
-						var key = document["@metadata"].Value<string>("@id");
-						if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
-							continue;
-					}
-
-					if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
-						continue;
-
-					if (!string.IsNullOrEmpty(Options.TransformScript))
-						document = await Operations.TransformDocument(document, Options.TransformScript);
-
-					// If document is null after a transform we skip it. 
-					if (document == null)
-						continue;
-
-					var metadata = document["@metadata"] as RavenJObject;
-					if (metadata != null)
-					{
-						if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
-							continue;
-
-						if (Options.StripReplicationInformation)
-							document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
-
-						if (Options.ShouldDisableVersioningBundle)
-							document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
-
-						document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
-					}
-
-					if (Options.UseContinuationFile)
-					{
-						tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-						if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
+						document = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
+						var size = DocumentHelpers.GetRoughSize(document);
+						if (size > 1024*1024)
 						{
-							skippedDocuments++;
-							skippedDocumentsSize += size;
-							continue;
+							Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
+								(double) size/1024,
+								document["@metadata"].Value<string>("@id"));
 						}
+						if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
+							continue;
+
+						if (Options.MatchFilters(document) == false)
+						{
+							if (affectedCollections.Count <= 0)
+								continue;
+
+							if (document.ContainsKey("@metadata") == false)
+								continue;
+
+							var key = document["@metadata"].Value<string>("@id");
+							if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+								continue;
+						}
+
+						if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+							continue;
+
+						if (!string.IsNullOrEmpty(Options.TransformScript))
+							document = await Operations.TransformDocument(document, Options.TransformScript);
+
+						// If document is null after a transform we skip it. 
+						if (document == null)
+							continue;
+
+						var metadata = document["@metadata"] as RavenJObject;
+						if (metadata != null)
+						{
+							if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+								continue;
+
+							if (Options.StripReplicationInformation)
+								document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+							if (Options.ShouldDisableVersioningBundle)
+								document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+
+							document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+						}
+
+						if (Options.UseContinuationFile)
+						{
+							tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+							if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
+							{
+								skippedDocuments++;
+								skippedDocumentsSize += size;
+
+								continue;
+							}
+						}
+
+						await Operations.PutDocument(document, (int) size);
+
+						//make sure the swap is atomic - since the heartbeat timer runs on separate thread
+						Interlocked.Exchange(ref lastTimeDocumentWasPut, new Reference<DateTime> { Value = SystemTime.UtcNow });
 					}
-
-					await Operations.PutDocument(document, (int)size);
-				}
-				catch (Exception e)
-				{
-					if (IgnoreErrorsAndContinue == false)
-						throw;
-
-					Operations.ShowProgress("Failed to import document. Message: {0}", e.Message);
-				}
-				count++;
-
-				if (count % Options.BatchSize == 0)
-				{
-					if (Options.UseContinuationFile)
+					catch (Exception e)
 					{
-						if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-							state.LastDocsEtag = tempLastEtag;
+						if (IgnoreErrorsAndContinue == false)
+							throw;
 
-						await WriteLastEtagToDatabase(state, lastEtagsDocument);
+						Operations.ShowProgress("Failed to import document. Message: {0}", e.Message);
 					}
+					count++;
 
-					// Wait for the batch to be indexed before continue.
-					if (Options.WaitForIndexing)
-						await WaitForIndexingAsOfLastWrite();
+					if (count%Options.BatchSize == 0)
+					{
+						if (Options.UseContinuationFile)
+						{
+							if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+								state.LastDocsEtag = tempLastEtag;
 
-					Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
+							await WriteLastEtagToDatabase(state, lastEtagsDocument);
+						}
+
+						// Wait for the batch to be indexed before continue.
+						if (Options.WaitForIndexing)
+							await WaitForIndexingAsOfLastWrite();
+
+						Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
+					}
 				}
 			}
 
@@ -1232,12 +1244,43 @@ namespace Raven.Abstractions.Smuggler
 				Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
 			}
 
+			//precaution:
+			//delete the heartbeat document in case the server is older version and doesn't recognize it
+			await Operations.DeleteDocument(Constants.BulkImportHeartbeatDocKey); 
+
 			await Operations.PutDocument(null, -1); // force flush    
 
 			return count;
 		}
 
-		private async Task WriteLastEtagToDatabase(OperationState state, JsonDocument lastEtagsDocument)
+	    private void Heartbeat()
+	    {
+		    if (SystemTime.UtcNow - lastTimeDocumentWasPut.Value < Options.HeartbeatLatencyInMilliseconds) 
+				return;
+
+		    var heartbeatDoc = BuildSkipDocument();
+		    var heartbeatDocSize = (int)DocumentHelpers.GetRoughSize(heartbeatDoc);
+		    AsyncHelpers.RunSync(() => Operations.PutDocument(heartbeatDoc, heartbeatDocSize));
+	    }
+
+	    private static RavenJObject BuildSkipDocument()
+	    {
+		    var metadata = new RavenJObject();
+			metadata.Add("@id",Constants.BulkImportHeartbeatDocKey);
+		    var skipDoc = new JsonDocument
+		    {
+				Key = Constants.BulkImportHeartbeatDocKey,
+				DataAsJson = RavenJObject.FromObject(new 
+				{
+					LastHearbeatSent = SystemTime.UtcNow
+				}),
+				Metadata = metadata
+		    };
+
+		    return skipDoc.ToJson();
+	    }
+
+	    private async Task WriteLastEtagToDatabase(OperationState state, JsonDocument lastEtagsDocument)
         {
             lastEtagsDocument.DataAsJson = RavenJObject.FromObject(state);
 
