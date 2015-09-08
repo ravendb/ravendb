@@ -80,6 +80,10 @@ class replicationDestination {
         this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
     }
 
+    toggleSkipIndexReplication() {
+        this.skipIndexReplication.toggle();
+    }
+
     static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
             Url: null,

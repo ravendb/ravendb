@@ -14,7 +14,7 @@ import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/infoPackageImport");
 
-enum parserState {
+const enum parserState {
   pid,
   stack
 }
