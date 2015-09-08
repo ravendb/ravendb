@@ -1,4 +1,4 @@
-enum alertType {
+const enum alertType {
     info,
     success,
     warning,
