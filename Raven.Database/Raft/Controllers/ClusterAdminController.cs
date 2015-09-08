@@ -175,39 +175,5 @@ namespace Raven.Database.Raft.Controllers
 				Removed = name
 			});
 		}
-
-		[HttpPost]
-		[RavenRoute("admin/cluster/remove-unsafe")]
-		public async Task<HttpResponseMessage> RemoveUnsafe()
-		{
-			var node = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
-
-			if (node == null)
-				return GetEmptyMessage(HttpStatusCode.BadRequest);
-
-			if (ClusterManager.Engine.CurrentTopology.Contains(node.Name) == false)
-				return GetEmptyMessage(HttpStatusCode.NotModified);
-
-			await ClusterManager.Client.RemoveFromClusterInUnsafeWay(node).ConfigureAwait(false);
-
-			return GetEmptyMessage();
-		}
-
-		[HttpPost]
-		[RavenRoute("admin/cluster/add-unsafe")]
-		public async Task<HttpResponseMessage> AddUnsafe()
-		{
-			var node = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
-
-			if (node == null)
-				return GetEmptyMessage(HttpStatusCode.BadRequest);
-
-			if (string.IsNullOrEmpty(node.Name))
-				throw new InvalidOperationException("A node's name (<system> database id) has to be specified");
-
-			await ClusterManager.Client.AddToClusterInUnsafeWay(node).ConfigureAwait(false);
-
-			return GetEmptyMessage();
-		}
 	}
 }
