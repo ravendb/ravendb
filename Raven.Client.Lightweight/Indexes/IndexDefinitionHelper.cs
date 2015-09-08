@@ -37,7 +37,7 @@ namespace Raven.Client.Indexes
                     switch (methodCallExpression.Method.Name)
                     {
                         case "Select":
-		                    queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments.FirstOrDefault(x => x.NodeType == ExpressionType.Call || x.NodeType == ExpressionType.Lambda) ?? methodCallExpression.Arguments[0]);
+                            queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments.FirstOrDefault(x => x.NodeType == ExpressionType.Call || x.NodeType == ExpressionType.Lambda) ?? methodCallExpression.Arguments[0]);
                             break;
                         case "SelectMany":
                             queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);
@@ -48,7 +48,12 @@ namespace Raven.Client.Indexes
 
             var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
 
-            var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
+            return FormatLinqQuery(expr, querySource, linqQuery);
+        }
+
+        private static string FormatLinqQuery(LambdaExpression expr, string querySource, string linqQuery)
+        {
+            var querySourceName = expr.Parameters.First(x => x.Type != typeof (IClientSideDatabase)).Name;
 
             var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.Ordinal);
             if (indexOfQuerySource == -1)
@@ -58,9 +63,10 @@ namespace Raven.Client.Indexes
                         linqQuery.Substring(indexOfQuerySource + querySourceName.Length);
 
             linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
-            linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\d)+", "this$1");
+            linqQuery = Regex.Replace(linqQuery, "<>([a-z])_",
+                // replace <>h_ in transparent identifiers
+                match => "__" + match.Groups[1].Value + "_");
+            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\w+)", match => "this" + match.Groups[1].Value);
             linqQuery = JSBeautify.Apply(linqQuery);
             return linqQuery;
         }
