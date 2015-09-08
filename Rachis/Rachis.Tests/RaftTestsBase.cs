@@ -131,12 +131,14 @@ namespace Rachis.Tests
 			return cde;
 		}
 
-		protected CountdownEvent WaitForCommitsOnCluster(Func<DictionaryStateMachine, bool> predicate)
+		protected CountdownEvent WaitForCommitsOnCluster(Func<DictionaryStateMachine, bool> predicate, List<RaftEngine> raftNodes = null)
 		{
-			var cde = new CountdownEvent(_nodes.Count);
+			raftNodes = raftNodes ?? _nodes;
+
+			var cde = new CountdownEvent(raftNodes.Count);
 			var votedAlready = new ConcurrentDictionary<RaftEngine, object>();
 
-			foreach (var node in _nodes)
+			foreach (var node in raftNodes)
 			{
 				var n = node;
 				n.CommitApplied += command =>
@@ -195,10 +197,10 @@ namespace Rachis.Tests
 			return cde;
 		}
 
-		protected Task<RaftEngine> WaitForNewLeaderAsync()
+		protected Task<RaftEngine> WaitForNewLeaderAsync(List<RaftEngine> raftNodes = null)
 		{
 			var rcs = new TaskCompletionSource<RaftEngine>();
-			foreach (var node in _nodes)
+			foreach (var node in raftNodes ?? _nodes)
 			{
 				var n = node;
 
@@ -309,6 +311,26 @@ namespace Rachis.Tests
 			_nodes.Add(raftEngine);
 			return raftEngine;
 		}
+
+		protected List<RaftEngine> GetRandomNodes(int numberOfNodes)
+		{
+			var result = new List<RaftEngine>();
+			var size = _nodes.Count;
+			var r = new Random();
+
+			do
+			{
+				var candidate = _nodes[r.Next(size - 1)];
+
+				if (result.Contains(candidate))
+					continue;
+
+				result.Add(candidate);
+
+			} while (result.Count < numberOfNodes);
+
+			return result;
+		} 
 
 		public virtual void Dispose()
 		{

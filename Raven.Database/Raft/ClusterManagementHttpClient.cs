@@ -365,6 +365,44 @@ namespace Raven.Database.Raft
 			}
 		}
 
+		public async Task RemoveFromClusterInUnsafeWay(NodeConnectionInfo nodeToRemove)
+		{
+			raftEngine.UnsafeOperations.RemoveFromCluster(nodeToRemove);
+
+			foreach (var node in raftEngine.CurrentTopology.AllNodes.Except(new [] { nodeToRemove, raftEngine.Options.SelfConnection }))
+			{
+				await SendRemoveFromClusterInternalAsync(node, nodeToRemove).ConfigureAwait(false);
+			}
+		}
+
+		public Task SendRemoveFromClusterInternalAsync(NodeConnectionInfo node, NodeConnectionInfo toRemove)
+		{
+			var url = node.Uri.AbsoluteUri + "admin/cluster/remove-unsafe";
+			using (var request = CreateRequest(node, url, HttpMethods.Post))
+			{
+				return request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(toRemove)));
+			}
+		}
+
+		public async Task AddToClusterInUnsafeWay(NodeConnectionInfo nodeToAdd)
+		{
+			raftEngine.UnsafeOperations.AddToCluster(nodeToAdd);
+
+			foreach (var node in raftEngine.CurrentTopology.AllNodes.Except(new[] { nodeToAdd, raftEngine.Options.SelfConnection }))
+			{
+				await SendAddToClusterInternalAsync(node, nodeToAdd).ConfigureAwait(false);
+			}
+		}
+
+		public Task SendAddToClusterInternalAsync(NodeConnectionInfo node, NodeConnectionInfo toAdd)
+		{
+			var url = node.Uri.AbsoluteUri + "admin/cluster/add-unsafe";
+			using (var request = CreateRequest(node, url, HttpMethods.Post))
+			{
+				return request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(toAdd)));
+			}
+		}
+
 		private static async Task<ErrorResponseException> CreateErrorResponseExceptionAsync(HttpResponseMessage response)
 		{
 			using (var sr = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))

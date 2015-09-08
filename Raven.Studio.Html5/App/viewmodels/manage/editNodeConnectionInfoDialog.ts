@@ -8,12 +8,14 @@ class editNodeConnectionInfoDialog extends dialogViewModelBase {
     private nextTask = $.Deferred<nodeConnectionInfo>();
 
 	nodeConnectionInfo = ko.observable<nodeConnectionInfo>();
-	isUpdate = ko.observable<boolean>();
+    isUpdate = ko.observable<boolean>();
+    isUnsafe = ko.observable<boolean>();
 
-    constructor(node: nodeConnectionInfo, isUpdate: boolean) {
+    constructor(node: nodeConnectionInfo, isUpdate: boolean, isUnsafe: boolean) {
         super();
 		this.nodeConnectionInfo(node);
-	    this.isUpdate(isUpdate);
+        this.isUpdate(isUpdate);
+        this.isUnsafe(isUnsafe);
     }
 
     onExit(): JQueryPromise<nodeConnectionInfo> {

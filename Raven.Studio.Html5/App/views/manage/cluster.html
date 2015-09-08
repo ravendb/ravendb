@@ -18,6 +18,7 @@
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+				<button data-bind="click: addAnotherServerToClusterUnsafe" class="btn btn-danger"><i class="fa fa-plus"></i> Add another server to cluster (unsafe)</button>
 				<button data-bind="click: refresh" class="btn btn-default"><i class="fa fa-refresh"></i> Refresh</button>
 			</div>
 			<div class="panel-body">
@@ -42,7 +43,11 @@
 							</td>
 							<td data-bind="text: uri"></td>
 							<td><button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
-							<td><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
+							<td>
+								<button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button>
+								&nbsp;
+								<button data-bind="click: $root.removeFromClusterUnsafe.bind($root, $data)" class="btn btn-danger"><i class="fa fa-trash"></i> Remove from cluster (unsafe)</button>
+							</td>
 						</tr>
 					</tbody>
 				</table>
