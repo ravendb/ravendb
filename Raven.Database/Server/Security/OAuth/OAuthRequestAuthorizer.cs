@@ -146,7 +146,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return msg;
 		}
 
-		public IPrincipal GetUser(RavenDbApiController controller, bool hasApiKey)
+		public IPrincipal GetUser(RavenBaseApiController controller, bool hasApiKey)
 		{
 			var token = GetToken(controller);
 

@@ -8,7 +8,7 @@ using System.Web.Http.Controllers;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class BundlesApiController : RavenDbApiController
+	public abstract class BundlesApiController : BaseDatabaseApiController
 	{
 		public abstract string BundleName { get; }
 
@@ -18,20 +18,20 @@ namespace Raven.Database.Server.Controllers
 			DocumentDatabase db;
             try
             {
-                db = await DatabasesLandlord.GetDatabaseInternal(DatabaseName);
+                db = await DatabasesLandlord.GetResourceInternal(ResourceName);
             }
             catch (Exception e)
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not open database named: " + DatabaseName + ", " + e.Message
+                    Error = "Could not open database named: " + ResourceName + ", " + e.Message
                 }, HttpStatusCode.ServiceUnavailable);
             }
 			if (db == null)
 			{
 				return GetMessageWithObject(new
 				{
-					Error = "Could not open database named: " + DatabaseName + ", database does not exists" 
+					Error = "Could not open database named: " + ResourceName + ", database does not exists" 
 				}, HttpStatusCode.ServiceUnavailable);
 			}
 			if (db.Configuration == null || db.Configuration.ActiveBundles == null ||

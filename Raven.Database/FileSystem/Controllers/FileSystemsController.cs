@@ -19,7 +19,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FileSystemsController : RavenDbApiController
+	public class FileSystemsController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("fs")]

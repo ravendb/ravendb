@@ -10,7 +10,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class SilverlightController : RavenDbApiController
+	public class SilverlightController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("silverlight/ensureStartup")]

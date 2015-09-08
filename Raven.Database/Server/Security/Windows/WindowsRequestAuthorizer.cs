@@ -248,10 +248,10 @@ namespace Raven.Database.Server.Security.Windows
 			WindowsSettingsChanged -= UpdateSettings;
 		}
 
-		public IPrincipal GetUser(RavenDbApiController controller)
+		public IPrincipal GetUser(RavenBaseApiController controller)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
+			var databaseName = controller.TenantName ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
 			if (userCreated == false)
 				onRejectingRequest();

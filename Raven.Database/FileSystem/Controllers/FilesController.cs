@@ -26,7 +26,7 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FilesController : RavenFsApiController
+    public class FilesController : BaseFileSystemApiController
     {
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 

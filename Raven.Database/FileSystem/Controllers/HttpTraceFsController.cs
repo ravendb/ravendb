@@ -6,7 +6,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class HttpTraceFsController : RavenFsApiController
+    public class HttpTraceFsController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/traffic-watch/events")]
@@ -15,7 +15,7 @@ namespace Raven.Database.FileSystem.Controllers
             var traceTransport = new HttpTracePushContent();
             traceTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 
-            RequestManager.RegisterResourceHttpTraceTransport(traceTransport, FileSystemName);
+            RequestManager.RegisterResourceHttpTraceTransport(traceTransport, ResourceName);
 
             return new HttpResponseMessage { Content = traceTransport };
         }

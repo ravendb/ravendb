@@ -18,6 +18,9 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Common;
+using Raven.Database.Counters;
+using Raven.Database.FileSystem;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Queries;
@@ -102,27 +105,27 @@ namespace Raven.Database.Server.WebApi
 
 		private void OnBeforeRequest(object sender, RequestWebApiEventArgs args)
 		{
-			var documentDatabase = args.Database;
-			if (documentDatabase != null)
+			if (args.ResourceType == ResourceType.Database)
 			{
+				var documentDatabase = (DocumentDatabase)args.Resource;
 				documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
 				documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var fileSystem = args.FileSystem;
-			if (fileSystem != null)
+			if (args.ResourceType == ResourceType.FileSystem)
 			{
+				var fileSystem = (RavenFileSystem)args.Resource;
 				fileSystem.MetricsCounters.ConcurrentRequests.Mark();
 				fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var counters = args.Counters;
-			if (counters != null)
+			if (args.ResourceType == ResourceType.Counter)
 			{
+				var counters = (CounterStorage)args.Resource;
 				counters.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
@@ -130,27 +133,26 @@ namespace Raven.Database.Server.WebApi
 
 		private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
 		{
-			var documentDatabase = args.Database;
-			if (documentDatabase != null)
+			if (args.ResourceType == ResourceType.Database)
 			{
+				var documentDatabase = (DocumentDatabase)args.Resource;
 				Interlocked.Decrement(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var fileSystem = args.FileSystem;
-			if (fileSystem != null)
+			if (args.ResourceType == ResourceType.FileSystem)
 			{
+				var fileSystem = (RavenFileSystem)args.Resource;
 				Interlocked.Decrement(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var counters = args.Counters;
-			if (counters != null)
+			if (args.ResourceType == ResourceType.Counter)
 			{
+				var counters = (CounterStorage)args.Resource;
 				Interlocked.Decrement(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
 		}
-
 
 		public void Init()
 		{

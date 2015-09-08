@@ -25,7 +25,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Index
 			{
 				if (Landlord.IsDatabaseLoaded(DatabaseName))
 				{
-					var database = Landlord.GetDatabaseInternal(DatabaseName).Result;
+					var database = Landlord.GetResourceInternal(DatabaseName).Result;
 					var exists = database.IndexDefinitionStorage.Contains(IndexName);
 
 					return new OctetString(exists.ToString(CultureInfo.InvariantCulture));

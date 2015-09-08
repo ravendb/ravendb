@@ -179,7 +179,7 @@ namespace Raven.Database.Server.Security
             return success;
         }
 
-	    public IPrincipal GetUser(RavenDbApiController controller)
+	    public IPrincipal GetUser(RavenBaseApiController controller)
 		{
             if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
             {
@@ -197,7 +197,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetUser(controller);
 		}
 
-		public List<string> GetApprovedResources(IPrincipal user, RavenDbApiController controller, string[] databases)
+		public List<string> GetApprovedResources(IPrincipal user, BaseDatabaseApiController controller, string[] databases)
 		{
 			var authHeader = controller.GetHeader("Authorization");
 

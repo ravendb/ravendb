@@ -32,7 +32,7 @@ namespace Raven.Database.Smuggler
 				shouldDispose = true;
 
 				var responseException = e as ErrorResponseException;
-				if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
+				if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && (responseException.Message.StartsWith("Could not find a resource named") || responseException.Message.StartsWith("Could not find a database named")))
 					throw new SmugglerException(
 						string.Format(
 							"Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",

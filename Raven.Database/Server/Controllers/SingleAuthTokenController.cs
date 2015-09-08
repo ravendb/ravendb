@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Extensions;
@@ -8,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DbSingleAuthTokenController : RavenDbApiController
+    public class DbSingleAuthTokenController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("singleAuthToken")]
@@ -19,7 +18,7 @@ namespace Raven.Database.Server.Controllers
             bool shouldCheckIfMachineAdmin = false;
 
 
-            if ((DatabaseName == "<system>" || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
+            if ((ResourceName == "<system>" || string.IsNullOrEmpty(ResourceName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
             {
 
                 if (!User.IsAdministrator(AnonymousUserAccessMode.None) &&
@@ -33,7 +32,7 @@ namespace Raven.Database.Server.Controllers
 
             }
 
-            var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(ResourceName, User);
 
             return GetMessageWithObject(new
             {
@@ -46,7 +45,7 @@ namespace Raven.Database.Server.Controllers
 namespace Raven.Database.FileSystem.Controllers
 {
 
-    public class FsSingleAuthTokenController : RavenFsApiController
+    public class FsSingleAuthTokenController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/singleAuthToken")]
@@ -54,7 +53,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("fs/" + FileSystemName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 
             return GetMessageWithObject(new
             {
@@ -66,7 +65,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CounterSingleAuthTokenController : RavenCountersApiController
+    public class CounterSingleAuthTokenController : BaseCountersApiController
     {
         [HttpGet]
         [RavenRoute("cs/{counterStorageName}/singleAuthToken")]
@@ -74,7 +73,7 @@ namespace Raven.Database.Counters.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("cs/" + CounterStorageName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 
             return GetMessageWithObject(new
             {
@@ -86,7 +85,7 @@ namespace Raven.Database.Counters.Controllers
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesSingleAuthTokenController : RavenTimeSeriesApiController
+	public class TimeSeriesSingleAuthTokenController : BaseTimeSeriesApiController
     {
         [HttpGet]
         [RavenRoute("ts/{timeSeriesName}/singleAuthToken")]
@@ -94,7 +93,7 @@ namespace Raven.Database.TimeSeries.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("ts/" + TimeSeriesName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 
             return GetMessageWithObject(new
             {

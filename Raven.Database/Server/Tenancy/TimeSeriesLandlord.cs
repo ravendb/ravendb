@@ -132,7 +132,15 @@ namespace Raven.Database.Server.Tenancy
 			return document;
 		}
 
-		public bool TryGetOrCreateResourceStore(string tenantId, out Task<TimeSeriesStorage> timeSeries)
+		public override async Task<TimeSeriesStorage> GetResourceInternal(string resourceName)
+		{
+			Task<TimeSeriesStorage> cs;
+			if (TryGetOrCreateResourceStore(resourceName, out cs))
+				return await cs;
+			return null;
+		}
+
+		public override bool TryGetOrCreateResourceStore(string tenantId, out Task<TimeSeriesStorage> timeSeries)
 		{
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("TimeSeriesLandlord", "Server is shutting down, can't access any time series");
@@ -256,15 +264,6 @@ namespace Raven.Database.Server.Tenancy
 			}
 
 			Authentication.AssertLicensedBundles(config.ActiveBundles);
-		}
-
-
-		public async Task<TimeSeriesStorage> GetTimeSeriesInternal(string name)
-		{
-			Task<TimeSeriesStorage> cs;
-			if (TryGetOrCreateResourceStore(name, out cs))
-				return await cs;
-			return null;
 		}
 
 		public void ForAllTimeSeries(Action<TimeSeriesStorage> action)

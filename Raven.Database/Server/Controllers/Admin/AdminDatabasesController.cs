@@ -19,7 +19,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
-	public class AdminDatabasesController : BaseAdminController
+	public class AdminDatabasesController : BaseAdminDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("admin/databases/{*id}")]

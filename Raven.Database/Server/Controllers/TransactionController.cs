@@ -8,7 +8,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class TransactionController : RavenDbApiController
+	public class TransactionController : BaseDatabaseApiController
 	{
 		[HttpPost]
 		[RavenRoute("transaction/rollback")]

@@ -19,7 +19,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Raft.Controllers
 {
-	public class ClusterController : RavenDbApiController
+	public class ClusterController : BaseDatabaseApiController
 	{
 		private HttpTransport Transport
 		{

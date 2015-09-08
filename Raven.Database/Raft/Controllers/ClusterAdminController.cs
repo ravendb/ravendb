@@ -23,7 +23,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Controllers
 {
-	public class ClusterAdminController : BaseAdminController
+	public class ClusterAdminController : BaseAdminDatabaseApiController
 	{
 		[HttpPut]
 		[RavenRoute("admin/cluster/commands/configuration")]
@@ -62,7 +62,7 @@ namespace Raven.Database.Raft.Controllers
 			if (string.IsNullOrEmpty(id))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
+			var documentJson = SystemDatabase.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
 			if (documentJson == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
@@ -87,7 +87,7 @@ namespace Raven.Database.Raft.Controllers
 				return GetMessageWithString("Server is already in cluster.", HttpStatusCode.NotAcceptable);
 
 			int nextStart = 0;
-			var databases = Database
+			var databases = SystemDatabase
 				.Documents
 				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 			

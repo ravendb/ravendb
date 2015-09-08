@@ -30,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 		protected override TData GetData()
 		{
 			if (Landlord.IsDatabaseLoaded(DatabaseName))
-				return GetData(Landlord.GetDatabaseInternal(DatabaseName).Result);
+				return GetData(Landlord.GetResourceInternal(DatabaseName).Result);
 
 			return default(TData);
 		}

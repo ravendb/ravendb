@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
 {
-	public class ReplicationTopologyController : RavenDbApiController
+	public class ReplicationTopologyController : BaseDatabaseApiController
 	{
 		[HttpPost]
 		[RavenRoute("admin/replication/topology/discover")]

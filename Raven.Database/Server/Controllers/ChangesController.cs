@@ -9,7 +9,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-	public class ChangesController : RavenDbApiController
+	public class ChangesController : BaseDatabaseApiController
 	{
         [HttpGet]
 		[RavenRoute("changes/config")]

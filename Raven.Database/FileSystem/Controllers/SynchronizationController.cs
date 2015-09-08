@@ -22,7 +22,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class SynchronizationController : RavenFsApiController
+	public class SynchronizationController : BaseFileSystemApiController
 	{
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -46,7 +46,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/ToDestination")]
         public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
         {
-            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + FileSystemName, forceSyncingAll);
+            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + ResourceName, forceSyncingAll);
             
             return GetMessageWithObject(result);
         }

@@ -18,7 +18,7 @@ using Raven.Database.Raft.Util;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class ClusterAwareRavenDbApiController : RavenDbApiController
+	public class ClusterAwareRavenDbApiController : BaseDatabaseApiController
 	{
 		protected virtual bool ForceClusterAwareness
 		{
@@ -43,9 +43,9 @@ namespace Raven.Database.Server.Controllers
 			if (Database == null || ClusterManager.IsActive() == false)
 				return await base.ExecuteAsync(controllerContext, cancellationToken);
 
-			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
+			if (ResourceName != null && await DatabasesLandlord.GetResourceInternal(ResourceName) == null)
 			{
-				var msg = "Could not find a database named: " + DatabaseName;
+				var msg = "Could not find a database named: " + ResourceName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 

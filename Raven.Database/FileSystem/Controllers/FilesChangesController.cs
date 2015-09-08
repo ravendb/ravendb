@@ -8,7 +8,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FilesChangesController : RavenFsApiController
+    public class FilesChangesController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/changes/config")]

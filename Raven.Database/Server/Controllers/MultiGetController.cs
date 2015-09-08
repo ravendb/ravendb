@@ -58,9 +58,9 @@ namespace Raven.Database.Server.Controllers
 					getRequest.Headers["Raven-Internal-Request"] = "true";
 					if (string.IsNullOrEmpty(clientVersion) == false)
 						getRequest.Headers["Raven-Client-Version"] = clientVersion;
-					if (DatabaseName != null)
+					if (ResourceName != null)
 					{
-						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;
+						getRequest.Url = "databases/" + ResourceName + getRequest.Url;
 					}
 				}
 
@@ -286,9 +286,9 @@ namespace Raven.Database.Server.Controllers
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
 
-			if (string.IsNullOrEmpty(indexQuery) == false && (controller as RavenDbApiController) != null)
+			if (string.IsNullOrEmpty(indexQuery) == false && (controller as BaseDatabaseApiController) != null)
 			{
-				((RavenDbApiController)controller).SetPostRequestQuery(indexQuery);
+				((BaseDatabaseApiController)controller).SetPostRequestQuery(indexQuery);
 			}
 
 			var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None);

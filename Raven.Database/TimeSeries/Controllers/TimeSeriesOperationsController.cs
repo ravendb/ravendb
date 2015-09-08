@@ -28,7 +28,7 @@ using BatchType = Raven.Abstractions.TimeSeries.Notifications.BatchType;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesOperationsController : RavenTimeSeriesApiController
+	public class TimeSeriesOperationsController : BaseTimeSeriesApiController
 	{
 		[RavenRoute("ts/{timeSeriesName}/types/{type}")]
 		[HttpPut]
@@ -37,12 +37,12 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type.Type) || type.Fields == null || type.Fields.Length < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			Storage.CreateType(new TimeSeriesType
+			TimeSeries.CreateType(new TimeSeriesType
 			{
 				Type = type.Type,
 				Fields = type.Fields,
 			});
-			Storage.MetricsTimeSeries.ClientRequests.Mark();
+			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.Created);
 		}
@@ -54,8 +54,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			Storage.DeleteType(type);
-			Storage.MetricsTimeSeries.ClientRequests.Mark();
+			TimeSeries.DeleteType(type);
+			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
@@ -68,13 +68,13 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (point == null || string.IsNullOrEmpty(point.Type) || string.IsNullOrEmpty(point.Key) || point.Values == null || point.Values.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = TimeSeries.CreateWriter())
 			{
 				var newPointWasAppended = writer.Append(point.Type, point.Key, point.At, point.Values);
 				writer.Commit();
 
-				Storage.MetricsTimeSeries.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new KeyChangeNotification
+				TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
+				TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Type = point.Type,
 					Key = point.Key,
@@ -132,9 +132,9 @@ namespace Raven.Database.TimeSeries.Controllers
 	            {
 		            foreach (var changeBatch in changeBatches)
 		            {
-						using (var writer = Storage.CreateWriter())
+						using (var writer = TimeSeries.CreateWriter())
 						{
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							TimeSeries.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Started,
 								OperationId = operationId
@@ -146,7 +146,7 @@ namespace Raven.Database.TimeSeries.Controllers
 							}
 							writer.Commit();
 
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							TimeSeries.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Ended,
 								OperationId = operationId
@@ -157,7 +157,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (OperationCanceledException)
 	            {
 					// happens on timeout
-		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
+					TimeSeries.Publisher.RaiseNotification(new BulkOperationNotification
 		            {
 			            Type = BatchType.Error,
 			            OperationId = operationId,
@@ -171,7 +171,7 @@ namespace Raven.Database.TimeSeries.Controllers
 	            catch (Exception e)
 	            {
 		            var errorMessage = e.SimplifyException().Message;
-					Storage.Publisher.RaiseNotification(new BulkOperationNotification
+					TimeSeries.Publisher.RaiseNotification(new BulkOperationNotification
 					{
 						Type = BatchType.Error,
 						OperationId = operationId,
@@ -283,14 +283,14 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = TimeSeries.CreateWriter())
 			{
 				var pointsDeleted = writer.DeleteKey(type, key);
 				writer.DeleteKeyInRollups(type, key);
 				writer.Commit();
 
-				Storage.MetricsTimeSeries.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new KeyChangeNotification
+				TimeSeries.MetricsTimeSeries.Deletes.Mark();
+				TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Type = type,
 					Key = key,
@@ -310,7 +310,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			var deletedCount = 0;
-			using (var writer = Storage.CreateWriter())
+			using (var writer = TimeSeries.CreateWriter())
 			{
 				foreach (var point in points)
 				{
@@ -323,8 +323,8 @@ namespace Raven.Database.TimeSeries.Controllers
 						deletedCount++;
 					writer.DeletePointInRollups(point);
 
-					Storage.MetricsTimeSeries.Deletes.Mark();
-					Storage.Publisher.RaiseNotification(new KeyChangeNotification
+					TimeSeries.MetricsTimeSeries.Deletes.Mark();
+					TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
 					{
 						Type = point.Type,
 						Key = point.Key,
@@ -348,14 +348,14 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (range.Start > range.End)
 				throw new InvalidOperationException("start cannot be greater than end");
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = TimeSeries.CreateWriter())
 			{
 				writer.DeleteRange(range.Type, range.Key, range.Start, range.End);
 				writer.DeleteRangeInRollups(range.Type, range.Key, range.Start, range.End);
 				writer.Commit();
 
-				Storage.MetricsTimeSeries.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new KeyChangeNotification
+				TimeSeries.MetricsTimeSeries.Deletes.Mark();
+				TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
 				{
 					Type = range.Type,
 					Key = range.Key,
@@ -372,9 +372,9 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetTypes(int skip = 0, int take = 20)
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = TimeSeries.CreateReader())
 			{
-				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 				var types = reader.GetTypes(skip).Take(take).ToArray();
 				return GetMessageWithObject(types);
 			}
@@ -384,9 +384,9 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetKey(string type, string key)
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = TimeSeries.CreateReader())
 			{
-				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 				var result = reader.GetKey(type, key);
 				return GetMessageWithObject(result);
 			}
@@ -396,9 +396,9 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetKeys(string type, int skip = 0, int take = 20)
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = TimeSeries.CreateReader())
 			{
-				Storage.MetricsTimeSeries.ClientRequests.Mark();
+				TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 				var keys = reader.GetKeys(type, skip).Take(take).ToArray();
 				return GetMessageWithObject(keys);
 			}
@@ -413,8 +413,8 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (take <= 0)
 				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
 
-			Storage.MetricsTimeSeries.ClientRequests.Mark();
-			using (var reader = Storage.CreateReader())
+			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
+			using (var reader = TimeSeries.CreateReader())
 			{
 				var points = reader.GetPoints(type, key, start ?? DateTimeOffset.MinValue, end ?? DateTimeOffset.MaxValue, skip).Take(take);
 				return GetMessageWithObject(points);

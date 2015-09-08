@@ -28,7 +28,7 @@ using Raven.Imports.Newtonsoft.Json;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class BulkInsertController : RavenDbApiController
+    public class BulkInsertController : BaseDatabaseApiController
     {
         [HttpPost]
         [RavenRoute("bulkInsert")]
@@ -50,7 +50,7 @@ namespace Raven.Database.Server.Controllers
 
                 var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-                var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
+                var token = authorizer.GenerateSingleUseAuthToken(ResourceName, User);
                 return GetMessageWithObject(new
                 {
                     Token = token

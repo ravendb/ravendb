@@ -9,7 +9,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class CountersController : RavenDbApiController
+	public class CountersController : BaseDatabaseApiController
 	{
 		[RavenRoute("cs")]
 		[HttpGet]
