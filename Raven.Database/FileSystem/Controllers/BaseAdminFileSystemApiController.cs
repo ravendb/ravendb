@@ -40,11 +40,6 @@ namespace Raven.Database.FileSystem.Controllers
 			FileSystemName = GetResourceName(controllerContext, ResourceType.FileSystem);
 		}
 
-		public override string TenantName
-		{
-			get { return BaseFileSystemApiController.TenantNamePrefix + FileSystemName; }
-		}
-
 		public override void MarkRequestDuration(long duration)
 		{
 			if (FileSystem == null)

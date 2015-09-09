@@ -34,11 +34,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		public override string TenantName
-		{
-			get { return ResourceName; }
-		}
-
 		public override void MarkRequestDuration(long duration)
 		{
 			if (Resource == null)

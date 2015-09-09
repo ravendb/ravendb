@@ -420,21 +420,21 @@ namespace Raven.Database.Server.WebApi
 
 			sw.Stop();
 
-			if (landlord.IsDatabaseLoaded(controller.TenantName ?? Constants.SystemDatabase))
+			if (landlord.IsDatabaseLoaded(controller.ResourceName ?? Constants.SystemDatabase))
 			{
 				controller.MarkRequestDuration(sw.ElapsedMilliseconds);
 			}
 
 			var curReq = Interlocked.Increment(ref reqNum);
 
-			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
+			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
 
 			if (controller.IsInternalRequest == false)
 			{
-				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName, response);
+				TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
 			}
 
-			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
+			RememberRecentRequests(logHttpRequestStatsParam, controller.ResourceName);
 		}
 
 

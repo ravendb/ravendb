@@ -29,11 +29,6 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		public override string TenantName
-		{
-			get { return TenantNamePrefix + ResourceName; }
-		}
-
 		public override void MarkRequestDuration(long duration)
 		{
 			if (Resource == null)

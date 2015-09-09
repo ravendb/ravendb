@@ -56,7 +56,7 @@ namespace Raven.Database.Common
 			}
 		}
 
-		public string ResourceName { get; protected set; }
+		public override string ResourceName { get; protected set; }
 
 		private SemaphoreSlim _maxNumberOfThreadsForResourceToLoadSemaphore;
 

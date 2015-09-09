@@ -62,7 +62,7 @@ namespace Raven.Database.Server.Security.Windows
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var tenantId = controller.TenantName ?? Constants.SystemDatabase;
+			var tenantId = controller.ResourceName ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
@@ -251,7 +251,7 @@ namespace Raven.Database.Server.Security.Windows
 		public IPrincipal GetUser(RavenBaseApiController controller)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.TenantName ?? Constants.SystemDatabase;
+			var databaseName = controller.ResourceName ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
 			if (userCreated == false)
 				onRejectingRequest();

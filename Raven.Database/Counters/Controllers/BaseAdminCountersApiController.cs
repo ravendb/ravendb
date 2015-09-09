@@ -40,11 +40,6 @@ namespace Raven.Database.Counters.Controllers
 			CounterName = GetResourceName(controllerContext, ResourceType.Counter);
 		}
 
-		public override string TenantName
-		{
-			get { return BaseCountersApiController.TenantNamePrefix + CounterName; }
-		}
-
 		public override void MarkRequestDuration(long duration)
 		{
 			if (Counters == null)

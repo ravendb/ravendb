@@ -53,7 +53,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
 
             return GetMessageWithObject(new
             {
@@ -73,7 +73,7 @@ namespace Raven.Database.Counters.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
 
             return GetMessageWithObject(new
             {
@@ -93,7 +93,7 @@ namespace Raven.Database.TimeSeries.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
 
             return GetMessageWithObject(new
             {

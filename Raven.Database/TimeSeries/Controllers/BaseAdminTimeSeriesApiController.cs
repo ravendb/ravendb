@@ -48,11 +48,6 @@ namespace Raven.Database.TimeSeries.Controllers
 			}
 		}
 
-		public override string TenantName
-		{
-			get { return BaseTimeSeriesApiController.TenantNamePrefix + TimeSeriesName; }
-		}
-
 		public override void MarkRequestDuration(long duration)
 		{
 			if (TimeSeries == null)

@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			var writeAccess = isGetRequest == false;
-            if (!tokenBody.IsAuthorized(controller.TenantName, writeAccess))
+            if (!tokenBody.IsAuthorized(controller.ResourceName, writeAccess))
 			{
 				if (allowUnauthenticatedUsers || ignoreDbAccess)
 				{
@@ -73,13 +73,13 @@ namespace Raven.Database.Server.Security.OAuth
 
 				msg = WriteAuthorizationChallenge(controller, 403, "insufficient_scope",
 					writeAccess ?
-                    "Not authorized for read/write access for tenant " + controller.TenantName :
-					"Not authorized for tenant " + controller.TenantName);
+                    "Not authorized for read/write access for tenant " + controller.ResourceName :
+					"Not authorized for tenant " + controller.ResourceName);
 
 				return false;
 			}
 			
-            controller.User = new OAuthPrincipal(tokenBody, controller.TenantName);
+            controller.User = new OAuthPrincipal(tokenBody, controller.ResourceName);
 			CurrentOperationContext.User.Value = controller.User;
 			msg = controller.GetEmptyMessage();
 
