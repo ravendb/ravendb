@@ -21,30 +21,28 @@ namespace ConsoleApplication4
         }
         private static void Main(string[] args)
         {
-			var transformResults = @"results.Select(order => new {
-    order = order,
-    merchantOrders = order.MerchantOrders.Select((((Func < dynamic, dynamic > )(LoadDocument))))
-}).Select(this0 => new {
-    Id = this0.order.Id,
-    MerchantOrders = this0.merchantOrders.Select(mo => new {
-        mo = mo,
-        merchant = this.LoadDocument(mo.MerchantId)
-    }).Select(this0 => new {
-        MerchantId = this0.merchant.Id,
-        MerchantName = this0.merchant.Name,
-        MerchantOrderId = this0.mo.Id,
-        Items = this0.mo.Items.Select(i => new {
-            Id = i.Id,
-            Name = i.Name
-        })
-    })
-})";
-			Console.WriteLine(new BadTransformer.UserOrderSummaryTransformer().CreateTransformerDefinition(true).TransformResults == transformResults);
-			Console.WriteLine(new BadTransformer.UserOrderSummaryTransformer().CreateTransformerDefinition(true).TransformResults);
-			Console.WriteLine(IndexPrettyPrinter.TryFormat(transformResults));
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080",
+                DefaultDatabase = "r1"
+            }.Initialize())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        while (true)
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                session.Load<dynamic>("users/1");
+                            }
+                        }
+                    });
+                }
 
-
-
+                Console.ReadLine();
+            }
         }
 
     }
