@@ -18,7 +18,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			get
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException("Use Counters.Configuration instead.");
 			}
 		}
 
@@ -26,7 +26,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			get
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException("Use SystemDatabase instead.");
 			}
 		}
 

@@ -24,7 +24,7 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Common
 {
-	public abstract class ResourceApiController<TResource, TResourceLandlord> : RavenBaseApiController
+	public abstract class ResourceApiController<TResource, TResourceLandlord> : RavenBaseApiController, IResourceApiController<TResource> 
 		where TResource : IResourceStore
 		where TResourceLandlord : IResourceLandlord<TResource>
 	{
@@ -41,7 +41,7 @@ namespace Raven.Database.Common
 				switch (ResourceType)
 				{
 					case ResourceType.Database:
-						_maxSecondsForTaskToWaitForResourceToLoad = ResourceConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+						_maxSecondsForTaskToWaitForResourceToLoad = Resource.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 						break;
 					case ResourceType.FileSystem:
 					case ResourceType.TimeSeries:
@@ -65,6 +65,14 @@ namespace Raven.Database.Common
 			get
 			{
 				return _maxNumberOfThreadsForResourceToLoadSemaphore;
+			}
+		}
+
+		IResourceStore IResourceApiController.Resource
+		{
+			get
+			{
+				return Resource;
 			}
 		}
 

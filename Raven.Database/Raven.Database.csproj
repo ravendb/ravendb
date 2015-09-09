@@ -253,6 +253,7 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationTaskBase.cs" />
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
     <Compile Include="Common\AdminResourceApiController.cs" />
+    <Compile Include="Common\IResourceApiController.cs" />
     <Compile Include="Common\IResourceLandlord.cs" />
     <Compile Include="Common\ResourceApiController.cs" />
     <Compile Include="Common\ResourceType.cs" />

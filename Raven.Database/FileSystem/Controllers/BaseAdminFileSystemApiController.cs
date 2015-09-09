@@ -18,7 +18,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			get
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException("Use FileSystem.Configuration instead.");
 			}
 		}
 
@@ -26,7 +26,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			get
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException("Use SystemDatabase instead.");
 			}
 		}
 

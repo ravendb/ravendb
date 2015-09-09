@@ -186,7 +186,7 @@ namespace Raven.Database.Server.WebApi
 
 
 
-		public async Task<HttpResponseMessage> HandleActualRequest(RavenBaseApiController controller,
+		public async Task<HttpResponseMessage> HandleActualRequest(IResourceApiController controller,
 																   HttpControllerContext controllerContext,
 																   Func<Task<HttpResponseMessage>> action,
 																   Func<HttpException, HttpResponseMessage> onHttpException)
@@ -209,9 +209,9 @@ namespace Raven.Database.Server.WebApi
 
 					try
 					{
-						if (  controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+						if (controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-							if (controller.ResourceConfiguration.RejectClientsMode)
+							if (controller.Resource.Configuration.RejectClientsMode)
 							{
 								response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 								{
@@ -373,7 +373,7 @@ namespace Raven.Database.Server.WebApi
 		}
 
 
-		private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
+		private void FinalizeRequestProcessing(IResourceApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 			try
@@ -420,10 +420,7 @@ namespace Raven.Database.Server.WebApi
 
 			sw.Stop();
 
-			if (landlord.IsDatabaseLoaded(controller.ResourceName ?? Constants.SystemDatabase))
-			{
-				controller.MarkRequestDuration(sw.ElapsedMilliseconds);
-			}
+			MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
 			var curReq = Interlocked.Increment(ref reqNum);
 
@@ -437,6 +434,24 @@ namespace Raven.Database.Server.WebApi
 			RememberRecentRequests(logHttpRequestStatsParam, controller.ResourceName);
 		}
 
+		private void MarkRequestDuration(IResourceApiController controller, long elapsedMilliseconds)
+		{
+			switch (controller.ResourceType)
+			{
+				case ResourceType.Database:
+					if (landlord.IsDatabaseLoaded(controller.ResourceName ?? Constants.SystemDatabase))
+						controller.MarkRequestDuration(elapsedMilliseconds);
+					break;
+				case ResourceType.FileSystem:
+					break;
+				case ResourceType.TimeSeries:
+					break;
+				case ResourceType.Counter:
+					break;
+				default:
+					throw new NotSupportedException(controller.ResourceType.ToString());
+			}
+		}
 
 		private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
 		{
@@ -466,7 +481,7 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
+		private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)
 				return;
@@ -476,7 +491,7 @@ namespace Raven.Database.Server.WebApi
 			if (controller is IndexController)
 			{
 				var jsonContent = response.Content as JsonContent;
-				if (jsonContent != null && jsonContent.Data != null) 
+				if (jsonContent != null && jsonContent.Data != null)
 				{
 					timingsJson = jsonContent.Data.Value<RavenJObject>("TimingsInMilliseconds");
 				}
@@ -518,7 +533,7 @@ namespace Raven.Database.Server.WebApi
 
 			return resourceName;
 		}
-		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
+		private void LogHttpRequestStats(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
 		{
 			if (Logger.IsDebugEnabled == false)
 				return;
