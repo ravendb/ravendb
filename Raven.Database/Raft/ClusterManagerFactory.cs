@@ -85,22 +85,38 @@ namespace Raven.Database.Raft
 			return new ClusterManager(raftEngine);
 		}
 
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager)
+		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager, bool isPartOfExistingCluster = false)
 		{
-			var topologyId = Guid.Parse(nodeConnection.Name);
+			var topologyId = Guid.NewGuid();
 			var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
 
 			var tcc = new TopologyChangeCommand
 					  {
-						  Requested = topology
+						  Requested = topology,
+						  Previous = isPartOfExistingCluster ? clusterManager.Engine.CurrentTopology : null
 					  };
 
 			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
 			clusterManager.Engine.StartTopologyChange(tcc);
 			clusterManager.Engine.CommitTopologyChange(tcc);
-			clusterManager.Engine.CurrentLeader = null;
+
+			if (isPartOfExistingCluster == false || clusterManager.Engine.State != RaftEngineState.Leader)
+				clusterManager.Engine.CurrentLeader = null;
 
 			Log.Info("Initialized Topology: " + topologyId);
+		}
+
+		public static void ChangeTopologyId(ClusterManager clusterManager, Guid id)
+		{
+			var tcc = new TopologyChangeCommand
+			{
+				Requested = new Topology(id)
+			};
+
+			clusterManager.Engine.StartTopologyChange(tcc);
+			clusterManager.Engine.CommitTopologyChange(tcc);
+
+			Log.Info("Changed topology id: " + id);
 		}
 
 		public static void InitializeTopology(ClusterManager engine)

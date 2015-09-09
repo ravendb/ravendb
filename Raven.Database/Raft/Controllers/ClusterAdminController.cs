@@ -102,6 +102,15 @@ namespace Raven.Database.Raft.Controllers
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
+		[HttpPatch]
+		[RavenRoute("admin/cluster/initialize-new-cluster")]
+		public HttpResponseMessage InitializeNewCluster()
+		{
+			ClusterManagerFactory.InitializeTopology(ClusterManager.Engine.Options.SelfConnection, ClusterManager, isPartOfExistingCluster: true);
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
+		}
+
 		[HttpPost]
 		[RavenRoute("admin/cluster/join")]
 		public async Task<HttpResponseMessage> JoinToCluster()
@@ -113,19 +122,30 @@ namespace Raven.Database.Raft.Controllers
 			if (nodeConnectionInfo.Name == null)
 				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await ClusterManager.Client.GetDatabaseId(nodeConnectionInfo).ConfigureAwait(false));
 
-			var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
-			switch (canJoinResult)
-			{
-				case CanJoinResult.InAnotherCluster:
-					return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
-				case CanJoinResult.AlreadyJoined:
-					return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
+			bool forced;
+			bool.TryParse(GetQueryStringValue("force"), out forced);
 
 			var topology = ClusterManager.Engine.CurrentTopology;
+
+			if (forced == false)
+			{
+				var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+				switch (canJoinResult)
+				{
+					case CanJoinResult.InAnotherCluster:
+						return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
+					case CanJoinResult.AlreadyJoined:
+						return GetEmptyMessage(HttpStatusCode.NotModified);
+				}
+			}
+			else
+			{
+				await ClusterManager.Client.SendChangeTopologyIdAsync(nodeConnectionInfo, topology.TopologyId).ConfigureAwait(false);
+			}
+			
 			if (topology.Contains(nodeConnectionInfo.Name))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-
+			
 			await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
 			return GetEmptyMessage();
 		}
@@ -174,6 +194,15 @@ namespace Raven.Database.Raft.Controllers
 			{
 				Removed = name
 			});
+		}
+
+		[HttpPatch]
+		[RavenRoute("admin/cluster/changeTopologyId")]
+		public HttpResponseMessage ChangeTopologyId([FromUri] Guid id)
+		{
+			ClusterManagerFactory.ChangeTopologyId(ClusterManager, id);
+
+			return GetEmptyMessage();
 		}
 	}
 }

@@ -1,5 +1,5 @@
 ﻿<section>
-	
+
 	<div data-bind="if: !topology().clusterMode()">
 		<div class="panel panel-default">
 			<div class="panel-heading">
@@ -17,8 +17,12 @@
 	<div data-bind="if: topology().clusterMode()">
 		<div class="panel panel-default">
 			<div class="panel-heading">
-				<button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+				<button data-bind="click: addAnotherServerToCluster.bind($root, false)" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
 				<button data-bind="click: refresh" class="btn btn-default"><i class="fa fa-refresh"></i> Refresh</button>
+				<div class="pull-right">
+					<button data-bind="click: initializeNewCluster" class="btn btn-danger"><i class="fa"></i> Initialize new cluster</button>
+					<button data-bind="click: addAnotherServerToCluster.bind($root, true)" class="btn btn-danger"><i class="fa fa-plus"></i> Take over a node (part of another cluster)</button>
+				</div>	
 			</div>
 			<div class="panel-body">
 				<table class="table table-condensed table-striped">

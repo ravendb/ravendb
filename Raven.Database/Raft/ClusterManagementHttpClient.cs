@@ -429,6 +429,21 @@ namespace Raven.Database.Raft
 			}
 		}
 
+		public async Task SendChangeTopologyIdAsync(NodeConnectionInfo node, Guid id)
+		{
+			var url = node.Uri.AbsoluteUri + "admin/cluster/changeTopologyId?id=" + id;
+
+			using (var request = CreateRequest(node, url, HttpMethods.Patch))
+			{
+				var response = await request.ExecuteAsync().ConfigureAwait(false);
+
+				if (response.IsSuccessStatusCode)
+					return;
+
+				throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
+			}
+		}
+
 		public void Dispose()
 		{
 			foreach (var q in _httpClientsCache.Select(x => x.Value))
