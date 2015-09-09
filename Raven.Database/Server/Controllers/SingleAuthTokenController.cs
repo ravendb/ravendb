@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
@@ -18,7 +20,7 @@ namespace Raven.Database.Server.Controllers
             bool shouldCheckIfMachineAdmin = false;
 
 
-            if ((ResourceName == "<system>" || string.IsNullOrEmpty(ResourceName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
+            if ((DatabaseName == Constants.SystemDatabase || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
             {
 
                 if (!User.IsAdministrator(AnonymousUserAccessMode.None) &&
@@ -32,7 +34,7 @@ namespace Raven.Database.Server.Controllers
 
             }
 
-            var token = authorizer.GenerateSingleUseAuthToken(ResourceName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
 
             return GetMessageWithObject(new
             {
@@ -53,7 +55,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + FileSystemName, User);
 
             return GetMessageWithObject(new
             {
@@ -73,7 +75,7 @@ namespace Raven.Database.Counters.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + CountersName, User);
 
             return GetMessageWithObject(new
             {
@@ -93,7 +95,7 @@ namespace Raven.Database.TimeSeries.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + ResourceName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantNamePrefix + TimeSeriesName, User);
 
             return GetMessageWithObject(new
             {

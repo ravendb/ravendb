@@ -7,12 +7,37 @@ using System;
 using System.Web.Http.Controllers;
 
 using Raven.Database.Common;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Counters.Controllers
 {
 	public abstract class BaseAdminCountersApiController : BaseAdminDatabaseApiController
 	{
+		public override InMemoryRavenConfiguration ResourceConfiguration
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
+		public override DocumentDatabase Database
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
+		public override string DatabaseName
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
 		public string CounterName { get; private set; }
 
 		private CounterStorage _counters;

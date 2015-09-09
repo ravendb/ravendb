@@ -7,12 +7,37 @@ using System;
 using System.Web.Http.Controllers;
 
 using Raven.Database.Common;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
 	public class BaseAdminTimeSeriesApiController : BaseAdminDatabaseApiController
 	{
+		public override InMemoryRavenConfiguration ResourceConfiguration
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
+		public override DocumentDatabase Database
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
+		public override string DatabaseName
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
 		public string TimeSeriesName { get; private set; }
 
 		private TimeSeriesStorage _timeSeries;

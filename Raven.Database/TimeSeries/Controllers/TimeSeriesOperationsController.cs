@@ -106,7 +106,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-				var token = authorizer.GenerateSingleUseAuthToken(ResourceName, User);
+				var token = authorizer.GenerateSingleUseAuthToken(TimeSeriesName, User);
 				return GetMessageWithObject(new
 				{
 					Token = token

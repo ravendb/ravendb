@@ -263,7 +263,7 @@ for(var customFunction in customFunctions) {{
 			});
 		    
             var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
-		        string.Format("Dump of {0}, {1}", ResourceName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+		        string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
 		        smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {

@@ -21,7 +21,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var stats = new FileSystemStats
             {
-                Name = ResourceName,
+                Name = FileSystemName,
                 FileCount = count,
                 Metrics = FileSystem.CreateMetrics(),
                 ActiveSyncs = FileSystem.SynchronizationTask.Queue.Active.ToList(),

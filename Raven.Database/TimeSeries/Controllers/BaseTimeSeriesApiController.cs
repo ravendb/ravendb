@@ -13,6 +13,14 @@ namespace Raven.Database.TimeSeries.Controllers
 	{
 		public const string TenantNamePrefix = "ts/";
 
+		protected string TimeSeriesName
+		{
+			get
+			{
+				return ResourceName;
+			}
+		}
+
 		protected TimeSeriesStorage TimeSeries
 		{
 			get

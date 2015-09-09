@@ -18,20 +18,20 @@ namespace Raven.Database.Server.Controllers
 			DocumentDatabase db;
             try
             {
-                db = await DatabasesLandlord.GetResourceInternal(ResourceName);
+                db = await DatabasesLandlord.GetResourceInternal(DatabaseName);
             }
             catch (Exception e)
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not open database named: " + ResourceName + ", " + e.Message
+                    Error = "Could not open database named: " + DatabaseName + ", " + e.Message
                 }, HttpStatusCode.ServiceUnavailable);
             }
 			if (db == null)
 			{
 				return GetMessageWithObject(new
 				{
-					Error = "Could not open database named: " + ResourceName + ", database does not exists" 
+					Error = "Could not open database named: " + DatabaseName + ", database does not exists" 
 				}, HttpStatusCode.ServiceUnavailable);
 			}
 			if (db.Configuration == null || db.Configuration.ActiveBundles == null ||

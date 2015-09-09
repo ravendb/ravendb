@@ -33,6 +33,14 @@ namespace Raven.Database.FileSystem.Controllers
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
+		public string FileSystemName
+		{
+			get
+			{
+				return ResourceName;
+			}
+		}
+
 		public RavenFileSystem FileSystem
 		{
 			get

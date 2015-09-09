@@ -19,9 +19,9 @@ namespace Raven.Database.Server.Controllers
             var traceTransport = new HttpTracePushContent();
             traceTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 
-            if (ResourceName != null)
+            if (DatabaseName != null)
             {
-                RequestManager.RegisterResourceHttpTraceTransport(traceTransport, ResourceName);
+                RequestManager.RegisterResourceHttpTraceTransport(traceTransport, DatabaseName);
             }
             else
             {

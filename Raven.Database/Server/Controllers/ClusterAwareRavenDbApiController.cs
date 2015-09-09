@@ -43,9 +43,9 @@ namespace Raven.Database.Server.Controllers
 			if (Database == null || ClusterManager.IsActive() == false)
 				return await base.ExecuteAsync(controllerContext, cancellationToken);
 
-			if (ResourceName != null && await DatabasesLandlord.GetResourceInternal(ResourceName) == null)
+			if (DatabaseName != null && await DatabasesLandlord.GetResourceInternal(DatabaseName) == null)
 			{
-				var msg = "Could not find a database named: " + ResourceName;
+				var msg = "Could not find a database named: " + DatabaseName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 

@@ -855,7 +855,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.Forbidden);
 			}
 
-			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, ResourceName));
+			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, DatabaseName));
 		}
 
 		[HttpGet]

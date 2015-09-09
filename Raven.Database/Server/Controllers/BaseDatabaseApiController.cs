@@ -27,6 +27,14 @@ namespace Raven.Database.Server.Controllers
 {
 	public abstract class BaseDatabaseApiController : ResourceApiController<DocumentDatabase, DatabasesLandlord>
 	{
+		public string DatabaseName
+		{
+			get
+			{
+				return ResourceName;
+			}
+		}
+
 		public DocumentDatabase Database
 		{
 			get

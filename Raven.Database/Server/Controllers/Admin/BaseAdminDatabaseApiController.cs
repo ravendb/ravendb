@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Controllers.Admin
 {
 	public class BaseAdminDatabaseApiController : AdminResourceApiController<DocumentDatabase, DatabasesLandlord>
 	{
-		public string DatabaseName
+		public virtual string DatabaseName
 		{
 			get
 			{
@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		public DocumentDatabase Database
+		public virtual DocumentDatabase Database
 		{
 			get
 			{

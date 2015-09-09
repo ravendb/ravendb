@@ -46,7 +46,7 @@ namespace Raven.Database.Counters.Controllers
 		private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
-			if (IsValidName(id, ResourceConfiguration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -91,7 +91,7 @@ namespace Raven.Database.Counters.Controllers
 		private async Task<HttpResponseMessage> GetSummary(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
-			if (IsValidName(id, ResourceConfiguration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -291,14 +291,14 @@ namespace Raven.Database.Counters.Controllers
 			var backupRequest = await ReadJsonObjectAsync<CounterStorageBackupRequest>();
 			var incrementalBackup = ParseBoolQueryString("incremental");
 
-			if (backupRequest.CounterStorageDocument == null && CounterName != null)
+			if (backupRequest.CounterStorageDocument == null && Counters.Name != null)
 			{
-				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + CounterName, null);
+				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Counters.Name, null);
 				if (jsonDocument != null)
 				{
 					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 					CountersLandlord.Unprotect(backupRequest.CounterStorageDocument);
-					backupRequest.CounterStorageDocument.StoreName = CounterName;
+					backupRequest.CounterStorageDocument.StoreName = Counters.Name;
 				}
 			}
 
@@ -310,7 +310,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 
 			if (incrementalBackup &&
-				ResourceConfiguration.Storage.Voron.AllowIncrementalBackups == false)
+				Counters.Configuration.Storage.Voron.AllowIncrementalBackups == false)
 			{
 				throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
 			}

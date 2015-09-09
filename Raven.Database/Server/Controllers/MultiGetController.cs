@@ -58,9 +58,9 @@ namespace Raven.Database.Server.Controllers
 					getRequest.Headers["Raven-Internal-Request"] = "true";
 					if (string.IsNullOrEmpty(clientVersion) == false)
 						getRequest.Headers["Raven-Client-Version"] = clientVersion;
-					if (ResourceName != null)
+					if (DatabaseName != null)
 					{
-						getRequest.Url = "databases/" + ResourceName + getRequest.Url;
+						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;
 					}
 				}
 

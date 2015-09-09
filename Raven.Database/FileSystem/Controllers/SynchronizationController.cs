@@ -46,7 +46,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/ToDestination")]
         public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
         {
-            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + ResourceName, forceSyncingAll);
+            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + FileSystemName, forceSyncingAll);
             
             return GetMessageWithObject(result);
         }

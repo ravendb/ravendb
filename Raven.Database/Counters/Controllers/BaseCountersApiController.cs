@@ -12,6 +12,14 @@ namespace Raven.Database.Counters.Controllers
 	{
 		public const string TenantNamePrefix = "cs/";
 
+		protected string CountersName
+		{
+			get
+			{
+				return ResourceName;
+			}
+		}
+
 		protected CounterStorage Counters
 		{
 			get
