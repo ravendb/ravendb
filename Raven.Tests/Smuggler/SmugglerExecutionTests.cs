@@ -14,7 +14,6 @@ using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -989,7 +988,6 @@ namespace Raven.Tests.Smuggler
                 this.Payload = value;
             }
         }
-
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSkipFilesWhenUsingContinuations()

@@ -71,6 +71,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
+		public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
