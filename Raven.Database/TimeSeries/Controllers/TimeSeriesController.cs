@@ -9,7 +9,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesController : RavenDbApiController
+	public class TimeSeriesController : BaseDatabaseApiController
 	{
 		[RavenRoute("ts")]
 		[HttpGet]

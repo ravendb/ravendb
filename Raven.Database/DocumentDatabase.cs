@@ -45,6 +45,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Abstractions.Threading;
+using Raven.Database.Common;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 

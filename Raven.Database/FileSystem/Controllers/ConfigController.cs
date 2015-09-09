@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class ConfigController : RavenFsApiController
+	public class ConfigController : BaseFileSystemApiController
 	{
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 

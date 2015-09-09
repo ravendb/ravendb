@@ -7,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FoldersController : RavenFsApiController
+	public class FoldersController : BaseFileSystemApiController
 	{
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]

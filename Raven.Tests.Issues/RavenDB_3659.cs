@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
 						}
 					});
 
-				var database = store.ServerIfEmbedded.Options.DatabaseLandlord.GetDatabaseInternal("DB1").Result;
+				var database = store.ServerIfEmbedded.Options.DatabaseLandlord.GetResourceInternal("DB1").Result;
 				Assert.Equal("DB1", database.Name);
 				Assert.Equal(path2, database.Configuration.TempPath);
 			}

@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Database.Common;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;

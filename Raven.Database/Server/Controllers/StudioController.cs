@@ -9,7 +9,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class StudioController : RavenDbApiController
+	public class StudioController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("raven")]

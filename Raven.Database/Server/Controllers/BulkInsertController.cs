@@ -28,7 +28,7 @@ using Raven.Imports.Newtonsoft.Json;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class BulkInsertController : RavenDbApiController
+    public class BulkInsertController : BaseDatabaseApiController
     {
         [HttpPost]
         [RavenRoute("bulkInsert")]

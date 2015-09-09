@@ -18,7 +18,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class SearchController : RavenFsApiController
+	public class SearchController : BaseFileSystemApiController
 	{
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/search/Terms")]

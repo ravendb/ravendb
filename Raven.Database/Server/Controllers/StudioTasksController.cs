@@ -19,8 +19,6 @@ using Jint;
 using Jint.Parser;
 
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Replication.Plugins;
-using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
@@ -34,14 +32,13 @@ using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StudioTasksController : RavenDbApiController
+	public class StudioTasksController : BaseDatabaseApiController
 	{
         const int CsvImportBatchSize = 512;
 
@@ -57,7 +54,7 @@ namespace Raven.Database.Server.Controllers
 			if (httpResponseMessage.StatusCode != HttpStatusCode.NotFound)
 				return httpResponseMessage.WithNoCache();
 
-			documentsController.SetCurrentDatabase(DatabasesLandlord.SystemDatabase);
+			documentsController.SetResource(DatabasesLandlord.SystemDatabase);
             return documentsController.DocGet("Raven/StudioConfig").WithNoCache();
 		}
 		[HttpGet]

@@ -11,7 +11,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class StaticFSController : RavenFsApiController
+	public class StaticFSController : BaseFileSystemApiController
 	{
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/static/FavIcon")]		

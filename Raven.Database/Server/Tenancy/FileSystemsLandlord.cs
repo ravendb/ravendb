@@ -188,7 +188,15 @@ namespace Raven.Database.Server.Tenancy
             return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
 
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
+	    public override async Task<RavenFileSystem> GetResourceInternal(string resourceName)
+	    {
+			Task<RavenFileSystem> db;
+			if (TryGetOrCreateResourceStore(resourceName, out db))
+				return await db;
+			return null;
+		}
+
+	    public override bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("FileSystem", "Server is shutting down, can't access any file systems");
@@ -273,14 +281,6 @@ namespace Raven.Database.Server.Tenancy
 	    protected override DateTime LastWork(RavenFileSystem resource)
         {
             return resource.SynchronizationTask.Context.LastSuccessfulSynchronizationTime;
-        }
-
-        public async Task<RavenFileSystem> GetFileSystemInternal(string name)
-        {
-            Task<RavenFileSystem> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
-            return null;
         }
 
         public void ForAllFileSystems(Action<RavenFileSystem> action)

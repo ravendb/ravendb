@@ -252,12 +252,19 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationTaskBase.cs" />
     <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
+    <Compile Include="Common\AdminResourceApiController.cs" />
+    <Compile Include="Common\IResourceApiController.cs" />
+    <Compile Include="Common\IResourceLandlord.cs" />
+    <Compile Include="Common\ResourceApiController.cs" />
+    <Compile Include="Common\ResourceType.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
+    <Compile Include="Counters\Controllers\BaseAdminCountersApiController.cs" />
     <Compile Include="Counters\Controllers\CountersReplicationTopologyController.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopologyNode.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopology.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />
+    <Compile Include="FileSystem\Controllers\BaseAdminFileSystemApiController.cs" />
     <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
@@ -436,6 +443,7 @@
     <Compile Include="Server\Connections\CounterStorageConnectionState.cs" />
     <Compile Include="Server\Connections\DocumentsConnectionState.cs" />
     <Compile Include="Server\Connections\FileSystemConnectionState.cs" />
+    <Compile Include="Server\Controllers\Admin\BaseAdminDatabaseApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminJsConsoleController.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
@@ -469,7 +477,7 @@
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
     <Compile Include="Plugins\Builtins\HighestEtagsPerCollection.cs" />
     <Compile Include="Plugins\IServerStartupTask.cs" />
-    <Compile Include="Server\Abstractions\IResourceStore.cs" />
+    <Compile Include="Common\IResourceStore.cs" />
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
     <Compile Include="Server\Connections\WebSocketsRequestParser.cs" />
     <Compile Include="Server\Connections\WebSocketRequest.cs" />
@@ -539,11 +547,12 @@
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="TimeSeries\Backup\BackupOperation.cs" />
     <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
+    <Compile Include="TimeSeries\Controllers\BaseAdminTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesChangesController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesOperationsController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
-    <Compile Include="TimeSeries\Controllers\RavenTimeSeriesApiController.cs" />
+    <Compile Include="TimeSeries\Controllers\BaseTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
     <Compile Include="TimeSeries\Notifications\NotificationPublisher.cs" />
     <Compile Include="TimeSeries\TimeSeriesMetricsManager.cs" />
@@ -588,7 +597,7 @@
     <Compile Include="Counters\Controllers\CountersReplicationController.cs" />
     <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Counters\Controllers\ReplicationTask.cs" />
-    <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\Controllers\BaseCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\Counter.cs" />
@@ -682,7 +691,6 @@
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
     <Compile Include="Server\Controllers\Admin\AdminDatabasesController.cs" />
-    <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
     <Compile Include="Server\Controllers\BuildController.cs" />
     <Compile Include="Server\Controllers\BulkInsertController.cs" />
     <Compile Include="Server\Controllers\ChangesController.cs" />
@@ -702,7 +710,7 @@
     <Compile Include="Server\Controllers\OperationsController.cs" />
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />
-    <Compile Include="Server\Controllers\RavenDbApiController.cs" />
+    <Compile Include="Server\Controllers\BaseDatabaseApiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
@@ -718,7 +726,7 @@
     <Compile Include="FileSystem\Controllers\ConfigController.cs" />
     <Compile Include="FileSystem\Controllers\FilesController.cs" />
     <Compile Include="FileSystem\Controllers\FoldersController.cs" />
-    <Compile Include="FileSystem\Controllers\RavenFsApiController.cs" />
+    <Compile Include="FileSystem\Controllers\BaseFileSystemApiController.cs" />
     <Compile Include="FileSystem\Controllers\RdcController.cs" />
     <Compile Include="FileSystem\Controllers\SearchController.cs" />
     <Compile Include="FileSystem\Controllers\StaticFSController.cs" />

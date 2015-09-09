@@ -51,7 +51,7 @@ using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
-	public class AdminController : BaseAdminController
+	public class AdminController : BaseAdminDatabaseApiController
 	{
 		private static readonly HashSet<string> TasksToFilterOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		                                                           {
@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
 							targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
 						}
 
-						var source = await DatabasesLandlord.GetDatabaseInternal(serverSmugglingItem.Name);
+						var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name);
 
 						var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
 						{
@@ -568,7 +568,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			    try
 			    {
 
-					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
+					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetResourceInternal(db));
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {
