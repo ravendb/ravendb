@@ -382,7 +382,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
+      <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-datetimepicker.min.css" />
@@ -660,6 +660,10 @@
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Content\less\bootstrap-datetimepicker-build.less" />
     <Content Include="Content\less\_bootstrap-datetimepicker.less" />
+    <None Include="compilerconfig.json" />
+    <Content Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </Content>
     <None Include="Scripts\jquery-2.1.3.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.3.js" />
     <Content Include="Scripts\jquery-2.1.3.min.js" />
