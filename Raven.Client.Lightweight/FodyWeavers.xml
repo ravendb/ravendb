@@ -2,8 +2,16 @@
 <Weavers>
   <Costura IncludeDebugSymbols='false'>
 	<ExcludeAssemblies>
-	  Raven.Abstractions
-      Raven.Database
-    </ExcludeAssemblies>
+    Raven.Abstractions
+    Sparrow
+    ICSharpCode.NRefactory
+    ICSharpCode.NRefactory.CSharp
+    ICSharpCode.NRefactory.Xml
+    Mono.Cecil
+    Mono.Cecil.Mdb
+    Mono.Cecil.Pdb
+    Mono.Cecil.Rocks
+    Raven.Database
+  </ExcludeAssemblies>
   </Costura>
 </Weavers>
