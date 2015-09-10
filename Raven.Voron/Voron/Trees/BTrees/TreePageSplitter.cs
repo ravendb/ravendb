@@ -8,27 +8,27 @@ using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
-    public unsafe class PageSplitter
+    public unsafe class TreePageSplitter
     {
-        private readonly Cursor _cursor;
+        private readonly TreeCursor _cursor;
         private readonly int _len;
         private readonly MemorySlice _newKey;
-        private readonly NodeFlags _nodeType;
+        private readonly TreeNodeFlags _nodeType;
         private readonly ushort _nodeVersion;
-        private readonly Page _page;
+        private readonly TreePage _page;
         private readonly long _pageNumber;
         private readonly Transaction _tx;
         private readonly Tree _tree;
-        private Page _parentPage;
+        private TreePage _parentPage;
 
-        public PageSplitter(Transaction tx,
+        public TreePageSplitter(Transaction tx,
             Tree tree,
             MemorySlice newKey,
             int len,
             long pageNumber,
-            NodeFlags nodeType,
+            TreeNodeFlags nodeType,
             ushort nodeVersion,
-            Cursor cursor)
+            TreeCursor cursor)
         {
             _tx = tx;
             _tree = tree;
@@ -38,18 +38,18 @@ namespace Voron.Trees
             _nodeType = nodeType;
             _nodeVersion = nodeVersion;
             _cursor = cursor;
-            Page page = _cursor.Pages.First.Value;
+            TreePage page = _cursor.Pages.First.Value;
             _page = tx.ModifyPage(page.PageNumber, _tree, page);
             _cursor.Pop();
         }
 
         public byte* Execute()
         {
-            Page rightPage = _tree.NewPage(_page.Flags, 1);
+            TreePage rightPage = _tree.NewPage(_page.Flags, 1);
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-				Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
+				TreePage newRootPage = _tree.NewPage(_tree.KeysPrefixing ? TreePageFlags.Branch | TreePageFlags.KeysPrefixed : TreePageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
                 _tree.State.RootPageNumber = newRootPage.PageNumber;
                 _tree.State.Depth++;
@@ -108,8 +108,8 @@ namespace Voron.Trees
 					{
 						// here we steal the last entry from the current page so we maintain the implicit null left entry
 
-						NodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-						Debug.Assert(node->Flags == NodeFlags.PageRef);
+						TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+						Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
 						rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
 						pos = AddNodeToPage(rightPage, 1);
 
@@ -137,24 +137,24 @@ namespace Voron.Trees
             return SplitPageInHalf(rightPage);
         }
 
-        private byte* AddNodeToPage(Page page, int index, MemorySlice alreadyPreparedNewKey = null)
+        private byte* AddNodeToPage(TreePage page, int index, MemorySlice alreadyPreparedNewKey = null)
         {
 	        var newKeyToInsert = alreadyPreparedNewKey ?? page.PrepareKeyToInsert(_newKey, index);
 
             switch (_nodeType)
             {
-                case NodeFlags.PageRef:
+                case TreeNodeFlags.PageRef:
 					return page.AddPageRefNode(index, newKeyToInsert, _pageNumber);
-                case NodeFlags.Data:
+                case TreeNodeFlags.Data:
 					return page.AddDataNode(index, newKeyToInsert, _len, _nodeVersion);
-                case NodeFlags.MultiValuePageRef:
+                case TreeNodeFlags.MultiValuePageRef:
 					return page.AddMultiValueNode(index, newKeyToInsert, _len, _nodeVersion);
                 default:
                     throw new NotSupportedException("Unknown node type");
             }
         }
 
-        private byte* SplitPageInHalf(Page rightPage)
+        private byte* SplitPageInHalf(TreePage rightPage)
         {
 			bool toRight;
 
@@ -231,7 +231,7 @@ namespace Voron.Trees
             ushort nKeys = _page.NumberOfEntries;
             for (int i = splitIndex; i < nKeys; i++)
             {
-                NodeHeader* node = _page.GetNode(i);
+                TreeNodeHeader* node = _page.GetNode(i);
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                 {
                     rightPage.CopyNodeDataToEndOfPage(node, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
@@ -285,13 +285,13 @@ namespace Voron.Trees
 			return pos;
         }
 
-	    private void RemoveBranchWithOneEntry(Page page, Page parentPage)
+	    private void RemoveBranchWithOneEntry(TreePage page, TreePage parentPage)
 		{
 			Debug.Assert(page.NumberOfEntries == 1);
 
 			var pageRefNumber = page.GetNode(0)->PageNumber;
 
-			NodeHeader* nodeHeader = null;
+			TreeNodeHeader* nodeHeader = null;
 
 			for (int i = 0; i < parentPage.NumberOfEntries; i++)
 			{
@@ -314,7 +314,7 @@ namespace Voron.Trees
 			_tree.FreePage(page);
 		}
 
-        private byte* InsertNewKey(Page p)
+        private byte* InsertNewKey(TreePage p)
         {
             int pos = p.NodePositionFor(_newKey);
 
@@ -324,7 +324,7 @@ namespace Voron.Trees
 			{
 				_cursor.Push(p);
 
-				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor);
+				var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor);
 
 				return pageSplitter.Execute();
 			}
@@ -342,7 +342,7 @@ namespace Voron.Trees
 
 			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
 			{
-				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+				var pageSplitter = new TreePageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
 					0, _cursor);
 				return pageSplitter.Execute();
 			}
@@ -382,7 +382,7 @@ namespace Voron.Trees
 			{
 				for (int i = 0; i < splitIndex; i++)
 				{
-					NodeHeader* node = _page.GetNode(i);
+					TreeNodeHeader* node = _page.GetNode(i);
 					pageSize += node->GetNodeSize();
 					pageSize += pageSize & 1;
 					if (pageSize > AbstractPager.PageMaxSpace)
@@ -401,7 +401,7 @@ namespace Voron.Trees
 			{
 				for (int i = _page.NumberOfEntries - 1; i >= splitIndex; i--)
 				{
-					NodeHeader* node = _page.GetNode(i);
+					TreeNodeHeader* node = _page.GetNode(i);
 					pageSize += node->GetNodeSize();
 					pageSize += pageSize & 1;
 					if (pageSize > AbstractPager.PageMaxSpace)
@@ -419,7 +419,7 @@ namespace Voron.Trees
             return splitIndex;
         }
 
-		private string GatherDetailedDebugInfo(Page rightPage, MemorySlice currentKey, MemorySlice seperatorKey, int currentIndex, int splitIndex, bool toRight)
+		private string GatherDetailedDebugInfo(TreePage rightPage, MemorySlice currentKey, MemorySlice seperatorKey, int currentIndex, int splitIndex, bool toRight)
 		{
 			var debugInfo = new StringBuilder();
 
@@ -437,7 +437,7 @@ namespace Voron.Trees
 				var node = _page.GetNode(i);
 				var key = _page.GetNodeKey(node);
 				debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
-					node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					node->DataSize, node->Flags == TreeNodeFlags.Data ? "Size" : "Page");
 			}
 
 			debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
@@ -447,7 +447,7 @@ namespace Voron.Trees
 				var node = rightPage.GetNode(i);
 				var key = rightPage.GetNodeKey(node);
 				debugInfo.AppendFormat("{0} - {2} {1}\r\n", key,
-					node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+					node->DataSize, node->Flags == TreeNodeFlags.Data ? "Size" : "Page");
 			}
 			return debugInfo.ToString();
 		}

@@ -10,11 +10,11 @@ namespace Voron.Debugging
 {
     public unsafe class TreeDumper
     {
-	    public static void DumpHumanReadable(Transaction tx, string path, Page start)
+	    public static void DumpHumanReadable(Transaction tx, string path, TreePage start)
 	    {
 		    using (var writer = File.CreateText(path))
 		    {
-                var stack = new Stack<Page>();
+                var stack = new Stack<TreePage>();
                 stack.Push(start);
 				writer.WriteLine("Root page #{0}",start.PageNumber);
 			    while (stack.Count > 0)
@@ -33,7 +33,7 @@ namespace Voron.Debugging
 						    var node = currentPage.GetNode(nodeIndex);
 						    var key = currentPage.GetNodeKey(node);
 
-							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
+							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == TreeNodeFlags.Data ? "Size" : "Page",
                                 SizeOf.NodeEntry(node));
 					    }
 						writer.WriteLine();
@@ -70,7 +70,7 @@ namespace Voron.Debugging
 			    }
 		    }
 	    }
-        public static void Dump(Transaction tx, string path, Page start, int showNodesEvery = 25)
+        public static void Dump(Transaction tx, string path, TreePage start, int showNodesEvery = 25)
         {
             using (var writer = File.CreateText(path))
             {
@@ -81,7 +81,7 @@ digraph structs {
 	bgcolor=transparent;
 ");
 
-                var stack = new Stack<Page>();
+                var stack = new Stack<TreePage>();
                 stack.Push(start);
                 var references = new StringBuilder();
                 while (stack.Count > 0)
@@ -110,7 +110,7 @@ digraph structs {
                             var node = p.GetNode(i);
                             key = p.GetNodeKey(node);
                             writer.WriteLine("{0} - {2} {1:#,#}", MaxString(key.ToString(), 25),
-                                node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+                                node->DataSize, node->Flags == TreeNodeFlags.Data ? "Size" : "Page");
                         }
                         if (p.NumberOfEntries < showNodesEvery)
                         {
@@ -164,7 +164,7 @@ digraph structs {
             return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
-        private static string GetBranchNodeString(int i, MemorySlice key, Page p, NodeHeader* node)
+        private static string GetBranchNodeString(int i, MemorySlice key, TreePage p, TreeNodeHeader* node)
         {
             string keyStr;
             if (i == 0 && key.KeyLength == 0)

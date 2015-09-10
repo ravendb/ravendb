@@ -51,8 +51,8 @@ namespace Voron.Trees
 			State.IsModified = true;
 			State.Flags |= TreeFlags.MultiValueTrees;
 
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+			TreeNodeHeader* node;
 			var page = FindPageFor(key, out node, out lazy);
 			if ((page == null || page.LastMatch != 0))
 			{
@@ -64,7 +64,7 @@ namespace Voron.Trees
 			var item = page.GetNode(page.LastSearchPosition);
 
 			// already was turned into a multi tree, not much to do here
-			if (item->Flags == NodeFlags.MultiValuePageRef)
+			if (item->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
 				var existingTree = OpenMultiValueTree(_tx, key, item);
 				existingTree.DirectAdd(value, 0, version: version);
@@ -72,17 +72,17 @@ namespace Voron.Trees
 			}
 
 			byte* nestedPagePtr;
-			if (item->Flags == NodeFlags.PageRef)
+			if (item->Flags == TreeNodeFlags.PageRef)
 			{
 				var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
 				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 			}
 			else
 			{
-				nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
+				nestedPagePtr = TreeNodeHeader.DirectAccess(_tx, item);
 			}
 
-			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
+			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item));
 
 			var existingItem = nestedPage.Search(value);
 			if (nestedPage.LastMatch != 0)
@@ -116,7 +116,7 @@ namespace Voron.Trees
 				// we can just expand the current value... no need to create a nested tree yet
                 var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
 
-                var currentDataSize = NodeHeader.GetDataSize(_tx, item);
+                var currentDataSize = TreeNodeHeader.GetDataSize(_tx, item);
                 ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, currentDataSize);
 
 				return;
@@ -131,7 +131,7 @@ namespace Voron.Trees
 			tree.DirectAdd(value, 0, version: version);
 			_tx.AddMultiValueTree(this, key, tree);
 			// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-			DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+			DirectAdd(key, sizeof (TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
 		}
 
 		private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
@@ -143,15 +143,15 @@ namespace Voron.Trees
 				var tempPagePointer = tmp.TempPagePointer;
                 Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
 				Delete(key); // release our current page
-				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
+				TreePage nestedPage = new TreePage(tempPagePointer, "multi tree", (ushort)currentSize);
 
 				var ptr = DirectAdd(key, newSize);
 
-				var newNestedPage = new Page(ptr, "multi tree", newSize)
+				var newNestedPage = new TreePage(ptr, "multi tree", newSize)
 				{
 					Lower = (ushort)Constants.PageHeaderSize,
 					Upper = KeysPrefixing ? (ushort) (newSize - Constants.PrefixInfoSectionSize) : newSize,
-					Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
+					Flags = KeysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf,
 					PageNumber = -1L // mark as invalid page number
 				};
 
@@ -191,7 +191,7 @@ namespace Voron.Trees
 				tree.DirectAdd(value, 0);
 				tx.AddMultiValueTree(this, key, tree);
 
-				DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+				DirectAdd(key, sizeof (TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
 				return;
 			}
 
@@ -199,12 +199,12 @@ namespace Voron.Trees
 
 			var ptr = DirectAdd(key, actualPageSize);
 
-			var nestedPage = new Page(ptr, "multi tree", actualPageSize)
+			var nestedPage = new TreePage(ptr, "multi tree", actualPageSize)
 			{
 				PageNumber = -1L,// hint that this is an inner page
 				Lower = (ushort) Constants.PageHeaderSize,
 				Upper = KeysPrefixing ? (ushort)(actualPageSize - Constants.PrefixInfoSectionSize) : actualPageSize,
-				Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
+				Flags = KeysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf,
 			};
 
 			nestedPage.ClearPrefixInfo();
@@ -217,8 +217,8 @@ namespace Voron.Trees
 		public void MultiDelete(Slice key, Slice value, ushort? version = null)
 		{
 			State.IsModified = true;
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+			TreeNodeHeader* node;
 			var page = FindPageFor(key, out node, out lazy);
 			if (page == null || page.LastMatch != 0)
 			{
@@ -229,7 +229,7 @@ namespace Voron.Trees
 
 			var item = page.GetNode(page.LastSearchPosition);
 
-			if (item->Flags == NodeFlags.MultiValuePageRef) //multi-value tree exists
+			if (item->Flags == TreeNodeFlags.MultiValuePageRef) //multi-value tree exists
 			{
 				var tree = OpenMultiValueTree(_tx, key, item);
 
@@ -247,23 +247,23 @@ namespace Voron.Trees
 			}
 			else // we use a nested page here
 			{
-				var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
+				var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item));
 				var nestedItem = nestedPage.Search(value);
 				if (nestedPage.LastMatch != 0) // value not found
 					return;
 
 				byte* nestedPagePtr;
-				if (item->Flags == NodeFlags.PageRef)
+				if (item->Flags == TreeNodeFlags.PageRef)
 				{
 					var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
 					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
 				}
 				else
 				{
-					nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
+					nestedPagePtr = TreeNodeHeader.DirectAccess(_tx, item);
 				}
 
-				nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item))
+				nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item))
 				{
 					LastSearchPosition = nestedPage.LastSearchPosition
 				};
@@ -278,8 +278,8 @@ namespace Voron.Trees
 		//TODO: write a test for this
 		public long MultiCount(Slice key)
 		{
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+			TreeNodeHeader* node;
 			var page = FindPageFor(key, out node, out lazy);
 			if (page == null || page.LastMatch != 0)
 				return 0;
@@ -292,22 +292,22 @@ namespace Voron.Trees
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
 			}
 
-			if (node->Flags == NodeFlags.MultiValuePageRef)
+			if (node->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
 				var tree = OpenMultiValueTree(_tx, key, node);
 
 				return tree.State.EntriesCount;
 			}
 
-			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, node));
 
 			return nestedPage.NumberOfEntries;
 		}
 
 		public IIterator MultiRead(Slice key)
 		{
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+			TreeNodeHeader* node;
 			var page = FindPageFor(key, out node, out lazy);
 			if (page == null || page.LastMatch != 0)
 				return new EmptyIterator();
@@ -320,19 +320,19 @@ namespace Voron.Trees
 				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
 			}
 
-			if (node->Flags == NodeFlags.MultiValuePageRef)
+			if (node->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
 				var tree = OpenMultiValueTree(_tx, key, node);
 
 				return tree.Iterate();
 			}
 
-			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, node));
 				
-			return new PageIterator(nestedPage);
+			return new TreePageIterator(nestedPage);
 		}
 
-		private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
+		private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, TreeNodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -350,17 +350,17 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, MemorySlice key, int len,
-														NodeFlags requestedNodeType, ushort? version,
+		private bool TryOverwriteDataOrMultiValuePageRefNode(TreeNodeHeader* updatedNode, MemorySlice key, int len,
+														TreeNodeFlags requestedNodeType, ushort? version,
 														out byte* pos)
 		{
 			switch (requestedNodeType)
 			{
-				case NodeFlags.Data:
-				case NodeFlags.MultiValuePageRef:
+				case TreeNodeFlags.Data:
+				case TreeNodeFlags.MultiValuePageRef:
 					{
 						if (updatedNode->DataSize == len &&
-							(updatedNode->Flags == NodeFlags.Data || updatedNode->Flags == NodeFlags.MultiValuePageRef))
+							(updatedNode->Flags == TreeNodeFlags.Data || updatedNode->Flags == TreeNodeFlags.MultiValuePageRef))
 						{
 							CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
 
@@ -377,7 +377,7 @@ namespace Voron.Trees
 						}
 						break;
 					}
-				case NodeFlags.PageRef:
+				case TreeNodeFlags.PageRef:
 					throw new InvalidOperationException("We never add PageRef explicitly");
 				default:
 					throw new ArgumentOutOfRangeException();

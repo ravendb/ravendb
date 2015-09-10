@@ -9,7 +9,7 @@ namespace Voron.Impl.Paging
 		PagerState PagerState { get; }
 
 		byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
-        Page Read(long pageNumber, PagerState pagerState = null);
+        TreePage Read(long pageNumber, PagerState pagerState = null);
 		void AllocateMorePages(Transaction tx, long newLength);
 	
 		bool Disposed { get; }
@@ -27,11 +27,11 @@ namespace Voron.Impl.Paging
 		int GetNumberOfOverflowPages(int overflowSize);
 	    bool WillRequireExtension(long requestedPageNumber, int numberOfPages);
         void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages);
-        int Write(Page page, long? pageNumber = null);
+        int Write(TreePage page, long? pageNumber = null);
 
-        int WriteDirect(Page start, long pagePosition, int pagesToWrite);
-	    Page GetWritable(long pageNumber);
-        void MaybePrefetchMemory(List<Page> sortedPages);
+        int WriteDirect(TreePage start, long pagePosition, int pagesToWrite);
+	    TreePage GetWritable(long pageNumber);
+        void MaybePrefetchMemory(List<TreePage> sortedPages);
         void TryPrefetchingWholeFile();
     }
 }

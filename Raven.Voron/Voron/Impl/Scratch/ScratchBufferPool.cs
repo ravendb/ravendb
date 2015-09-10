@@ -284,7 +284,7 @@ namespace Voron.Impl.Scratch
         private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem( InvalidScratchFileNumber, null );
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public Page ReadPage(int scratchNumber, long p, PagerState pagerState = null)
+		public TreePage ReadPage(int scratchNumber, long p, PagerState pagerState = null)
 		{
             ScratchBufferFile bufferFile;
             ScratchBufferCacheItem item = lastScratchBuffer;

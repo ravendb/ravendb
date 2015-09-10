@@ -61,7 +61,7 @@ namespace Voron.Trees
                 };
         }
 
-		public void RecordNewPage(Page p, int num)
+		public void RecordNewPage(TreePage p, int num)
 		{
 			PageCount += num;
 
@@ -79,7 +79,7 @@ namespace Voron.Trees
 			}
 		}
 
-		public void RecordFreedPage(Page p, int num)
+		public void RecordFreedPage(TreePage p, int num)
 		{
 			PageCount -= num;
 			Debug.Assert(PageCount >= 0);

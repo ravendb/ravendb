@@ -3,7 +3,7 @@
 	using System;
 
 	[Flags]
-	public enum PageFlags : byte
+	public enum TreePageFlags : byte
 	{
 		None = 0,
 		Branch = 1,

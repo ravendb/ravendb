@@ -7,17 +7,17 @@
     using System.Linq;
     using Voron.Util;
 
-    public class Cursor : IDisposable
+    public class TreeCursor : IDisposable
     {
-        public LinkedList<Page> Pages = new LinkedList<Page>();
+        public LinkedList<TreePage> Pages = new LinkedList<TreePage>();
 
-        private static readonly ObjectPool<Dictionary<long, Page>> _pagesByNumPool = new ObjectPool<Dictionary<long, Page>>(() => new Dictionary<long, Page>(NumericEqualityComparer.Instance), 50);
+        private static readonly ObjectPool<Dictionary<long, TreePage>> _pagesByNumPool = new ObjectPool<Dictionary<long, TreePage>>(() => new Dictionary<long, TreePage>(NumericEqualityComparer.Instance), 50);
 
-        private readonly Dictionary<long, Page> _pagesByNum;
+        private readonly Dictionary<long, TreePage> _pagesByNum;
 
         private bool _anyOverrides;
 
-        public Cursor()
+        public TreeCursor()
         {
             _pagesByNum = _pagesByNumPool.Allocate();
         }
@@ -38,7 +38,7 @@
             }
         }
 
-        public void Update(LinkedListNode<Page> node, Page newVal)
+        public void Update(LinkedListNode<TreePage> node, TreePage newVal)
         {
             var oldPageNumber = node.Value.PageNumber;
             var newPageNumber = newVal.PageNumber;
@@ -56,11 +56,11 @@
             node.Value = newVal;
         }
 
-        public Page ParentPage
+        public TreePage ParentPage
         {
             get
             {
-                LinkedListNode<Page> linkedListNode = Pages.First;
+                LinkedListNode<TreePage> linkedListNode = Pages.First;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No pages in cursor");
                 linkedListNode = linkedListNode.Next;
@@ -70,11 +70,11 @@
             }
         }
 
-        public Page CurrentPage
+        public TreePage CurrentPage
         {
             get
             {
-                LinkedListNode<Page> linkedListNode = Pages.First;
+                LinkedListNode<TreePage> linkedListNode = Pages.First;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No pages in cursor");
                 return linkedListNode.Value;
@@ -86,13 +86,13 @@
             get { return Pages.Count; }
         }
 
-        public void Push(Page p)
+        public void Push(TreePage p)
         {
             Pages.AddFirst(p);
             _pagesByNum.Add(p.PageNumber, p);
         }
 
-        public Page Pop()
+        public TreePage Pop()
         {
             if (Pages.Count == 0)
                 throw new InvalidOperationException("No page to pop");

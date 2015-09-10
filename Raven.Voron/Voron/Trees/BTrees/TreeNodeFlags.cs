@@ -1,6 +1,6 @@
 ﻿namespace Voron.Trees
 {
-	public enum NodeFlags : byte
+	public enum TreeNodeFlags : byte
 	{
 		Data = 1,
 		PageRef = 2,

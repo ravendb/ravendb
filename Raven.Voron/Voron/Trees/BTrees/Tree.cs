@@ -82,7 +82,7 @@ namespace Voron.Trees
 	        if (globalKeysPrefixingSetting != null)
 				keysPrefixing = globalKeysPrefixingSetting.Value;
 
-            var newRootPage = tx.AllocatePage(1, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf);
+            var newRootPage = tx.AllocatePage(1, keysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {
                 _state =
@@ -195,9 +195,9 @@ namespace Voron.Trees
             }
         }
 
-        internal byte* DirectAdd(MemorySlice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
+        internal byte* DirectAdd(MemorySlice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
         {
-            Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
+            Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
 	        if (State.InWriteTransaction)
 				State.IsModified = true;
@@ -208,8 +208,8 @@ namespace Voron.Trees
 			if (AbstractPager.IsKeySizeValid(key.Size, KeysPrefixing) == false)
 				throw new ArgumentException("Key size is too big, must be at most " + AbstractPager.GetMaxKeySize(KeysPrefixing) + " bytes, but was " + key.Size, "key");
 
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var foundPage = FindPageFor(key, out node, out lazy);
 
             var page = _tx.ModifyPage(foundPage.PageNumber, this, foundPage);
@@ -254,7 +254,7 @@ namespace Voron.Trees
             {
                 pageNumber = WriteToOverflowPages(len, out overFlowPos);
                 len = -1;
-                nodeType = NodeFlags.PageRef;
+                nodeType = TreeNodeFlags.PageRef;
             }
 
             var keyToInsert = page.PrepareKeyToInsert(key, lastSearchPosition);
@@ -266,7 +266,7 @@ namespace Voron.Trees
                 {
                     cursor.Update(cursor.Pages.First, page);
 
-                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
+                var pageSplitter = new TreePageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
                     dataPos = pageSplitter.Execute();
                 }
 
@@ -276,13 +276,13 @@ namespace Voron.Trees
             {
                 switch (nodeType)
                 {
-                    case NodeFlags.PageRef:
+                    case TreeNodeFlags.PageRef:
                         dataPos = page.AddPageRefNode(lastSearchPosition, keyToInsert, pageNumber);
                         break;
-                    case NodeFlags.Data:
+                    case TreeNodeFlags.Data:
                         dataPos = page.AddDataNode(lastSearchPosition, keyToInsert, len, nodeVersion);
                         break;
-                    case NodeFlags.MultiValuePageRef:
+                    case TreeNodeFlags.MultiValuePageRef:
                         dataPos = page.AddMultiValueNode(lastSearchPosition, keyToInsert, len, nodeVersion);
                         break;
                     default:
@@ -298,7 +298,7 @@ namespace Voron.Trees
 		private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
             var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(overflowSize);
-            var overflowPageStart = _tx.AllocatePage(numberOfPages, PageFlags.Overflow);
+            var overflowPageStart = _tx.AllocatePage(numberOfPages, TreePageFlags.Overflow);
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
 
@@ -307,11 +307,11 @@ namespace Voron.Trees
             return overflowPageStart.PageNumber;
         }
 
-        private void RemoveLeafNode(Page page, out ushort nodeVersion)
+        private void RemoveLeafNode(TreePage page, out ushort nodeVersion)
         {
             var node = page.GetNode(page.LastSearchPosition);
             nodeVersion = node->Version;
-            if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
+            if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
             {
                 var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
 				FreePage(overflowPage);
@@ -324,7 +324,7 @@ namespace Voron.Trees
         public void DebugValidateTree(long rootPageNumber)
         {
             var pages = new HashSet<long>();
-            var stack = new Stack<Page>();
+            var stack = new Stack<TreePage>();
             var root = _tx.GetReadOnlyPage(rootPageNumber);
             stack.Push(root);
             pages.Add(rootPageNumber);
@@ -359,9 +359,9 @@ namespace Voron.Trees
             }
         }
 
-        internal Page FindPageFor(MemorySlice key, out NodeHeader* node, out Lazy<Cursor> cursor)
+        internal TreePage FindPageFor(MemorySlice key, out TreeNodeHeader* node, out Lazy<TreeCursor> cursor)
         {
-            Page p;
+            TreePage p;
 
             if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
             {
@@ -371,16 +371,16 @@ namespace Voron.Trees
             return SearchForPage(key, out cursor, out node);
         }
 
-        private Page SearchForPage(MemorySlice key, out Lazy<Cursor> cursor, out NodeHeader* node)
+        private TreePage SearchForPage(MemorySlice key, out Lazy<TreeCursor> cursor, out TreeNodeHeader* node)
         {
             var p = _tx.GetReadOnlyPage(State.RootPageNumber);
-            var c = new Cursor();
+            var c = new TreeCursor();
             c.Push(p);
 
             bool rightmostPage = true;
             bool leftmostPage = true;
 
-            while ((p.Flags & PageFlags.Branch) == PageFlags.Branch)
+            while ((p.Flags & TreePageFlags.Branch) == TreePageFlags.Branch)
             {
                 int nodePos;
                 if (key.Options == SliceOptions.BeforeAllKeys)
@@ -432,11 +432,11 @@ namespace Voron.Trees
 
             AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
 
-            cursor = new Lazy<Cursor>(() => c);
+            cursor = new Lazy<TreeCursor>(() => c);
             return p;
         }
 
-        private void AddToRecentlyFoundPages(Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
+        private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool? leftmostPage, bool? rightmostPage)
         {
             MemorySlice firstKey;
             if (leftmostPage == true)
@@ -479,7 +479,7 @@ namespace Voron.Trees
             RecentlyFoundPages.Add(foundPage);
         }
 
-        private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<Cursor> cursor, out Page page, out NodeHeader* node)
+        private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
@@ -499,7 +499,7 @@ namespace Voron.Trees
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
-                page = new Page(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
             }
             else
             {
@@ -513,9 +513,9 @@ namespace Voron.Trees
 
             var cursorPath = foundPage.CursorPath;
             var pageCopy = page;
-            cursor = new Lazy<Cursor>(() =>
+            cursor = new Lazy<TreeCursor>(() =>
             {
-                var c = new Cursor();
+                var c = new TreeCursor();
                 foreach (var p in cursorPath)
                 {
                     if (p == lastFoundPageNumber)
@@ -551,7 +551,7 @@ namespace Voron.Trees
             return true;
         }
 
-		internal Page NewPage(PageFlags flags, int num)
+		internal TreePage NewPage(TreePageFlags flags, int num)
         {
 			var page = _tx.AllocatePage(num, flags);
 
@@ -560,7 +560,7 @@ namespace Voron.Trees
             return page;
         }
 
-	    internal void FreePage(Page p)
+	    internal void FreePage(TreePage p)
 	    {
 		    if (p.IsOverflow)
 		    {
@@ -585,8 +585,8 @@ namespace Voron.Trees
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
             State.IsModified = true;
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var page = FindPageFor(key, out node, out lazy);
 
             if (page.LastMatch != 0)
@@ -621,20 +621,20 @@ namespace Voron.Trees
 
         public ReadResult Read(Slice key)
         {
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var p = FindPageFor(key, out node, out lazy);
 
             if (p.LastMatch != 0)
                 return null;
 
-            return new ReadResult(NodeHeader.Reader(_tx, node), node->Version);
+            return new ReadResult(TreeNodeHeader.Reader(_tx, node), node->Version);
         }
 
         public int GetDataSize(Slice key)
         {
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var p = FindPageFor(key, out node, out lazy);
             if (p == null || p.LastMatch != 0)
                 return -1;
@@ -642,13 +642,13 @@ namespace Voron.Trees
             if (node == null || p.GetNodeKey(node).Compare(key) != 0)
                 return -1;
 
-            return NodeHeader.GetDataSize(_tx, node);
+            return TreeNodeHeader.GetDataSize(_tx, node);
         }
 
         public ushort ReadVersion(Slice key)
         {
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var p = FindPageFor(key, out node, out lazy);
             if (p == null || p.LastMatch != 0)
                 return 0;
@@ -661,15 +661,15 @@ namespace Voron.Trees
 
         internal byte* DirectRead(Slice key)
         {
-            Lazy<Cursor> lazy;
-            NodeHeader* node;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
             var p = FindPageFor(key, out node, out lazy);
             if (p == null || p.LastMatch != 0)
                 return null;
 
             Debug.Assert(node != null);
 
-            if (node->Flags == (NodeFlags.PageRef))
+            if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = _tx.GetReadOnlyPage(node->PageNumber);
                 return overFlowPage.Base + Constants.PageHeaderSize;
@@ -681,7 +681,7 @@ namespace Voron.Trees
         public List<long> AllPages()
         {
             var results = new List<long>();
-            var stack = new Stack<Page>();
+            var stack = new Stack<TreePage>();
             var root = _tx.GetReadOnlyPage(State.RootPageNumber);
             stack.Push(root);
 
@@ -700,7 +700,7 @@ namespace Voron.Trees
                     {
                         stack.Push(_tx.GetReadOnlyPage(pageNumber));
                     }
-                    else if (node->Flags == NodeFlags.PageRef)
+                    else if (node->Flags == TreeNodeFlags.PageRef)
                     {
                         // This is an overflow page
                         var overflowPage = _tx.GetReadOnlyPage(pageNumber);
@@ -708,7 +708,7 @@ namespace Voron.Trees
                         for (long j = 0; j < numberOfPages; ++j)
                             results.Add(overflowPage.PageNumber + j);
                     }
-                    else if (node->Flags == NodeFlags.MultiValuePageRef)
+                    else if (node->Flags == TreeNodeFlags.MultiValuePageRef)
                     {
                         // this is a multi value
                         p.SetNodeKey(node, ref key);
@@ -719,7 +719,7 @@ namespace Voron.Trees
                     {
 	                    if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
 	                    {
-							var valueReader = NodeHeader.Reader(_tx, node);
+							var valueReader = TreeNodeHeader.Reader(_tx, node);
 		                    byte valueSize = *valueReader.Base;
 
 		                    var fixedSizeTreeName = p.GetNodeKey(i);
@@ -765,10 +765,10 @@ namespace Voron.Trees
             return new Tree(tx, _state.Clone()) { Name = Name };
         }
 
-		private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
+		private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode,
                                                       MemorySlice key, int len, ushort? version, out byte* pos)
         {
-            if (updatedNode->Flags == NodeFlags.PageRef &&
+            if (updatedNode->Flags == TreeNodeFlags.PageRef &&
                 _tx.Id <= _tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows
             {
                 var overflowPage = _tx.GetReadOnlyPage(updatedNode->PageNumber);

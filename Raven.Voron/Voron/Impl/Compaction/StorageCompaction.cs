@@ -97,7 +97,7 @@ namespace Voron.Impl.Compaction
 				                {
 				                    var key = existingTreeIterator.CurrentKey;
 
-				                    if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
+				                    if (existingTreeIterator.Current->Flags == TreeNodeFlags.MultiValuePageRef)
 				                    {
 				                        using (var multiTreeIterator = existingTree.MultiRead(key))
 				                        {

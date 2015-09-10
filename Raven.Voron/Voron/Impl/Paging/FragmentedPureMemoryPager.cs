@@ -46,12 +46,12 @@ namespace Voron.Impl.Paging
 			throw new NotSupportedException();
 		}
 
-		public override int Write(Page page, long? pageNumber)
+		public override int Write(TreePage page, long? pageNumber)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+		public override int WriteDirect(TreePage start, long pagePosition, int pagesToWrite)
 		{
 			throw new NotSupportedException();
 		}

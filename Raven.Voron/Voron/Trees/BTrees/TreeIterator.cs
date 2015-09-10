@@ -10,8 +10,8 @@ namespace Voron.Trees
 	{
 		private readonly Tree _tree;
 		private readonly Transaction _tx;
-		private Cursor _cursor;
-		private Page _currentPage;
+		private TreeCursor _cursor;
+		private TreePage _currentPage;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 		private MemorySlice _currentInternalKey;
 	    private bool _disposed;
@@ -33,7 +33,7 @@ namespace Voron.Trees
 		{
             if(_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
-			return NodeHeader.GetDataSize(_tx, Current);
+			return TreeNodeHeader.GetDataSize(_tx, Current);
 		}
 
 		public bool Seek(Slice key)
@@ -41,8 +41,8 @@ namespace Voron.Trees
             if (_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+			TreeNodeHeader* node;
 			_currentPage = _tree.FindPageFor(key, out node, out lazy);
 			_cursor = lazy.Value;
 			_cursor.Pop();
@@ -90,7 +90,7 @@ namespace Voron.Trees
 			return Seek(currentKey);
 		}
 
-		public NodeHeader* Current
+		public TreeNodeHeader* Current
 		{
 			get
 			{
@@ -193,12 +193,12 @@ namespace Voron.Trees
 
 		public ValueReader CreateReaderForCurrent()
 		{
-			return NodeHeader.Reader(_tx, Current);
+			return TreeNodeHeader.Reader(_tx, Current);
 		}
 
 		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
 		{
-			var valueReader = NodeHeader.Reader(_tx, Current);
+			var valueReader = TreeNodeHeader.Reader(_tx, Current);
 
 			return new StructureReader<T>(valueReader.Base, schema);
 		}
@@ -239,7 +239,7 @@ namespace Voron.Trees
 			} while (self.MoveNext());
 		}
 
-		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, Page page)
+		public unsafe static bool ValidateCurrentKey(this IIterator self, TreeNodeHeader* node, TreePage page)
 		{
 			if (self.RequiredPrefix != null)
 			{

@@ -39,7 +39,7 @@ namespace Voron.Trees.Compact
 
         public static PrefixTree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
         {
-            var newRootPage = tx.AllocatePage(1, PageFlags.Leaf);
+            var newRootPage = tx.AllocatePage(1, TreePageFlags.Leaf);
             
             var tree = new PrefixTree(tx, newRootPage.PageNumber);
             tree.State.RecordNewPage(newRootPage, 1);

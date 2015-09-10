@@ -298,7 +298,7 @@ namespace Voron.Platform.Win32
                    (os.Version.Major > 6 || (os.Version.Major == 6 && os.Version.Minor >= 2));
         }
 
-        public override void MaybePrefetchMemory(List<Page> sortedPages)
+        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
         {
             if (sortedPages.Count == 0)
                 return;

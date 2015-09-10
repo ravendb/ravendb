@@ -203,7 +203,7 @@ namespace Voron.Impl.Scratch
 			}
 		}
 
-		public Page ReadPage(long p, PagerState pagerState = null)
+		public TreePage ReadPage(long p, PagerState pagerState = null)
 		{
 			return _scratchPager.Read(p, pagerState);
 		}

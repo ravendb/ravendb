@@ -8,12 +8,12 @@ using System.Runtime.InteropServices;
 namespace Voron.Trees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct PrefixInfoSection
+	public struct PrefixTreeInfoSection
 	{
 		[FieldOffset(0)]
 		public byte NextPrefixId;
 
 		[FieldOffset(1)]
-		public unsafe fixed ushort PrefixOffsets[Page.PrefixCount];
+		public unsafe fixed ushort PrefixOffsets[TreePage.PrefixCount];
 	}
 }

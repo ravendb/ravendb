@@ -239,7 +239,7 @@ namespace Voron.Impl.Backup
 						try
 						{
 							TransactionHeader* lastTxHeader = null;
-							var pagesToWrite = new Dictionary<long, Page>();
+							var pagesToWrite = new Dictionary<long, TreePage>();
 
 							long journalNumber = -1;
 							foreach (var entry in package.Entries)

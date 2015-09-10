@@ -128,8 +128,8 @@ namespace Voron.Tests
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
-			Lazy<Cursor> lazy;
-		    NodeHeader* node;
+			Lazy<TreeCursor> lazy;
+		    TreeNodeHeader* node;
 			var p = tx.Root.FindPageFor(key, out node, out lazy);
 			
 

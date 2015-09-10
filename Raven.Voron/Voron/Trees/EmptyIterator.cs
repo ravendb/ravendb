@@ -42,7 +42,7 @@ namespace Voron.Trees
 			yield break;
 		}
 
-		public unsafe NodeHeader* Current
+		public unsafe TreeNodeHeader* Current
 		{
 			get
 			{

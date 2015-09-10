@@ -161,7 +161,7 @@ namespace Voron.Trees.Fixed
         public class LargeIterator : IFixedSizeIterator
         {
             private readonly FixedSizeTree _parent;
-            private Page _currentPage;
+            private TreePage _currentPage;
 
             public LargeIterator(FixedSizeTree parent)
             {

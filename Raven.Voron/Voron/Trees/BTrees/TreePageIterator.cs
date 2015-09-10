@@ -3,14 +3,14 @@ using Voron.Impl;
 
 namespace Voron.Trees
 {
-	public unsafe class PageIterator : IIterator
+	public unsafe class TreePageIterator : IIterator
 	{
-		private readonly Page _page;
+		private readonly TreePage _page;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
 		private MemorySlice _currentInternalKey;
 	    private bool _disposed;
 
-		public PageIterator(Page page)
+		public TreePageIterator(TreePage page)
 		{
 			_page = page;
 			_currentInternalKey = page.CreateNewEmptyKey();
@@ -37,7 +37,7 @@ namespace Voron.Trees
 			return this.ValidateCurrentKey(current, _page);
 		}
 
-		public NodeHeader* Current
+		public TreeNodeHeader* Current
 		{
 			get
 			{

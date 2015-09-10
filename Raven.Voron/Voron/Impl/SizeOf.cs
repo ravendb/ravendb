@@ -54,10 +54,10 @@ namespace Voron.Impl
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int NodeEntry(NodeHeader* other)
+		public static int NodeEntry(TreeNodeHeader* other)
 		{
 			var sz = other->KeySize + Constants.NodeHeaderSize;
-			if (other->Flags == NodeFlags.Data || other->Flags == NodeFlags.MultiValuePageRef)
+			if (other->Flags == TreeNodeFlags.Data || other->Flags == TreeNodeFlags.MultiValuePageRef)
 				sz += other->DataSize;
 
 			sz += sz & 1;
@@ -66,11 +66,11 @@ namespace Voron.Impl
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NodeEntryWithAnotherKey(NodeHeader* other, MemorySlice key)
+        public static int NodeEntryWithAnotherKey(TreeNodeHeader* other, MemorySlice key)
         {
             var keySize = key == null ? other->KeySize : key.Size;
             var sz = keySize + Constants.NodeHeaderSize;
-            if (other->Flags == NodeFlags.Data || other->Flags == NodeFlags.MultiValuePageRef)
+            if (other->Flags == TreeNodeFlags.Data || other->Flags == TreeNodeFlags.MultiValuePageRef)
                 sz += other->DataSize;
 
             sz += sz & 1;

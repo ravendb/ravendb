@@ -3,13 +3,13 @@
 namespace Voron.Trees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct PageHeader
+	public struct TreePageHeader
 	{
 		[FieldOffset(0)]
 		public long PageNumber;
 
 		[FieldOffset(8)]
-		public PageFlags Flags;
+		public TreePageFlags Flags;
 
 		[FieldOffset(9)]
 		public ushort Lower;

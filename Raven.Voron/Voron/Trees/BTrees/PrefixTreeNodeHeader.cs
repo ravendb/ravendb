@@ -9,7 +9,7 @@ using Voron.Impl;
 namespace Voron.Trees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct PrefixNodeHeader
+	public struct PrefixTreeNodeHeader
 	{
 		[FieldOffset(0)]
 		public ushort PrefixLength;
@@ -18,7 +18,7 @@ namespace Voron.Trees
 	public unsafe class PrefixNode
 	{
 		public byte* Base;
-		public PrefixNodeHeader Header;
+		public PrefixTreeNodeHeader Header;
 		public long PageNumber;
 		public byte* ValuePtr;
 		public byte[] Value;
@@ -28,7 +28,7 @@ namespace Voron.Trees
 			
 		}
 
-		public PrefixNode(PrefixNodeHeader header, byte[] value, long pageNumber)
+		public PrefixNode(PrefixTreeNodeHeader header, byte[] value, long pageNumber)
 		{
 			Header = header;
 			Value = value;
@@ -38,7 +38,7 @@ namespace Voron.Trees
 		public void Set(byte* p, long pageNumber)
 		{
 			Base = p;
-			Header = *((PrefixNodeHeader*)p);
+			Header = *((PrefixTreeNodeHeader*)p);
 			ValuePtr = p + Constants.PrefixNodeHeaderSize;
 			PageNumber = pageNumber;
 		}

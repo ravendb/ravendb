@@ -14,13 +14,13 @@ namespace Voron.Trees
 	using System.Runtime.CompilerServices;
     using Voron.Util;
 
-	public unsafe class Page
+	public unsafe class TreePage
     {
 	    public const byte PrefixCount = 8;
 		public const sbyte KeysPrefixingDisabled = -127;
         private readonly byte* _base;
-        private readonly PageHeader* _header;
-		private readonly PrefixInfoSection* _prefixSection;
+        private readonly TreePageHeader* _header;
+		private readonly PrefixTreeInfoSection* _prefixSection;
 
 	    public readonly string Source;
 	    private readonly ushort _pageSize;
@@ -29,13 +29,13 @@ namespace Voron.Trees
 	    public int LastSearchPosition;
 	    public bool Dirty;
 
-	    public Page(byte* b, string source, ushort pageSize)
+	    public TreePage(byte* b, string source, ushort pageSize)
         {
             _base = b;
-            _header = (PageHeader*)b;
+            _header = (TreePageHeader*)b;
 	        Source = source;
 	        _pageSize = pageSize;
-            _prefixSection = (PrefixInfoSection*)(_base + _pageSize - Constants.PrefixInfoSectionSize);
+            _prefixSection = (PrefixTreeInfoSection*)(_base + _pageSize - Constants.PrefixInfoSectionSize);
         }
 
         
@@ -47,7 +47,7 @@ namespace Voron.Trees
             set { _header->PageNumber = value; } 
         }
 
-	    public PageFlags Flags 
+	    public TreePageFlags Flags 
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _header->Flags; }
@@ -93,7 +93,7 @@ namespace Voron.Trees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private NodeHeader* Search(Slice key)
+        private TreeNodeHeader* Search(Slice key)
         {
             int numberOfEntries = NumberOfEntries;
             if (numberOfEntries == 0)
@@ -127,7 +127,7 @@ namespace Voron.Trees
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (TreeNodeHeader*)(_base + KeysOffsets[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -172,7 +172,7 @@ namespace Voron.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private NodeHeader* SearchPrefixed(MemorySlice key)
+        private TreeNodeHeader* SearchPrefixed(MemorySlice key)
         {
             key.PrepareForSearching();
 
@@ -208,7 +208,7 @@ namespace Voron.Trees
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (TreeNodeHeader*)(_base + KeysOffsets[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -253,7 +253,7 @@ namespace Voron.Trees
 
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public NodeHeader* Search(MemorySlice key)
+        public TreeNodeHeader* Search(MemorySlice key)
 		{
             if (KeysPrefixed)
             {
@@ -266,12 +266,12 @@ namespace Voron.Trees
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public NodeHeader* GetNode(int n)
+        public TreeNodeHeader* GetNode(int n)
         {
             Debug.Assert(n >= 0 && n < NumberOfEntries);
 
             var nodeOffset = KeysOffsets[n];
-            var nodeHeader = (NodeHeader*)(_base + nodeOffset);
+            var nodeHeader = (TreeNodeHeader*)(_base + nodeOffset);
 
             return nodeHeader;
         }
@@ -286,31 +286,31 @@ namespace Voron.Trees
 	    public bool IsLeaf
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return (_header->Flags & PageFlags.Leaf) == PageFlags.Leaf; }
+			get { return (_header->Flags & TreePageFlags.Leaf) == TreePageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (_header->Flags & PageFlags.Branch) == PageFlags.Branch; }
+            get { return (_header->Flags & TreePageFlags.Branch) == TreePageFlags.Branch; }
         }
 
 		public bool IsOverflow
 		{
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return (_header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
+			get { return (_header->Flags & TreePageFlags.Overflow) == TreePageFlags.Overflow; }
 		}
 
 		public bool KeysPrefixed
 		{
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
+			get { return (_header->Flags & TreePageFlags.KeysPrefixed) == TreePageFlags.KeysPrefixed; }
 		}
 
 		public bool IsFixedSize
 		{
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return (_header->Flags & PageFlags.FixedSize) == PageFlags.FixedSize; }
+			get { return (_header->Flags & TreePageFlags.FixedSize) == TreePageFlags.FixedSize; }
 		}
 
 		public bool HasPrefixes
@@ -370,7 +370,7 @@ namespace Voron.Trees
 
 		public byte* AddPageRefNode(int index, MemorySlice key, long pageNumber)
 		{
-			var node = CreateNode(index, key, NodeFlags.PageRef, -1, 0);
+			var node = CreateNode(index, key, TreeNodeFlags.PageRef, -1, 0);
 			node->PageNumber = pageNumber;
 
 			return null; // nothing to write into page ref node
@@ -381,7 +381,7 @@ namespace Voron.Trees
 			Debug.Assert(dataSize >= 0);
 			Debug.Assert(key.Options == SliceOptions.Key);
 
-			var node = CreateNode(index, key, NodeFlags.Data, dataSize, previousNodeVersion);
+			var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize, previousNodeVersion);
 			node->DataSize = dataSize;
 
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
@@ -392,7 +392,7 @@ namespace Voron.Trees
 			Debug.Assert(dataSize == sizeof(TreeRootHeader));
 			Debug.Assert(key.Options == SliceOptions.Key);
 
-			var node = CreateNode(index, key, NodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
+			var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
 			node->DataSize = dataSize;
 
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
@@ -405,12 +405,12 @@ namespace Voron.Trees
 			var node = GetNode(implicitRefIndex);
 
 			node->KeySize = 0;
-			node->Flags = NodeFlags.PageRef;
+			node->Flags = TreeNodeFlags.PageRef;
 			node->Version = 1;
 			node->PageNumber = implicitRefPageNumber;
 		}
 
-        private NodeHeader* CreateNode(int index, MemorySlice key, NodeFlags flags, int len, ushort previousNodeVersion)
+        private TreeNodeHeader* CreateNode(int index, MemorySlice key, TreeNodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
@@ -444,7 +444,7 @@ namespace Voron.Trees
         /// Internal method that is used when splitting pages
         /// No need to do any work here, we are always adding at the end
         /// </summary>
-        internal void CopyNodeDataToEndOfPage(NodeHeader* other, MemorySlice key)
+        internal void CopyNodeDataToEndOfPage(TreeNodeHeader* other, MemorySlice key)
         {
 			var index = NumberOfEntries;
 
@@ -470,10 +470,10 @@ namespace Voron.Trees
             if (key.Options == SliceOptions.Key && key.Size > 0)
 				key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
-	        if (IsBranch || other->Flags == (NodeFlags.PageRef))
+	        if (IsBranch || other->Flags == (TreeNodeFlags.PageRef))
 	        {
 		        newNode->PageNumber = other->PageNumber;
-		        newNode->Flags = NodeFlags.PageRef;
+		        newNode->Flags = TreeNodeFlags.PageRef;
 		        return;
 	        }
 	        newNode->DataSize = other->DataSize;
@@ -649,7 +649,7 @@ namespace Voron.Trees
 			return false;
 		}
 
-	    private NodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
+	    private TreeNodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
         {
 	        int newSize = previousNodeVersion + 1;
 	        if (newSize > ushort.MaxValue)
@@ -661,7 +661,7 @@ namespace Voron.Trees
             _header->Upper = newNodeOffset;
             _header->Lower += (ushort)Constants.NodeOffsetSize;
 
-			var node = (NodeHeader*)(_base + newNodeOffset);
+			var node = (TreeNodeHeader*)(_base + newNodeOffset);
             node->Flags = 0;
 			node->Version = ++previousNodeVersion;
             return node;
@@ -682,7 +682,7 @@ namespace Voron.Trees
 
 			_prefixSection->PrefixOffsets[prefixId] = prefixNodeOffset;
 
-			var prefixNodeHeader = (PrefixNodeHeader*)(_base + prefixNodeOffset);
+			var prefixNodeHeader = (PrefixTreeNodeHeader*)(_base + prefixNodeOffset);
 
 			prefixNodeHeader->PrefixLength = prefix.Size;
 
@@ -797,7 +797,7 @@ namespace Voron.Trees
 
         public override string ToString()
         {
-            if ((Flags & PageFlags.FixedSize)==PageFlags.FixedSize)
+            if ((Flags & TreePageFlags.FixedSize)==TreePageFlags.FixedSize)
                 return "#" + PageNumber + " (count: " + FixedSize_NumberOfEntries + ") " + Flags;
             return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + Flags;
         }
@@ -907,13 +907,13 @@ namespace Voron.Trees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetNodeKey(NodeHeader* node, ref Slice slice)
+        private void SetNodeKey(TreeNodeHeader* node, ref Slice slice)
         {
             Slice.SetInline(slice, node);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetNodeKey(NodeHeader* node, ref PrefixedSlice slice)
+        private void SetNodeKey(TreeNodeHeader* node, ref PrefixedSlice slice)
         {
             if (node->KeySize == 0)
             {
@@ -949,7 +949,7 @@ namespace Voron.Trees
 
         // REVIEW: Removed forced inlining for now until we can see if we improve without needing it. 
         // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetNodeKey(NodeHeader* node, ref MemorySlice sliceInstance)
+        public void SetNodeKey(TreeNodeHeader* node, ref MemorySlice sliceInstance)
         {
             if (KeysPrefixed)
             {
@@ -972,7 +972,7 @@ namespace Voron.Trees
 			return GetNodeKey(node);
 		}
 
-		public MemorySlice GetNodeKey(NodeHeader* node)
+		public MemorySlice GetNodeKey(TreeNodeHeader* node)
 		{
 			if (KeysPrefixed == false)
 			{
@@ -1003,7 +1003,7 @@ namespace Voron.Trees
 
 			AssertPrefixNode(prefixedSlice.Header.PrefixId);
 
-            var prefixNodePtr = (PrefixNodeHeader*)(_base + _prefixSection->PrefixOffsets[prefixedSlice.Header.PrefixId]);
+            var prefixNodePtr = (PrefixTreeNodeHeader*)(_base + _prefixSection->PrefixOffsets[prefixedSlice.Header.PrefixId]);
 
 			var prefixLength = prefixNodePtr->PrefixLength;
 			var prefixData = new byte[prefixLength];
@@ -1011,7 +1011,7 @@ namespace Voron.Trees
 			fixed (byte* ptr = prefixData)
                 Memory.CopyInline(ptr, (byte*)prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
 
-            prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader { PrefixLength = prefixLength }, prefixData, PageNumber);
+            prefixedSlice.Prefix = new PrefixNode(new PrefixTreeNodeHeader { PrefixLength = prefixLength }, prefixData, PageNumber);
 
 			return prefixedSlice;
 		}
@@ -1055,7 +1055,7 @@ namespace Voron.Trees
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
-                if (node->Flags == (NodeFlags.PageRef))
+                if (node->Flags == (TreeNodeFlags.PageRef))
                 {
                     if (pages.Add(node->PageNumber) == false)
                     {

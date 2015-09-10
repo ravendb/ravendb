@@ -11,12 +11,12 @@ namespace Voron.Trees.Compact
         public long RootPageNumber;
         public long PageCount;
 
-        public void RecordNewPage(Page p, int num)
+        public void RecordNewPage(TreePage p, int num)
         {
             PageCount += num;
         }
 
-        public void RecordFreedPage(Page p, int num)
+        public void RecordFreedPage(TreePage p, int num)
         {
             PageCount -= num;
         }

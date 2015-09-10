@@ -28,9 +28,9 @@ namespace Voron.Debugging
 			TreeDumper.DumpHumanReadable(tx, path, tx.GetReadOnlyPage(startPageNumber));
 		}
 
-		public unsafe static bool HasDuplicateBranchReferences(Transaction tx, Page start, out long pageNumberWithDuplicates)
+		public unsafe static bool HasDuplicateBranchReferences(Transaction tx, TreePage start, out long pageNumberWithDuplicates)
 		{
-			var stack = new Stack<Page>();
+			var stack = new Stack<TreePage>();
 			var existingTreeReferences = new ConcurrentDictionary<long, List<long>>();
 			stack.Push(start);
 			while (stack.Count > 0)
@@ -255,7 +255,7 @@ namespace Voron.Debugging
 			Process.Start(output);
 		}
 
-		private unsafe static void RenderFixedSizeTreePage(Transaction tx, Page page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
+		private unsafe static void RenderFixedSizeTreePage(Transaction tx, TreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
 		{
 			sw.WriteLine(
 				"<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
@@ -334,7 +334,7 @@ namespace Voron.Debugging
 			sw.Flush();
 		}
 
-		private unsafe static void RenderPage(Transaction tx, Page page, TextWriter sw, string text, bool open)
+		private unsafe static void RenderPage(Transaction tx, TreePage page, TextWriter sw, string text, bool open)
 		{
 			sw.WriteLine(
 			   "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
@@ -346,7 +346,7 @@ namespace Voron.Debugging
 				if (page.IsLeaf)
 				{
 					var key = new Slice(nodeHeader).ToString();
-					sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, NodeHeader.GetDataSize(tx, nodeHeader));
+					sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, TreeNodeHeader.GetDataSize(tx, nodeHeader));
 				}
 				else
 				{

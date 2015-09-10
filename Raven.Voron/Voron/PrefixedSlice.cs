@@ -78,7 +78,7 @@ namespace Voron
 			Options = nonPrefixedValue.Options;
 		}
 
-		public PrefixedSlice(NodeHeader* node)
+		public PrefixedSlice(TreeNodeHeader* node)
 		{
 			if (node->KeySize > 0)
 			{
@@ -115,7 +115,7 @@ namespace Voron
 			Options = SliceOptions.Key;
 		}
 
-		public override void Set(NodeHeader* node)
+		public override void Set(TreeNodeHeader* node)
 		{
 			Debug.Assert(this != Empty, "Cannot call Set() on PrefixedSlice.Empty");
 
@@ -228,7 +228,7 @@ namespace Voron
 		{
 			if (Prefix == null && NewPrefix != null)
 			{
-				Prefix = new PrefixNode(new PrefixNodeHeader
+				Prefix = new PrefixNode(new PrefixTreeNodeHeader
 				{
 					PrefixLength = NewPrefix.KeyLength
 				}, NewPrefix.Array, -1);

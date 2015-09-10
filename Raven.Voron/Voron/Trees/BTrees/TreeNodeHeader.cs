@@ -9,7 +9,7 @@ using Voron.Util;
 namespace Voron.Trees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public unsafe struct  NodeHeader
+	public unsafe struct  TreeNodeHeader
 	{
 		[FieldOffset(0)]
 		public int DataSize;
@@ -18,7 +18,7 @@ namespace Voron.Trees
 		public long PageNumber;
 
 		[FieldOffset(8)]
-		public NodeFlags Flags;
+		public TreeNodeFlags Flags;
 
 		[FieldOffset(9)]
 		public ushort KeySize;
@@ -29,12 +29,12 @@ namespace Voron.Trees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public int GetNodeSize()
 		{
-			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
+			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + (Flags == (TreeNodeFlags.PageRef) ? 0 : DataSize);
 		}
 
-		public static byte* DirectAccess(Transaction tx, NodeHeader* node)
+		public static byte* DirectAccess(Transaction tx, TreeNodeHeader* node)
 		{
-			if (node->Flags == (NodeFlags.PageRef))
+			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
 				return overFlowPage.Base + Constants.PageHeaderSize;
@@ -42,9 +42,9 @@ namespace Voron.Trees
 			return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
 		}
 
-        public static ValueReader Reader(Transaction tx, NodeHeader* node)
+        public static ValueReader Reader(Transaction tx, TreeNodeHeader* node)
 		{
-			if (node->Flags == (NodeFlags.PageRef))
+			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
 
@@ -56,9 +56,9 @@ namespace Voron.Trees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
 
-	    public static Slice GetData(Transaction tx, NodeHeader* node)
+	    public static Slice GetData(Transaction tx, TreeNodeHeader* node)
 	    {
-            if (node->Flags == (NodeFlags.PageRef))
+            if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
@@ -69,9 +69,9 @@ namespace Voron.Trees
 	    }
 
 
-        public static void CopyTo(Transaction tx, NodeHeader* node, byte* dest)
+        public static void CopyTo(Transaction tx, TreeNodeHeader* node, byte* dest)
         {
-            if (node->Flags == (NodeFlags.PageRef))
+            if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
                 Memory.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
@@ -79,9 +79,9 @@ namespace Voron.Trees
             Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-		public static int GetDataSize(Transaction tx, NodeHeader* node)
+		public static int GetDataSize(Transaction tx, TreeNodeHeader* node)
 		{
-			if (node->Flags == (NodeFlags.PageRef))
+			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
 				return overFlowPage.OverflowSize;

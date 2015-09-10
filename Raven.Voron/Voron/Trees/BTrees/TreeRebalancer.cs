@@ -13,16 +13,16 @@ namespace Voron.Trees
     {
         private readonly Transaction _tx;
 		private readonly Tree _tree;
-	    private readonly Cursor _cursor;
+	    private readonly TreeCursor _cursor;
 
-        public TreeRebalancer(Transaction tx, Tree tree, Cursor cursor)
+        public TreeRebalancer(Transaction tx, Tree tree, TreeCursor cursor)
         {
             _tx = tx;
 			_tree = tree;
 	        _cursor = cursor;
         }
 
-        public Page Execute(Page page)
+        public TreePage Execute(TreePage page)
         {
 			_tree.ClearRecentFoundPages();
             if (_cursor.PageCount <= 1) // the root page
@@ -106,11 +106,11 @@ namespace Voron.Trees
             return parentPage;
         }
 
-		private void RemoveBranchWithOneEntry(Page page, Page parentPage)
+		private void RemoveBranchWithOneEntry(TreePage page, TreePage parentPage)
 		{
 			var pageRefNumber = page.GetNode(0)->PageNumber;
 
-			NodeHeader* nodeHeader = null;
+			TreeNodeHeader* nodeHeader = null;
 
 			for (int i = 0; i < parentPage.NumberOfEntries; i++)
 			{
@@ -127,7 +127,7 @@ namespace Voron.Trees
 			_tree.FreePage(page);
 		}
 
-		private bool TryMergePages(Page parentPage, Page left, Page right)
+		private bool TryMergePages(TreePage parentPage, TreePage left, TreePage right)
 		{
 			TemporaryPage tmp;
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
@@ -163,9 +163,9 @@ namespace Voron.Trees
 			return true;
 		}
 
-        private Page SetupMoveOrMerge(Page page, Page parentPage)
+        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage)
         {
-            Page sibling;
+            TreePage sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
                 sibling = _tx.ModifyPage(parentPage.GetNode(1)->PageNumber,_tree, null);
@@ -190,7 +190,7 @@ namespace Voron.Trees
             return sibling;
         }
 
-        private void MoveLeafNode(Page parentPage, Page from, Page to)
+        private void MoveLeafNode(TreePage parentPage, TreePage from, TreePage to)
         {
             Debug.Assert(from.IsBranch == false);
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
@@ -208,15 +208,15 @@ namespace Voron.Trees
 	        var fromDataSize = fromNode->DataSize;
 	        switch (fromNode->Flags)
 	        {
-				case NodeFlags.PageRef:
+				case TreeNodeFlags.PageRef:
 					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, -1);
 					dataPos = to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->PageNumber);
 					break;
-				case NodeFlags.Data:
+				case TreeNodeFlags.Data:
 					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
 					dataPos = to.AddDataNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
 					break;
-				case NodeFlags.MultiValuePageRef:
+				case TreeNodeFlags.MultiValuePageRef:
 					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
 					dataPos = to.AddMultiValueNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
 					break;
@@ -243,13 +243,13 @@ namespace Voron.Trees
 			AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
         }
 
-		private void AddSeparatorToParentPage(Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
+		private void AddSeparatorToParentPage(TreePage parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
 		{
 			var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
 
 			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
 			{
-				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+				var pageSplitter = new TreePageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
 					0, _cursor);
 				pageSplitter.Execute();
 			}
@@ -259,7 +259,7 @@ namespace Voron.Trees
 			}
 		}
 
-        private void MoveBranchNode(Page parentPage, Page from, Page to)
+        private void MoveBranchNode(TreePage parentPage, TreePage from, TreePage to)
         {
             Debug.Assert(from.IsBranch);
 
@@ -275,7 +275,7 @@ namespace Voron.Trees
                 // cannot add to left implicit side, adjust by moving the left node
                 // to the right by one, then adding the new one as the left
 
-	            NodeHeader* actualKeyNode;
+	            TreeNodeHeader* actualKeyNode;
                 var implicitLeftKey = GetActualKey(to, 0, out actualKeyNode);
 	            var implicitLeftNode = to.GetNode(0);
 				var leftPageNumber = implicitLeftNode->PageNumber;
@@ -331,14 +331,14 @@ namespace Voron.Trees
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private MemorySlice GetActualKey(Page page, int pos)
+	    private MemorySlice GetActualKey(TreePage page, int pos)
 	    {
-		    NodeHeader* _;
+		    TreeNodeHeader* _;
 		    return GetActualKey(page, pos, out _);
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private MemorySlice GetActualKey(Page page, int pos, out NodeHeader* node)
+        private MemorySlice GetActualKey(TreePage page, int pos, out TreeNodeHeader* node)
         {
             node = page.GetNode(pos);
 			var key = page.GetNodeKey(node);
@@ -353,7 +353,7 @@ namespace Voron.Trees
 			return key;
         }
 
-        private void RebalanceRoot(Page page)
+        private void RebalanceRoot(TreePage page)
         {
             if (page.NumberOfEntries == 0)
                 return; // nothing to do 
@@ -364,7 +364,7 @@ namespace Voron.Trees
             // in this case, we have a root pointer with just one pointer, we can just swap it out
 
             var node = page.GetNode(0);
-            Debug.Assert(node->Flags == (NodeFlags.PageRef));
+            Debug.Assert(node->Flags == (TreeNodeFlags.PageRef));
 
 			var rootPage = _tx.ModifyPage(node->PageNumber, _tree, null);
 			_tree.State.RootPageNumber = rootPage.PageNumber;
