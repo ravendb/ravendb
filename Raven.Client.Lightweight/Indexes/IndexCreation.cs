@@ -48,16 +48,20 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
+				List<IndexToAdd> indexesToAdd = new List<IndexToAdd>();
+				foreach (var task in tasks)
+				{
+					task.Conventions = conventions;
+					indexesToAdd.Add(
+						new IndexToAdd()
+						{
+							Definition = task.CreateIndexDefinition(),
+							Name = task.IndexName,
+							Priority = task.Priority ?? IndexingPriority.Normal
+						});
+				}
 
-				databaseCommands.PutIndexes(indexesToAdd);
+				databaseCommands.PutIndexes(indexesToAdd.ToArray());
 
 				foreach (var task in tasks)
 					task.AfterExecute(databaseCommands, conventions);
@@ -96,17 +100,20 @@ namespace Raven.Client.Indexes
 		        var tasks = catalogToGetnIndexingTasksFrom
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
+				List<IndexToAdd> indexesToAdd = new List<IndexToAdd>();
+				foreach (var task in tasks)
+				{
+					task.Conventions = conventions;
+					indexesToAdd.Add(
+						new IndexToAdd()
+						{
+							Definition = task.CreateIndexDefinition(),
+							Name = task.IndexName,
+							Priority = task.Priority ?? IndexingPriority.Normal
+						});
+				}
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
-				await databaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+				await databaseCommands.PutIndexesAsync(indexesToAdd.ToArray()).ConfigureAwait(false);
 
 		        foreach (var task in tasks)
 					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
