@@ -521,12 +521,9 @@ namespace Raven.Database.Server.WebApi
 				return "<system>";
 			}
 
-			if (resourceName.IndexOf("counters/") == 0)
-			{
-				return resourceName.Substring(9);
-			}
-
-			if (resourceName.IndexOf("fs/") == 0)
+			if (resourceName.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+			    resourceName.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+			    resourceName.StartsWith("ts/", StringComparison.OrdinalIgnoreCase))
 			{
 				return resourceName.Substring(3);
 			}
