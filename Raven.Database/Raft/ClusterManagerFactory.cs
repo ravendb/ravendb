@@ -106,7 +106,7 @@ namespace Raven.Database.Raft
 			Log.Info("Initialized Topology: " + topologyId);
 		}
 
-		public static void ChangeTopologyId(ClusterManager clusterManager, Guid id)
+		public static void InitializeEmptyTopologyWithId(ClusterManager clusterManager, Guid id)
 		{
 			var tcc = new TopologyChangeCommand
 			{

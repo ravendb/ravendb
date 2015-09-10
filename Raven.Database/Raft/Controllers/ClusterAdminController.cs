@@ -103,10 +103,13 @@ namespace Raven.Database.Raft.Controllers
 		}
 
 		[HttpPatch]
-		[RavenRoute("admin/cluster/initialize-new-cluster")]
-		public HttpResponseMessage InitializeNewCluster()
+		[RavenRoute("admin/cluster/initialize-new-cluster/{*id}")]
+		public HttpResponseMessage InitializeNewCluster(string id)
 		{
-			ClusterManagerFactory.InitializeTopology(ClusterManager.Engine.Options.SelfConnection, ClusterManager, isPartOfExistingCluster: true);
+			if (string.IsNullOrEmpty(id))
+				ClusterManagerFactory.InitializeTopology(ClusterManager.Engine.Options.SelfConnection, ClusterManager, isPartOfExistingCluster: true);
+			else
+				ClusterManagerFactory.InitializeEmptyTopologyWithId(ClusterManager, Guid.Parse(id));
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -140,7 +143,7 @@ namespace Raven.Database.Raft.Controllers
 			}
 			else
 			{
-				await ClusterManager.Client.SendChangeTopologyIdAsync(nodeConnectionInfo, topology.TopologyId).ConfigureAwait(false);
+				await ClusterManager.Client.SendInitializeNewClusterForAsync(nodeConnectionInfo, topology.TopologyId).ConfigureAwait(false);
 			}
 			
 			if (topology.Contains(nodeConnectionInfo.Name))
@@ -194,15 +197,6 @@ namespace Raven.Database.Raft.Controllers
 			{
 				Removed = name
 			});
-		}
-
-		[HttpPatch]
-		[RavenRoute("admin/cluster/changeTopologyId")]
-		public HttpResponseMessage ChangeTopologyId([FromUri] Guid id)
-		{
-			ClusterManagerFactory.ChangeTopologyId(ClusterManager, id);
-
-			return GetEmptyMessage();
 		}
 	}
 }

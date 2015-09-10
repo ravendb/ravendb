@@ -429,9 +429,9 @@ namespace Raven.Database.Raft
 			}
 		}
 
-		public async Task SendChangeTopologyIdAsync(NodeConnectionInfo node, Guid id)
+		public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node, Guid clusterId)
 		{
-			var url = node.Uri.AbsoluteUri + "admin/cluster/changeTopologyId?id=" + id;
+			var url = node.Uri.AbsoluteUri + "admin/cluster/initialize-new-cluster?id=" + clusterId;
 
 			using (var request = CreateRequest(node, url, HttpMethods.Patch))
 			{
