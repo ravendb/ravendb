@@ -28,7 +28,6 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 using System.Linq;
-using Lucene.Net.Support;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -177,11 +176,11 @@ namespace Raven.Database.Bundles.SqlReplication
 						return true;
 					return SystemTime.UtcNow >= sqlReplicationStatistics.LastErrorTime;
 				}) // have error or the timeout expired
-						.ToList();
+				.ToList();
 
 				if (relevantConfigs.Count == 0)
 				{
-					log.Debug("No Relevant (Enabled, non errorous SQL Replications were found, waiting for work");
+					log.Debug("No relevant non errorous SQL Replications were found, waiting for work");
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
 				}
@@ -532,8 +531,16 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				else
 				{
-					var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
-					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
+					if (replicationStatistics.LastErrorTime == DateTime.MinValue)
+					{
+						newTime = SystemTime.UtcNow.AddSeconds(5);
+					}
+					else
+					{
+						// double the fallback time (but don't cross 15 minutes)
+						var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
+						newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
+					}
 				}
 				replicationStats.RecordWriteError(e, Database, countOfItems, newTime);
 				return false;
