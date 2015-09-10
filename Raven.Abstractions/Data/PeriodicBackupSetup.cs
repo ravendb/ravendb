@@ -119,5 +119,15 @@ namespace Raven.Abstractions.Data
 		    LastDocsDeletionEtag = Etag.Empty;
 		    LastAttachmentDeletionEtag = Etag.Empty;
 		}
+		[Flags]
+		public enum PeriodicExportStatusEtags
+		{
+			None = 0,
+			LastDocsEtag = 1,
+			LastAttachmentsEtag = 2,
+			LastDocsDeletionEtag = 4,
+			LastAttachmentDeletionEtag = 8,
+			All = 15
+		}
 	}
 }
