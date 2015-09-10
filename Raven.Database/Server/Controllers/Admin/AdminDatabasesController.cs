@@ -19,7 +19,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
-	public class AdminDatabasesController : BaseAdminController
+	public class AdminDatabasesController : BaseAdminDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("admin/databases/{*id}")]
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			bool result;
 			var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
 
-			var message = await DeleteDatabase(id, hardDelete);
+			var message = await DeleteDatabase(id, hardDelete).ConfigureAwait(false);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -336,10 +336,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (document.IsClusterDatabase())
 				{
 					await ClusterManager.Client.SendDatabaseDeleteAsync(databaseId, isHardDeleteNeeded).ConfigureAwait(false);
-					return new MessageWithStatusCode
-					{
-						ErrorCode = HttpStatusCode.NoContent
-					};
+					return new MessageWithStatusCode();
 				}
 			}
 

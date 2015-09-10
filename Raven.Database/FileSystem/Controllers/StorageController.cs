@@ -5,7 +5,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class StorageController : RavenFsApiController
+	public class StorageController : BaseFileSystemApiController
 	{
 		[HttpPost]
         [RavenRoute("fs/{fileSystemName}/storage/cleanup")]

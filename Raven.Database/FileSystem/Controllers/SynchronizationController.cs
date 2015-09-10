@@ -22,7 +22,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class SynchronizationController : RavenFsApiController
+	public class SynchronizationController : BaseFileSystemApiController
 	{
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 

@@ -7,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FileSystemsStatsController : RavenFsApiController
+	public class FileSystemsStatsController : BaseFileSystemApiController
 	{
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/stats")]
@@ -28,7 +28,7 @@ namespace Raven.Database.FileSystem.Controllers
                 PendingSyncs = FileSystem.SynchronizationTask.Queue.Pending.ToList()
             };
 
-            return this.GetMessageWithObject(stats).WithNoCache();
+            return GetMessageWithObject(stats).WithNoCache();
 		}
 	}
 }

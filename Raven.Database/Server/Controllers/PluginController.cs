@@ -8,7 +8,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class PluginController : RavenDbApiController
+	public class PluginController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("plugins/status")]

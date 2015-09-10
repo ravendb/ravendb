@@ -95,7 +95,7 @@ namespace Raven.Tests.Issues
 
             const string nonSystemDbPrefix = "databases/{databaseName}/";
 
-            var routeMethods = typeof (RavenDbApiController).Assembly
+            var routeMethods = typeof (BaseDatabaseApiController).Assembly
                                                             .DefinedTypes
                                                             .Where(t=> ignoredNamespaces.Contains(t.Namespace) == false)
                                                             .SelectMany(t => t.GetMethods())

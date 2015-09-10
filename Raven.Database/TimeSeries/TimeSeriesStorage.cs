@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Util;
+using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;

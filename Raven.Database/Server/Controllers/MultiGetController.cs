@@ -286,9 +286,9 @@ namespace Raven.Database.Server.Controllers
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
 
-			if (string.IsNullOrEmpty(indexQuery) == false && (controller as RavenDbApiController) != null)
+			if (string.IsNullOrEmpty(indexQuery) == false && (controller as BaseDatabaseApiController) != null)
 			{
-				((RavenDbApiController)controller).SetPostRequestQuery(indexQuery);
+				((BaseDatabaseApiController)controller).SetPostRequestQuery(indexQuery);
 			}
 
 			var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None);

@@ -10,6 +10,7 @@ import app = require("durandal/app");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
+import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import clusterConfiguration = require("models/database/cluster/clusterConfiguration");
@@ -80,13 +81,13 @@ class cluster extends viewModelBase {
 		});
 	}
 
-    addAnotherServerToCluster() {
+    addAnotherServerToCluster(forcedAdd: boolean) {
         var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
-                new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false)
+            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false, forcedAdd)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
@@ -101,7 +102,7 @@ class cluster extends viewModelBase {
         dialog
             .onExit()
             .done(nci => {
-            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true)
+            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true, false)
                 .execute()
                 .done(() => {
 					shell.clusterMode(true);
@@ -114,8 +115,17 @@ class cluster extends viewModelBase {
         app.showDialog(dialog);
     }
 
-	editNode(node: nodeConnectionInfo) {
-		var dialog = new editNodeConnectionInfoDialog(node, true);
+    initializeNewCluster() {
+        this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
+            .done(() => {
+            new initializeNewClusterCommand(appUrl.getSystemDatabase())
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+            });
+    }
+
+    editNode(node: nodeConnectionInfo) {
+        var dialog = new editNodeConnectionInfoDialog(node, true);
 		dialog.onExit()
 			.done(nci => {
 				new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
@@ -133,7 +143,7 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-	}
+    }
 }
 
 export = cluster;

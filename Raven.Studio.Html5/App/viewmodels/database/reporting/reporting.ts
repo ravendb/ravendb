@@ -138,12 +138,12 @@ class reporting extends viewModelBase {
             } else {
                 groupedFacets.push(curFacet);
             }
-
         });
         var db = this.activeDatabase();
         var resultsFetcher = (skip: number, take: number) => {
-            return new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db, this.isCacheDisable())
-                .execute()
+            var command = new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db, this.isCacheDisable());
+            ko.postbox.publish("SetRawJSONUrl", appUrl.forReportingRawData(this.activeDatabase(), this.selectedIndexName()) + command.argsUrl);
+            return command.execute()
                 .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
         };
         this.reportResults(new pagedList(resultsFetcher));
@@ -151,7 +151,8 @@ class reporting extends viewModelBase {
 
 	toggleCacheEnable() {
 		this.isCacheDisable(!this.isCacheDisable());
-	}
+    }
+
 }
 
 export = reporting;

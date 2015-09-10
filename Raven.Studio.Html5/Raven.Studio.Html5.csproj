@@ -30,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
@@ -116,23 +117,9 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\file.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\folder.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counters.ts" />
@@ -198,7 +185,6 @@
     <Content Include="App\views\common\upgrade.html" />
     <Content Include="App\views\common\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\counter\counters.html" />
-    <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
     <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceStatsInfo.html" />
@@ -397,7 +383,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
+      <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-datetimepicker.min.css" />
@@ -675,6 +661,10 @@
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Content\less\bootstrap-datetimepicker-build.less" />
     <Content Include="Content\less\_bootstrap-datetimepicker.less" />
+    <None Include="compilerconfig.json" />
+    <Content Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </Content>
     <None Include="Scripts\jquery-2.1.3.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.3.js" />
     <Content Include="Scripts\jquery-2.1.3.min.js" />
@@ -817,14 +807,10 @@
     <TypeScriptCompile Include="App\commands\database\patch\executePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\patch\getPatchesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\patch\savePatchCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\enableQueryTimings.ts" />
     <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\conflictsResolveCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\enableReplicationCommand.ts" />

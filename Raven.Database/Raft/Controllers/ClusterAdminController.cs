@@ -23,7 +23,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Controllers
 {
-	public class ClusterAdminController : BaseAdminController
+	public class ClusterAdminController : BaseAdminDatabaseApiController
 	{
 		[HttpPut]
 		[RavenRoute("admin/cluster/commands/configuration")]
@@ -62,7 +62,7 @@ namespace Raven.Database.Raft.Controllers
 			if (string.IsNullOrEmpty(id))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
+			var documentJson = SystemDatabase.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
 			if (documentJson == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
@@ -87,7 +87,7 @@ namespace Raven.Database.Raft.Controllers
 				return GetMessageWithString("Server is already in cluster.", HttpStatusCode.NotAcceptable);
 
 			int nextStart = 0;
-			var databases = Database
+			var databases = SystemDatabase
 				.Documents
 				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 			
@@ -97,9 +97,21 @@ namespace Raven.Database.Raft.Controllers
 			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
 			nodeConnectionInfo.Name = ClusterManager.Engine.Name;
 
-			ClusterManagerFactory.InitializeTopology(nodeConnectionInfo, ClusterManager);
+			ClusterManager.InitializeTopology(nodeConnectionInfo);
 
 			return GetEmptyMessage(HttpStatusCode.Created);
+		}
+
+		[HttpPatch]
+		[RavenRoute("admin/cluster/initialize-new-cluster/{*id}")]
+		public HttpResponseMessage InitializeNewCluster(string id)
+		{
+			if (string.IsNullOrEmpty(id))
+				ClusterManager.InitializeTopology(isPartOfExistingCluster: true);
+			else
+				ClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
+
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]
@@ -113,19 +125,30 @@ namespace Raven.Database.Raft.Controllers
 			if (nodeConnectionInfo.Name == null)
 				nodeConnectionInfo.Name = RaftHelper.GetNodeName(await ClusterManager.Client.GetDatabaseId(nodeConnectionInfo).ConfigureAwait(false));
 
-			var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
-			switch (canJoinResult)
-			{
-				case CanJoinResult.InAnotherCluster:
-					return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
-				case CanJoinResult.AlreadyJoined:
-					return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
+			bool forced;
+			bool.TryParse(GetQueryStringValue("force"), out forced);
 
 			var topology = ClusterManager.Engine.CurrentTopology;
+
+			if (forced == false)
+			{
+				var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+				switch (canJoinResult)
+				{
+					case CanJoinResult.InAnotherCluster:
+						return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
+					case CanJoinResult.AlreadyJoined:
+						return GetEmptyMessage(HttpStatusCode.NotModified);
+				}
+			}
+			else
+			{
+				await ClusterManager.Client.SendInitializeNewClusterForAsync(nodeConnectionInfo, topology.TopologyId).ConfigureAwait(false);
+			}
+			
 			if (topology.Contains(nodeConnectionInfo.Name))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-
+			
 			await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
 			return GetEmptyMessage();
 		}

@@ -21,7 +21,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class RdcController : RavenFsApiController
+	public class RdcController : BaseFileSystemApiController
 	{
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 

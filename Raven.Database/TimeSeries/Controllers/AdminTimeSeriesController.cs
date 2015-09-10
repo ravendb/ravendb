@@ -8,25 +8,25 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.TimeSeries;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.TimeSeries;
 using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-    public class AdminTimeSeriesController : BaseAdminController
+    public class AdminTimeSeriesController : BaseAdminTimeSeriesApiController
     {
         [HttpPut]
 		[RavenRoute("admin/ts/{*id}")]
 		public async Task<HttpResponseMessage> Put(string id)
         {
 			MessageWithStatusCode nameFormatErrorMessage;
-			if (IsValidName(id, Database.Configuration.TimeSeries.DataDirectory, out nameFormatErrorMessage) == false)
+			if (IsValidName(id, SystemConfiguration.TimeSeries.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -45,7 +45,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			var docKey = Constants.TimeSeries.Prefix + id;
 
 			var isTimeSeriesUpdate = ParseBoolQueryString("update");
-			var timeSeries = Database.Documents.Get(docKey, null);
+			var timeSeries = SystemDatabase.Documents.Get(docKey, null);
 			if (timeSeries != null && isTimeSeriesUpdate == false)
             {
 				return GetMessageWithString(string.Format("Time series {0} already exists!", id), HttpStatusCode.Conflict);
@@ -56,7 +56,7 @@ namespace Raven.Database.TimeSeries.Controllers
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
 
-            Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+			SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }
@@ -146,7 +146,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Time series wasn't found" };
 
 			var docKey = Constants.TimeSeries.Prefix + id;
-			Database.Documents.Delete(docKey, null, null);
+			SystemDatabase.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded && configuration.RunInMemory == false)
 			{
@@ -159,7 +159,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		private MessageWithStatusCode ToggleTimeSeriesDisabled(string id, bool isSettingDisabled)
 		{
 			var docKey = Constants.TimeSeries.Prefix + id;
-			var document = Database.Documents.Get(docKey, null);
+			var document = SystemDatabase.Documents.Get(docKey, null);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Time series " + id + " wasn't found" };
 
@@ -173,7 +173,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			doc.Disabled = !doc.Disabled;
 			var json = RavenJObject.FromObject(doc);
 			json.Remove("Id");
-			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+			SystemDatabase.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
 			return new MessageWithStatusCode();
 		}

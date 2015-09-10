@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Connections
         public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
-            ResourceName = controller.TenantName;
+            ResourceName = controller.ResourceName;
 			Id = controller.GetQueryStringValue("id");
             
 			if (string.IsNullOrEmpty(Id))

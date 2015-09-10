@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -22,8 +23,8 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Server.Tenancy
 {
-    public abstract class AbstractLandlord<TResource> : IDisposable
-        where TResource : IDisposable
+    public abstract class AbstractLandlord<TResource> : IResourceLandlord<TResource>
+	    where TResource : IResourceStore
     {
 	    protected static string DisposingLock = Guid.NewGuid().ToString();
 
@@ -36,7 +37,6 @@ namespace Raven.Database.Server.Tenancy
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly ConcurrentDictionary<string, DateTime> LastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         public event Action<string> CleanupOccured;
 
 	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
@@ -267,5 +267,21 @@ namespace Raven.Database.Server.Tenancy
             });
             ResourcesStoresCache.Clear();
         }
+
+	    public abstract Task<TResource> GetResourceInternal(string resourceName);
+
+	    public abstract bool TryGetOrCreateResourceStore(string resourceName, out Task<TResource> resourceTask);
+
+	    private ConcurrentDictionary<string, DateTime> _lastRecentlyUsed;
+        public ConcurrentDictionary<string, DateTime> LastRecentlyUsed
+	    {
+		    get
+		    {
+				if (_lastRecentlyUsed == null)
+					_lastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+			    return _lastRecentlyUsed;
+		    }
+	    }
     }
 }

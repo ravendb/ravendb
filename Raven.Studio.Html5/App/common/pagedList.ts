@@ -30,7 +30,7 @@ class pagedList {
     }
 
     itemCount(): number {
-        return this.items.length;
+        return this.items ? this.items.length : 0;
     }
 
     fetch(skip: number, take: number): JQueryPromise<pagedResultSet> {

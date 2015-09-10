@@ -14,7 +14,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class OAuthController : RavenDbApiController
+	public class OAuthController : BaseDatabaseApiController
 	{
 		const string TokenContentType = "application/json; charset=UTF-8";
 		const string TokenGrantType = "client_credentials";

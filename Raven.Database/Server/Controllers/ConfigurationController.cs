@@ -20,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class ConfigurationController : RavenDbApiController
+	public class ConfigurationController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("configuration/document/{*docId}")]

@@ -121,18 +121,18 @@ namespace Raven.Database.Server.Tenancy
             return document;
         }
 
-        public async Task<DocumentDatabase> GetDatabaseInternal(string name)
-        {
-            if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
-                return systemDatabase;
+		public override async Task<DocumentDatabase> GetResourceInternal(string resourceName)
+		{
+			if (string.Equals("<system>", resourceName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(resourceName))
+				return systemDatabase;
 
-            Task<DocumentDatabase> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
-            return null;
-        }
+			Task<DocumentDatabase> db;
+			if (TryGetOrCreateResourceStore(resourceName, out db))
+				return await db;
+			return null;
+		}
 
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
+		public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");

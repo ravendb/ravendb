@@ -34,7 +34,7 @@ using IOExtensions = Raven.Database.Extensions.IOExtensions;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class DebugController : RavenDbApiController
+	public class DebugController : BaseDatabaseApiController
 	{
 
 		public class CounterDebugInfo
@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("cs/{counterStorageName}/debug/")]
 		public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName)
 		{
-			var counter = await CountersLandlord.GetCounterInternal(counterStorageName);
+			var counter = await CountersLandlord.GetResourceInternal(counterStorageName);
 			if (counter == null)
 				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
 
@@ -96,7 +96,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("cs/{counterStorageName}/debug/metrics")]
 		public async Task<HttpResponseMessage> GetCounterMetrics(string counterStorageName)
 		{
-			var counter = await CountersLandlord.GetCounterInternal(counterStorageName);
+			var counter = await CountersLandlord.GetResourceInternal(counterStorageName);
 			if (counter == null)
 				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName), HttpStatusCode.NotFound);
 
