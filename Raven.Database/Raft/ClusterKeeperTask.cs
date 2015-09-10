@@ -76,6 +76,8 @@ namespace Raven.Database.Raft
 
 		public void Dispose()
 		{
+			if(clusterManager != null)
+				clusterManager.Engine.TopologyChanged -= HandleTopologyChanges;
 		}
 
 		private void HandleTopologyChanges(TopologyChangeCommand command)

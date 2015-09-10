@@ -106,17 +106,19 @@ namespace Raven.Database.Raft
 			Log.Info("Initialized Topology: " + topologyId);
 		}
 
-		public static void ChangeTopologyId(ClusterManager clusterManager, Guid id)
+		public static void InitializeEmptyTopologyWithId(ClusterManager clusterManager, Guid id)
 		{
 			var tcc = new TopologyChangeCommand
 			{
-				Requested = new Topology(id)
+				Requested = new Topology(id),
+				Previous = clusterManager.Engine.CurrentTopology
 			};
 
+			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
 			clusterManager.Engine.StartTopologyChange(tcc);
 			clusterManager.Engine.CommitTopologyChange(tcc);
 
-			Log.Info("Changed topology id: " + id);
+			Log.Info("Changed topology id: " + id + " and set the empty cluster topology");
 		}
 
 		public static void InitializeTopology(ClusterManager engine)
