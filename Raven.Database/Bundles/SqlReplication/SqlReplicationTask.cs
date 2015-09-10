@@ -532,7 +532,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				else if (replicationStatistics.LastErrorTime == DateTime.MinValue)
 				{
-					//this is the first we'll need to record the error time
+					//this is the first time we'll need to record the error time
 					newTime = SystemTime.UtcNow.AddSeconds(5);
 				}
 				else
