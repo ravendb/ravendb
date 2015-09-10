@@ -249,7 +249,8 @@ namespace Raven.Database.TimeSeries
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(type.Fields.Length * sizeof(double)));
-					var periodFixedTree = periodTx.ReadTree(PeriodTreePrefix + query.Type)
+					var treeName = PeriodTreePrefix + query.Type;
+					var periodFixedTree = (periodTx.ReadTree(treeName) ?? storage.storageEnvironment.CreateTree(periodTx, treeName))
 						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double)));
 
 					using (var periodWriter = new RollupWriter(periodFixedTree, type.Fields.Length))
@@ -548,7 +549,8 @@ namespace Raven.Database.TimeSeries
 					if (currentType == null)
 						throw new InvalidOperationException("There is no type named: " + type);
 
-					tree = tx.ReadTree(SeriesTreePrefix + currentType.Type);
+					var treeName = SeriesTreePrefix + currentType.Type;
+					tree = tx.ReadTree(treeName) ?? storage.storageEnvironment.CreateTree(tx, treeName);
 				}
 
 				if (values.Length != currentType.Fields.Length)
