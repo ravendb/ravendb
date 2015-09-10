@@ -527,20 +527,19 @@ namespace Raven.Database.Bundles.SqlReplication
 				DateTime newTime;
 				if (statistics.TryGetValue(cfg.Name, out replicationStatistics) == false)
 				{
+					//there is no record in the statistics for this sql replication
+					newTime = SystemTime.UtcNow.AddSeconds(5);
+				}
+				else if (replicationStatistics.LastErrorTime == DateTime.MinValue)
+				{
+					//this is the first we'll need to record the error time
 					newTime = SystemTime.UtcNow.AddSeconds(5);
 				}
 				else
 				{
-					if (replicationStatistics.LastErrorTime == DateTime.MinValue)
-					{
-						newTime = SystemTime.UtcNow.AddSeconds(5);
-					}
-					else
-					{
-						// double the fallback time (but don't cross 15 minutes)
-						var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
-						newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
-					}
+					// double the fallback time (but don't cross 15 minutes)
+					var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
+					newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60*15, Math.Max(5, totalSeconds*2)));
 				}
 				replicationStats.RecordWriteError(e, Database, countOfItems, newTime);
 				return false;
