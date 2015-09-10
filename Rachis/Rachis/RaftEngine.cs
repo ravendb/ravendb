@@ -255,7 +255,14 @@ namespace Rachis
 			_log.Debug("{0} ==> {1}", oldState, state);
 		}
 
-		public Task StepDownAsync()
+
+        public void ForceCandidateState()
+        {
+            _log.Debug("Forced into candidate mode");
+            SetState(RaftEngineState.CandidateByRequest);
+        }
+
+        public Task StepDownAsync()
 		{
 			if (State != RaftEngineState.Leader)
 				throw new NotLeadingException("Not a leader, and only leaders can step down");

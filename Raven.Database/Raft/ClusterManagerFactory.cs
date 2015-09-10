@@ -100,8 +100,7 @@ namespace Raven.Database.Raft
 			clusterManager.Engine.StartTopologyChange(tcc);
 			clusterManager.Engine.CommitTopologyChange(tcc);
 
-			if (isPartOfExistingCluster == false || clusterManager.Engine.State != RaftEngineState.Leader)
-				clusterManager.Engine.CurrentLeader = null;
+		    clusterManager.Engine.ForceCandidateState();
 
 			Log.Info("Initialized Topology: " + topologyId);
 		}
