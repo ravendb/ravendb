@@ -25,8 +25,6 @@ namespace Raven.Database.Raft
 {
 	public static class ClusterManagerFactory
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
-
 		public static NodeConnectionInfo CreateSelfConnection(DocumentDatabase database)
 		{
 			var configuration = database.Configuration;
@@ -83,46 +81,6 @@ namespace Raven.Database.Raft
 			stateMachine.RaftEngine = raftEngine;
 
 			return new ClusterManager(raftEngine);
-		}
-
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager, bool isPartOfExistingCluster = false)
-		{
-			var topologyId = Guid.NewGuid();
-			var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
-
-			var tcc = new TopologyChangeCommand
-					  {
-						  Requested = topology,
-						  Previous = isPartOfExistingCluster ? clusterManager.Engine.CurrentTopology : null
-					  };
-
-			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
-			clusterManager.Engine.StartTopologyChange(tcc);
-			clusterManager.Engine.CommitTopologyChange(tcc);
-
-		    clusterManager.Engine.ForceCandidateState();
-
-			Log.Info("Initialized Topology: " + topologyId);
-		}
-
-		public static void InitializeEmptyTopologyWithId(ClusterManager clusterManager, Guid id)
-		{
-			var tcc = new TopologyChangeCommand
-			{
-				Requested = new Topology(id),
-				Previous = clusterManager.Engine.CurrentTopology
-			};
-
-			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
-			clusterManager.Engine.StartTopologyChange(tcc);
-			clusterManager.Engine.CommitTopologyChange(tcc);
-
-			Log.Info("Changed topology id: " + id + " and set the empty cluster topology");
-		}
-
-		public static void InitializeTopology(ClusterManager engine)
-		{
-			InitializeTopology(engine.Engine.Options.SelfConnection, engine);
 		}
 	}
 }

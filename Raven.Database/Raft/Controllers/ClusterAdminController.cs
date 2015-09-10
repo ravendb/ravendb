@@ -97,7 +97,7 @@ namespace Raven.Database.Raft.Controllers
 			var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
 			nodeConnectionInfo.Name = ClusterManager.Engine.Name;
 
-			ClusterManagerFactory.InitializeTopology(nodeConnectionInfo, ClusterManager);
+			ClusterManager.InitializeTopology(nodeConnectionInfo);
 
 			return GetEmptyMessage(HttpStatusCode.Created);
 		}
@@ -107,9 +107,9 @@ namespace Raven.Database.Raft.Controllers
 		public HttpResponseMessage InitializeNewCluster(string id)
 		{
 			if (string.IsNullOrEmpty(id))
-				ClusterManagerFactory.InitializeTopology(ClusterManager.Engine.Options.SelfConnection, ClusterManager, isPartOfExistingCluster: true);
+				ClusterManager.InitializeTopology(isPartOfExistingCluster: true);
 			else
-				ClusterManagerFactory.InitializeEmptyTopologyWithId(ClusterManager, Guid.Parse(id));
+				ClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
