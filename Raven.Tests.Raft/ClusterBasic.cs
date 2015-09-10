@@ -110,6 +110,8 @@ namespace Raven.Tests.Raft
 			// initialize new single node cluster
 			nodeClient.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/initialize-new-cluster", new HttpMethod("PATCH")).ExecuteRequest();
 
+			Assert.True(nodeRaftEngine.WaitForLeader());
+
 			var newClusterId = nodeRaftEngine.CurrentTopology.TopologyId;
 
 			Assert.NotEqual(oldClusterId, newClusterId);
