@@ -532,6 +532,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         first = false;
                         if (getItemsToReduceParams.LastReduceKeyAndBucket != null)
                         {
+                            if (getItemsToReduceParams.LastReduceKeyAndBucket.ReduceKey != reduceKey)
+                            {
+                                throw new InvalidOperationException("Mismatches last reduce key with the remaining reduce keys in the params");
+                            }
                             needToMoveNext = true;
                             start = CreateBucketAndEtagKey(getItemsToReduceParams.LastReduceKeyAndBucket.Bucket, Etag.Empty);
                         }
