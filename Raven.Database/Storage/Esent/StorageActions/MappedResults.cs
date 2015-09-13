@@ -272,10 +272,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			            first = false;
 			            if (getItemsToReduceParams.LastReduceKeyAndBucket != null)
 			            {
-			                if (getItemsToReduceParams.LastReduceKeyAndBucket.ReduceKey != reduceKey)
-			                {
-			                    throw new InvalidOperationException("Mismatches last reduce key with the remaining reduce keys in the params");
-			                }
 			                needToMoveNext = true;
                             initialBucket = getItemsToReduceParams.LastReduceKeyAndBucket.Bucket;
 			            }
