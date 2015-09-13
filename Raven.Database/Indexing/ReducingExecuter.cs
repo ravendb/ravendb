@@ -131,7 +131,7 @@ namespace Raven.Database.Indexing
 
 						if (latest == null)
 							return;
-						actions.Indexing.UpdateLastReduced(indexToWorkOn.Index.indexId, latest.Etag, latest.Timestamp);
+						actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexId, latest.Etag, latest.Timestamp);
 					});
 
 					postReducingOperations.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeleteScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
@@ -265,11 +265,11 @@ namespace Raven.Database.Indexing
                                     Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
                                         persistedResults.Count,
                                         string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
-                                        index.IndexId, level, batchTimeWatcher.Elapsed));
+                                        index.Index.PublicName, level, batchTimeWatcher.Elapsed));
                                 }
 								else
                                 {
-                                    Log.Debug("No reduce keys found for {0}", index.IndexId);
+                                    Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
                                 }									
 							}
 
@@ -321,7 +321,7 @@ namespace Raven.Database.Indexing
 
                             if ( Log.IsDebugEnabled )
                             {
-                                Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration, performance.ItemsCount, index.IndexId, reduceTimeWatcher.Elapsed, level);
+                                Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration, performance.ItemsCount, index.Index.PublicName, reduceTimeWatcher.Elapsed, level);
                             }
 
 							autoTuner.AutoThrottleBatchSize(count, size, batchDuration);
