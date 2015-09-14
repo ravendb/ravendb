@@ -192,7 +192,6 @@ namespace Raven.Database.Indexing
 
 			var reducePerformance = new ReducingPerformanceStats(ReduceType.MultiStep);
 
-            var keysToReduceSet = new HashSet<string>(keysToReduce);
 
 			for (int i = 0; i < 3; i++)
 			{
@@ -206,7 +205,7 @@ namespace Raven.Database.Indexing
 
 				var reduceParams = new GetItemsToReduceParams(
 					index.IndexId,
-                    keysToReduceSet,
+                    new HashSet<string>(keysToReduce),
 					level,
 					true,
 					itemsToDelete);
