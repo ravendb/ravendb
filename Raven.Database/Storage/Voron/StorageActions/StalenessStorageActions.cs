@@ -172,19 +172,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		public Etag GetMostRecentAttachmentEtag()
-		{
-			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);
-			using (var iterator = attachmentsByEtag.Iterate(Snapshot, writeBatch.Value))
-			{
-				if (!iterator.Seek(Slice.AfterAllKeys))
-					return Etag.Empty;
-
-				return Etag.Parse(iterator.CurrentKey.ToString());
-			}
-		}
-
 		public int GetIndexTouchCount(int id)
 		{
             var read = tableStorage.IndexingMetadata.Read(Snapshot, (Slice)CreateKey(id, "touches"), writeBatch.Value);

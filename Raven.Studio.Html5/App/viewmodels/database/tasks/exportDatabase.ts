@@ -10,7 +10,6 @@ class exportDatabase extends viewModelBase {
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeTransformers = ko.observable(true);
-    includeAttachments = ko.observable(false);
     includeExpiredDocuments = ko.observable(false);
     includeAllCollections = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -66,9 +65,6 @@ class exportDatabase extends viewModelBase {
         }
         if (this.includeIndexes()) {
             operateOnTypes += 2;
-        }
-        if (this.includeAttachments()) {
-            operateOnTypes += 4;
         }
         if (this.includeTransformers()) {
             operateOnTypes += 8;

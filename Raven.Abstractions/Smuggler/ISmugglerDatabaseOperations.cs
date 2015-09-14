@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -21,23 +20,11 @@ namespace Raven.Abstractions.Smuggler
 	{
         SmugglerDatabaseOptions Options { get; }
 
-        [Obsolete("Use RavenFS instead.")]
-		Task DeleteAttachment(string key);
-
 		Task DeleteDocument(string key);
-
-        [Obsolete("Use RavenFS instead.")]
-		Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag);
 
 		Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag);
 
 		LastEtagsInfo FetchCurrentMaxEtags();
-
-        [Obsolete("Use RavenFS instead.")]
-		Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords);
-
-        [Obsolete("Use RavenFS instead.")]
-		Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation);
 
 		JsonDocument GetDocument(string key);
 
@@ -52,9 +39,6 @@ namespace Raven.Abstractions.Smuggler
 		Task<string> GetVersion(RavenConnectionStringOptions server);
 
 		void PurgeTombstones(OperationState result);
-
-        [Obsolete("Use RavenFS instead.")]
-		Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
 
 		Task PutDocument(RavenJObject document, int size);
 

@@ -61,7 +61,6 @@ namespace Raven.Database.Storage.Voron.Schema
 				CreateStalenessSchema(tx, storage);
 				CreateScheduledReductionsSchema(tx, storage);
 				CreateMappedResultsSchema(tx, storage);
-				CreateAttachmentsSchema(tx, storage);
 				CreateReduceKeyCountsSchema(tx, storage);
 				CreateReduceKeyTypesSchema(tx, storage);
 				CreateReduceResultsSchema(tx, storage);
@@ -199,14 +198,6 @@ namespace Raven.Database.Storage.Voron.Schema
 		{
 			storage.Environment.CreateTree(tx, Tables.ReduceKeyTypes.TableName);
 			storage.Environment.CreateTree(tx, storage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		private static void CreateAttachmentsSchema(Transaction tx, TableStorage storage)
-		{
-			storage.Environment.CreateTree(tx, Tables.Attachments.TableName);
-			storage.Environment.CreateTree(tx, storage.Attachments.GetIndexKey(Tables.Attachments.Indices.ByEtag));
-			storage.Environment.CreateTree(tx, storage.Attachments.GetIndexKey(Tables.Attachments.Indices.Metadata));
 		}
 
 		private static void CreateMappedResultsSchema(Transaction tx, TableStorage storage)

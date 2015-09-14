@@ -165,8 +165,7 @@ namespace Raven.Database
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
                     initializer.InitializeIndexDefinitionStorage();
-					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
-                    Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
+					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);               
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
 					Subscriptions = new SubscriptionActions(this, Log);
@@ -282,22 +281,8 @@ namespace Raven.Database
 			}
 		}
 
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
-
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
-
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		internal PutSerialLock DocumentLock { get; private set; }
-
-		[Obsolete("Use RavenFS instead.")]
-		public AttachmentActions Attachments { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler
 		{
@@ -473,9 +458,6 @@ namespace Raven.Database
 					typeof (AbstractIndexQueryTrigger),
 					typeof (AbstractIndexUpdateTrigger),
 					typeof (AbstractAnalyzerGenerator),
-					typeof (AbstractAttachmentDeleteTrigger),
-					typeof (AbstractAttachmentPutTrigger),
-					typeof (AbstractAttachmentReadTrigger),
 					typeof (AbstractBackgroundTask),
 					typeof (IAlterConfiguration)
 				};
@@ -555,36 +537,29 @@ namespace Raven.Database
 				TransactionalStorage.Batch(actions =>
 				{
 					result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
-					result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
 
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
-					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
-					.Select(indexId =>
-		{
-			Index index = IndexStorage.GetIndexInstance(indexId);
-			return index == null ? null : index.PublicName;
-		}).ToArray();
+					                            .Select(indexId =>
+		                                        {
+			                                        Index index = IndexStorage.GetIndexInstance(indexId);
+			                                        return index == null ? null : index.PublicName;
+		                                        }).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-		{
-			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-			if (indexInstance == null)
-				return null;
-			x.Name = indexInstance.PublicName;
-			x.SetLastDocumentEtag(result.LastDocEtag);
-			return x;
-		})
-						.Where(x => x != null)
-						.ToArray();
+		                                {
+			                                Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+			                                if (indexInstance == null)
+				                                return null;
+			                                x.Name = indexInstance.PublicName;
+			                                x.SetLastDocumentEtag(result.LastDocEtag);
+			                                return x;
+		                                }).Where(x => x != null).ToArray();
 
 					result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
-					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
-						result.StaleIndexes.Contains(idx.Name)
-						&& !idx.Priority.HasFlag(IndexingPriority.Disabled)
-						&& !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+					result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count( idx => result.StaleIndexes.Contains(idx.Name) && !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
 				});
 
 				if (result.Indexes != null)
@@ -1216,12 +1191,6 @@ namespace Raven.Database
 
 			IndexQueryTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
-			AttachmentPutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-			AttachmentDeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
-			AttachmentReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
 			IndexUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
@@ -1258,9 +1227,6 @@ namespace Raven.Database
 				.Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-				.Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-				.Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
-				.Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
 				.Apply(initialization => initialization.SecondStageInit());
 		}

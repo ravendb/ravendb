@@ -1444,7 +1444,7 @@ namespace Raven.Database.Config
 		public class ReplicationConfiguration
 		{
 			/// <summary>
-			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
+			/// Number of seconds after which replication will stop reading documents from disk. Default: 30.
 			/// </summary>
 			public int FetchingFromDiskTimeoutInSeconds { get; set; }
 

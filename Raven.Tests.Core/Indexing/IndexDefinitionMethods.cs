@@ -119,42 +119,5 @@ namespace Raven.Tests.Core.Indexing
                 }
             }
         }
-
-		[Fact]
-	    public void CanUseLoadAttachmentForIndexing()
-	    {
-			using (var store = GetDocumentStore())
-			{
-				var index = new Post_LoadAttachment();
-				index.Execute(store);
-
-				store.DatabaseCommands.PutAttachment("posts/1/attachments/1", null,
-					new MemoryStream(Encoding.UTF8.GetBytes("Lorem ipsum")), new RavenJObject());
-
-				store.DatabaseCommands.PutAttachment("posts/1/attachments/2", null,
-					new MemoryStream(Encoding.UTF8.GetBytes("dolor sit amet")), new RavenJObject());
-
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Post
-					{
-						Id = "posts/1",
-						AttachmentIds = new []{"posts/1/attachments/1", "posts/1/attachments/2"}
-					});
-
-					session.SaveChanges();
-
-					WaitForIndexing(store);
-
-					var post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "Lorem").First();
-
-					Assert.NotNull(post);
-
-					post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "sit").First();
-
-					Assert.NotNull(post);
-				}
-			}
-	    }
     }
 }

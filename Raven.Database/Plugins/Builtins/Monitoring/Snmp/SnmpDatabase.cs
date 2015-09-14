@@ -68,7 +68,6 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			store.Add(new DatabaseCountOfIndexes(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseCountOfTransformers(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseStaleIndexes(databaseName, databaseLandlord, databaseIndex));
-			store.Add(new DatabaseCountOfAttachments(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseCountOfDocuments(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseCurrentNumberOfItemsToIndexInSingleBatch(databaseName, databaseLandlord, databaseIndex));
 			store.Add(new DatabaseCurrentNumberOfItemsToReduceInSingleBatch(databaseName, databaseLandlord, databaseIndex));

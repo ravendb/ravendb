@@ -449,8 +449,7 @@ namespace Raven.Bundles.Replication.Tasks
 								}
 							}
 									
-							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty &&
-							    destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty)
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty)
 							{
 								IndexReplication.Execute();
 							}
@@ -458,7 +457,6 @@ namespace Raven.Bundles.Replication.Tasks
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 
 							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag &&
-								destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag &&
 								(destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count == 0))
 							{
 								DateTime lastSent;
@@ -511,18 +509,6 @@ namespace Raven.Bundles.Replication.Tasks
 						}
 					}
 
-					using (var scope = stats.StartRecording("Attachments"))
-					{
-						switch (ReplicateAttachments(destination, destinationsReplicationInformationForSource, scope))
-						{
-							case true:
-								replicated = true;
-								break;
-							case false:
-								return false;
-						}
-					}
-
 					var elapsedMicroseconds = (long)(stats.ElapsedTime.Ticks * SystemTime.MicroSecPerTick);
 					docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update(elapsedMicroseconds);
 					UpdateReplicationPerformance(destination, stats.Started, stats.ElapsedTime, replicatedDocuments);
@@ -556,55 +542,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 			}
 		}
-
-
-		[Obsolete("Use RavenFS instead.")]
-		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
-		{
-			Tuple<RavenJArray, Etag> tuple;
-			RavenJArray attachments;
-
-			using (var scope = recorder.StartRecording("Get"))
-			{
-				tuple = GetAttachments(destinationsReplicationInformationForSource, destination, scope);
-				attachments = tuple.Item1;
-
-				if (attachments == null || attachments.Length == 0)
-				{
-					if (tuple.Item2 != destinationsReplicationInformationForSource.LastAttachmentEtag)
-					{
-						SetLastReplicatedEtagForServer(destination, lastAttachmentEtag: tuple.Item2);
-					}
-					return null;
-				}
-			}
-
-			using (var scope = recorder.StartRecording("Send"))
-			{
-				string lastError;
-				if (TryReplicationAttachments(destination, attachments, out lastError) == false) // failed to replicate, start error handling strategy
-				{
-					if (IsFirstFailure(destination.ConnectionStringOptions.Url))
-					{
-						log.Info("This is the first failure for {0}, assuming transient failure and trying again", destination);
-						if (TryReplicationAttachments(destination, attachments, out lastError)) // success on second fail
-						{
-							RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
-							return true;
-						}
-					}
-
-					scope.RecordError(lastError);
-					RecordFailure(destination.ConnectionStringOptions.Url, lastError);
-					return false;
-				}
-			}
-
-			RecordSuccess(destination.ConnectionStringOptions.Url,
-				lastReplicatedEtag: tuple.Item2);
-
-			return true;
-		}
+	
 
 		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
 		{
@@ -694,7 +632,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private void SetLastReplicatedEtagForServer(ReplicationStrategy destination, Etag lastDocEtag = null, Etag lastAttachmentEtag = null)
+		private void SetLastReplicatedEtagForServer(ReplicationStrategy destination, Etag lastDocEtag = null)
 		{
 			try
 			{
@@ -702,8 +640,6 @@ namespace Raven.Bundles.Replication.Tasks
 
 				if (lastDocEtag != null)
 					url += "&docEtag=" + lastDocEtag;
-				if (lastAttachmentEtag != null)
-					url += "&attachmentEtag=" + lastAttachmentEtag;
 
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 				request.Write(new byte[0]);
@@ -803,66 +739,6 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			var destStats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			return destStats.FailureCount == 0;
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string errorMessage)
-		{
-			try
-			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" +
-						  UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
-
-				var sp = Stopwatch.StartNew();
-				using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
-				{
-					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
-
-					request.WriteBson(jsonAttachments);
-					request.ExecuteRequest(docDb.WorkContext.CancellationToken);
-					log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
-					errorMessage = "";
-					return true;
-				}
-			}
-			catch (WebException e)
-			{
-				HandleRequestBufferingErrors(e, destination);
-
-				var response = e.Response as HttpWebResponse;
-				if (response != null)
-				{
-					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
-					{
-						var error = streamReader.ReadToEnd();
-						try
-						{
-							var ravenJObject = RavenJObject.Parse(error);
-							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
-							errorMessage = error;
-							return false;
-						}
-						catch (Exception)
-						{
-						}
-
-						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
-						errorMessage = error;
-					}
-				}
-				else
-				{
-					log.WarnException("Replication to " + destination + " had failed", e);
-					errorMessage = e.Message;
-				}
-				return false;
-			}
-			catch (Exception e)
-			{
-				log.WarnException("Replication to " + destination + " had failed", e);
-				errorMessage = e.Message;
-				return false;
-			}
 		}
 
 		internal bool GetRequestBuffering(ReplicationStrategy destination)
@@ -1107,158 +983,6 @@ namespace Raven.Bundles.Replication.Tasks
 			return results.ToList();
 		}
 
-		[Obsolete("Use RavenFS instead.")]
-		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
-		{
-			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
-			var duration = Stopwatch.StartNew();
-
-			RavenJArray attachments = null;
-			Etag lastAttachmentEtag = Etag.Empty;
-			try
-			{
-				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
-				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
-
-				docDb.TransactionalStorage.Batch(actions =>
-				{
-					int attachmentSinceLastEtag = 0;
-					List<AttachmentInformation> attachmentsToReplicate;
-					List<AttachmentInformation> filteredAttachmentsToReplicate;
-					var startEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
-					lastAttachmentEtag = startEtag;
-					while (true)
-					{
-						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag, maxNumberOfItemsToReceiveInSingleBatch);
-
-						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
-
-						attachmentSinceLastEtag += attachmentsToReplicate.Count;
-
-						if (attachmentsToReplicate.Count == 0 ||
-							filteredAttachmentsToReplicate.Count != 0)
-						{
-							break;
-						}
-
-						AttachmentInformation jsonDocument = attachmentsToReplicate.Last();
-						Etag attachmentEtag = jsonDocument.Etag;
-						if (log.IsDebugEnabled)
-							log.Debug("All the attachments were filtered, trying another batch from etag [>{0}]", attachmentEtag);
-						lastAttachmentEtag = attachmentEtag;
-
-						if (duration.Elapsed > timeout)
-							break;
-					}
-
-					if (log.IsDebugEnabled)
-						log.Debug(() =>
-						{
-							if (attachmentSinceLastEtag == 0)
-								return string.Format("No attachments to replicate to {0} - last replicated etag: {1}", destination,
-													 destinationsReplicationInformationForSource.LastAttachmentEtag);
-
-							if (attachmentSinceLastEtag == filteredAttachmentsToReplicate.Count)
-								return string.Format("Replicating {0} attachments [>{1}] to {2}.",
-												 attachmentSinceLastEtag,
-												 destinationsReplicationInformationForSource.LastAttachmentEtag,
-												 destination);
-
-							var diff = attachmentsToReplicate.Except(filteredAttachmentsToReplicate).Select(x => x.Key);
-							return string.Format("Replicating {1} attachments (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
-												 attachmentSinceLastEtag,
-												 filteredAttachmentsToReplicate.Count,
-												 destination,
-												 string.Join(", ", diff),
-												 destinationsReplicationInformationForSource.LastAttachmentEtag);
-						});
-
-					scope.Record(new RavenJObject
-					             {
-						             {"StartEtag", startEtag.ToString()},
-									 {"EndEtag", lastAttachmentEtag.ToString()},
-									 {"Count", attachmentSinceLastEtag},
-									 {"FilteredCount", filteredAttachmentsToReplicate.Count}
-					             });
-
-					attachments = new RavenJArray(filteredAttachmentsToReplicate
-													  .Select(x =>
-													  {
-														  var data = new byte[0];
-														  if (x.Size > 0)
-														  {
-															  data = actions.Attachments.GetAttachment(x.Key).Data().ReadData();
-														  }
-
-														  EnsureReplicationInformationInMetadata(x.Metadata, docDb);
-
-														  return new RavenJObject
-							                                           {
-								                                           {"@metadata", x.Metadata},
-								                                           {"@id", x.Key},
-								                                           {"@etag", x.Etag.ToByteArray()},
-								                                           {"data", data}
-							                                           };
-													  }));
-				});
-			}
-			catch (InvalidDataException e)
-			{
-				RecordFailure(String.Empty, string.Format("Data is corrupted, could not proceed with attachment replication. Exception : {0}", e));
-				scope.RecordError(e);
-				log.ErrorException("Data is corrupted, could not proceed with replication", e);
-			}
-			catch (Exception e)
-			{
-				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
-			}
-			return Tuple.Create(attachments, lastAttachmentEtag);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
-		{
-			var maxNumberOfAttachments = 100;
-			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-				maxNumberOfAttachments = Math.Min(maxNumberOfAttachments, maxNumberOfItemsToReceiveInSingleBatch.Value);
-
-			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, maxNumberOfAttachments, 1024 * 1024 * 10).ToList();
-
-			Etag lastEtag = null;
-			if (attachmentInformations.Count > 0)
-				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
-
-			var maxNumberOfTombstones = Math.Max(maxNumberOfAttachments, attachmentInformations.Count);
-			var tombstones = actions
-				.Lists
-				.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, maxNumberOfTombstones + 1)
-							.Select(x => new AttachmentInformation
-							{
-								Key = x.Key,
-								Etag = x.Etag,
-								Metadata = x.Data,
-								Size = 0,
-							})
-				.ToList();
-
-			var results = attachmentInformations.Concat(tombstones);
-
-			if (tombstones.Count >= maxNumberOfTombstones + 1)
-			{
-				var lastTombstoneEtag = tombstones[tombstones.Count - 1].Etag;
-				log.Info("Replication batch trimmed. Found more than '{0}' attachment tombstones. Last attachment etag: '{1}'. Last tombstone etag: '{2}'.", maxNumberOfTombstones, lastEtag, lastTombstoneEtag);
-
-				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
-			}
-
-			results = results.OrderBy(x => x.Etag);
-
-			// can't return earlier, because we need to know if there are tombstones that need to be send
-			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
-
-			return results.ToList();
-		}
 
 		internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
 		{

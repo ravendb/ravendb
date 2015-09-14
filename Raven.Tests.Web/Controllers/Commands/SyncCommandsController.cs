@@ -44,13 +44,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new HttpResponseMessage();
 		}
 
-		[Route("api/sync/commands/deleteAttachment")]
-		public HttpResponseMessage DeleteAttachment()
-		{
-			DocumentStore.DatabaseCommands.DeleteAttachment("keys/1", null);
-			return new HttpResponseMessage();
-		}
-
 		[Route("api/sync/commands/deleteByIndex")]
 		public HttpResponseMessage DeleteByIndex()
 		{
@@ -84,27 +77,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public HttpResponseMessage Get2()
 		{
 			DocumentStore.DatabaseCommands.Get(new[] { "keys/1", "keys/2" }, null);
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/sync/commands/getAttachment")]
-		public HttpResponseMessage GetAttachment()
-		{
-			DocumentStore.DatabaseCommands.GetAttachment("attachment1");
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/sync/commands/getAttachmentHeadersStartingWith")]
-		public HttpResponseMessage GetAttachmentHeadersStartingWith()
-		{
-			DocumentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("attachments", 0, 128);
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/sync/commands/getAttachments")]
-		public HttpResponseMessage GetAttachments()
-		{
-			DocumentStore.DatabaseCommands.GetAttachments(0, Etag.Empty, 128);
 			return new HttpResponseMessage();
 		}
 
@@ -239,13 +211,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new HttpResponseMessage();
 		}
 
-		[Route("api/sync/commands/headAttachment")]
-		public HttpResponseMessage HeadAttachment()
-		{
-			DocumentStore.DatabaseCommands.HeadAttachment("keys/1");
-			return new HttpResponseMessage();
-		}
-
 		[Route("api/sync/commands/indexHasChanged")]
 		public HttpResponseMessage IndexHasChanged()
 		{
@@ -305,13 +270,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public HttpResponseMessage Put()
 		{
 			DocumentStore.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/sync/commands/putAttachment")]
-		public HttpResponseMessage PutAttachment()
-		{
-			DocumentStore.DatabaseCommands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
 			return new HttpResponseMessage();
 		}
 
@@ -409,13 +367,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public HttpResponseMessage Suggest()
 		{
 			DocumentStore.DatabaseCommands.Suggest(new Users_ByName().IndexName, new SuggestionQuery { Field = "Name", Term = "Term1" });
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/sync/commands/updateAttachmentMetadata")]
-		public HttpResponseMessage UpdateAttachmentMetadata()
-		{
-			DocumentStore.DatabaseCommands.UpdateAttachmentMetadata("keys/1", null, new RavenJObject());
 			return new HttpResponseMessage();
 		}
 

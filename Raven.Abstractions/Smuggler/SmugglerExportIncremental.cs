@@ -21,13 +21,9 @@ namespace Raven.Smuggler
 		public ExportIncremental()
 		{
 			LastDocsEtag = Etag.Empty;
-			LastAttachmentsEtag = Etag.Empty;
 		}
 
 		public Etag LastDocsEtag { get; set; }
-
-        [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentsEtag { get; set; }
 
         public Etag LastFilesEtag { get; set; }
 	}

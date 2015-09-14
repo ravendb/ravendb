@@ -417,36 +417,7 @@ namespace Raven.Tests.Common
             }
             return document;
         }
-
-        protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId)
-        {
-            Attachment attachment = null;
-
-            for (int i = 0; i < RetriesCount; i++)
-            {
-                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
-                if (attachment != null)
-                    break;
-                Thread.Sleep(100);
-            }
-            try
-            {
-                Assert.NotNull(attachment);
-            }
-            catch (Exception ex)
-            {
-                Thread.Sleep(TimeSpan.FromSeconds(10));
-
-                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
-                if (attachment == null) throw;
-
-                throw new Exception(
-                    "WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?",
-                    ex);
-            }
-            return attachment;
-        }
-
+   
         protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
         {
 			if (afterEtag != null)

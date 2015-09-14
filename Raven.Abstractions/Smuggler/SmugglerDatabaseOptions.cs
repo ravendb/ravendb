@@ -29,10 +29,10 @@ namespace Raven.Abstractions.Smuggler
 			Filters = new List<FilterSetting>();
             ConfigureDefaultFilters();
 		    ChunkSize = int.MaxValue;
-            OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
+            OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
 			ShouldExcludeExpired = false;			
-	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+	        StartDocsDeletionEtag = StartDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
@@ -112,22 +112,9 @@ namespace Raven.Abstractions.Smuggler
         public Etag StartDocsEtag { get; set; }
 
         /// <summary>
-        /// Start exporting from the specified attachments etag
-        /// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        public Etag StartAttachmentsEtag { get; set; }
-
-        /// <summary>
         /// Start exporting from the specified document deletion etag
         /// </summary>
         public Etag StartDocsDeletionEtag { get; set; }
-
-        /// <summary>
-        /// Start exporting from the specified attachment deletion etag
-        /// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        public Etag StartAttachmentsDeletionEtag { get; set; }
-
 
 		/// <summary>
         /// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
@@ -234,8 +221,7 @@ namespace Raven.Abstractions.Smuggler
 	{
 		Documents = 0x1,
 		Indexes = 0x2,
-        [Obsolete("Use RavenFS instead.")]
-		Attachments = 0x4,
+
 		Transformers = 0x8,
 
         RemoveAnalyzers = 0x8000,

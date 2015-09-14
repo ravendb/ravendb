@@ -171,7 +171,6 @@
     <Compile Include="Utils\Entities\ISearchable.cs" />
     <Compile Include="Utils\Indexes\MultiMapIndex.cs" />
     <Compile Include="Utils\Indexes\Posts_ByTitleAndContent.cs" />
-    <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Indexes\Users_CountByLastName.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
@@ -237,7 +236,6 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="BulkInsert\SimpleBulkInsert.cs" />
-    <Compile Include="Commands\Attachments.cs" />
     <Compile Include="Commands\Documents.cs" />
     <Compile Include="Commands\Indexes.cs" />
     <Compile Include="Querying\Linq.cs" />
@@ -245,7 +243,6 @@
     <Compile Include="Querying\Projections.cs" />
     <Compile Include="Querying\Sorting.cs" />
     <Compile Include="Indexing\IndexDefinitionMethods.cs" />
-    <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AutomaticConflictResolution.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />

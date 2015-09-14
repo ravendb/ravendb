@@ -12,9 +12,6 @@ namespace Raven.Bundles.Replication.Data
 	{
 		public Etag LastDocumentEtag { get; set; }
 
-        [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentEtag { get; set; }
-
 		public Guid ServerInstanceId { get; set; }
 
 		public string Source { get; set; }
@@ -27,13 +24,12 @@ namespace Raven.Bundles.Replication.Data
 
 		public override string ToString()
 		{
-			return string.Format("LastDocumentEtag: {0}, LastAttachmentEtag: {1}", LastDocumentEtag, LastAttachmentEtag);
+			return string.Format("LastDocumentEtag: {0}", LastDocumentEtag);
 		}
 
 		public SourceReplicationInformation()
 		{
 			LastDocumentEtag = Etag.Empty;
-			LastAttachmentEtag = Etag.Empty;
 		}
 	}
 

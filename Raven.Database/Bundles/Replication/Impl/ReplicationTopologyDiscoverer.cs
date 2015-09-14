@@ -102,9 +102,9 @@ namespace Raven.Database.Bundles.Replication.Impl
 				switch (state)
 				{
 					case ReplicatonNodeState.Online:
-						return ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+						return ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag);
 					case ReplicatonNodeState.Offline:
-						return ReplicationTopologySourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+						return ReplicationTopologySourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag);
 					default:
 						throw new NotSupportedException(state.ToString());
 				}
@@ -114,7 +114,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			ReplicationTopologyRootNode rootNode;
 			if (TryGetSchema(source.Source, new RavenConnectionStringOptions(), out rootNode, out error))
 			{
-				var node = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+				var node = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag);
 				node.Destinations = rootNode.Destinations;
 				node.Sources = rootNode.Sources;
 				node.Errors = rootNode.Errors;
@@ -122,7 +122,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 				return node;
 			}
 
-			var offline = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+			var offline = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag);
 
 			if (string.IsNullOrEmpty(error) == false)
 				offline.Errors.Add(error);

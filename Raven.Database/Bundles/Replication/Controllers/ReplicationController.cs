@@ -209,39 +209,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetMessageWithObject(configurationDocumentWithClusterInformation);
 		}
 
-		[Obsolete("Use RavenFS instead.")]
-		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers
-		{
-			get
-			{
-				var exported = Database.Configuration.Container.GetExportedValues<AbstractAttachmentReplicationConflictResolver>();
-
-				var config = GetReplicationConfig();
-
-				if (config == null || config.AttachmentConflictResolution == StraightforwardConflictResolution.None)
-					return exported;
-
-				var withConfiguredResolvers = exported.ToList();
-
-				switch (config.AttachmentConflictResolution)
-				{
-					case StraightforwardConflictResolution.ResolveToLocal:
-						withConfiguredResolvers.Add(LocalAttachmentReplicationConflictResolver.Instance);
-						break;
-					case StraightforwardConflictResolution.ResolveToRemote:
-						withConfiguredResolvers.Add(RemoteAttachmentReplicationConflictResolver.Instance);
-						break;
-					case StraightforwardConflictResolution.ResolveToLatest:
-						// ignore this resolver for attachments
-						break;
-					default:
-						throw new ArgumentOutOfRangeException("config.AttachmentConflictResolution");
-				}
-
-				return withConfiguredResolvers;
-			}
-		}
-
 		[HttpPost]
 		[RavenRoute("replication/replicateDocs")]
 		[RavenRoute("databases/{databaseName}/replication/replicateDocs")]
@@ -329,12 +296,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (!string.IsNullOrEmpty(collections))
 				replicationDocKey += ("/" + collections);
 
-			var replicationDocument = Database.Documents.Get(replicationDocKey, null);
-			var lastAttachmentId = Etag.Empty;
-			if (replicationDocument != null)
-			{
-				lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
-			}
+			var replicationDocument = Database.Documents.Get(replicationDocKey, null);			
 
 			Database
 				.Documents
@@ -346,7 +308,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						{
 							Source = src,
 							LastDocumentEtag = Etag.Parse(lastEtag),
-							LastAttachmentEtag = lastAttachmentId,
 							ServerInstanceId = remoteServerInstanceId,
 							SourceCollections = collections,
 							LastModified = SystemTime.UtcNow,
@@ -354,73 +315,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						}),
 					new RavenJObject(),
 					null);
-		}
-
-		[HttpPost]
-		[RavenRoute("replication/replicateAttachments")]
-		[RavenRoute("databases/{databaseName}/replication/replicateAttachments")]
-		[Obsolete("Use RavenFS instead.")]
-		public async Task<HttpResponseMessage> AttachmentReplicatePost()
-		{
-			var src = GetQueryStringValue("from");
-			if (string.IsNullOrEmpty(src))
-				return GetEmptyMessage(HttpStatusCode.BadRequest);
-
-			while (src.EndsWith("/"))
-				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
-			if (string.IsNullOrEmpty(src))
-				return GetEmptyMessage(HttpStatusCode.BadRequest);
-
-			var array = await ReadBsonArrayAsync();
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				var conflictResolvers = AttachmentReplicationConflictResolvers; 
-
-				Database.TransactionalStorage.Batch(actions =>
-				{
-					Etag lastEtag = Etag.Empty;
-					foreach (RavenJObject attachment in array)
-					{
-						var metadata = attachment.Value<RavenJObject>("@metadata");
-						if (metadata[Constants.RavenReplicationSource] == null)
-						{
-							// not sure why, old attachment from when the user didn't have replication
-							// that we suddenly decided to replicate, choose the source for that
-							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
-						}
-
-						lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
-						var id = attachment.Value<string>("@id");
-
-						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src, conflictResolvers);
-					}
-
-					Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
-
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
-					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
-					Etag lastDocId = null;
-					if (replicationDocument != null)
-					{
-						lastDocId =
-							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
-								LastDocumentEtag;
-					}
-
-					Database.Documents.Put(replicationDocKey, null,
-								 RavenJObject.FromObject(new SourceReplicationInformation
-								 {
-									 Source = src,
-									 LastDocumentEtag = lastDocId,
-									 LastAttachmentEtag = lastEtag,
-									 ServerInstanceId = remoteServerInstanceId,
-									 LastModified = SystemTime.UtcNow
-								 }),
-								 new RavenJObject(), null);
-				});
-			}
-
-			return GetEmptyMessage();
 		}
 
 		[HttpGet]
@@ -512,7 +406,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					{
 						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
 
-						sourceReplicationInformation.LastAttachmentEtag = Etag.InvalidEtag;
 						sourceReplicationInformation.LastDocumentEtag = Etag.InvalidEtag;
 					}
 
@@ -572,18 +465,10 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				SourceReplicationInformation sourceReplicationInformation;
 
-				Etag docEtag = null, attachmentEtag = null;
+				Etag docEtag = null;
 				try
 				{
 					docEtag = Etag.Parse(GetQueryStringValue("docEtag"));
-				}
-				catch
-				{
-				}
-
-				try
-				{
-					attachmentEtag = Etag.Parse(GetQueryStringValue("attachmentEtag"));
 				}
 				catch
 				{
@@ -596,7 +481,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
 						ServerInstanceId = serverInstanceId,
-						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
 						LastDocumentEtag = docEtag ?? Etag.Empty,
 						Source = src,
 						LastModified = SystemTime.UtcNow
@@ -607,7 +491,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
 					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
-					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 					sourceReplicationInformation.LastModified = SystemTime.UtcNow;
 				}
 
@@ -616,9 +499,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
 				if (log.IsDebugEnabled)
-					log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
-								  sourceReplicationInformation.LastDocumentEtag,
-								  sourceReplicationInformation.LastAttachmentEtag);
+					log.Debug("Updating replication last etags from {0}: [doc: {1}]", src,
+								  sourceReplicationInformation.LastDocumentEtag);
 
 				Database.Documents.Put(key, etag, newDoc, metadata, null);
 			}
@@ -854,19 +736,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				ReplicationConflictResolvers = conflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, document);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src, IEnumerable<AbstractAttachmentReplicationConflictResolver> conflictResolvers)
-		{
-			new AttachmentReplicationBehavior
-			{
-				Actions = actions,
-				Database = Database,
-				ReplicationConflictResolvers = conflictResolvers,
-				Src = src
-			}.Replicate(id, metadata, data);
-		}
+		}		
 
 		private ReplicationConfig GetReplicationConfig()
 		{

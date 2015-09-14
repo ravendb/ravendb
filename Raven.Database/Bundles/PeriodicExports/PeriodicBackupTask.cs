@@ -284,119 +284,112 @@ namespace Raven.Database.Bundles.PeriodicExports
 								{
 									Limit = backupLimit
 								});
-							var localBackupConfigs = exportConfigs;
-							var localBackupStatus = exportStatus;
-							if (localBackupConfigs == null)
-								return;
 
-							if (localBackupConfigs.Disabled) 
-								return;
+							    var localBackupConfigs = exportConfigs;
+							    var localBackupStatus = exportStatus;
+							    if (localBackupConfigs == null)
+								    return;
 
-							if (fullBackup == false)
-							{
-								var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
-								// No-op if nothing has changed
-								if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
-								{
-									return;
-								}
-							}
+							    if (localBackupConfigs.Disabled) 
+								    return;
 
-							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
-							if (Directory.Exists(backupPath) == false) 
-								Directory.CreateDirectory(backupPath);
+							    if (fullBackup == false)
+							    {
+								    var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
+								    // No-op if nothing has changed
+								    if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag)
+								    {
+									    return;
+								    }
+							    }
 
-							if (fullBackup)
-							{
-								// create filename for full dump
-								backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
-								if (File.Exists(backupPath))
-								{
-									var counter = 1;
-									while (true)
-									{
-										backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
+							    var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							    if (Directory.Exists(backupPath) == false) 
+								    Directory.CreateDirectory(backupPath);
 
-										if (File.Exists(backupPath) == false)
-											break;
-										counter++;
-									}
-								}
-							}
+							    if (fullBackup)
+							    {
+								    // create filename for full dump
+								    backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
+								    if (File.Exists(backupPath))
+								    {
+									    var counter = 1;
+									    while (true)
+									    {
+										    backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
 
-                            var smugglerOptions = dataDumper.Options;
-							if (fullBackup == false)
-							{
-								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
-								smugglerOptions.StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag;
-								smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
-								smugglerOptions.StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag;
-								smugglerOptions.Incremental = true;
-								smugglerOptions.ExportDeletions = true;
-							}
-							exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
+										    if (File.Exists(backupPath) == false)
+											    break;
+										    counter++;
+									    }
+								    }
+							    }
 
-							if (fullBackup == false)
-							{
-								// No-op if nothing has changed
-								if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-									exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
-									exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
-									exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
-								{
-									logger.Info("Periodic export returned prematurely, nothing has changed since last export");
-									return;
-								}
-							}
+                                var smugglerOptions = dataDumper.Options;
+							    if (fullBackup == false)
+							    {
+								    smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
+								    smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
+								    smugglerOptions.Incremental = true;
+								    smugglerOptions.ExportDeletions = true;
+							    }
+							    exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
 
-							try
-							{
-								UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
-							}
-							finally
-							{
-								// if user did not specify local folder we delete temporary file.
-								if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
-								{
-									IOExtensions.DeleteFile(exportResult.FilePath);
-								}
-							}
+							    if (fullBackup == false)
+							    {
+								    // No-op if nothing has changed
+								    if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+									    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag)
+								    {
+									    logger.Info("Periodic export returned prematurely, nothing has changed since last export");
+									    return;
+								    }
+							    }
 
-							localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
-							localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
-							localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
-							localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
+							    try
+							    {
+								    UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+							    }
+							    finally
+							    {
+								    // if user did not specify local folder we delete temporary file.
+								    if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
+								    {
+									    IOExtensions.DeleteFile(exportResult.FilePath);
+								    }
+							    }
 
-								if (fullBackup)
-									localBackupStatus.LastFullBackup = SystemTime.UtcNow;
-								else
-									localBackupStatus.LastBackup = SystemTime.UtcNow;
+							    localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+							    localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
 
-								var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
-							ravenJObject.Remove("Id");
-							var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
-								new RavenJObject(), null);
+							    if (fullBackup)
+								    localBackupStatus.LastFullBackup = SystemTime.UtcNow;
+							    else
+								    localBackupStatus.LastBackup = SystemTime.UtcNow;
 
-							// this result in exportStatus being refreshed
-							localBackupStatus = exportStatus;
-							if (localBackupStatus != null)
-							{
-								if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
-									localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
-							}
+							    var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
+							    ravenJObject.Remove("Id");
+							    var putResult = documentDatabase.Documents.Put(PeriodicExportStatus.RavenDocumentKey, null, ravenJObject,
+								    new RavenJObject(), null);
+
+							    // this result in exportStatus being refreshed
+							    localBackupStatus = exportStatus;
+							    if (localBackupStatus != null)
+							    {
+								    if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
+									    localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
+							    }
 								
-								if (backupLimit != int.MaxValue)
-								{
-									backupLimit = int.MaxValue;
-									performAnotherRun = true;
-						}
-								else
-								{
-									performAnotherRun = false;
-								}
+							    if (backupLimit != int.MaxValue)
+							    {
+								    backupLimit = int.MaxValue;
+								    performAnotherRun = true;
+					            }
+							    else
+							    {
+								    performAnotherRun = false;
+							    }
 							} while (performAnotherRun);
 						}
 						catch (ObjectDisposedException)

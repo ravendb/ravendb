@@ -575,10 +575,7 @@ namespace Raven.Tests.Helpers
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
             if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
-			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
-			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
-
 		}
 
         /// <summary>
@@ -634,16 +631,15 @@ namespace Raven.Tests.Helpers
 			var done = SpinWait.SpinUntil(() =>
 			{
 				currentStatus = GetPerodicBackupStatus(getDocument);
-				return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
-					   currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag ||
-					   currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
-					   currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
+                return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
+                       currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            
             if (!done) throw new Exception("WaitForPeriodicExport failed");
-			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
-			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+			
+            previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
-			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
 
 		}
 

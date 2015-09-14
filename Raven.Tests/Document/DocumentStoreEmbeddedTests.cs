@@ -38,7 +38,8 @@ namespace Raven.Tests.Document
 			documentStore.Dispose();
 			base.Dispose();
 		}
-	[Fact]
+
+	    [Fact]
 		public void CanGetIndexNames()
 		{
 			Assert.Contains("Raven/DocumentsByEntityName", documentStore.DatabaseCommands.GetIndexNames(0, 25));
@@ -49,27 +50,7 @@ namespace Raven.Tests.Document
 		{
 			documentStore.SystemDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
 		}
-
-		[Fact]
-		public void UsingAttachments()
-		{
-			var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
-			Assert.Null(attachment);
-
-			documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
-
-			attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
-			Assert.NotNull(attachment);
-
-			Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
-			Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
-
-			documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
-
-			attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
-			Assert.Null(attachment);
-		}
-
+	
 
 		[Fact]
 		public void WillGetNotificationWhenReadingNonAuthoritativeInformation()

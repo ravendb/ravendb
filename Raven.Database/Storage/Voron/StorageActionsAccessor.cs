@@ -32,7 +32,6 @@ namespace Raven.Database.Storage.Voron
             Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
-            Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshotReference, generator, storage, transactionalStorage, bufferPool);
 	        var generalStorageActions = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool, this);
 	        General = generalStorageActions;
 			Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool, generalStorageActions);
@@ -57,9 +56,6 @@ namespace Raven.Database.Storage.Voron
 		public ITasksStorageActions Tasks { get; private set; }
 
 		public IStalenessStorageActions Staleness { get; private set; }
-
-        [Obsolete("Use RavenFS instead.")]
-		public IAttachmentsStorageActions Attachments { get; private set; }
 
 		public IIndexingStorageActions Indexing { get; private set; }
 

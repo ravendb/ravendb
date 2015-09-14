@@ -48,13 +48,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new HttpResponseMessage();
 		}
 
-		[Route("api/async/commands/deleteAttachment")]
-		public async Task<HttpResponseMessage> DeleteAttachment()
-		{
-			await DocumentStore.AsyncDatabaseCommands.DeleteAttachmentAsync("keys/1", null);
-			return new HttpResponseMessage();
-		}
-
 		[Route("api/async/commands/deleteByIndex")]
 		public async Task<HttpResponseMessage> DeleteByIndex()
 		{
@@ -88,27 +81,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public async Task<HttpResponseMessage> Get2()
 		{
 			await DocumentStore.AsyncDatabaseCommands.GetAsync(new[] { "keys/1", "keys/2" }, null);
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/async/commands/getAttachment")]
-		public async Task<HttpResponseMessage> GetAttachment()
-		{
-			await DocumentStore.AsyncDatabaseCommands.GetAttachmentAsync("attachment1");
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/async/commands/getAttachmentHeadersStartingWith")]
-		public async Task<HttpResponseMessage> GetAttachmentHeadersStartingWith()
-		{
-			await DocumentStore.AsyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync("attachments", 0, 128);
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/async/commands/getAttachments")]
-		public async Task<HttpResponseMessage> GetAttachments()
-		{
-			await DocumentStore.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 128);
 			return new HttpResponseMessage();
 		}
 
@@ -243,13 +215,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new HttpResponseMessage();
 		}
 
-		[Route("api/async/commands/headAttachment")]
-		public async Task<HttpResponseMessage> HeadAttachment()
-		{
-			await DocumentStore.AsyncDatabaseCommands.HeadAttachmentAsync("keys/1");
-			return new HttpResponseMessage();
-		}
-
 		[Route("api/async/commands/indexHasChanged")]
 		public async Task<HttpResponseMessage> IndexHasChanged()
 		{
@@ -309,13 +274,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public async Task<HttpResponseMessage> Put()
 		{
 			await DocumentStore.AsyncDatabaseCommands.PutAsync("keys/1", null, new RavenJObject(), new RavenJObject());
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/async/commands/putAttachment")]
-		public async Task<HttpResponseMessage> PutAttachment()
-		{
-			await DocumentStore.AsyncDatabaseCommands.PutAttachmentAsync("keys/1", null, new MemoryStream(), new RavenJObject());
 			return new HttpResponseMessage();
 		}
 
@@ -413,13 +371,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public async Task<HttpResponseMessage> Suggest()
 		{
 			await DocumentStore.AsyncDatabaseCommands.SuggestAsync(new Users_ByName().IndexName, new SuggestionQuery { Field = "Name", Term = "Term1" });
-			return new HttpResponseMessage();
-		}
-
-		[Route("api/async/commands/updateAttachmentMetadata")]
-		public async Task<HttpResponseMessage> UpdateAttachmentMetadata()
-		{
-			await DocumentStore.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("keys/1", null, new RavenJObject());
 			return new HttpResponseMessage();
 		}
 

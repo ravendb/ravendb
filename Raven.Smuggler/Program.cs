@@ -186,7 +186,7 @@ namespace Raven.Smuggler
 			databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
 			databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
             databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
-			databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents/attachments.", s => databaseOptions.Limit = int.Parse(s));
+			databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents.", s => databaseOptions.Limit = int.Parse(s));
 			databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
 			databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
 			databaseOptionSet.Add("u|user|username:", OptionCategory.SmugglerDatabase, "The username to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).UserName = value);

@@ -220,11 +220,6 @@ namespace Raven.Tests.Smuggler
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
-                commands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
-                var attachment = commands.GetAttachment("keys/1");
-                Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-
                 var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { StripReplicationInformation = true });
                 smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
@@ -263,9 +258,6 @@ namespace Raven.Tests.Smuggler
                 doc = commands.Get("keys/1");
                 Assert.False(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                 Assert.False(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-                attachment = commands.GetAttachment("keys/1");
-                Assert.False(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                Assert.False(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
                 store
                     .DatabaseCommands
@@ -294,9 +286,6 @@ namespace Raven.Tests.Smuggler
                 doc = commands.Get("keys/1");
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-                attachment = commands.GetAttachment("keys/1");
-                Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
             }
         }
 
@@ -312,11 +301,6 @@ namespace Raven.Tests.Smuggler
                     var doc = commands.Get("keys/1");
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-
-                    commands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
-                    var attachment = commands.GetAttachment("keys/1");
-                    Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                    Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
                     var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions { StripReplicationInformation = true });
                     smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToStream = stream, From = new RavenConnectionStringOptions { DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
@@ -340,9 +324,6 @@ namespace Raven.Tests.Smuggler
                     var doc = commands.Get("keys/1");
                     Assert.False(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                     Assert.False(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-                    var attachment = commands.GetAttachment("keys/1");
-                    Assert.False(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                    Assert.False(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
                 }
 
                 stream.Position = 0;
@@ -363,9 +344,6 @@ namespace Raven.Tests.Smuggler
                     var doc = commands.Get("keys/1");
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
-                    var attachment = commands.GetAttachment("keys/1");
-                    Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationSource));
-                    Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
                 }
             }
 

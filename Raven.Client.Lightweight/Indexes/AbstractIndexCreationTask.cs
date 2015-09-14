@@ -193,15 +193,6 @@ namespace Raven.Client.Indexes
         }
 
         /// <summary>
-        /// Loads the specifed attachment content during the indexing process
-        /// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        public object LoadAttachmentForIndexing(string key)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        /// <summary>
         /// Executes the index creation against the specified document store in side-by-side mode.
         /// </summary>
         /// <param name="store"></param>

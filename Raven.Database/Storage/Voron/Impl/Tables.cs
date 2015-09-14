@@ -107,19 +107,6 @@ namespace Raven.Database.Storage.Voron.Impl
             }
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		public class Attachments
-		{
-			public const string TableName = "attachments";
-
-			public class Indices
-			{
-				public const string ByEtag = "key_by_etag";
-
-                public const string Metadata = "metadata";
-			}
-		}
-
 		public class MappedResults
 		{
 			public const string TableName = "mapped_results";

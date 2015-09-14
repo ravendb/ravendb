@@ -14,7 +14,6 @@ class importDatabase extends viewModelBase {
     transformScript = ko.observable<string>();
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
-    includeAttachments = ko.observable(false);
     includeTransformers = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     hasFileSelected = ko.observable(false);
@@ -113,9 +112,6 @@ class importDatabase extends viewModelBase {
         }
         if (this.includeIndexes()) {
             importItemTypes.push(ImportItemType.Indexes);
-        }
-        if (this.includeAttachments()) {
-            importItemTypes.push(ImportItemType.Attachments);
         }
         if (this.includeTransformers()) {
             importItemTypes.push(ImportItemType.Transformers);

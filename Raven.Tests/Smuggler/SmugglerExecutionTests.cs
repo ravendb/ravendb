@@ -164,9 +164,7 @@ namespace Raven.Tests.Smuggler
             try
             {
                 using (var store = NewDocumentStore())
-                {
-                    store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
-
+                {                 
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User { Name = "oren" });
@@ -195,7 +193,6 @@ namespace Raven.Tests.Smuggler
                     using (var session = store.OpenSession())
                     {
                         Assert.Equal("oren", session.Load<User>(1).Name);
-                        Assert.NotNull(store.DatabaseCommands.GetAttachment("attach/1"));
                     }
                 }
             }
@@ -214,9 +211,7 @@ namespace Raven.Tests.Smuggler
             try
             {
                 using (var store = NewDocumentStore())
-                {
-
-                    store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
+                {                  
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User { Name = "oren" });
@@ -333,12 +328,10 @@ namespace Raven.Tests.Smuggler
                     userId = user.Id;
                     session.SaveChanges();
                 }
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
                 WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
                 store.DatabaseCommands.Delete(userId, null);
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
                 WaitForPeriodicExport(store.SystemDatabase, backupStatus);
 
@@ -358,7 +351,6 @@ namespace Raven.Tests.Smuggler
                 using (var session = store.OpenSession())
                 {
                     Assert.Null(session.Load<User>(1));
-                    Assert.Null(store.DatabaseCommands.GetAttachment("attach/1"));
                 }
             }
 
@@ -414,48 +406,7 @@ namespace Raven.Tests.Smuggler
             }
 
             IOExtensions.DeleteDirectory(backupPath);
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public void CanBackupAttachmentDeletion()
-        {
-            var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    var periodicBackupSetup = new PeriodicExportSetup
-                    {
-                        LocalFolderName = backupPath,
-                        IntervalMilliseconds = 250
-                    };
-                    session.Store(periodicBackupSetup, PeriodicExportSetup.RavenDocumentKey);
-
-                    session.SaveChanges();
-                }
-
-                var backupStatus = GetPeriodicBackupStatus(store.SystemDatabase);
-
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
-
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
-
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
-
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
-
-            }
-
-            using (var store = NewDocumentStore())
-            {
-                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
-                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
-
-                Assert.Null(store.DatabaseCommands.GetAttachment("attach/1"));
-            }
-
-            IOExtensions.DeleteDirectory(backupPath);
-        }
+        }       
 
         [Fact]
         public void ShouldDeleteDocumentTombStoneAfterNextPut()
@@ -501,33 +452,6 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact]
-        public void ShouldDeleteAttachmentTombStoneAfterNextPut()
-        {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
-            {
-                // create document
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
-
-                //now delete it and check for tombstone
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
-
-                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
-                {
-                    var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/1");
-                    Assert.NotNull(tombstone);
-                });
-
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
-
-                store.SystemDatabase.TransactionalStorage.Batch(accessor =>
-                {
-                    var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/1");
-                    Assert.Null(tombstone);
-                });
-            }
-        }
-
-        [Fact]
         public void CanDeleteTombStones()
         {
             using (var store = NewRemoteDocumentStore(databaseName: Constants.SystemDatabase))
@@ -547,10 +471,6 @@ namespace Raven.Tests.Smuggler
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
-                
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
-                
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
                                                                      Assert.Equal(1,
                                                                                   accessor.Lists.Read(
@@ -558,8 +478,6 @@ namespace Raven.Tests.Smuggler
                                                                                           .RavenPeriodicExportsDocsTombstones,
                                                                                       Etag.Empty, null, 10).Count()));
 
-                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
-                    Assert.Equal(1, accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 10).Count()));
 
                 using (var session = store.OpenSession())
                 {
@@ -568,13 +486,9 @@ namespace Raven.Tests.Smuggler
                     userId = user.Id;
                     session.SaveChanges();
                 }
-                store.DatabaseCommands.PutAttachment("attach/2", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
 
                 var documentEtagAfterFirstDelete = Etag.Empty;
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor => documentEtagAfterFirstDelete = accessor.Staleness.GetMostRecentDocumentEtag());
-
-                var attachmentEtagAfterFirstDelete = Etag.Empty;
-                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor => attachmentEtagAfterFirstDelete = accessor.Staleness.GetMostRecentAttachmentEtag());
 
                 using (var session = store.OpenSession())
                 {
@@ -582,18 +496,13 @@ namespace Raven.Tests.Smuggler
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.DeleteAttachment("attach/2", null);
-
-
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
                     Assert.Equal(2, accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 10).Count()));
 
-                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
-                    Assert.Equal(2, accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 10).Count()));
 
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
-                                                                    "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
+                                                                    "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete,
 																	HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
@@ -602,8 +511,6 @@ namespace Raven.Tests.Smuggler
 
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
                     Assert.Equal(1, accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 10).Count()));
-                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
-                    Assert.Equal(1, accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 10).Count()));
 
             }
         }
@@ -632,8 +539,6 @@ namespace Raven.Tests.Smuggler
                 {
                     session.Store(new User { Name = "oren" });
                     session.Store(new User { Name = "ayende" });
-                    store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
-                    store.DatabaseCommands.PutAttachment("attach/2", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
                     session.SaveChanges();
                 }
 
@@ -644,16 +549,11 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.Delete("users/1", null);
                 store.DatabaseCommands.Delete("users/2", null);
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
-                store.DatabaseCommands.DeleteAttachment("attach/2", null);
 
                 store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     Assert.Equal(2,
                                  accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20)
-                                         .Count());
-                    Assert.Equal(2,
-                                 accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 20)
                                          .Count());
                 });
 
@@ -668,9 +568,6 @@ namespace Raven.Tests.Smuggler
                     Assert.Equal(1,
                                  accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20)
                                          .Count());
-                    Assert.Equal(1,
-                                 accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 20)
-                                         .Count());
                 });
 
             }
@@ -684,7 +581,7 @@ namespace Raven.Tests.Smuggler
         }
 
         /// <summary>
-        ///  In 2.5 we didn't support deleted documents/attachments, so those props aren't available. 
+        ///  In 2.5 we didn't support deleted documents, so those props aren't available. 
         /// </summary>
         [Fact]
         public void CanProperlyReadLastEtagUsingPreviousFormat()
@@ -697,7 +594,6 @@ namespace Raven.Tests.Smuggler
                 new RavenJObject
 					{
 						{"LastDocEtag", Etag.Parse("00000000-0000-0000-0000-000000000001").ToString()},
-                        {"LastAttachmentEtag", Etag.Parse("00000000-0000-0000-0000-000000000002").ToString()}
 					}.WriteTo(new JsonTextWriter(streamWriter));
                 streamWriter.Flush();
             }
@@ -709,9 +605,7 @@ namespace Raven.Tests.Smuggler
             SmugglerDatabaseApiBase.ReadLastEtagsFromFile(result);
 
             Assert.Equal("00000000-0000-0000-0000-000000000001", result.LastDocsEtag.ToString());
-            Assert.Equal("00000000-0000-0000-0000-000000000002", result.LastAttachmentsEtag.ToString());
             Assert.Equal(Etag.Empty, result.LastDocDeleteEtag);
-            Assert.Equal(Etag.Empty, result.LastAttachmentsDeleteEtag);
         }
 
         /// <summary>
@@ -729,13 +623,6 @@ namespace Raven.Tests.Smuggler
                 Operations.Initialize(Options);
 
                 return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
-            }
-
-            public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
-            {
-                Operations.Initialize(Options);
-
-                return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
@@ -802,56 +689,6 @@ namespace Raven.Tests.Smuggler
                     Assert.Equal("01000000-0000-0001-0000-00000000000B", lastEtag.ToString());
                 }
 
-                for (var i = 0; i < 10; i++)
-                {
-                    store.DatabaseCommands.PutAttachment("attach/" + (i + 1), null, new MemoryStream(new[] { (byte)i }), new RavenJObject());
-                }
-
-                using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
-                {
-                    var dumper = new CustomDataDumper(store.SystemDatabase);
-
-                    var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
-                    var endEtag = startEtag.IncrementBy(2);
-
-                    writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, endEtag);
-                    writer.WriteEndArray();
-                    writer.Flush();
-
-                    // read exported content
-                    var exportedAttachments = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
-                    Assert.Equal(2, exportedAttachments.Count());
-
-                    Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-000000000007", exportedAttachments.Last().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-000000000007", lastEtag.ToString());
-
-                }
-
-                using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
-                {
-                    var dumper = new CustomDataDumper(store.SystemDatabase);
-
-                    var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
-
-                    writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, null);
-                    writer.WriteEndArray();
-                    writer.Flush();
-
-                    // read exported content
-                    var exportedAttachments = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
-                    Assert.Equal(5, exportedAttachments.Count());
-
-                    Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-00000000000A", exportedAttachments.Last().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-00000000000A", lastEtag.ToString());
-
-                }
-
                 WaitForIndexing(store);
 
                 store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery()
@@ -859,10 +696,6 @@ namespace Raven.Tests.Smuggler
                     Query = "Tag:Users"
                 }).WaitForCompletion();
 
-                for (var i = 0; i < 10; i++)
-                {
-                    store.DatabaseCommands.DeleteAttachment("attach/" + (i + 1), null);
-                }
 
                 Etag user6DeletionEtag = null, user9DeletionEtag = null, attach5DeletionEtag = null, attach7DeletionEtag = null;
 
@@ -870,14 +703,8 @@ namespace Raven.Tests.Smuggler
 
                 store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
-                    user6DeletionEtag =
-                        accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/6").Etag;
-                    user9DeletionEtag =
-                        accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/9").Etag;
-                    attach5DeletionEtag =
-                        accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/5").Etag;
-                    attach7DeletionEtag =
-                        accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, "attach/7").Etag;
+                    user6DeletionEtag = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/6").Etag;
+                    user9DeletionEtag = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/9").Etag;
 
                 });
 
@@ -891,25 +718,19 @@ namespace Raven.Tests.Smuggler
                     var exportResult = new OperationState
                     {
                         LastDocDeleteEtag = user6DeletionEtag,
-                        LastAttachmentsDeleteEtag = attach5DeletionEtag
                     };
 
                     lastEtags.LastDocDeleteEtag = user9DeletionEtag;
-                    lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
+
                     dumper.ExportDeletions(writer, exportResult, lastEtags).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 
                     // read exported content
                     var exportJson = RavenJObject.Parse(textStream.GetStringBuilder().ToString());
-                    var docsKeys =
-                        exportJson.Value<RavenJArray>("DocsDeletions").Select(x => x.Value<string>("Key")).ToArray();
-                    var attachmentsKeys =
-                        exportJson.Value<RavenJArray>("AttachmentsDeletions")
-                                  .Select(x => x.Value<string>("Key"))
-                                  .ToArray();
+                    var docsKeys = exportJson.Value<RavenJArray>("DocsDeletions").Select(x => x.Value<string>("Key")).ToArray();
+           
                     Assert.Equal(new[] { "users/7", "users/8", "users/9" }, docsKeys);
-                    Assert.Equal(new[] { "attach/6", "attach/7" }, attachmentsKeys);
                 }
             }
         }

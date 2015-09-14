@@ -184,7 +184,6 @@
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
-    <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\DatabaseBackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
     <Compile Include="Data\DocumentsChanges.cs" />
@@ -214,7 +213,6 @@
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
-    <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
@@ -284,7 +282,6 @@
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Exceptions\OperationVetoedException.cs" />
-    <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
@@ -417,7 +414,6 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Replication\SideBySideReplicationInfo.cs" />
     <Compile Include="ServerSmugglerRequest.cs" />
-    <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\CounterOperationState.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />

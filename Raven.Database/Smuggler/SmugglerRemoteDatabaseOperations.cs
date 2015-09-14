@@ -67,21 +67,10 @@ namespace Raven.Smuggler
 			this.isIdentitiesSmugglingSupported = isIdentitiesSmugglingSupported;
 		}
 
-		[Obsolete("Use RavenFS instead.")]
-		public Task DeleteAttachment(string key)
-		{
-			return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
-		}
 
 		public Task DeleteDocument(string key)
 		{
 			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
-		{
-			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
 		}
 
 		public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
@@ -93,29 +82,9 @@ namespace Raven.Smuggler
 		{
 			return new LastEtagsInfo
 			{
-				LastAttachmentsDeleteEtag = null,
 				LastDocDeleteEtag = null,
-				LastAttachmentsEtag = null,
 				LastDocsEtag = null
 			};
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
-		{
-			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
-
-			return attachments.ToList();
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
-		{
-			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-			if (attachment == null)
-				return null;
-
-			return attachment.Data().ReadData();
 		}
 
 		public JsonDocument GetDocument(string key)
@@ -214,15 +183,6 @@ namespace Raven.Smuggler
 		public void PurgeTombstones(OperationState result)
 		{
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public async Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
-		{
-			if (attachmentExportInfo != null)
-			{
-				await Store.AsyncDatabaseCommands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
-			}
 		}
 
 		public Task PutDocument(RavenJObject document, int size)

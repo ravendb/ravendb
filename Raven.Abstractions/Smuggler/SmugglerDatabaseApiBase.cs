@@ -19,8 +19,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Database.Data;
-
 namespace Raven.Abstractions.Smuggler
 {
     public abstract class SmugglerDatabaseApiBase : ISmugglerApi<RavenConnectionStringOptions, SmugglerDatabaseOptions, OperationState>
@@ -54,10 +52,8 @@ namespace Raven.Abstractions.Smuggler
             var result = new OperationState
             {
                 FilePath = exportOptions.ToFile,
-                LastAttachmentsEtag = Options.StartAttachmentsEtag,
                 LastDocsEtag = Options.StartDocsEtag,
                 LastDocDeleteEtag = Options.StartDocsDeletionEtag,
-                LastAttachmentsDeleteEtag = Options.StartAttachmentsDeletionEtag
             };
 
             if (Options.Incremental)
@@ -70,7 +66,7 @@ namespace Raven.Abstractions.Smuggler
 						Directory.CreateDirectory(result.FilePath);
 				}
 
-                if (Options.StartDocsEtag == Etag.Empty && Options.StartAttachmentsEtag == Etag.Empty)
+                if (Options.StartDocsEtag == Etag.Empty)
 				{
 					ReadLastEtagsFromFile(result);
 				}
@@ -146,24 +142,7 @@ namespace Raven.Abstractions.Smuggler
                             lastException = e;
                         }
 					}
-					jsonWriter.WriteEndArray();
-
-					jsonWriter.WritePropertyName("Attachments");
-					jsonWriter.WriteStartArray();
-                    if (Options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
-					{
-						try
-						{
-							result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
-						}
-						catch (SmugglerExportException e)
-						{
-							result.LastAttachmentsEtag = e.LastEtag;
-							e.File = ownedStream ? result.FilePath : null;
-							lastException = e;
-						}
-					}
-					jsonWriter.WriteEndArray();
+					jsonWriter.WriteEndArray();		
 
 					jsonWriter.WritePropertyName("Transformers");
 					jsonWriter.WriteStartArray();
@@ -302,9 +281,7 @@ namespace Raven.Abstractions.Smuggler
                     return;
                 }
                 result.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
-                result.LastAttachmentsEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
                 result.LastDocDeleteEtag = Etag.Parse(ravenJObject.Value<string>("LastDocDeleteEtag") ?? Etag.Empty.ToString());
-                result.LastAttachmentsDeleteEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentsDeleteEtag") ?? Etag.Empty.ToString());
             }
         }
 
@@ -321,9 +298,7 @@ namespace Raven.Abstractions.Smuggler
                 new RavenJObject
 					{
 						{"LastDocEtag", result.LastDocsEtag.ToString()},
-						{"LastAttachmentEtag", result.LastAttachmentsEtag.ToString()},
                         {"LastDocDeleteEtag", result.LastDocDeleteEtag.ToString()},
-                        {"LastAttachmentsDeleteEtag", result.LastAttachmentsDeleteEtag.ToString()}
 					}.WriteTo(new JsonTextWriter(streamWriter));
                 streamWriter.Flush();
             }
@@ -391,122 +366,6 @@ namespace Raven.Abstractions.Smuggler
 		}
 
 		public abstract Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch);
-
-        [Obsolete("Use RavenFS instead.")]
-		protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
-		{
-			var totalCount = 0;
-			var retries = RetriesCount;
-			var maxEtagReached = false;
-
-			while (true)
-			{
-				try
-				{
-                    if (Options.Limit - totalCount <= 0 || maxEtagReached)
-					{
-						Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
-
-                    var maxRecords = Math.Min(Options.Limit - totalCount, Options.BatchSize);
-					List<AttachmentInformation> attachments;
-
-					try
-					{
-						attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
-					}
-					catch (Exception e)
-					{
-						if (retries-- == 0 && IgnoreErrorsAndContinue)
-							return Etag.InvalidEtag;
-
-						if (IgnoreErrorsAndContinue == false)
-							throw;
-
-						Operations.ShowProgress("Failed to get attachments. {0} retries remaining. Message: {1}", retries, e.Message);
-						continue;
-					}
-
-					if (attachments.Count == 0)
-					{
-						DatabaseStatistics databaseStatistics;
-						try
-						{
-							databaseStatistics = await Operations.GetStats();
-						}
-						catch (Exception e)
-						{
-							if (retries-- == 0 && IgnoreErrorsAndContinue)
-								return Etag.Empty;
-
-							if (IgnoreErrorsAndContinue == false)
-								throw;
-
-							Operations.ShowProgress("Failed to get database statistics. Message: {0}", e.Message);
-							continue;
-						}
-
-						if (lastEtag == null) lastEtag = Etag.Empty;
-						if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-						{
-							lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-							Operations.ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}",
-										 lastEtag);
-							continue;
-						}
-						Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
-
-					totalCount += attachments.Count;
-					Operations.ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Count, totalCount);
-					foreach (var attachmentInformation in attachments)
-					{
-						if (maxEtag != null && attachmentInformation.Etag.CompareTo(maxEtag) > 0)
-						{
-							maxEtagReached = true;
-							break;
-						}
-
-						Operations.ShowProgress("Downloading attachment: {0}", attachmentInformation.Key);
-
-						try
-						{
-							var attachmentData = await Operations.GetAttachmentData(attachmentInformation);
-						if (attachmentData == null)
-							continue;
-
-						new RavenJObject
-						{
-							{ "Data", attachmentData }, 
-								{ "Metadata", attachmentInformation.Metadata },
-								{ "Key", attachmentInformation.Key },
-								{ "Etag", new RavenJValue(attachmentInformation.Etag.ToString()) }
-						}.WriteTo(jsonWriter);
-
-							lastEtag = attachmentInformation.Etag;
-					}
-						catch (Exception e)
-						{
-							if (IgnoreErrorsAndContinue == false)
-								throw;
-
-							Operations.ShowProgress("EXPORT of an attachment {0} failed. Message: {1}", attachmentInformation.Key, e.Message);
-				}
-					}
-				}
-				catch (Exception e)
-				{
-					Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-					Operations.ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
-					throw new SmugglerExportException(e.Message, e)
-					{
-						LastEtag = lastEtag,
-					};
-				}
-			}
-		}
 
         protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
@@ -800,10 +659,8 @@ namespace Raven.Abstractions.Smuggler
 
 			exportSectionRegistar.Add("Attachments", () =>
 			{
-				Operations.ShowProgress("Begin reading attachments");
-				var attachmentCount = ImportAttachments(importOptions.To, jsonReader).Result;
-				Operations.ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
-				return attachmentCount;
+                IgnoreData(jsonReader);
+				return 0;
 			});
 
 			exportSectionRegistar.Add("Transformers", () =>
@@ -824,10 +681,8 @@ namespace Raven.Abstractions.Smuggler
 
 			exportSectionRegistar.Add("AttachmentsDeletions", () =>
 			{
-				Operations.ShowProgress("Begin reading deleted attachments");
-				var deletedAttachmentsCount = ImportDeletedAttachments(jsonReader).Result;
-				Operations.ShowProgress(string.Format("Done with reading deleted attachments, total: {0}", deletedAttachmentsCount));
-				return deletedAttachmentsCount;
+                IgnoreData(jsonReader);
+				return 0;
 			});
 
 			exportSectionRegistar.Add("Identities", () =>
@@ -866,7 +721,7 @@ namespace Raven.Abstractions.Smuggler
 
 			sw.Stop();
 
-			Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#.###;;0} s", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds / 1000f);
+			Operations.ShowProgress("Imported {0:#,#;;0} documents, and deleted {1:#,#;;0} documents in {2:#,#.###;;0} s", exportCounts["Docs"], exportCounts["DocsDeletions"], sw.ElapsedMilliseconds / 1000f);
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
 		}
@@ -940,40 +795,6 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		private async Task<int> ImportDeletedAttachments(JsonReader jsonReader)
-		{
-			var count = 0;
-
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			{
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
-
-				var item = RavenJToken.ReadFrom(jsonReader);
-
-				var deletedAttachmentInfo = new JsonSerializer { Converters = DefaultConverters }
-                                                    .Deserialize<Tombstone>(new RavenJTokenReader(item));
-
-				Operations.ShowProgress("Importing deleted attachment {0}", deletedAttachmentInfo.Key);
-
-				try
-				{
-				await Operations.DeleteAttachment(deletedAttachmentInfo.Key);
-				}
-				catch (Exception e)
-				{
-					if (IgnoreErrorsAndContinue == false)
-						throw;
-
-					Operations.ShowProgress("IMPORT of an deleted attachment {0} failed. Message: {1}", deletedAttachmentInfo.Key, e.Message);
-				}
-
-				count++;
-			}
-
-			return count;
-		}
-
 		private async Task<int> ImportTransformers(JsonTextReader jsonReader)
 		{
 			var count = 0;
@@ -1025,45 +846,14 @@ namespace Raven.Abstractions.Smuggler
             get { return defaultConverters.Value; }
         }
 
-        [Obsolete("Use RavenFS instead.")]
-		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
+		private async void IgnoreData(JsonTextReader jsonReader)
 		{
-			var count = 0;
-
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			{
+            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+            {
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-				var item = RavenJToken.ReadFrom(jsonReader);
-                if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
-					continue;
-
-				var attachmentExportInfo = new JsonSerializer { Converters = DefaultConverters }
-                                                    .Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
-
-				Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
-
-				try
-				{
-				if (Options.StripReplicationInformation) 
-					attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
-
-				await Operations.PutAttachment(attachmentExportInfo);
-				}
-				catch (Exception e)
-				{
-					if (IgnoreErrorsAndContinue == false)
-						throw;
-
-					Operations.ShowProgress("IMPORT of an attachment {0} failed. Message: {1}", attachmentExportInfo.Key, e.Message);
-				}
-
-				count++;
-			}
-
-			await Operations.PutAttachment(null); // force flush
-
-				return count;
+                RavenJToken.ReadFrom(jsonReader);
+            }
 		}
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader)

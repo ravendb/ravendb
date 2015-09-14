@@ -100,7 +100,7 @@ namespace Raven.Tests.Core.Replication
 
 				destination.DatabaseCommands.Put("docs/1", null, resolution.DataAsJson, resolution.Metadata);
 
-				Assert.DoesNotThrow(() => destination.DatabaseCommands.GetAttachment("docs/1"));
+				Assert.DoesNotThrow(() => destination.DatabaseCommands.Get("docs/1"));
 			}
 		}
 	}

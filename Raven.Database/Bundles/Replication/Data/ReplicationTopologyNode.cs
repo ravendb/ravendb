@@ -45,7 +45,6 @@ namespace Raven.Database.Bundles.Replication.Data
                 connection.DestinationToSourceState = sourceNode.State;
                 connection.StoredServerId = sourceNode.StoredServerId;
                 connection.LastDocumentEtag = sourceNode.LastDocumentEtag;
-                connection.LastAttachmentEtag = sourceNode.LastAttachmentEtag;
             }
 
             topology.Connections.Add(connection);
@@ -124,31 +123,26 @@ namespace Raven.Database.Bundles.Replication.Data
 	{
 		public Guid StoredServerId { get; set; }
 
-        [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentEtag { get; set; }
-
 		public Etag LastDocumentEtag { get; set; }
 
-		public static ReplicationTopologySourceNode Online(string serverUrl, Guid serverId, Etag lastDocumentEtag, Etag lastAttachmentEtag)
+		public static ReplicationTopologySourceNode Online(string serverUrl, Guid serverId, Etag lastDocumentEtag)
 		{
 			return new ReplicationTopologySourceNode
 				   {
 					   ServerUrl = serverUrl,
 					   State = ReplicatonNodeState.Online,
 					   LastDocumentEtag = lastDocumentEtag,
-					   LastAttachmentEtag = lastAttachmentEtag,
 					   StoredServerId = serverId
 				   };
 		}
 
-		public static ReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, Etag lastDocumentEtag, Etag lastAttachmentEtag)
+		public static ReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, Etag lastDocumentEtag)
 		{
 			return new ReplicationTopologySourceNode
 			{
 				ServerUrl = serverUrl,
 				State = ReplicatonNodeState.Offline,
 				LastDocumentEtag = lastDocumentEtag,
-				LastAttachmentEtag = lastAttachmentEtag,
 				StoredServerId = serverId
 			};
 		}

@@ -32,11 +32,6 @@ namespace Raven.Database.Smuggler
 			jsonWriter.WriteStartArray();
 			result.LastDocDeleteEtag = await Operations.ExportDocumentsDeletion(jsonWriter, result.LastDocDeleteEtag, maxEtagsToFetch.LastDocDeleteEtag.IncrementBy(1));
 			jsonWriter.WriteEndArray();
-
-			jsonWriter.WritePropertyName("AttachmentsDeletions");
-			jsonWriter.WriteStartArray();
-			result.LastAttachmentsDeleteEtag = await Operations.ExportAttachmentsDeletion(jsonWriter, result.LastAttachmentsDeleteEtag, maxEtagsToFetch.LastAttachmentsDeleteEtag.IncrementBy(1));
-			jsonWriter.WriteEndArray();
 		}
 
 		public override async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)

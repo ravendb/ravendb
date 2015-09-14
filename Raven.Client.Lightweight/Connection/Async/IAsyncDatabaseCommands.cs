@@ -26,7 +26,6 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -90,15 +89,6 @@ namespace Raven.Client.Connection.Async
         /// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
         /// <param name="token">The cancellation token.</param>
         Task DeleteAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Removes an attachment from a database.
-        /// </summary>
-        /// <param name="key">key of an attachment to delete</param>
-        /// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task DeleteAttachmentAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Perform a set based deletes using the specified index
@@ -166,34 +156,6 @@ namespace Raven.Client.Connection.Async
         /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
         /// <param name="token">The cancellation token.</param>
         Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Downloads a single attachment.
-        /// </summary>
-        /// <param name="key">key of the attachment you want to download</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task<Attachment> GetAttachmentAsync(string key, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Downloads attachment metadata for a multiple attachments.
-        /// </summary>
-        /// <param name="idPrefix">prefix for which attachments should be returned</param>
-        /// <param name="start">number of attachments that should be skipped</param>
-        /// <param name="pageSize">maximum number of attachments that will be returned</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Used to download attachment information for multiple attachments.
-        /// </summary>
-        /// <param name="start">indicates how many attachments should be skipped</param>
-        /// <param name="startEtag">ETag from which to start</param>
-        /// <param name="pageSize">maximum number of attachments that will be downloaded</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Get the low level bulk insert operation
@@ -353,14 +315,6 @@ namespace Raven.Client.Connection.Async
         Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Download attachment metadata for a single attachment.
-        /// </summary>
-        /// <param name="key">key of the attachment you want to download metadata for</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task<Attachment> HeadAttachmentAsync(string key, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.
         ///     <para>
         ///         This might be useful when you want to check the prior index deployment, if index will be overwritten, and if
@@ -495,17 +449,6 @@ namespace Raven.Client.Connection.Async
         /// <param name="metadata">document metadata</param>
         /// <param name="token">The cancellation token.</param>
         Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Puts a byte array as attachment with the specified key
-        /// </summary>
-        /// <param name="key">unique key under which attachment will be stored</param>
-        /// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-        /// <param name="data">attachment data</param>
-        /// <param name="metadata">attachment metadata</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -677,16 +620,6 @@ namespace Raven.Client.Connection.Async
         /// </param>
         /// <param name="token">The cancellation token.</param>
         Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        ///     Updates attachments metadata only.
-        /// </summary>
-        /// <param name="key">key under which attachment is stored</param>
-        /// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-        /// <param name="metadata">attachment metadata</param>
-        /// <param name="token">The cancellation token.</param>
-        [Obsolete("Use RavenFS instead.")]
-		Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Perform a set based update using the specified index

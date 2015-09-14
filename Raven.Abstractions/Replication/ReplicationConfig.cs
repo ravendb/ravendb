@@ -13,9 +13,6 @@ namespace Raven.Abstractions.Replication
 	public class ReplicationConfig
 	{
 		public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
-
-        [Obsolete("Use RavenFS instead.")]
-		public StraightforwardConflictResolution AttachmentConflictResolution { get; set; }
 	}
 
 	public enum StraightforwardConflictResolution

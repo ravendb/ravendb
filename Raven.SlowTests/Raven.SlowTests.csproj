@@ -108,7 +108,6 @@
     <Compile Include="Issues\RavenDB_1033.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
-    <Compile Include="Issues\RavenDB_1359 .cs" />
     <Compile Include="Issues\RavenDB_1411.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1603.cs" />

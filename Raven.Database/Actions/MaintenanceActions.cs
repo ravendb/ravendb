@@ -120,9 +120,7 @@ namespace Raven.Database.Actions
 	    {
 		    var tomstoneLists = new[]
 		    {
-			    Constants.RavenPeriodicExportsAttachmentsTombstones,
 			    Constants.RavenPeriodicExportsDocsTombstones,
-			    Constants.RavenReplicationAttachmentsTombstones,
 			    Constants.RavenReplicationDocsTombstones
 		    };
 

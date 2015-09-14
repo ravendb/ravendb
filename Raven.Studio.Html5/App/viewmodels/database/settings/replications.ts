@@ -312,7 +312,6 @@ class replications extends viewModelBase {
     useGlobal() {
         this.usingGlobal(true);
         if (this.globalReplicationConfig()) {
-            this.replicationConfig().attachmentConflictResolution(this.globalReplicationConfig().attachmentConflictResolution());
             this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());    
         }
         

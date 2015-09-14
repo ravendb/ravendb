@@ -17,11 +17,9 @@ namespace Raven.Database.Bundles.Replication.Utils
         internal static ReplicationStatistics GetReplicationInformation(DocumentDatabase database)
         {
             var mostRecentDocumentEtag = Etag.Empty;
-            var mostRecentAttachmentEtag = Etag.Empty;
             database.TransactionalStorage.Batch(accessor =>
             {
                 mostRecentDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-                mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
             });
 
             var replicationTask = database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
@@ -29,7 +27,6 @@ namespace Raven.Database.Bundles.Replication.Utils
             {
                 Self = database.ServerUrl,
                 MostRecentDocumentEtag = mostRecentDocumentEtag,
-                MostRecentAttachmentEtag = mostRecentAttachmentEtag,
                 Stats = replicationTask == null ? new List<DestinationStats>() : replicationTask.DestinationStats.Values.ToList()
             };
 

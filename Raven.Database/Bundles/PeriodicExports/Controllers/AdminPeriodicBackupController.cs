@@ -25,20 +25,15 @@ namespace Raven.Database.Bundles.PeriodicExports.Controllers
 		[RavenRoute("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
         {
-            var docEtagStr = GetQueryStringValue("docEtag");
-            var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
+            var docEtagStr = GetQueryStringValue("docEtag");           
 
-            Etag docEtag, attachmentEtag;
-
-            var docEtagParsed = Etag.TryParse(docEtagStr, out docEtag);
-            var attachmentEtagParsed = Etag.TryParse(attachmentEtagStr, out attachmentEtag);
-
-            if (docEtagParsed == false && attachmentEtagParsed == false)
+            Etag docEtag;
+            if (Etag.TryParse(docEtagStr, out docEtag) == false)
             {
                 return GetMessageWithObject(
                     new
                     {
-                        Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
+                        Error = "The query string variable 'docEtag' must be set to a valid etag"
                     }, HttpStatusCode.BadRequest);
             }
 
@@ -47,10 +42,6 @@ namespace Raven.Database.Bundles.PeriodicExports.Controllers
                 if (docEtag != null)
                 {
                     accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, docEtag);
-                }
-                if (attachmentEtag != null)
-                {
-                    accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, attachmentEtag);
                 }
             });
 

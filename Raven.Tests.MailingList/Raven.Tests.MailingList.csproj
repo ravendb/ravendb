@@ -160,7 +160,6 @@
     <Compile Include="AsyncShouldThrowConcurrencyException.cs" />
     <Compile Include="AsyncSpatial.cs" />
     <Compile Include="AsyncSpatialTest.cs" />
-    <Compile Include="AttachmentContentType.cs" />
     <Compile Include="AutoGenIndexLinqQuery.cs" />
     <Compile Include="BadQuery.cs" />
     <Compile Include="BAM.cs" />
@@ -388,7 +387,6 @@
     <Compile Include="RenamedProperty.cs" />
     <Compile Include="ResultTransformerMetaData .cs" />
     <Compile Include="Rob.cs" />
-    <Compile Include="RobinM\AttachmentsStatic.cs" />
     <Compile Include="RobStats\Entity.cs" />
     <Compile Include="RobStats\Opinion.cs" />
     <Compile Include="RobStats\StatisticsBug.cs" />
