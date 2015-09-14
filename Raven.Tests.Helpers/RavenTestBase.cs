@@ -551,10 +551,12 @@ namespace Raven.Tests.Helpers
 
 		    var statistics = databaseCommands.GetStatistics();
 		    var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-		    var errorMessage = string.Format("The indexes stayed stale for more than {0}{1}{2}",
+            var file = Path.GetTempFileName() + ".json";
+            File.WriteAllText(file, stats);
+		    var errorMessage = string.Format("The indexes stayed stale for more than {0},{1}Details at: {2}",
 		        timeout.Value,
 		        Environment.NewLine,
-		        stats);
+		        file);
 		    throw new TimeoutException(errorMessage);
 		}
 
