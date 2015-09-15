@@ -467,7 +467,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreatePullingRequest()
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET");
+			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET", timeout: options.PullingRequestTimeout);
 		}
 
 		private HttpJsonRequest CreateClientAliveRequest()
