@@ -11,8 +11,6 @@ namespace Raven.Database.TimeSeries.Controllers
 {
 	public abstract class BaseTimeSeriesApiController : ResourceApiController<TimeSeriesStorage, TimeSeriesLandlord>
 	{
-		public const string TenantNamePrefix = "ts/";
-
 		protected string TimeSeriesName
 		{
 			get

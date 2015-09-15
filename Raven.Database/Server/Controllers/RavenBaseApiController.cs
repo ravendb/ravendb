@@ -752,7 +752,9 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-        public abstract string ResourceName { get; protected set; }
+		public abstract string ResourcePrefix { get; }
+
+		public abstract string ResourceName { get; protected set; }
 
         private int innerRequestsCount;
 

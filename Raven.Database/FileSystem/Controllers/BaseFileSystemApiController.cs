@@ -28,8 +28,6 @@ namespace Raven.Database.FileSystem.Controllers
 {
 	public abstract class BaseFileSystemApiController : ResourceApiController<RavenFileSystem, FileSystemsLandlord>
 	{
-		public const string TenantNamePrefix = "fs/";
-
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
