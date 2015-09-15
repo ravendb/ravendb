@@ -10,8 +10,6 @@ namespace Raven.Database.Counters.Controllers
 {
 	public abstract class BaseCountersApiController : ResourceApiController<CounterStorage, CountersLandlord>
 	{
-		public const string TenantNamePrefix = "cs/";
-
 		protected string CountersName
 		{
 			get

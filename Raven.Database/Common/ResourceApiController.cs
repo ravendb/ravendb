@@ -24,7 +24,7 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Common
 {
-	public abstract class ResourceApiController<TResource, TResourceLandlord> : RavenBaseApiController, IResourceApiController<TResource> 
+	public abstract class ResourceApiController<TResource, TResourceLandlord> : RavenBaseApiController, IResourceApiController<TResource>
 		where TResource : IResourceStore
 		where TResourceLandlord : IResourceLandlord<TResource>
 	{
@@ -53,6 +53,36 @@ namespace Raven.Database.Common
 				}
 
 				return _maxSecondsForTaskToWaitForResourceToLoad.Value;
+			}
+		}
+
+		private string _resourcePrefix;
+		public override string ResourcePrefix
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(_resourcePrefix))
+				{
+					switch (ResourceType)
+					{
+						case ResourceType.Counter:
+							_resourcePrefix = "cs/";
+							break;
+						case ResourceType.TimeSeries:
+							_resourcePrefix = "ts/";
+							break;
+						case ResourceType.Database:
+							_resourcePrefix = string.Empty;
+							break;
+						case ResourceType.FileSystem:
+							_resourcePrefix = "fs/";
+							break;
+						default:
+							throw new NotSupportedException(ResourceType.ToString());
+					}
+				}
+
+				return _resourcePrefix;
 			}
 		}
 
