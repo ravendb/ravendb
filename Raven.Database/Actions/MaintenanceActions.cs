@@ -54,13 +54,8 @@ namespace Raven.Database.Actions
 
             string storage;
             if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-            {
-	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-					storage = InMemoryRavenConfiguration.VoronTypeName;
-	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-				else
-					storage = InMemoryRavenConfiguration.EsentTypeName;
+            {	          
+			    storage = InMemoryRavenConfiguration.VoronTypeName;
             }
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
@@ -85,14 +80,6 @@ namespace Raven.Database.Actions
                 {
                     throw new InvalidOperationException("Backup is already running");
                 }
-            }
-
-            bool enableIncrementalBackup;
-            if (incrementalBackup &&
-                TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(Database.Configuration.Settings[Constants.Esent.CircularLog], out enableIncrementalBackup) == false || enableIncrementalBackup))
-            {
-                throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
             }
 
             if (incrementalBackup &&

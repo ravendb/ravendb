@@ -20,6 +20,7 @@ using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Smuggler
 {
@@ -58,10 +59,12 @@ namespace Raven.Tests.FileSystem.Smuggler
 			}
 		}
 
-		[Fact, Trait("Category", "Smuggler")]
-		public async Task ShouldNotThrowIfFileSystemExists()
+		[Trait("Category", "Smuggler")]
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task ShouldNotThrowIfFileSystemExists(string storage)
 		{
-			using (var store = NewStore(fileSystemName: "DoesExists", requestedStorage: "esent"))
+            using (var store = NewStore(fileSystemName: "DoesExists", requestedStorage: storage))
 			{
 				var server = GetServer();
 				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");                

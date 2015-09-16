@@ -23,10 +23,5 @@ namespace Raven.Abstractions.Util
 		{
 		    return x.CompareTo(y) >= 0;
 		}
-
-        public static byte[] TransformToValueForEsentSorting(this Etag etag)
-        {
-            return etag.ToByteArray();
-        }
 	}
 }

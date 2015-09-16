@@ -59,7 +59,7 @@ namespace Raven.Tests.Issues
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 RunInMemory = false,
                 Port = port,
-                DefaultStorageTypeName = "esent"
+                DefaultStorageTypeName = "voron"
             };
 
             if (removeDataDirectory)

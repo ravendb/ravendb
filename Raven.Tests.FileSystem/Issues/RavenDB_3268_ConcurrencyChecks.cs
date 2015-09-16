@@ -17,8 +17,7 @@ namespace Raven.Tests.FileSystem.Issues
 	public class RavenDB_3268_ConcurrencyChecks : RavenFilesTestBase
 	{
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -63,8 +62,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnMetadataUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -111,8 +109,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnContentUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -155,8 +152,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnContentUpdate(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -197,8 +193,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnRename(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -241,8 +236,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnRename(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -283,8 +277,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnDelete(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))
@@ -327,8 +320,7 @@ namespace Raven.Tests.FileSystem.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnDelete(string storage)
 		{
 			using (var store = NewStore(requestedStorage: storage))

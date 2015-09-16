@@ -271,8 +271,6 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
 				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-			else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
 			ravenConfiguration.CustomizeValuesForDatabaseTenant(databaseName);
 			ravenConfiguration.Initialize();
@@ -337,7 +335,6 @@ namespace Raven.Database.Server.Controllers.Admin
 
 				    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
 					databaseDocument.Settings.Remove(Constants.RavenIndexPath);
-					databaseDocument.Settings.Remove(Constants.RavenEsentLogsPath);
 					databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
 
 				    if (restoreRequest.IndexesLocation != null)

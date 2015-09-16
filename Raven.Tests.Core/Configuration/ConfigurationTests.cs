@@ -252,7 +252,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxIndexCommitPointStoreTimeInterval.Value, actual => actual.MaxIndexCommitPointStoreTimeInterval);
 			configurationComparer.Assert(expected => expected.MinIndexingTimeIntervalToStoreCommitPoint.Value, actual => actual.MinIndexingTimeIntervalToStoreCommitPoint);
 			configurationComparer.Assert(expected => expected.MaxNumberOfStoredCommitPoints.Value, actual => actual.MaxNumberOfStoredCommitPoints);
-            // allow +- 16MB tollerance in memory during the test (can happen in slow machines / debug):
+            // allow +- 16MB tolerance in memory during the test (can happen in slow machines / debug):
 			configurationComparer.AssertInRange(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb, 16);
 			configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
 			configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
@@ -305,7 +305,6 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Cluster.MaxLogLengthBeforeCompaction.Value, actual => actual.Cluster.MaxLogLengthBeforeCompaction);
 			configurationComparer.Assert(expected => expected.TempPath.Value, actual => actual.TempPath);
 			
-			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
 			configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
@@ -325,7 +324,6 @@ namespace Raven.Tests.Core.Configuration
 			Assert.Equal("Open", inMemoryConfiguration.ExposeConfigOverTheWire);
 			Assert.True(inMemoryConfiguration.CreateAnalyzersDirectoryIfNotExisting);
 			Assert.True(inMemoryConfiguration.CreatePluginsDirectoryIfNotExisting);
-			Assert.Equal(null, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);
 			Assert.Equal(null, inMemoryConfiguration.Storage.Voron.JournalsStoragePath);
 
 			configurationComparer.Validate();

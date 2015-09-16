@@ -329,11 +329,11 @@ namespace Raven.Tests.Smuggler
                     session.SaveChanges();
                 }
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus,PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus,PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsEtag);
 
                 store.DatabaseCommands.Delete(userId, null);
 
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
+				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsDeletionEtag);
 
             }
 

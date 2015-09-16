@@ -252,7 +252,7 @@
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
-    <Compile Include="FragementFail.cs" />
+    <Compile Include="FragmentFail.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
     <Compile Include="gaz.cs" />
@@ -262,7 +262,6 @@
     <Compile Include="GuidProjection.cs" />
     <Compile Include="Hancock.cs" />
     <Compile Include="HeadAsync.cs" />
-    <Compile Include="Hendrik.cs" />
     <Compile Include="HierarchicalInheritanceIndexing.cs" />
     <Compile Include="HierarchyTests.cs" />
     <Compile Include="HiloTests.cs" />
@@ -384,7 +383,6 @@
     <Compile Include="RavenDB669.cs" />
     <Compile Include="RavenDbBugs.cs" />
     <Compile Include="RavenDbPutTest.cs" />
-    <Compile Include="RavenDbRecoveryTests.cs" />
     <Compile Include="RavenDeserializationBug.cs" />
     <Compile Include="RavenDynamicTests.cs" />
     <Compile Include="RavenProjectionGuid.cs" />
@@ -409,7 +407,6 @@
     <Compile Include="Sean.cs" />
     <Compile Include="SeanBuchanan.cs" />
     <Compile Include="SearchByMapReduceExample.cs" />
-    <Compile Include="SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="SetBased.cs" />
     <Compile Include="ShardedFacets.cs" />
     <Compile Include="SkippedResults.cs" />

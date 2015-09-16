@@ -3,15 +3,18 @@ using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.MailingList
 {
-	public class ConcurrencyTests : RavenTestBase
+	public class ConcurrencyTests : RavenTest
 	{
-		[Fact]
-		public void CanSaveReferencingAndReferencedDocumentsInOneGo()
+        [Theory]
+        [PropertyData("Storages")]
+		public void CanSaveReferencingAndReferencedDocumentsInOneGo(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage:"esent")) 
+			using (var store = NewDocumentStore(requestedStorage: storage)) 
 			{
 				new Sections().Execute(store);
 

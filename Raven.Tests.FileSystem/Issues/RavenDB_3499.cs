@@ -14,7 +14,7 @@ namespace Raven.Tests.FileSystem.Issues
 	{
 		[Theory]
 		[PropertyData("Storages")]
-		public async Task TestLongEsentFileName(string requestedStorage)
+		public async Task TestLongFileName(string requestedStorage)
 		{
 			using (var db = NewStore(requestedStorage: requestedStorage))
 			{
@@ -56,7 +56,7 @@ namespace Raven.Tests.FileSystem.Issues
 				client.UploadAsync(longPath, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}});
 
 				longPath = string.Concat(longPath, "1");
-				Assert.Throws<AggregateException>(() =>
+                Assert.Throws<AggregateException>(() =>
 				{
 					client.UploadAsync(longPath, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}}).Wait();
 					return null;
@@ -64,7 +64,7 @@ namespace Raven.Tests.FileSystem.Issues
 
 				var shortName = "file.file";
 				client.UploadAsync(shortName, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}}).Wait();
-				Assert.Throws<AggregateException>(() =>
+                Assert.Throws<AggregateException>(() =>
 				{
 					client.RenameAsync(shortName, longPath).Wait();
 					return null;

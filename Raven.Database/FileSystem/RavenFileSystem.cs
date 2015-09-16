@@ -144,6 +144,8 @@ namespace Raven.Database.FileSystem
 
         internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
+            //TODO: Check if we need all this complexity at all. 
+
             // We select the most specific.
             var storageType = configuration.FileSystem.DefaultStorageTypeName;
             if (storageType == null) // We choose the system wide if not defined.
@@ -160,11 +162,8 @@ namespace Raven.Database.FileSystem
 						throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
 					}
                     return new TransactionalStorage(configuration);
-                case InMemoryRavenConfiguration.EsentTypeName:
-                    return new Storage.Esent.TransactionalStorage(configuration);
-                
-                default: // We choose esent by default.
-                    return new Storage.Esent.TransactionalStorage(configuration);
+                default: // We choose voron by default.
+                    return new TransactionalStorage(configuration);
             }
         }
 

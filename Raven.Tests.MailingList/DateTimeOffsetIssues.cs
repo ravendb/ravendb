@@ -18,9 +18,10 @@ namespace Raven.Tests.MailingList
 		[Theory]
 		[InlineData("2011-11-05T13:09:17.5402774")]
 		[InlineData("2011-11-05T13:09:17.540277")]	
+
 		public void Adding_DateTimeOffset_To_metadata_should_fetch_it_as_DateTimeOffset(string expectedDateTimeString)
 		{
-			using (var _documentStore = NewRemoteDocumentStore(fiddler: true, requestedStorage: "esent", runInMemory: false))
+			using (var _documentStore = NewRemoteDocumentStore(runInMemory: false))
 			{
 
 				// Arrange
@@ -84,7 +85,7 @@ namespace Raven.Tests.MailingList
 		[InlineData("2011-11-05T13:09:17.540277")]
 		public void Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)
 		{
-			using(var _documentStore = NewRemoteDocumentStore(fiddler:true,requestedStorage:"esent",runInMemory:false))
+			using(var _documentStore = NewRemoteDocumentStore(runInMemory:false))
 			{
 				
 				// Arrange

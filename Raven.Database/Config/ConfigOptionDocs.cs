@@ -17,8 +17,7 @@ namespace Raven.Database.Config
 
 			// Paths
 			{"Raven/DataDir", "string", null,"The path for the database directory. Can use ~\\ as the root, in which case the path will start from the server base directory. Default: ~\\Data."},
-			{"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Indexes."},
-			{"Raven/Esent/LogsPath", "string", null,"The path for the esent logs. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Logs."},
+			{"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Indexes."},			
 
 			// Authentication
 			{"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
@@ -44,7 +43,7 @@ namespace Raven.Database.Config
 			{"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
-			{"Raven/StorageTypeName", "string", "esent, voron or Assembly Qualified Name", "The storage engine to use for the database. Default: esent."},
+			{"Raven/StorageTypeName", "string", "voron or Assembly Qualified Name", "The storage engine to use for the database. Default: voron."},
 
 			// Indexing
 			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
@@ -81,7 +80,6 @@ namespace Raven.Database.Config
 			{"Raven/CreateAutoIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of auto indexes on dynamic queries"},
 			
             // Memory
-			{"Raven/MemoryCacheLimitMegabytes", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
 			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
 			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned."},
 			{"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 60 minutes"},

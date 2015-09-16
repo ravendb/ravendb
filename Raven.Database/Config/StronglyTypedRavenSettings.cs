@@ -22,8 +22,6 @@ namespace Raven.Database.Config
 
 		public VoronConfiguration Voron { get; private set; }
 
-		public EsentConfiguration Esent { get; private set; }
-
 		public PrefetcherConfiguration Prefetcher { get; private set; }
 
 		public FileSystemConfiguration FileSystem { get; private set; }
@@ -46,7 +44,6 @@ namespace Raven.Database.Config
 		{
 			Replication = new ReplicationConfiguration();
 			Voron = new VoronConfiguration();
-			Esent = new EsentConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			FileSystem = new FileSystemConfiguration();
 			Counter = new CounterConfiguration();
@@ -242,13 +239,7 @@ namespace Raven.Database.Config
 			Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
 			Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
-
-			var txJournalPath = settings[Constants.RavenTxJournalPath];
-			var esentLogsPath = settings[Constants.RavenEsentLogsPath];
-
-			Voron.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(txJournalPath) ? esentLogsPath : txJournalPath, (string)null);
-
-			Esent.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(esentLogsPath) ? txJournalPath : esentLogsPath, (string)null);
+			Voron.JournalsStoragePath = new StringSetting(settings[Constants.RavenTxJournalPath], (string)null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
@@ -283,7 +274,7 @@ namespace Raven.Database.Config
             Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);
             Cluster.MaxStepDownDrainTime = new TimeSpanSetting(settings["Raven/Cluster/MaxStepDownDrainTime"], RaftEngineOptions.DefaultMaxStepDownDrainTime, TimeSpanArgumentType.FromParse);
 
-			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
+			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], "voron");
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
@@ -315,12 +306,13 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-            var cacheSizeMaxSetting = new IntegerSetting(settings[Constants.Esent.CacheSizeMax], 1024);
+            // TODO: This used to use an esent key. Ensure that this is not needed anymore and kill this method. 
+            var cacheSizeMaxSetting = 1024;
 
 			// we need to leave ( a lot ) of room for other things as well, so we min the cache size
 			var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
 				// reduce the unmanaged cache size from the default min
-									cacheSizeMaxSetting.Value;
+                                    cacheSizeMaxSetting;
 
 			if (val < 0)
 				return 128; // if machine has less than 1024 MB, then only use 128 MB 
@@ -491,11 +483,6 @@ namespace Raven.Database.Config
 			public StringSetting JournalsStoragePath { get; set; }
 
 			public BooleanSetting AllowOn32Bits { get; set; }
-		}
-
-		public class EsentConfiguration
-		{
-			public StringSetting JournalsStoragePath { get; set; }
 		}
 
 		public class IndexingConfiguration

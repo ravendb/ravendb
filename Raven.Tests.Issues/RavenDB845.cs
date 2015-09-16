@@ -5,10 +5,11 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB845 : RavenTestBase
+	public class RavenDB845 : RavenTest
 	{
 		public override void Dispose()
 		{
@@ -22,19 +23,21 @@ namespace Raven.Tests.Issues
 			public string Name { get; set; }
 		}
 
-		[Fact]
-		public void LastModifiedDate_IsUpdated_Local()
+        [Theory]
+        [PropertyData("Storages")]
+        public void LastModifiedDate_IsUpdated_Local(string storage)
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+            using (var documentStore = NewDocumentStore(requestedStorage: storage))
 			{
 				DoTest(documentStore);
 			}
 		}
 
-		[Fact]
-		public void LastModifiedDate_IsUpdated_Remote()
+        [Theory]
+        [PropertyData("Storages")]
+        public void LastModifiedDate_IsUpdated_Remote(string storage)
 		{
-			using (var documentStore = NewRemoteDocumentStore())
+            using (var documentStore = NewRemoteDocumentStore(requestedStorage: storage))
 			{
 				DoTest(documentStore);
 			}

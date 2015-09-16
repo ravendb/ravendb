@@ -26,7 +26,7 @@ namespace Raven.Tests.Bundles.LiveTest
 		}
 
 		[Fact]
-		public void PutTriggerShouldEnableQuotasAndVoron()
+		public void PutTriggerShouldEnableQuotas()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -54,7 +54,6 @@ namespace Raven.Tests.Bundles.LiveTest
 				databaseDocument.Settings[Constants.DocsHardLimit] = "456";
 				databaseDocument.Settings[Constants.DocsSoftLimit] = "654";
                 databaseDocument.Settings[Constants.RunInMemory] = "false";
-				databaseDocument.Settings["Raven/StorageEngine"] = "esent";
 
 				store.DatabaseCommands.Put("Raven/Databases/Northwind", null, RavenJObject.FromObject(databaseDocument), document.Metadata);
 
@@ -79,7 +78,6 @@ namespace Raven.Tests.Bundles.LiveTest
 			Assert.Null(databaseDocument.Settings[Constants.DocsSoftLimit]);
 
             Assert.True(bool.Parse(databaseDocument.Settings[Constants.RunInMemory]));
-			Assert.Equal(InMemoryRavenConfiguration.VoronTypeName, databaseDocument.Settings["Raven/StorageEngine"]);
 		}
 	}
 }

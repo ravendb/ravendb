@@ -30,7 +30,7 @@ namespace Raven.Tests.Document
 
 		public DocumentStoreEmbeddedTests()
 		{
-            documentStore = NewDocumentStore(requestedStorage: "esent");
+            documentStore = NewDocumentStore();
 		}
 
 		public override void Dispose()

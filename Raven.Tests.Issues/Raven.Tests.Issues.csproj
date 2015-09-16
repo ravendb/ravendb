@@ -212,12 +212,10 @@
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />
-    <Compile Include="RavenDB-2334.cs" />
     <Compile Include="RavenDB-2643.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
-    <Compile Include="RavenDB1067.cs" />
     <Compile Include="RavenDB1229.cs" />
     <Compile Include="RavenDB1247.cs" />
     <Compile Include="RavenDB1259.cs" />
@@ -360,7 +358,6 @@
     <Compile Include="RavenDB_2314.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="RavenDB_2387.cs" />
     <Compile Include="RavenDB_2424.cs" />
     <Compile Include="RavenDB_2391.cs" />
     <Compile Include="RavenDB_2432.cs" />

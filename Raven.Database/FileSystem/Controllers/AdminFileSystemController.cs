@@ -265,14 +265,6 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
-            bool enableIncrementalBackup;
-            if (incrementalBackup &&
-                transactionalStorage is Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(FileSystem.Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
-            {
-                throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
-            }
-
             if (incrementalBackup &&
                 transactionalStorage is Storage.Voron.TransactionalStorage &&
 				FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
@@ -433,11 +425,8 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
-            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.EsentTypeName;
-            else
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
 
+            ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
             ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
 

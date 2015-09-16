@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 
-using Raven.Database.FileSystem.Storage.Esent;
-
 namespace Raven.Database.FileSystem.Storage
 {
 	public class SignatureReadOnlyStream : Stream

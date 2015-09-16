@@ -362,7 +362,7 @@ namespace Raven.Database.Smuggler
 		public async Task ImportData(SmugglerImportOptions<CounterConnectionStringOptions> importOptions)
 		{
 			if (String.IsNullOrWhiteSpace(importOptions.FromFile) && importOptions.FromStream == null)
-				throw new ArgumentException("Missing from paramter from import options - be sure to define either FromFile or FromStream property");
+				throw new ArgumentException("Missing from parameter from import options - be sure to define either FromFile or FromStream property");
 
 			if(importOptions.To == null)
 				throw new ArgumentException("Missing To parameter from importOptions - do not know where to import to.");

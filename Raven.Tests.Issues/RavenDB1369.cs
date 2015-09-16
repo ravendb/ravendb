@@ -88,7 +88,6 @@ namespace Raven.Tests.Issues
             {
                 documentStore.Configuration.DataDirectory = dataDir;
                 documentStore.Configuration.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.Esent.JournalsStoragePath = jouranlDir;
 				documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
             }))
             {
@@ -137,7 +136,6 @@ namespace Raven.Tests.Issues
                 IndexStoragePath = indexesDir
             };
 
-			ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
 			ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
 
             using (var db = new DocumentDatabase(ravenConfiguration, null))
@@ -210,7 +208,6 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {Constants.Esent.CircularLog, "false"},
                         {Constants.Voron.AllowIncrementalBackups, "true"}
                     }
                 });

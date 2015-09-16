@@ -97,9 +97,6 @@
     <LuceneQuery-Raven-Database-IndexingParser>$(ProjectDir)Indexing\LuceneQuery</LuceneQuery-Raven-Database-IndexingParser>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop">
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
       <Private>True</Private>
@@ -406,9 +403,7 @@
     <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPool.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
     <Compile Include="FileSystem\Storage\CopyFileOperation.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From05To06.cs" />
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
@@ -457,8 +452,6 @@
     <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileCodec.cs" />
     <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
     <Compile Include="Indexing\IndexReplacer.cs" />
     <Compile Include="Impl\Generators\JsonCodeGenerator.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
@@ -489,8 +482,6 @@
     <Compile Include="FileSystem\Controllers\HttpTraceFsController.cs" />
     <Compile Include="FileSystem\Storage\BaseBackupOperation.cs" />
     <Compile Include="FileSystem\Storage\BaseRestoreOperation.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Backup\BackupOperation.cs" />
-    <Compile Include="FileSystem\Storage\Esent\Backup\RestoreOperation.cs" />
     <Compile Include="FileSystem\Storage\Voron\Backup\BackupOperation.cs" />
     <Compile Include="FileSystem\Storage\Voron\Backup\RestoreOperation.cs" />
     <Compile Include="FileSystem\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
@@ -521,8 +512,6 @@
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
-    <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\RemainingReductionPerLevel.cs" />
     <Compile Include="Storage\TransactionalStorageHelper.cs" />
@@ -659,8 +648,6 @@
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\CancellationTokenSource.cs" />
-    <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
-    <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
@@ -740,20 +727,14 @@
     <Compile Include="FileSystem\Search\IndexStorage.cs" />
     <Compile Include="FileSystem\Search\SimpleFilesQueryParser.cs" />
     <Compile Include="FileSystem\Storage\DeleteFileOperation.cs" />
-    <Compile Include="FileSystem\Storage\Esent\EsentExtension.cs" />
     <Compile Include="FileSystem\Storage\Exceptions\FileExistsException.cs" />
     <Compile Include="FileSystem\Storage\IStorageActionsAccessor.cs" />
     <Compile Include="FileSystem\Storage\ITransactionalStorage.cs" />
     <Compile Include="FileSystem\Storage\FileAndPagesInformation.cs" />
     <Compile Include="FileSystem\Storage\PageInformation.cs" />
     <Compile Include="FileSystem\Storage\RenameFileOperation.cs" />
-    <Compile Include="FileSystem\Storage\Esent\SchemaCreator.cs" />
     <Compile Include="FileSystem\Storage\SignatureReadOnlyStream.cs" />
-    <Compile Include="FileSystem\Storage\Esent\StorageActionsAccessor.cs" />
-    <Compile Include="FileSystem\Storage\Esent\TransactionalStorageConfigurator.cs" />
     <Compile Include="FileSystem\Storage\StorageConstants.cs" />
-    <Compile Include="FileSystem\Storage\Esent\TableColumnsCache.cs" />
-    <Compile Include="FileSystem\Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="FileSystem\Storage\Voron\IdGenerator.cs" />
     <Compile Include="FileSystem\Storage\Voron\Impl\Index.cs" />
     <Compile Include="FileSystem\Storage\Voron\Impl\Table.cs" />
@@ -1258,45 +1239,6 @@
     <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DatabaseSizeInformation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
-    <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
-    <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
-    <Compile Include="Storage\Esent\Backup\RestoreOperation.cs" />
-    <Compile Include="Storage\Esent\Debug\StorageSizes.cs" />
-    <Compile Include="Storage\Esent\EsentExtension.cs" />
-    <Compile Include="Storage\Esent\SchemaCreator.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From38To39.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From37To38.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From48To50.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
-    <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
-    <Compile Include="Storage\Esent\StorageActions\General.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
-    <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
-    <Compile Include="Storage\Esent\StorageActions\OptimizedDeleter.cs" />
-    <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />
-    <Compile Include="Storage\Esent\StorageActions\TableProperties.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Tasks.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Util.cs" />
-    <Compile Include="Storage\Esent\TableColumnsCache.cs" />
-    <Compile Include="Storage\Esent\TransactionalStorage.cs" />
-    <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
     <Compile Include="Storage\IIndexingStorageActions.cs" />

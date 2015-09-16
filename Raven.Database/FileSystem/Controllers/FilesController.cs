@@ -22,7 +22,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Database.Extensions;
-using Microsoft.Isam.Esent.Interop;
+using Voron.Impl.Paging;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -294,7 +294,7 @@ namespace Raven.Database.FileSystem.Controllers
             rename = FileHeader.Canonize(rename);
 		    var etag = GetEtag();
 
-		    if (rename.Length > SystemParameters.KeyMost)
+            if (rename.Length > AbstractPager.GetMaxKeySize(false))
 		    {
 				if (Log.IsDebugEnabled)
 					Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
@@ -353,10 +353,11 @@ namespace Raven.Database.FileSystem.Controllers
 			var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			var etag = GetEtag();
 
-			if (name.Length > SystemParameters.KeyMost)
+            if (name.Length > AbstractPager.GetMaxKeySize(false))
 			{
 				if (Log.IsDebugEnabled)
 					Log.Debug("File '{0}' was not created due to illegal name length", name);
+
 				return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
 			}
 

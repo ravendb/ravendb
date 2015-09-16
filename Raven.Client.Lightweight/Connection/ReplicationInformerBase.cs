@@ -237,7 +237,7 @@ namespace Raven.Client.Connection
             if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
-                    .ConfigureAwait(false);
+                                                .ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
@@ -258,7 +258,9 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error,token) == false)
+
+                bool isPrimary = replicationDestination.Url == primaryOperation.Url;
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, isPrimary, operationResult.Error, token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
@@ -272,9 +274,9 @@ namespace Raven.Client.Connection
                 {
                     operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
-                    // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
                     if (operationResult.Success)
                         return operationResult.Result;
+
 					FailureCounters.IncrementFailureCount(replicationDestination.Url);
                 }
             }
@@ -291,17 +293,19 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
  			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken));
 		}
 
-        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
-            OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
+        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
         {
 			var tryWithPrimaryCredentials = FailureCounters.IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
+            
             bool shouldTryAgain = false;
-
             try
             {
-				cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
+                cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
+                
                 var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ClusterInformation) : operationMetadata).ConfigureAwait(false);
-				FailureCounters.ResetFailureCount(operationMetadata.Url);
+                
+                FailureCounters.ResetFailureCount(operationMetadata.Url);
+                
                 return new AsyncOperationResult<T>
                 {
                     Result = result,
@@ -310,8 +314,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             }
             catch (Exception e)
             {
-                var ae = e as AggregateException;
                 ErrorResponseException errorResponseException;
+
+                var ae = e as AggregateException;                
                 if (ae != null)
                 {
                     errorResponseException = ae.ExtractSingleInnerException() as ErrorResponseException;
@@ -320,9 +325,10 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                 {
                     errorResponseException = e as ErrorResponseException;
                 }
+
                 if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && errorResponseException != null)
                 {
-					FailureCounters.IncrementFailureCount(operationMetadata.Url);
+                    FailureCounters.IncrementFailureCount(operationMetadata.Url);
 
                     if (errorResponseException.StatusCode == HttpStatusCode.Unauthorized)
                     {
@@ -336,9 +342,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                         throw;
 
                     bool wasTimeout;
-					var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
-	                
-					if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
+                    var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
+
+                    if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
                     {
                         return new AsyncOperationResult<T>
                         {
@@ -349,17 +355,18 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     }
 
                     if (isServerDown)
-		{
-						return new AsyncOperationResult<T>
-			{
-							Success = false,
-							WasTimeout = wasTimeout,
-							Error = e
-						};
-			}
-					throw;
-		    }
-			}
+                    {
+                        return new AsyncOperationResult<T>
+                        {
+                            Success = false,
+                            WasTimeout = wasTimeout,
+                            Error = e
+                        };
+                    }
+
+                    throw;
+                }
+            }
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
 		}
 

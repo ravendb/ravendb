@@ -8,6 +8,7 @@ using Raven.Tests.Common;
 using Xunit;
 using Raven.Client.Indexes;
 using Raven.Abstractions.Indexing;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.Indexing
 {
@@ -30,10 +31,11 @@ namespace Raven.Tests.Bugs.Indexing
 			}
 		}
 
-		[Fact]
-		public void WillNotProduceAnyErrors()
+        [Theory]
+        [PropertyData("Storages")]
+		public void WillNotProduceAnyErrors(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var indexCreationTask = new Companies_ByTurnover();
 				indexCreationTask.Execute(store);

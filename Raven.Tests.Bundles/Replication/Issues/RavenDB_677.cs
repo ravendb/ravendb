@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
         [PropertyData("Storages")]
         public void CanDeleteTombstones(string requestedStorage)
         {
-            var store1 = (DocumentStore)CreateStore(databaseName: Constants.SystemDatabase, requestedStorageType: requestedStorage);
+            var store1 = (DocumentStore)CreateStore(databaseName: Constants.SystemDatabase, requestedStorage: requestedStorage);
             var x = store1.DatabaseCommands.Put("ayende", null, new RavenJObject(), new RavenJObject());
             store1.DatabaseCommands.Delete("ayende", null);
             servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
@@ -48,7 +48,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
         [PropertyData("Storages")]
         public void CanDeleteTombstonesButNotAfterTheSpecifiedEtag(string requestedStorage)
         {
-            var store1 = (DocumentStore)CreateStore(databaseName: Constants.SystemDatabase, requestedStorageType: requestedStorage);
+            var store1 = (DocumentStore)CreateStore(databaseName: Constants.SystemDatabase, requestedStorage: requestedStorage);
             store1.DatabaseCommands.Put("ayende", null, new RavenJObject(), new RavenJObject());
             store1.DatabaseCommands.Delete("ayende", null);
             store1.DatabaseCommands.Put("rahien", null, new RavenJObject(), new RavenJObject());

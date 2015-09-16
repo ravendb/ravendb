@@ -41,7 +41,6 @@ namespace Raven.Tests.Indexes.Recovery
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.DefaultStorageTypeName = "esent";
 			configuration.FlushIndexToDiskSizeInMb = 0;
 		}
 

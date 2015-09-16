@@ -6,10 +6,11 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1520 : RavenTestBase
+	public class RavenDB_1520 : RavenTest
 	{
 		private readonly string BackupDir;
 		private readonly string DataDir;
@@ -20,10 +21,11 @@ namespace Raven.Tests.Issues
 			DataDir = NewDataPath("DataDir");
 		}
 
-		[Fact]
-		public void Backup_and_restore_of_system_database_should_work()
+        [Theory]
+        [PropertyData("Storages")]
+		public void Backup_and_restore_of_system_database_should_work(string storage)
 		{
-			using (var ravenServer = GetNewServer(runInMemory: false,requestedStorage:"esent"))
+			using (var ravenServer = GetNewServer(runInMemory: false,requestedStorage: storage))
 			using (var _ = NewRemoteDocumentStore(ravenDbServer: ravenServer, databaseName: "fooDB", runInMemory: false))
 			{
 			    using (var systemDatabaseBackupOperation = new DatabaseBackupOperation(new BackupParameters

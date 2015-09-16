@@ -5,15 +5,17 @@ using Raven.Abstractions.Indexing;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Indexes
 {
 	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
-		[Fact]
-		public void WillNotProduceAnyErrors()
+        [Theory]
+        [PropertyData("Storages")]
+		public void WillNotProduceAnyErrors(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{

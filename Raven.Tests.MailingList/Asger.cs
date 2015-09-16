@@ -5,15 +5,17 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
 	public class Asger : RavenTest
 	{
-		[Fact]
-		public void putting_and_patching_in_same_transaction()
+        [Theory]
+        [PropertyData("Storages")]
+		public void putting_and_patching_in_same_transaction(string storage)
 		{
-            using (var store = NewDocumentStore(requestedStorage: "esent"))
+            using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				Assert.DoesNotThrow(() =>
 				{

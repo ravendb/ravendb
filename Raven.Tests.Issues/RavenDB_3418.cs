@@ -68,6 +68,6 @@ namespace Raven.Tests.Issues
         }
 
         private static TimeSpan timeout = TimeSpan.FromSeconds(120);
-        private static Dictionary<string,int> storageToExpectedLength = new Dictionary<string, int>(){{"voron",5},{"esent",3}}; 
+        private static Dictionary<string,int> storageToExpectedLength = new Dictionary<string, int>(){{"voron",5}}; 
     }
 }

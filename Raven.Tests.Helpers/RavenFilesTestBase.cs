@@ -44,7 +44,6 @@ namespace Raven.Tests.Helpers
                 return new[]
 				{
 					new object[] {"voron"},
-					new object[] {"esent"}
 				};
             }
         }

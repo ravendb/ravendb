@@ -111,7 +111,6 @@ task Test -depends Compile {
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
 		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
 		"$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
 	Write-Host $test_prjs
 	
@@ -121,8 +120,8 @@ task Test -depends Compile {
 	$hasErrors = $false
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'esent';
-			Write-Host "Testing $_ (esent)"
+			$env:raventest_storage_engine = 'voron';
+			Write-Host "Testing $_ (voron)"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
@@ -150,8 +149,8 @@ task StressTest -depends Compile {
 		Write-Host "Testing $_"
 		
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'esent';
-			Write-Host "Testing $_ (esent)"
+			$env:raventest_storage_engine = 'voron';
+			Write-Host "Testing $_ (voron)"
 			&"$xUnit" "$_"
 		}
 		else {

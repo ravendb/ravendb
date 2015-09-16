@@ -120,15 +120,8 @@ namespace Raven.Tests.Storage.Voron
 			Type exception2Type = null;
 			string exception1Message = null;
 			string exception2Message = null;
-			if (requestedStorage == "esent")
-			{
-				exception1Type = typeof(EsentKeyDuplicateException);
-				exception1Message = "Illegal duplicate key";
 
-				exception2Type = typeof(EsentKeyDuplicateException);
-				exception2Message = "Illegal duplicate key";
-			}
-			else if (requestedStorage == "voron")
+			if (requestedStorage == "voron")
 			{
 				exception1Type = typeof(ArgumentException);
 				exception1Message = "There is already an index with the name: '101'";

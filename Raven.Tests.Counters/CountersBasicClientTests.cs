@@ -91,7 +91,7 @@ namespace Raven.Tests.Counters
 		[Theory]
 		[InlineData(2)]
 		[InlineData(-2)]
-		public async Task CountrsReset_should_work(int delta)
+		public async Task CountersReset_should_work(int delta)
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{

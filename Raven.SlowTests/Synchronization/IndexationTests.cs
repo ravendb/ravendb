@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Synchronization
 {
@@ -59,10 +60,12 @@ namespace Raven.SlowTests.Synchronization
 
 			}
 		}
-		[Fact]
-		public void IndexerTest()
+
+        [Theory]
+        [PropertyData("Storages")]
+		public void IndexerTest(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false))
+			using (var store = NewDocumentStore(requestedStorage: storage, configureStore: s => s.Conventions.AcceptGzipContent = false))
 			{
 				var index = new RavenDocumentsByEntityName();
 				index.Execute(store);
@@ -91,10 +94,11 @@ namespace Raven.SlowTests.Synchronization
 			}
 		}
 
-		[Fact]
-		public void ReducerTest()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ReducerTest(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage:"esent", configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
+			using (var store = NewDocumentStore(requestedStorage: storage, configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
 			{
 				var index1 = new RavenDocumentsByEntityName();
 				index1.Execute(store);

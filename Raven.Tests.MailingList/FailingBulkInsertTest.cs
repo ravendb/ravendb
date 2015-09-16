@@ -11,16 +11,18 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class FailingBulkInsertTest : RavenTestBase
+	public class FailingBulkInsertTest : RavenTest
 	{
-		[Fact]
-		public void CanBulkInsert()
+        [Theory]
+        [PropertyData("Storages")]
+		public void CanBulkInsert(string storage)
 		{
 			var bulkInsertSize = 20000;
-			using (var store = NewDocumentStore(requestedStorage:"esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				new SampleData_Index().Execute(store);
 				using (var bulkInsert = store.BulkInsert())
@@ -44,11 +46,12 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		[Fact]
-		public void CanBulkInsertConcurrently()
+        [Theory]
+        [PropertyData("Storages")]
+		public void CanBulkInsertConcurrently(string storage)
 		{
 			var bulkInsertSize = 5000;
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				new SampleData_Index().Execute(store);
 
@@ -118,10 +121,11 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		[Fact]
-		public void CanBulkInsert_LowLevel()
+        [Theory]
+        [PropertyData("Storages")]
+		public void CanBulkInsert_LowLevel(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage:"esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				store.SystemDatabase.Documents.BulkInsert(new BulkInsertOptions(), YieldDocumentBatch(store), Guid.NewGuid(), CancellationToken.None);
 

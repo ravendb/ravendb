@@ -15,7 +15,6 @@ namespace Raven.Tests.Bugs
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.RunInMemory = false;
-			ravenConfiguration.DefaultStorageTypeName = "esent";
 		}
 
 		[Fact]
