@@ -54,7 +54,7 @@ namespace Raven.Client.FileSystem.Connection
 			{
 				if (firstTime)
 				{
-					var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+                    var serverHash = ServerHash.GetServerHash(serverClient.UrlFor());
 					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (IsInvalidDestinationsDocument(document) == false)
 					{
