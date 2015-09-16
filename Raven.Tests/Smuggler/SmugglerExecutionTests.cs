@@ -408,47 +408,6 @@ namespace Raven.Tests.Smuggler
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public void CanBackupAttachmentDeletion()
-        {
-            var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    var periodicBackupSetup = new PeriodicExportSetup
-                    {
-                        LocalFolderName = backupPath,
-                        IntervalMilliseconds = 250
-                    };
-                    session.Store(periodicBackupSetup, PeriodicExportSetup.RavenDocumentKey);
-
-                    session.SaveChanges();
-                }
-
-                var backupStatus = GetPeriodicBackupStatus(store.SystemDatabase);
-
-                store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
-
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
-
-                store.DatabaseCommands.DeleteAttachment("attach/1", null);
-
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
-
-            }
-
-            using (var store = NewDocumentStore())
-            {
-                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
-                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
-
-                Assert.Null(store.DatabaseCommands.GetAttachment("attach/1"));
-            }
-
-            IOExtensions.DeleteDirectory(backupPath);
-        }
-
         [Fact]
         public void ShouldDeleteDocumentTombStoneAfterNextPut()
         {
