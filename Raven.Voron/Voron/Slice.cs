@@ -49,7 +49,7 @@ namespace Voron
 			Array = key;
 		}
 
-		public Slice(NodeHeader* node)
+		public Slice(TreeNodeHeader* node)
 		{
 			Options = SliceOptions.Key;
             SetInline(this, node);
@@ -409,7 +409,7 @@ namespace Voron
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetInline(Slice slice, NodeHeader* node)
+        public static void SetInline(Slice slice, TreeNodeHeader* node)
         {
             slice.Pointer = (byte*)node + Constants.NodeHeaderSize;
             slice.Size = node->KeySize;
@@ -417,7 +417,7 @@ namespace Voron
             slice.Array = null;
         }
 		
-		public override void Set(NodeHeader* node)
+		public override void Set(TreeNodeHeader* node)
 		{
             SetInline(this, node);
 		}

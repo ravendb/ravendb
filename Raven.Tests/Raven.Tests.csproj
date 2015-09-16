@@ -80,12 +80,15 @@
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
     <Reference Include="FluentAssertions">
+    <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
@@ -243,7 +246,6 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
     <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
-    <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
@@ -318,7 +320,6 @@
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
-    <Compile Include="Bugs\EmptyAttachments.cs" />
     <Compile Include="Bugs\EqualityWithArrayOfGuids.cs" />
     <Compile Include="Bugs\Everett.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
@@ -434,8 +435,6 @@
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />
     <Compile Include="Bugs\Arrays.cs" />
     <Compile Include="Bugs\Async\Querying.cs" />
-    <Compile Include="Bugs\AttachmentEncoding.cs" />
-    <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnalyzersForQuery.cs" />
     <Compile Include="Bugs\Caching\CachingOfDocumentInclude.cs" />
@@ -819,7 +818,6 @@
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\DocRefsDump.cs" />
     <Compile Include="Storage\Lists.cs" />
-    <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
@@ -837,9 +835,6 @@
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />
     <Compile Include="Spatial\BrainV.cs" />
-    <Compile Include="Storage\Attachments.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -941,10 +936,6 @@
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
-    <Compile Include="Triggers\AttachmentDeleteTrigger.cs" />
-    <Compile Include="Triggers\AttachmentReadTrigger.cs" />
-    <Compile Include="Triggers\AttachmentPutTriggers.cs" />
-    <Compile Include="Triggers\AuditAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
     <Compile Include="Triggers\Bugs\AuditContext.cs" />
     <Compile Include="Triggers\Bugs\AuditTrigger.cs" />
@@ -956,7 +947,6 @@
     <Compile Include="Triggers\IndexTriggers.cs" />
     <Compile Include="Triggers\PutTriggers.cs" />
     <Compile Include="Triggers\ReadTriggers.cs" />
-    <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Utils\DictionaryComparer.cs" />
     <Compile Include="Utils\DynamicListTests.cs" />

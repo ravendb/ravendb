@@ -58,25 +58,6 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
-		{
-			var lastEtag = startAttachmentsDeletionEtag;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
-				{
-					var o = new RavenJObject
-                    {
-                        {"Key", listItem.Key}
-                    };
-					o.WriteTo(jsonWriter);
-					lastEtag = listItem.Etag;
-				}
-			});
-			return new CompletedTask<Etag>(lastEtag);
-		}
-
 		public Task<RavenJArray> GetTransformers(int start)
 		{
 			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
@@ -107,21 +88,12 @@ namespace Raven.Database.Smuggler
 			{
 				result = new LastEtagsInfo
 				{
-					LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),
-					LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
+					LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),				
 				};
 
 				var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
 				if (lastDocumentTombstone != null)
 					result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
-
-				var attachmentTombstones =
-					accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
-							.OrderBy(x => x.Etag).ToArray();
-				if (attachmentTombstones.Any())
-				{
-					result.LastAttachmentsDeleteEtag = attachmentTombstones.Last().Etag;
-				}
 			});
 
 			return result;
@@ -132,23 +104,6 @@ namespace Raven.Database.Smuggler
 			if (index != null)
 			{
 				database.Indexes.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
-			}
-
-			return new CompletedTask();
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
-		{
-			if (attachmentExportInfo != null)
-			{
-				// we filter out content length, because getting it wrong will cause errors 
-				// in the server side when serving the wrong value for this header.
-				// worse, if we are using http compression, this value is known to be wrong
-				// instead, we rely on the actual size of the data provided for us
-				attachmentExportInfo.Metadata.Remove("Content-Length");
-				database.Attachments.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
-									attachmentExportInfo.Metadata);
 			}
 
 			return new CompletedTask();
@@ -202,20 +157,12 @@ namespace Raven.Database.Smuggler
 
 		public SmugglerDatabaseOptions Options { get; private set; }
 
-        [Obsolete("Use RavenFS instead.")]
-		public Task DeleteAttachment(string key)
-		{
-			database.Attachments.DeleteStatic(key, null);
-			return new CompletedTask();
-		}
-
 		public void PurgeTombstones(OperationState result)
 		{
 			database.TransactionalStorage.Batch(accessor =>
 			{
 				// since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
 				accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
-				accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
 			});
 		}
 
@@ -301,36 +248,6 @@ namespace Raven.Database.Smuggler
 			{
 				Progress(string.Format(format, args));
 			}
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		public Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
-		{
-			var attachments = database
-				.Attachments
-				.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10)
-				.ToList();
-
-			return new CompletedTask<List<AttachmentInformation>>(attachments);
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
-		{
-			var attachment = database.Attachments.GetStatic(attachmentInformation.Key);
-			if (attachment == null) 
-				return null;
-
-			var data = attachment.Data;
-			attachment.Data = () =>
-			{
-				var memoryStream = new MemoryStream();
-				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
-				memoryStream.Position = 0;
-				return memoryStream;
-			};
-
-			return new CompletedTask<byte[]>(attachment.Data().ReadData());
 		}
 
 		public string GetIdentifier()

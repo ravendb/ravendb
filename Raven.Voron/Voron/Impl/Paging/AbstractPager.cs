@@ -60,14 +60,14 @@ namespace Voron.Impl.Paging
 		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize + Constants.PrefixedSliceHeaderSize;
 
 		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
-	    public static readonly int NodeMaxSizePrefixedKeys = (PageMaxSpace - (Constants.PrefixInfoSectionSize + (Page.PrefixCount*Constants.PrefixNodeHeaderSize) + Page.PrefixCount /* possible 2-byte alignment for each prefix */))/2 - 1;
+	    public static readonly int NodeMaxSizePrefixedKeys = (PageMaxSpace - (Constants.PrefixInfoSectionSize + (TreePage.PrefixCount*Constants.PrefixNodeHeaderSize) + TreePage.PrefixCount /* possible 2-byte alignment for each prefix */))/2 - 1;
 
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 
-        public Page Read(long pageNumber, PagerState pagerState = null)
+        public TreePage Read(long pageNumber, PagerState pagerState = null)
         {
 			ThrowObjectDisposedIfNeeded();
 			
@@ -77,12 +77,12 @@ namespace Voron.Impl.Paging
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
+            return new TreePage(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
         }
 
         protected abstract string GetSourceName();
 
-        public virtual Page GetWritable(long pageNumber)
+        public virtual TreePage GetWritable(long pageNumber)
         {
 			ThrowObjectDisposedIfNeeded();
 			
@@ -92,7 +92,7 @@ namespace Voron.Impl.Paging
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber), _source, PageSize);
+            return new TreePage(AcquirePagePointer(pageNumber), _source, PageSize);
         }
 
         public virtual void TryPrefetchingWholeFile()
@@ -100,7 +100,7 @@ namespace Voron.Impl.Paging
             // do nothing
         }
 
-        public virtual void MaybePrefetchMemory(List<Page> sortedPages)
+        public virtual void MaybePrefetchMemory(List<TreePage> sortedPages)
         {
             // do nothing
         }
@@ -161,7 +161,7 @@ namespace Voron.Impl.Paging
         }
 
 
-        public virtual int Write(Page page, long? pageNumber)
+        public virtual int Write(TreePage page, long? pageNumber)
         {
             long startPage = pageNumber ?? page.PageNumber;
 
@@ -230,7 +230,7 @@ namespace Voron.Impl.Paging
 			return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
-        public virtual int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public virtual int WriteDirect(TreePage start, long pagePosition, int pagesToWrite)
         {
             ThrowObjectDisposedIfNeeded();
 

@@ -30,23 +30,20 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
+        [RavenRoute("admin/replication/purge-tombstones")]
 		[RavenRoute("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");
-			var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
+		
 
-			Etag docEtag, attachmentEtag;
-
-			var docEtagParsed = Etag.TryParse(docEtagStr, out docEtag);
-			var attachmentEtagParsed = Etag.TryParse(attachmentEtagStr, out attachmentEtag);
-
-			if (docEtagParsed == false && attachmentEtagParsed == false)
+			Etag docEtag;
+			if (Etag.TryParse(docEtagStr, out docEtag) == false)
 			{
 				return GetMessageWithObject(
 					new
 					{
-						Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
+						Error = "The query string variable 'docEtag' must be set to a valid etag"
 					}, HttpStatusCode.BadRequest);
 			}
 
@@ -55,10 +52,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				if (docEtag != null)
 				{
 					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationDocsTombstones, docEtag);
-				}
-				if (attachmentEtag != null)
-				{
-					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones, attachmentEtag);
 				}
 			});
 

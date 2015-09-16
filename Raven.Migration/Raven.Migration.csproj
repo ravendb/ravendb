@@ -72,7 +72,6 @@
     <Compile Include="..\Raven.Smuggler\Helpers\ConsoleHelper.cs">
       <Link>Helpers\ConsoleHelper.cs</Link>
     </Compile>
-    <Compile Include="MigrationTasks\CopyAttachmentsToFileSystem.cs" />
     <Compile Include="MigrationTasks\MigrationTask.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -102,6 +101,6 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
-   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

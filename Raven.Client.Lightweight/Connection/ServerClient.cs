@@ -30,7 +30,6 @@ using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -133,44 +132,6 @@ namespace Raven.Client.Connection
 		public void Delete(string key, Etag etag)
 		{
 			AsyncHelpers.RunSync(() => asyncServerClient.DeleteAsync(key, etag));
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
-		{
-			AsyncHelpers.RunSync(() => asyncServerClient.PutAttachmentAsync(key, etag, data, metadata));
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
-		{
-			AsyncHelpers.RunSync(() => asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata));
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
-		{
-			return new AsyncEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
-				start, pageSize).Result);
-
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Attachment GetAttachment(string key)
-		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.GetAttachmentAsync(key));
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Attachment HeadAttachment(string key)
-		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.HeadAttachmentAsync(key));
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public void DeleteAttachment(string key, Etag etag)
-		{
-			AsyncHelpers.RunSync(() => asyncServerClient.DeleteAttachmentAsync(key, etag));
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
@@ -374,12 +335,6 @@ namespace Raven.Client.Connection
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression, disableAuthentication, timeout);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize)
-		{
-			return AsyncHelpers.RunSync(() => asyncServerClient.GetAttachmentsAsync(start, startEtag, pageSize));
 		}
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)

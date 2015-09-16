@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sparrow
 {
-    public unsafe static class Hashing
+    public unsafe static partial class Hashing
     {
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 32bits 
@@ -153,7 +153,8 @@ namespace Sparrow
         /// <<remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         public static class XXHash64
         {
-            public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static unsafe ulong CalculateInline(byte* buffer, int len, ulong seed = 0)
             {
                 ulong h64;
 
@@ -259,20 +260,25 @@ namespace Sparrow
                 return h64;
             }
 
+            public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            {
+                return CalculateInline(buffer, len, seed);
+            }
+
             public static ulong Calculate(string value, Encoding encoder, ulong seed = 0)
             {
                 var buf = encoder.GetBytes(value);
 
                 fixed (byte* buffer = buf)
                 {
-                    return Calculate(buffer, buf.Length, seed);
+                    return CalculateInline(buffer, buf.Length, seed);
                 }
             }
             public static ulong CalculateRaw(string buf, ulong seed = 0)
             {
                 fixed (char* buffer = buf)
                 {
-                    return Calculate((byte*)buffer, buf.Length * sizeof(char), seed);
+                    return CalculateInline((byte*)buffer, buf.Length * sizeof(char), seed);
                 }
             }
 
@@ -283,7 +289,7 @@ namespace Sparrow
 
                 fixed (byte* buffer = buf)
                 {
-                    return Calculate(buffer, len, seed);
+                    return CalculateInline(buffer, len, seed);
                 }
             }
 
@@ -294,7 +300,7 @@ namespace Sparrow
 
                 fixed (int* buffer = buf)
                 {
-                    return Calculate((byte*)buffer, len * sizeof(int), seed);
+                    return CalculateInline((byte*)buffer, len * sizeof(int), seed);
                 }
             }
 
@@ -311,15 +317,23 @@ namespace Sparrow
             }
         }
 
-        public static int Combine( int x, int y )
+        public static int Combine(int x, int y)
+        {
+            return CombineInline(x, y);
+        }
+
+        public static uint Combine(uint x, uint y)
         {
             return CombineInline(x, y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CombineInline( int x, int y )
+        public static int CombineInline(int x, int y)
         {
-            long key = x << 32 | y;
+            ulong ex = (ulong)x;
+            ulong ey = (ulong)y;
+
+            ulong key = ex << 32 | ey;
 
             key = (~key) + (key << 18); // key = (key << 18) - key - 1;
             key = key ^ (key >> 31);
@@ -328,7 +342,64 @@ namespace Sparrow
             key = key + (key << 6);
             key = key ^ (key >> 22);
 
-            return (int) key;
+            return (int)key;
+        }
+
+        private static readonly ulong kMul = 0x9ddfea08eb382d69UL;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CombineInline(ulong x, ulong y)
+        {
+            // This is the Hash128to64 function from Google's CityHash (available
+            // under the MIT License).  We use it to reduce multiple 64 bit hashes
+            // into a single hash.
+
+            // Murmur-inspired hashing.
+            ulong a = (y ^ x) * kMul;
+            a ^= (a >> 47);
+            ulong b = (x ^ a) * kMul;
+            b ^= (b >> 47);
+            b *= kMul;
+
+            return b;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CombineInline(long upper, long lower)
+        {
+            // This is the Hash128to64 function from Google's CityHash (available
+            // under the MIT License).  We use it to reduce multiple 64 bit hashes
+            // into a single hash.
+
+            ulong x = (ulong)upper;
+            ulong y = (ulong)lower;
+
+            // Murmur-inspired hashing.
+            ulong a = (y ^ x) * kMul;
+            a ^= (a >> 47);
+            ulong b = (x ^ a) * kMul;
+            b ^= (b >> 47);
+            b *= kMul;
+
+            return b;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint CombineInline(uint x, uint y)
+        {
+            ulong ex = (ulong)x;
+            ulong ey = (ulong)y;
+
+            ulong key = ex << 32 | ey;
+
+            key = (~key) + (key << 18); // key = (key << 18) - key - 1;
+            key = key ^ (key >> 31);
+            key = key * 21; // key = (key + (key << 2)) + (key << 4);
+            key = key ^ (key >> 11);
+            key = key + (key << 6);
+            key = key ^ (key >> 22);
+
+            return (uint)key;
         }
 
     }

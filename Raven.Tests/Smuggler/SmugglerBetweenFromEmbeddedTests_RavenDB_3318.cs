@@ -31,8 +31,6 @@ namespace Raven.Tests.Smuggler
 					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" });
 					await session.SaveChangesAsync();
 				}
-				await store.AsyncDatabaseCommands.PutAttachmentAsync("1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-				await store.AsyncDatabaseCommands.PutAttachmentAsync("2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
 				using (var server = GetNewServer(port: 8078))
 				{
@@ -60,9 +58,6 @@ namespace Raven.Tests.Smuggler
 
 							Assert.Equal(2, users.Count);
 						}
-
-						Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("1"));
-						Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("2"));
 					}
 				}
 			}
@@ -81,8 +76,6 @@ namespace Raven.Tests.Smuggler
 					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" }, "users/2");
 					await session.SaveChangesAsync();
 				}
-				await store.AsyncDatabaseCommands.PutAttachmentAsync("1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-				await store.AsyncDatabaseCommands.PutAttachmentAsync("2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
 				using (var server = GetNewServer(port: 8078))
 				{
@@ -113,8 +106,6 @@ namespace Raven.Tests.Smuggler
 							await session.SaveChangesAsync();
 						}
 
-						await store.AsyncDatabaseCommands.PutAttachmentAsync("3", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
-
 						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
 							To = new RavenConnectionStringOptions
@@ -138,10 +129,6 @@ namespace Raven.Tests.Smuggler
 
 							Assert.Equal(3, users.Count);
 						}
-
-						Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("1"));
-						Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("2"));
-						Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("3"));
 					}
 				}
 			}

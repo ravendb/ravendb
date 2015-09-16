@@ -14,15 +14,15 @@ namespace Voron.Impl
 		/// </summary>
 		public const int MinKeysInPage = 2;
 
-		public static readonly int PageHeaderSize = sizeof(PageHeader);
+		public static readonly int PageHeaderSize = sizeof(TreePageHeader);
 
-		public static readonly int NodeHeaderSize = sizeof(NodeHeader);
+		public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
 
-		public static readonly int PrefixNodeHeaderSize = sizeof(PrefixNodeHeader);
+		public static readonly int PrefixNodeHeaderSize = sizeof(PrefixTreeNodeHeader);
 
 		public static readonly int PrefixedSliceHeaderSize = sizeof (PrefixedSliceHeader);
 
-		public static readonly int PrefixInfoSectionSize = sizeof (PrefixInfoSection);
+		public static readonly int PrefixInfoSectionSize = sizeof (PrefixTreeInfoSection);
 
 		public static int PageNumberSize = sizeof(long);
 

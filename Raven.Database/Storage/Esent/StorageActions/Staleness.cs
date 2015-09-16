@@ -143,18 +143,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			return Etag.Parse(lastEtag);
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		public Etag GetMostRecentAttachmentEtag()
-		{
-			Api.JetSetCurrentIndex(session, Files, "by_etag");
-			if (!Api.TryMoveLast(session, Files))
-			{
-				return Etag.Empty;
-			}
-			var lastEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.DocumentsColumns["etag"]);
-			return Etag.Parse(lastEtag);
-		}
-
 		public int GetIndexTouchCount(int view)
 		{
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");

@@ -60,7 +60,6 @@ namespace Raven.Smuggler
 					}
 
 					databaseOptions.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
-					databaseOptions.StartAttachmentsEtag = incremental.LastAttachmentsEtag ?? Etag.Empty;
 				}
 			}
 
@@ -77,11 +76,6 @@ namespace Raven.Smuggler
 			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Documents))
 			{
 				incremental.LastDocsEtag = await ExportDocuments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
-			}
-
-			if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Attachments))
-			{
-				incremental.LastAttachmentsEtag = await ExportAttachments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
 			}
 
 			await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes).ConfigureAwait(false);
@@ -276,76 +270,6 @@ namespace Raven.Smuggler
 
 				ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
-			}
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		private async Task<Etag> ExportAttachments(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, SmugglerDatabaseOptions databaseOptions)
-		{
-			Etag lastEtag = databaseOptions.StartAttachmentsEtag;
-			int totalCount = 0;
-
-			while (true)
-			{
-				try
-				{
-					if (databaseOptions.Limit - totalCount <= 0)
-					{
-						await importOperations.PutAttachment(null).ConfigureAwait(false); // force flush
-
-						ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
-					var maxRecords = Math.Min(databaseOptions.Limit - totalCount, databaseOptions.BatchSize);
-					var attachments = await exportOperations.GetAttachments(totalCount, lastEtag, maxRecords).ConfigureAwait(false);
-					if (attachments.Count == 0)
-					{
-						var databaseStatistics = await exportOperations.GetStats().ConfigureAwait(false);
-						if (lastEtag == null) lastEtag = Etag.Empty;
-						if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-						{
-							lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-							ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}",
-										 lastEtag);
-							continue;
-						}
-						ShowProgress("Done with reading attachments, total: {0}", totalCount);
-						return lastEtag;
-					}
-
-					totalCount += attachments.Count;
-					ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Count, totalCount);
-
-					foreach (var attachment in attachments)
-					{
-						var attachmentData = await exportOperations.GetAttachmentData(attachment).ConfigureAwait(false);
-						if (attachmentData == null)
-							continue;
-
-						var attachmentToExport = new AttachmentExportInfo
-						{
-							Key = attachment.Key,
-							Metadata = attachment.Metadata,
-							Data = new MemoryStream(attachmentData)
-						};
-
-						if (databaseOptions.StripReplicationInformation)
-							attachmentToExport.Metadata = StripReplicationInformationFromMetadata(attachmentToExport.Metadata);
-
-						await importOperations.PutAttachment(attachmentToExport).ConfigureAwait(false);
-
-						lastEtag = attachment.Etag;
-					}
-				}
-				catch (Exception e)
-				{
-					ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-					ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
-					throw new SmugglerExportException(e.Message, e)
-					{
-						LastEtag = lastEtag,
-					};
-				}
 			}
 		}
 

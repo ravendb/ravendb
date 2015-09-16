@@ -84,49 +84,6 @@ namespace Raven.Tests.Issues
 					Assert.Equal(lastId, items.First().Id);
 				}
 			}
-		}
-
-		[Fact]
-		public void ReplicationShouldReplicateAllAttachmentTombstones()
-		{
-			using (var store1 = CreateStore())
-			using (var store2 = CreateStore())
-			{
-				TellFirstInstanceToReplicateToSecondInstance();
-				string lastId = null;
-
-				for (int i = 0; i < 200; i++)
-				{
-					var id = "static/" + i;
-					store1.DatabaseCommands.PutAttachment(id, null, new MemoryStream(), new RavenJObject());
-					lastId = id;
-				}
-
-				WaitForIndexing(store1);
-				WaitForAttachment(store2, lastId);
-
-				RemoveReplication(store1.DatabaseCommands);
-
-				for (int i = 0; i < 200; i++)
-				{
-					var id = "static/" + i;
-					store1.DatabaseCommands.DeleteAttachment(id, null);
-				}
-
-				store1.DatabaseCommands.PutAttachment("static/9999", null, new MemoryStream(), new RavenJObject());
-				lastId = "static/9999";
-
-				TellFirstInstanceToReplicateToSecondInstance();
-				WaitForAttachment(store2, lastId);
-
-				var attachments = store2
-					.DatabaseCommands
-					.GetAttachmentHeadersStartingWith("static/", 0, int.MaxValue)
-					.ToList();
-
-				Assert.Equal(1, attachments.Count);
-				Assert.Equal(lastId, attachments.First().Key);
-			}
-		}
+		}	
 	}
 }

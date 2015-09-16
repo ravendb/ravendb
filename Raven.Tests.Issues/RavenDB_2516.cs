@@ -79,7 +79,6 @@ namespace Raven.Tests.Issues
 					Assert.NotNull(connection.Source);
 					Assert.NotNull(connection.Destination);
 					Assert.Equal(TransitiveReplicationOptions.Replicate, connection.ReplicationBehavior);
-					Assert.NotNull(connection.LastAttachmentEtag);
 					Assert.NotNull(connection.LastDocumentEtag);
 					Assert.NotNull(connection.SendServerId);
 					Assert.NotNull(connection.StoredServerId);
@@ -91,7 +90,6 @@ namespace Raven.Tests.Issues
 				Assert.NotNull(c.Source);
 				Assert.NotNull(c.Destination);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, c.ReplicationBehavior);
-				Assert.Null(c.LastAttachmentEtag);
 				Assert.Null(c.LastDocumentEtag);
 				Assert.NotNull(c.SendServerId);
 				Assert.Equal(Guid.Empty, c.StoredServerId);
@@ -162,7 +160,6 @@ namespace Raven.Tests.Issues
 					Assert.NotNull(connection.Source);
 					Assert.NotNull(connection.Destination);
 					Assert.Equal(TransitiveReplicationOptions.Replicate, connection.ReplicationBehavior);
-					Assert.NotNull(connection.LastAttachmentEtag);
 					Assert.NotNull(connection.LastDocumentEtag);
 					Assert.NotNull(connection.SendServerId);
 					Assert.NotNull(connection.StoredServerId);
@@ -174,7 +171,6 @@ namespace Raven.Tests.Issues
 				Assert.NotNull(c.Source);
 				Assert.NotNull(c.Destination);
 				Assert.Equal(TransitiveReplicationOptions.Replicate, c.ReplicationBehavior);
-				Assert.Null(c.LastAttachmentEtag);
 				Assert.Null(c.LastDocumentEtag);
 				Assert.NotNull(c.SendServerId);
 				Assert.Equal(Guid.Empty, c.StoredServerId);

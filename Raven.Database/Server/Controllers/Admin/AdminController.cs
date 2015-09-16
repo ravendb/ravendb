@@ -765,7 +765,6 @@ namespace Raven.Database.Server.Controllers.Admin
 						TotalDatabaseSize = totalDatabaseSize,
 						TotalDatabaseHumaneSize = SizeHelper.Humane(totalDatabaseSize),
 						CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
-						CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 						StorageStats = documentDatabase.TransactionalStorage.GetStorageStats(),
 						DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						Metrics = documentDatabase.CreateMetrics()

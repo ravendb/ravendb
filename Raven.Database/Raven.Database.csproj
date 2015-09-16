@@ -234,7 +234,6 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Actions\ActionsBase.cs" />
-    <Compile Include="Actions\AttachmentActions.cs" />
     <Compile Include="Actions\LastCollectionEtags.cs" />
     <Compile Include="Actions\MaintenanceActions.cs" />
     <Compile Include="Actions\DocumentActions.cs" />
@@ -314,7 +313,6 @@
     </Compile>
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToReduceInSingleBatch.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCurrentNumberOfItemsToIndexInSingleBatch.cs" />
-    <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfAttachments.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfDocuments.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseCountOfTransformers.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\Database\Statistics\DatabaseNumberOfErrorIndexes.cs" />
@@ -575,11 +573,7 @@
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
-    <Compile Include="Bundles\PeriodicExports\Triggers\AttachmentAncestryPutTrigger.cs" />
-    <Compile Include="Bundles\PeriodicExports\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Plugins\LatestDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\PeriodicExports\Controllers\AdminPeriodicBackupController.cs" />
@@ -652,13 +646,10 @@
     <Compile Include="Bundles\Replication\Controllers\ReplicationController.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
-    <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
-    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
@@ -673,7 +664,6 @@
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
-    <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
@@ -685,7 +675,6 @@
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\Controllers\StudioTasksController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
-    <Compile Include="Server\Contents\StaticHeadContent.cs" />
     <Compile Include="Server\Controllers\StudioController.cs" />
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
@@ -713,7 +702,6 @@
     <Compile Include="Server\Controllers\BaseDatabaseApiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
-    <Compile Include="Server\Controllers\StaticController.cs" />
     <Compile Include="Server\Controllers\StatisticsController.cs" />
     <Compile Include="Server\Controllers\StreamsController.cs" />
     <Compile Include="Server\Controllers\SuggestionController.cs" />
@@ -949,24 +937,17 @@
     <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
     <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountQuotaForDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Quotas\Size\SizeQuotaConfiguration.cs" />
-    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeDocumentDeleteTrigger.cs" />
-    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQuotaForAttachmentsPutTrigger.cs" />
     <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQuotaForDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Data\DestinationFailureInformation.cs" />
     <Compile Include="Bundles\Replication\Data\SourceReplicationInformation.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
-    <Compile Include="Bundles\Replication\Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\AncestryPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\AttachmentAncestryPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
@@ -1213,9 +1194,6 @@
     <Compile Include="Config\InMemoryRavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\Ast\CaptureSelectNewFieldNamesVisitor.cs" />
-    <Compile Include="Plugins\AbstractAttachmentDeleteTrigger.cs" />
-    <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
-    <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
@@ -1304,7 +1282,6 @@
     </Compile>
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
-    <Compile Include="Storage\Esent\StorageActions\Attachments.cs" />
     <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
@@ -1320,7 +1297,6 @@
     <Compile Include="Storage\Esent\TableColumnsCache.cs" />
     <Compile Include="Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
-    <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
     <Compile Include="Storage\IIndexingStorageActions.cs" />
@@ -1340,7 +1316,6 @@
     <Compile Include="Storage\Voron\Schema\ISchemaUpdate.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
-    <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
     <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
@@ -1473,6 +1448,9 @@
       <DependentUpon>LuceneQuery.parser</DependentUpon>
     </None>
     <None Include="Indexing\LuceneQuery.parser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Server\Contents\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!--  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->

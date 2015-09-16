@@ -116,12 +116,6 @@ namespace Raven.Abstractions.Data
         public long CountOfDocuments { get; set; }
 
 		/// <summary>
-		/// Total count of attachments in database.
-		/// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        public long CountOfAttachments { get; set; }
-
-		/// <summary>
 		/// Transaction version size in megabytes for database.
 		/// </summary>
         public decimal DatabaseTransactionVersionSizeInMB { get; set; }

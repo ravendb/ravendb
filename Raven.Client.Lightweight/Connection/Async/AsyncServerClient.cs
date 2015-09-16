@@ -25,7 +25,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Metrics;
-using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -1654,144 +1653,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		[Obsolete("Use RavenFS instead.")]
-		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken))
-		{
-			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
-			{
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag + "&start=" + start, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
-				{
-					request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-
-					var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return convention.CreateSerializer().Deserialize<AttachmentInformation[]>(new RavenJTokenReader(json));
-				}
-			}, token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata, CancellationToken token = default(CancellationToken))
-		{
-			return ExecuteWithReplication(HttpMethod.Put, async operationMetadata =>
-			{
-				if (metadata == null)
-					metadata = new RavenJObject();
-
-				if (etag != null)
-					metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
-
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), HttpMethod.Put, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
-				{
-					request.AddOperationHeaders(OperationsHeaders);
-					request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-
-					await request.WriteAsync(data).WithCancellation(token).ConfigureAwait(false);
-				}
-			}, token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task<Attachment> GetAttachmentAsync(string key, CancellationToken token = default (CancellationToken))
-		{
-			EnsureIsNotNullOrEmpty(key, "key");
-
-			return ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, HttpMethod.Get, token), token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task<Attachment> HeadAttachmentAsync(string key, CancellationToken token = default(CancellationToken))
-		{
-			EnsureIsNotNullOrEmpty(key, "key");
-
-			return ExecuteWithReplication(HttpMethod.Head, operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, HttpMethod.Head, token), token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private async Task<Attachment> DirectGetAttachmentAsync(string key, OperationMetadata operationMetadata, HttpMethod method, CancellationToken token = default(CancellationToken))
-		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key), method, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url));
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
-			{
-				ErrorResponseException responseException;
-				try
-				{
-					var result = await request.ReadResponseBytesAsync().WithCancellation(token).ConfigureAwait(false);
-					request.HandleReplicationStatusChanges(request.ResponseHeaders, Url, operationMetadata.Url);
-
-					if (method == HttpMethod.Get)
-					{
-						var memoryStream = new MemoryStream(result);
-						return new Attachment
-						{
-							Key = key,
-							Data = () => memoryStream,
-							Size = result.Length,
-							Etag = request.ResponseHeaders.GetEtagHeader(),
-							Metadata = request.ResponseHeaders.FilterHeadersAttachment()
-						};
-					}
-					else
-					{
-						return new Attachment
-						{
-							Key = key,
-							Data = () =>
-							{
-								throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
-							},
-							Size = int.Parse(request.ResponseHeaders["Content-Length"]),
-							Etag = request.ResponseHeaders.GetEtagHeader(),
-							Metadata = request.ResponseHeaders.FilterHeadersAttachment()
-						};
-					}
-				}
-				catch (ErrorResponseException e)
-				{
-					if (e.StatusCode == HttpStatusCode.NotFound) return null;
-					if (e.StatusCode != HttpStatusCode.Conflict) throw;
-					responseException = e;
-				}
-
-				using (var stream = await responseException.Response.GetResponseStreamWithHttpDecompression().WithCancellation(token).ConfigureAwait(false))
-				{
-					string[] conflictIds;
-					if (method == HttpMethod.Get)
-					{
-						var conflictsDoc = stream.ToJObject();
-						conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-					}
-					else
-					{
-						conflictIds = new[] { "Cannot get conflict ids in HEAD requesT" };
-					}
-
-					throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true) { ConflictedVersionIds = conflictIds, Etag = responseException.Etag };
-				}
-			}
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task DeleteAttachmentAsync(string key, Etag etag, CancellationToken token = default (CancellationToken))
-		{
-			return ExecuteWithReplication(HttpMethod.Delete, operationMetadata =>
-			{
-				var metadata = new RavenJObject();
-
-				if (etag != null)
-					metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
-
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), HttpMethod.Delete, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
-				{
-					request.AddOperationHeaders(OperationsHeaders);
-					request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-
-					return request.ExecuteRequestAsync();
-				}
-			}, token);
-		}
-
 		public static string Static(string url, string key)
 		{
 			return url + "/static/" + Uri.EscapeUriString(key);
@@ -2320,33 +2181,6 @@ namespace Raven.Client.Connection.Async
 					responseException = e;
 				}
 				if (!HandleException(responseException)) throw responseException;
-			}
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize, CancellationToken token = default (CancellationToken))
-		{
-			return ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectGetAttachmentHeadersStartingWith(HttpMethod.Get, idPrefix, start, pageSize, operationMetadata, token), token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(HttpMethod method, string idPrefix, int start, int pageSize, OperationMetadata operationMetadata, CancellationToken token = default (CancellationToken))
-		{
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
-			{
-				RavenJToken result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-
-				List<Attachment> attachments = convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result)).Select(x => new Attachment
-				{
-					Etag = x.Etag,
-					Metadata = x.Metadata.WithCaseInsensitivePropertyNames(),
-					Size = x.Size,
-					Key = x.Key,
-					Data = () =>
-						{ throw new InvalidOperationException("Cannot get attachment data from an attachment header"); }
-				}).ToList();
-
-				return new AsyncEnumeratorBridge<Attachment>(attachments.GetEnumerator());
 			}
 		}
 

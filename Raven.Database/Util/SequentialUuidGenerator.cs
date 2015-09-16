@@ -9,10 +9,6 @@ namespace Raven.Database.Util
 	{
 		private byte[] ticksAsBytes;
 		private long sequentialUuidCounterDocuments;
-
-        [Obsolete("Use RavenFS instead.")]
-		private long sequentialUuidCounterAttachments;
-
 		private long sequentialUuidCounterDocumentsTransactions;
 		private long sequentialUuidCounterMappedResults;
 		private long sequentialUuidCounterReduceResults;
@@ -46,9 +42,6 @@ namespace Raven.Database.Util
 			{
 				case UuidType.Documents:
 					increment = Interlocked.Increment(ref sequentialUuidCounterDocuments);
-					break;
-				case UuidType.Attachments:
-					increment = Interlocked.Increment(ref sequentialUuidCounterAttachments);
 					break;
 				case UuidType.DocumentTransactions:
 					increment = Interlocked.Increment(ref sequentialUuidCounterDocumentsTransactions);

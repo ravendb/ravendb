@@ -6,8 +6,6 @@ namespace Raven.Abstractions.Data
 	{
 		Documents = 1,
 
-		[Obsolete("Use RavenFS instead.")]
-		Attachments = 2,
 		DocumentTransactions = 3,
 		MappedResults = 4,
 		ReduceResults = 5,

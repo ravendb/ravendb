@@ -105,9 +105,6 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public TableOfStructures<ReduceResultFields> ReduceResults { get; private set; }
 
-        [Obsolete("Use RavenFS instead.")]
-		public Table Attachments { get; private set; }
-
 		public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
 
 		public TableOfStructures<ReduceKeyTypeFields> ReduceKeyTypes { get; private set; }
@@ -250,9 +247,7 @@ namespace Raven.Database.Storage.Voron.Impl
 					.Add<int>(ReduceKeyTypeFields.IndexId)
 					.Add<int>(ReduceKeyTypeFields.ReduceType)
 					.Add<string>(ReduceKeyTypeFields.ReduceKey),
-				bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
-
-			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
+				bufferPool, Tables.ReduceKeyTypes.Indices.ByView);		
 
 			ReduceResults = new TableOfStructures<ReduceResultFields>(Tables.ReduceResults.TableName,
 				new StructureSchema<ReduceResultFields>()

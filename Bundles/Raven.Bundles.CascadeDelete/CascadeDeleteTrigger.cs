@@ -43,11 +43,7 @@ namespace Raven.Bundles.CascadeDelete
 					}
 				}
 			}
-			var attachmentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.AttachmentsToCascadeDelete);
 
-			if (attachmentsToDelete != null)
-				foreach (var attachmentToDelete in attachmentsToDelete)
-					Database.Attachments.DeleteStatic(attachmentToDelete.Value<string>(), null);
 			return;
 		}
 	}

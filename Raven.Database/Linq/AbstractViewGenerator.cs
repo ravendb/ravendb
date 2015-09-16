@@ -135,18 +135,6 @@ namespace Raven.Database.Linq
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO, false, Field.TermVector.NO, index);
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		protected dynamic LoadAttachmentForIndexing(object item)
-		{
-			if (item == null || item is DynamicNullObject)
-				return new DynamicNullObject();
-
-			var key = item as string;
-			if (key == null)
-				throw new InvalidOperationException("Attachment id should be string, but was " + item + ": " + item.GetType().Name);
-			return new AttachmentForIndexing(key);
-		}
-
         // Required for RavenDB-1519
 	    protected dynamic LoadDocument<TIGnored>(object item)
 	    {

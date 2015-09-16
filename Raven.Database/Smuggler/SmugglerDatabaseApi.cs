@@ -66,15 +66,6 @@ namespace Raven.Smuggler
 	        }
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
-		{
-			if (maxEtag != null)
-				throw new ArgumentException("We don't support maxEtag in SmugglerDatabaseApi", maxEtag);
-
-			return base.ExportAttachments(src, jsonWriter, lastEtag, null);
-		}
-
 		public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)
 		{
 			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");

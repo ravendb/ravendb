@@ -146,12 +146,12 @@ namespace Raven.Abstractions.Data
 	public class ReplicationConflictNotification : EventArgs
 	{
 		/// <summary>
-		/// Type of conflict that occurred (None, DocumentReplicationConflict, AttachmentReplicationConflict).
+		/// Type of conflict that occurred (None, DocumentReplicationConflict).
 		/// </summary>
 		public ReplicationConflictTypes ItemType { get; set; }
 
 		/// <summary>
-		/// Identifier of a document/attachment on which replication conflict occurred.
+		/// Identifier of a document on which replication conflict occurred.
 		/// </summary>
 		public string Id { get; set; }
 
@@ -182,9 +182,6 @@ namespace Raven.Abstractions.Data
 		None = 0,
 
 		DocumentReplicationConflict = 1,
-
-        [Obsolete("Use RavenFS instead.")]
-		AttachmentReplicationConflict = 2,
 	}
 
 	[Flags]

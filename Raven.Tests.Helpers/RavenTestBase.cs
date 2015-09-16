@@ -575,10 +575,7 @@ namespace Raven.Tests.Helpers
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
             if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
-			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
-			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
-
 		}
 
         /// <summary>
@@ -643,13 +640,11 @@ namespace Raven.Tests.Helpers
 					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag) && currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag);
 
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) 
-				throw new Exception("WaitForPeriodicExport failed");
+            if (!done) throw new Exception("WaitForPeriodicExport failed");
 
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
-			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
-			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
 
 		}
 

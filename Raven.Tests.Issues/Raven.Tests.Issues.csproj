@@ -56,6 +56,10 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
       <Private>True</Private>
@@ -201,7 +205,6 @@
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_1344 .cs" />
     <Compile Include="RavenDB_1733.cs" />
-    <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
     <Compile Include="EmbeddedMultipleDatabases.cs" />
@@ -224,7 +227,6 @@
     <Compile Include="RavenDB1259.cs" />
     <Compile Include="RavenDB1260.cs" />
     <Compile Include="RavenDB1261.cs" />
-    <Compile Include="RavenDB1316.cs" />
     <Compile Include="RavenDB1369.cs" />
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
@@ -324,13 +326,11 @@
     <Compile Include="RavenDB_1600.cs" />
     <Compile Include="RavenDB_1601.cs" />
     <Compile Include="RavenDB_1609.cs" />
-    <Compile Include="RavenDB_1610.cs" />
     <Compile Include="RavenDB_1650.cs" />
     <Compile Include="RavenDB_1666.cs" />
     <Compile Include="RavenDB_1716.cs" />
     <Compile Include="RavenDB_1717.cs" />
     <Compile Include="RavenDB_1735.cs" />
-    <Compile Include="RavenDB_1749.cs" />
     <Compile Include="RavenDB_1760.cs" />
     <Compile Include="RavenDB_1761.cs" />
     <Compile Include="RavenDB_1762.cs" />
@@ -448,7 +448,6 @@
     <Compile Include="RavenDB_3448.cs" />
     <Compile Include="RavenDB_3462.cs" />
     <Compile Include="RavenDB_3484.cs" />
-    <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_3525.cs" />
     <Compile Include="RavenDB_3574.cs" />
@@ -465,7 +464,6 @@
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_3760.cs" />
     <Compile Include="RavenDB_381.cs" />
-    <Compile Include="RavenDB_384.cs" />
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_421.cs" />
@@ -513,7 +511,6 @@
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
-    <Compile Include="RDBQA_16.cs" />
     <Compile Include="RDBQA_17.cs" />
     <Compile Include="RDBQA_18.cs" />
     <Compile Include="RDBQA_4.cs" />

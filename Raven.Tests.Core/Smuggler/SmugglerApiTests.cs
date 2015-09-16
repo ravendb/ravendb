@@ -74,8 +74,6 @@ namespace Raven.Tests.Core.Smuggler
                         session.SaveChanges();
                     }
 
-                    store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
                         Port = Port2,
@@ -109,9 +107,6 @@ namespace Raven.Tests.Core.Smuggler
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
-                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
-                            Assert.Equal(1, attachments.Length);
-
                         }
                     }
                 }
@@ -151,8 +146,6 @@ namespace Raven.Tests.Core.Smuggler
                         session.Store(new User { Name = "Name2", LastName = "LastName2" });
                         session.SaveChanges();
                     }
-
-                    store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 
                     var smugglerApi = new SmugglerDatabaseApi
                     (
@@ -199,8 +192,6 @@ namespace Raven.Tests.Core.Smuggler
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
-                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
-                            Assert.Equal(1, attachments.Length);
                         }
                     }
                 }

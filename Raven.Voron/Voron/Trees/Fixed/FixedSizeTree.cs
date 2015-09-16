@@ -26,7 +26,7 @@ namespace Voron.Trees.Fixed
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
         private FixedSizeTreeHeader.OptionFlags? _flags;
-        private Stack<Page> _cursor;
+        private Stack<TreePage> _cursor;
 
         public FixedSizeTree(Transaction tx, Tree parent, Slice treeName, byte valSize)
         {
@@ -49,7 +49,7 @@ namespace Voron.Trees.Fixed
                                                     header->ValueSize + " for " + _treeName);
         }
 
-        public long[] Debug(Page p)
+        public long[] Debug(TreePage p)
         {
             if (p == null)
                 return null;
@@ -157,7 +157,7 @@ namespace Voron.Trees.Fixed
             return (page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
         }
 
-        private void ResetStartPosition(Page page)
+        private void ResetStartPosition(TreePage page)
         {
             if (page.FixedSize_StartPosition == Constants.PageHeaderSize)
                 return;
@@ -169,12 +169,12 @@ namespace Voron.Trees.Fixed
             page.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
         }
 
-        private Page FindPageFor(long key)
+        private TreePage FindPageFor(long key)
         {
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
             var page = _tx.GetReadOnlyPage(header->RootPageNumber);
             if (_cursor == null)
-                _cursor = new Stack<Page>();
+                _cursor = new Stack<TreePage>();
             else
                 _cursor.Clear();
 
@@ -192,12 +192,12 @@ namespace Voron.Trees.Fixed
             return page;
         }
 
-        private Page PageSplit(Page page, long key)
+        private TreePage PageSplit(TreePage page, long key)
         {
-            Page parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
+            TreePage parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
             if (parentPage == null) // root split
             {
-                parentPage = _parent.NewPage(PageFlags.Branch | PageFlags.FixedSize, 1);
+                parentPage = _parent.NewPage(TreePageFlags.Branch | TreePageFlags.FixedSize, 1);
                 parentPage.FixedSize_NumberOfEntries = 1;
                 parentPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
                 parentPage.FixedSize_ValueSize = _valSize;
@@ -215,7 +215,7 @@ namespace Voron.Trees.Fixed
 
             if (page.IsLeaf) // simple case of splitting a leaf pageNum
             {
-                var newPage = _parent.NewPage(PageFlags.Leaf | PageFlags.FixedSize, 1);
+                var newPage = _parent.NewPage(TreePageFlags.Leaf | TreePageFlags.FixedSize, 1);
                 newPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
                 newPage.FixedSize_ValueSize = _valSize;
                 newPage.FixedSize_NumberOfEntries = 0;
@@ -242,7 +242,7 @@ namespace Voron.Trees.Fixed
             }
             else // branch page
             {
-                var newPage = _parent.NewPage(PageFlags.Branch | PageFlags.FixedSize, 1);
+                var newPage = _parent.NewPage(TreePageFlags.Branch | TreePageFlags.FixedSize, 1);
                 newPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
                 newPage.FixedSize_ValueSize = _valSize;
                 newPage.FixedSize_NumberOfEntries = 0;
@@ -284,14 +284,14 @@ namespace Voron.Trees.Fixed
             }
         }
 
-        private void AddLeafKey(Page page, int position, long key)
+        private void AddLeafKey(TreePage page, int position, long key)
         {
             var newEntryPos = page.Base + page.FixedSize_StartPosition + ((position) * BranchEntrySize);
             page.FixedSize_NumberOfEntries++;
             ((long*)newEntryPos)[0] = key;
         }
 
-        private void AddSeparatorToParentPage(Page parentPage, int position, long key, long pageNum)
+        private void AddSeparatorToParentPage(TreePage parentPage, int position, long key, long pageNum)
         {
             if ((parentPage.FixedSize_NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
             {
@@ -346,7 +346,7 @@ namespace Voron.Trees.Fixed
                 {
                     // convert to large database
                     _flags = FixedSizeTreeHeader.OptionFlags.Large;
-                    var allocatePage = _parent.NewPage(PageFlags.Leaf, 1);
+                    var allocatePage = _parent.NewPage(TreePageFlags.Leaf, 1);
 
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
@@ -355,7 +355,7 @@ namespace Voron.Trees.Fixed
                     largeHeader->Flags = FixedSizeTreeHeader.OptionFlags.Large;
                     largeHeader->RootPageNumber = allocatePage.PageNumber;
 
-                    allocatePage.Flags = PageFlags.FixedSize | PageFlags.Leaf;
+                    allocatePage.Flags = TreePageFlags.FixedSize | TreePageFlags.Leaf;
                     allocatePage.PageNumber = allocatePage.PageNumber;
                     allocatePage.FixedSize_NumberOfEntries = newEntriesCount;
                     allocatePage.FixedSize_ValueSize = _valSize;
@@ -396,7 +396,7 @@ namespace Voron.Trees.Fixed
             return (dataStart + sizeof(long));
         }
 
-        private void BinarySearch(Page page, long val)
+        private void BinarySearch(TreePage page, long val)
         {
             page.LastSearchPosition = BinarySearch(page.Base + page.FixedSize_StartPosition,
                 page.FixedSize_NumberOfEntries, val,
@@ -428,7 +428,7 @@ namespace Voron.Trees.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long KeyFor(Page page, int num)
+        private long KeyFor(TreePage page, int num)
         {
             return KeyFor(page.Base + page.FixedSize_StartPosition, num, page.IsLeaf ? _entrySize : BranchEntrySize);
         }
@@ -441,7 +441,7 @@ namespace Voron.Trees.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long PageValueFor(Page page, int num)
+        private long PageValueFor(TreePage page, int num)
         {
             var lp = (long*)((page.Base + page.FixedSize_StartPosition) + (num * (BranchEntrySize)) + sizeof(long));
             return lp[0];
@@ -460,7 +460,7 @@ namespace Voron.Trees.Fixed
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
                     var root = _tx.GetReadOnlyPage(largePtr->RootPageNumber);
 
-                    var stack = new Stack<Page>();
+                    var stack = new Stack<TreePage>();
                     stack.Push(root);
 
                     while (stack.Count > 0)
@@ -620,7 +620,7 @@ namespace Voron.Trees.Fixed
              * - We need special handling for the end node and for the start node only.
              */
             long entriesDeleted = 0;
-            Page page;
+            TreePage page;
             FixedSizeTreeHeader.Large* largeHeader;
             while (true)
             {
@@ -691,7 +691,7 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-        private Page GetNextLeafPage()
+        private TreePage GetNextLeafPage()
         {
             while (_cursor.Count > 0)
             {
@@ -711,7 +711,7 @@ namespace Voron.Trees.Fixed
             return null;
         }
 
-        private int RemoveRangeFromPage(Page page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
+        private int RemoveRangeFromPage(TreePage page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
         {
             var startPos = page.LastSearchPosition;
             BinarySearch(page, rangeEnd);
@@ -746,7 +746,7 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-        private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
+        private bool RemoveEntirePage(TreePage page, FixedSizeTreeHeader.Large* largeHeader)
         {
             _tx.FreePage(page.PageNumber);
             if (_cursor.Count == 0) //remove the root page
@@ -786,7 +786,7 @@ namespace Voron.Trees.Fixed
 	        return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
-        private void RemoveEntryFromPage(Page page, int pos)
+        private void RemoveEntryFromPage(TreePage page, int pos)
         {
             page.FixedSize_NumberOfEntries--;
             var size = (ushort)(page.IsLeaf ? _entrySize : BranchEntrySize);
@@ -802,7 +802,7 @@ namespace Voron.Trees.Fixed
                    (page.FixedSize_NumberOfEntries - pos + 1) * size);
         }
 
-        private Page RebalancePage(Page page, FixedSizeTreeHeader.Large* largeTreeHeader)
+        private TreePage RebalancePage(TreePage page, FixedSizeTreeHeader.Large* largeTreeHeader)
         {
             if (_cursor.Count == 0)
             {

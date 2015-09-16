@@ -183,7 +183,6 @@ namespace Raven.SlowTests.Migration
 			using (var session = store.OpenSession())
 			{
 				var statistics = store.DatabaseCommands.GetStatistics();
-				Assert.Equal(0, statistics.CountOfAttachments);
 				Assert.Equal(4, statistics.Indexes.Length);
 
 				Assert.Equal(8, session.Query<Category>().Count());

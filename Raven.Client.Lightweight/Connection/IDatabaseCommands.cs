@@ -22,7 +22,6 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -85,14 +84,6 @@ namespace Raven.Client.Connection
 		void Delete(string key, Etag etag);
 
 		/// <summary>
-		///     Removes an attachment from a database.
-		/// </summary>
-		/// <param name="key">key of an attachment to delete</param>
-		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-		[Obsolete("Use RavenFS instead.")]
-		void DeleteAttachment(string key, Etag etag);
-
-		/// <summary>
 		///     Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">name of an index to perform a query on</param>
@@ -153,31 +144,6 @@ namespace Raven.Client.Connection
 		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
 		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
 		MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
-
-		/// <summary>
-		///     Downloads a single attachment.
-		/// </summary>
-		/// <param name="key">key of the attachment you want to download</param>
-		[Obsolete("Use RavenFS instead.")]
-		Attachment GetAttachment(string key);
-
-		/// <summary>
-		///     Downloads attachment metadata for a multiple attachments.
-		/// </summary>
-		/// <param name="idPrefix">prefix for which attachments should be returned</param>
-		/// <param name="start">number of attachments that should be skipped</param>
-		/// <param name="pageSize">maximum number of attachments that will be returned</param>
-		[Obsolete("Use RavenFS instead.")]
-		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
-
-		/// <summary>
-		///     Used to download attachment information for multiple attachments.
-		/// </summary>
-		/// <param name="start">indicates how many attachments should be skipped</param>
-		/// <param name="startEtag">ETag from which to start</param>
-		/// <param name="pageSize">maximum number of attachments that will be downloaded</param>
-		[Obsolete("Use RavenFS instead.")]
-		AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
 
 		/// <summary>
 		///     Get the low level bulk insert operation
@@ -337,13 +303,6 @@ namespace Raven.Client.Connection
 		JsonDocumentMetadata Head(string key);
 
 		/// <summary>
-		///     Download attachment metadata for a single attachment.
-		/// </summary>
-		/// <param name="key">key of the attachment you want to download metadata for</param>
-		[Obsolete("Use RavenFS instead.")]
-		Attachment HeadAttachment(string key);
-
-		/// <summary>
 		///     Lets you check if the given index definition differs from the one on a server.
 		///     <para>
 		///         This might be useful when you want to check the prior index deployment, if index will be overwritten, and if
@@ -467,16 +426,6 @@ namespace Raven.Client.Connection
 		/// <param name="document">document data</param>
 		/// <param name="metadata">document metadata</param>
 		PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
-
-		/// <summary>
-		///     Puts a byte array as attachment with the specified key
-		/// </summary>
-		/// <param name="key">unique key under which attachment will be stored</param>
-		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-		/// <param name="data">attachment data</param>
-		/// <param name="metadata">attachment metadata</param>
-		[Obsolete("Use RavenFS instead.")]
-		void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
@@ -633,15 +582,6 @@ namespace Raven.Client.Connection
 		///     index
 		/// </param>
 		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
-
-		/// <summary>
-		///     Updates attachments metadata only.
-		/// </summary>
-		/// <param name="key">key under which attachment is stored</param>
-		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-		/// <param name="metadata">attachment metadata</param>
-		[Obsolete("Use RavenFS instead.")]
-		void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
 		///     Perform a set based update using the specified index

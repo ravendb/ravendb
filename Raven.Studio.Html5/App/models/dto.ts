@@ -519,8 +519,7 @@ interface environmentColorDto {
 }
 
 interface replicationConfigDto {
-    DocumentConflictResolution: string;
-    AttachmentConflictResolution: string;
+    DocumentConflictResolution: string;    
 }
 
 interface databaseAccessDto {

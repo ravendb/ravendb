@@ -21,12 +21,6 @@ namespace Raven.Abstractions.Data
 		public Etag LastDocEtag { get; set; }
 
 		/// <summary>
-		/// Last attachment etag in database.
-		/// </summary>
-		[Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentEtag { get; set; }
-
-		/// <summary>
 		/// Total number of indexes in database.
 		/// </summary>
 		public int CountOfIndexes { get; set; }
@@ -55,12 +49,6 @@ namespace Raven.Abstractions.Data
 		/// Total number of documents in database.
 		/// </summary>
 		public long CountOfDocuments { get; set; }
-
-		/// <summary>
-		/// Total number of attachments in database.
-		/// </summary>
-		[Obsolete("Use RavenFS instead.")]
-		public long CountOfAttachments { get; set; }
 
 		/// <summary>
 		/// List of stale index names in database..

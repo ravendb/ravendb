@@ -68,7 +68,6 @@ systemDatabase1Index			OBJECT IDENTIFIER ::= { systemDatabaseIndexes 1 }
 --5.2.X.1.4 Database count of transformers
 --5.2.X.1.5 Database approximate task count
 --5.2.X.1.6 Database count of documents
---5.2.X.1.7 Database count of attachments
 --5.2.X.1.8 Database CurrentNumberOfItemsToIndexInSingleBatch
 --5.2.X.1.9 Database CurrentNumberOfItemsToReduceInSingleBatch
 --5.2.X.1.10 Database errors (count)
@@ -296,14 +295,6 @@ systemDatabaseCountOfDocuments OBJECT-TYPE
    DESCRIPTION
       "# of documents in database"
    ::= { systemDatabaseStatistics 6 }
-   
-systemDatabaseCountOfAttachments OBJECT-TYPE
-   SYNTAX Gauge32
-   MAX-ACCESS read-only
-   STATUS current
-   DESCRIPTION
-      "# of attachments in database"
-   ::= { systemDatabaseStatistics 7 }
    
 systemDatabaseNumberOfItemsToIndexInSingleBatch OBJECT-TYPE
    SYNTAX Gauge32

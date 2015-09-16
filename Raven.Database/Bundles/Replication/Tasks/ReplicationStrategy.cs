@@ -84,35 +84,7 @@ namespace Raven.Bundles.Replication.Tasks
 					return true;
 			}
 			return false;
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)
-		{
-			if (attachment.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) || // don't replicate system attachments
-			    attachment.Key.StartsWith("transactions/recoveryInformation", StringComparison.OrdinalIgnoreCase)) // don't replicate transaction recovery information
-				return false;
-
-			// explicitly marked to skip
-			if (attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication))
-				return false;
-
-			if (attachment.Metadata.ContainsKey(Constants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
-				return false;
-
-			// we don't replicate stuff that was created there
-			if (attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == destinationInstanceId)
-				return false;
-
-			switch (ReplicationOptionsBehavior)
-			{
-				case TransitiveReplicationOptions.None:
-					return attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == null ||
-					       (attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == CurrentDatabaseId);
-			}
-
-			return true;
-		}
+		}     
 
 		public Dictionary<string, string> SpecifiedCollections { get; set; }
 

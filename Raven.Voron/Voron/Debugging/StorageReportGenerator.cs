@@ -114,7 +114,7 @@ namespace Voron.Debugging
 
 						switch (currentNode->Flags)
 						{
-							case NodeFlags.MultiValuePageRef:
+							case TreeNodeFlags.MultiValuePageRef:
 							{
 								var multiValueTreeHeader = (TreeRootHeader*) ((byte*) currentNode + currentNode->KeySize + Constants.NodeHeaderSize);
 
@@ -126,14 +126,14 @@ namespace Voron.Debugging
 								multiValues.PageCount += multiValueTreeHeader->PageCount;
 								break;
 							}
-							case NodeFlags.Data:
+							case TreeNodeFlags.Data:
 							{
-								var nestedPage = GetNestedMultiValuePage(NodeHeader.DirectAccess(_tx, currentNode), currentNode);
+								var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
 
 								multiValues.EntriesCount += nestedPage.NumberOfEntries;
 								break;
 							}
-							case NodeFlags.PageRef:
+							case TreeNodeFlags.PageRef:
 							{
 								var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
 								var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
@@ -142,7 +142,7 @@ namespace Voron.Debugging
 								break;
 							}
 							default:
-								throw new InvalidEnumArgumentException("currentNode->Flags", (int) currentNode->Flags, typeof (NodeFlags));
+								throw new InvalidEnumArgumentException("currentNode->Flags", (int) currentNode->Flags, typeof (TreeNodeFlags));
 						}
 					} while (multiTreeIterator.MoveNext());
 				}
@@ -183,9 +183,9 @@ namespace Voron.Debugging
 			return densities;
 		}
 
-		private Page GetNestedMultiValuePage(byte* nestedPagePtr, NodeHeader* currentNode)
+		private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
 		{
-			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort) NodeHeader.GetDataSize(_tx, currentNode));
+			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) TreeNodeHeader.GetDataSize(_tx, currentNode));
 
 			Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
 			return nestedPage;

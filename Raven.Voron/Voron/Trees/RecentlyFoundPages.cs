@@ -12,12 +12,12 @@ namespace Voron.Trees
         public class FoundPage
         {
             public readonly long Number;
-			public Page Page;
+			public TreePage Page;
 			public readonly MemorySlice FirstKey;
 			public readonly MemorySlice LastKey;
             public readonly long[] CursorPath;
 
-            public FoundPage(long number, Page page, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
+            public FoundPage(long number, TreePage page, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
             {
                 Number = number;
                 Page = page;

@@ -150,15 +150,12 @@
     <Compile Include="MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
     <Compile Include="PeriodicExports\PeriodicBackupTests.cs" />
-    <Compile Include="Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Replication\Async\FailureHandling.cs" />
     <Compile Include="Replication\Async\MultihopReplication.cs" />
     <Compile Include="Replication\Async\SimpleReplication.cs" />
     <Compile Include="Replication\Async\WritesDuringFailover.cs" />
-    <Compile Include="Replication\AttachmentReplication.cs" />
-    <Compile Include="Replication\AttachmentReplicationBugs.cs" />
     <Compile Include="Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
     <Compile Include="Replication\Bugs\David.cs" />
     <Compile Include="Replication\Bugs\HiLoHanging.cs" />

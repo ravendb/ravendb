@@ -42,7 +42,7 @@ namespace Voron
 		public abstract void CopyTo(byte* dest);
 		public abstract Slice ToSlice();
 		public abstract Slice Skip(ushort bytesToSkip);
-		public abstract void Set(NodeHeader* node);
+		public abstract void Set(TreeNodeHeader* node);
 
 		protected abstract int CompareData(MemorySlice other, ushort size);
 

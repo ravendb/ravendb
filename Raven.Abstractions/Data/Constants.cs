@@ -210,14 +210,8 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
 
-        [Obsolete("Use RavenFS instead.")]
-		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
-
         //Periodic export
 		public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
-
-        [Obsolete("Use RavenFS instead.")]
-		public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
 

@@ -166,7 +166,7 @@ namespace Voron.Impl
 			}
 		}
 
-		internal void WriteDirect(Page[] pages, long nextPageNumber)
+		internal void WriteDirect(TreePage[] pages, long nextPageNumber)
 		{
 			for (int i = 0; i < pages.Length; i++)
 			{
@@ -183,7 +183,7 @@ namespace Voron.Impl
 			}
 		}
 
-		private void WritePageDirect(Page page, int numberOfPagesIncludingOverflow)
+		private void WritePageDirect(TreePage page, int numberOfPagesIncludingOverflow)
 		{
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
@@ -260,7 +260,7 @@ namespace Voron.Impl
 		    return null;
 		}
 
-		internal Page ModifyPage(long num, Tree tree, Page page)
+		internal TreePage ModifyPage(long num, Tree tree, TreePage page)
 		{
 			_env.AssertFlushingNotFailed();
 
@@ -274,7 +274,7 @@ namespace Voron.Impl
 				return page;
 			}
 
-		    var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
+		    var newPage = AllocatePage(1, TreePageFlags.None, num); // allocate new page in a log file but with the same number
 
             Memory.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
@@ -300,11 +300,11 @@ namespace Voron.Impl
         private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
 	    private bool _disposed;
 
-	    public Page GetReadOnlyPage(long pageNumber)
+	    public TreePage GetReadOnlyPage(long pageNumber)
 	    {
 	        if (_disposed)
 	            throw new ObjectDisposedException("Transaction");
-			Page p;
+			TreePage p;
 
             PageFromScratchBuffer value;
             if ( _scratchPagesTable.TryGetValue(pageNumber, out value))
@@ -336,7 +336,7 @@ namespace Voron.Impl
 		    return p;
 		}
 
-		internal Page AllocatePage(int numberOfPages, PageFlags flags, long? pageNumber = null)
+		internal TreePage AllocatePage(int numberOfPages, TreePageFlags flags, long? pageNumber = null)
 		{
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
@@ -384,7 +384,7 @@ namespace Voron.Impl
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Flags = flags;
 
-			if ((flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed)
+			if ((flags & TreePageFlags.KeysPrefixed) == TreePageFlags.KeysPrefixed)
 			{
 				page.Upper = (ushort) (AbstractPager.PageSize - Constants.PrefixInfoSectionSize);
 				page.ClearPrefixInfo();
@@ -407,14 +407,14 @@ namespace Voron.Impl
             get { return _trees.Values; }
 	    }
 
-		internal int GetNumberOfFreePages(NodeHeader* node)
+		internal int GetNumberOfFreePages(TreeNodeHeader* node)
 		{
 			return GetNodeDataSize(node) / Constants.PageNumberSize;
 		}
 
-		private int GetNodeDataSize(NodeHeader* node)
+		private int GetNodeDataSize(TreeNodeHeader* node)
 		{
-			if (node->Flags == (NodeFlags.PageRef)) // lots of data, enough to overflow!
+			if (node->Flags == (TreeNodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
 				var overflowPage = GetReadOnlyPage(node->PageNumber);
 				return overflowPage.OverflowSize;
@@ -529,7 +529,7 @@ namespace Voron.Impl
 				var key = multiValueTree.Key.Item2;
 				var childTree = multiValueTree.Value;
 
-				var trh = (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+				var trh = (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
 				childTree.State.CopyTo(trh);
 
 				//parentTree.SetAsMultiValueTreeRef(this, key);

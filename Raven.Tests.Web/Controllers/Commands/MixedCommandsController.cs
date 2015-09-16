@@ -47,12 +47,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
-		[Route("api/mixed/commands/deleteAttachment")]
-		public Task<HttpResponseMessage> DeleteAttachment()
-		{
-			DocumentStore.DatabaseCommands.DeleteAttachment("keys/1", null);
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
 
 		[Route("api/mixed/commands/deleteByIndex")]
 		public Task<HttpResponseMessage> DeleteByIndex()
@@ -87,27 +81,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public Task<HttpResponseMessage> Get2()
 		{
 			DocumentStore.DatabaseCommands.Get(new[] { "keys/1", "keys/2" }, null);
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
-		[Route("api/mixed/commands/getAttachment")]
-		public Task<HttpResponseMessage> GetAttachment()
-		{
-			DocumentStore.DatabaseCommands.GetAttachment("attachment1");
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
-		[Route("api/mixed/commands/getAttachmentHeadersStartingWith")]
-		public Task<HttpResponseMessage> GetAttachmentHeadersStartingWith()
-		{
-			DocumentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("attachments", 0, 128);
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
-		[Route("api/mixed/commands/getAttachments")]
-		public Task<HttpResponseMessage> GetAttachments()
-		{
-			DocumentStore.DatabaseCommands.GetAttachments(0, Etag.Empty, 128);
 			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
@@ -242,13 +215,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
-		[Route("api/mixed/commands/headAttachment")]
-		public Task<HttpResponseMessage> HeadAttachment()
-		{
-			DocumentStore.DatabaseCommands.HeadAttachment("keys/1");
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
 		[Route("api/mixed/commands/indexHasChanged")]
 		public Task<HttpResponseMessage> IndexHasChanged()
 		{
@@ -308,13 +274,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public Task<HttpResponseMessage> Put()
 		{
 			DocumentStore.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
-		[Route("api/mixed/commands/putAttachment")]
-		public Task<HttpResponseMessage> PutAttachment()
-		{
-			DocumentStore.DatabaseCommands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
 			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 
@@ -412,13 +371,6 @@ namespace Raven.Tests.Web.Controllers.Commands
 		public Task<HttpResponseMessage> Suggest()
 		{
 			DocumentStore.DatabaseCommands.Suggest(new Users_ByName().IndexName, new SuggestionQuery { Field = "Name", Term = "Term1" });
-			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
-		}
-
-		[Route("api/mixed/commands/updateAttachmentMetadata")]
-		public Task<HttpResponseMessage> UpdateAttachmentMetadata()
-		{
-			DocumentStore.DatabaseCommands.UpdateAttachmentMetadata("keys/1", null, new RavenJObject());
 			return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
 		}
 

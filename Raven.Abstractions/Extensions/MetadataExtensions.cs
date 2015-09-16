@@ -163,15 +163,6 @@ namespace Raven.Abstractions.Extensions
             return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
 		}
 
-        [Obsolete("Use RavenFS instead.")]
-		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
-			if (self["Content-Type"] != null)
-				filterHeaders["Content-Type"] = self["Content-Type"];
-			return filterHeaders;
-		}
-
         /// <summary>
         /// Filters the headers from unwanted headers
         /// </summary>
@@ -205,25 +196,6 @@ namespace Raven.Abstractions.Extensions
             }
             return metadata;
         }
-
-        [Obsolete("Use RavenFS instead.")]
-        public static RavenJObject FilterHeadersAttachment(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
-            string contentType = null;
-            foreach (var keyValue in self)
-            {
-                if (keyValue.Key.Equals("Content-Type"))
-                {
-                    contentType = keyValue.Value.FirstOrDefault();
-                    break;
-                }
-            }
-			if (contentType != null)
-				filterHeaders["Content-Type"] = contentType;
-
-			return filterHeaders;
-		}
 
         /// <summary>
 		/// Filters the headers from unwanted headers

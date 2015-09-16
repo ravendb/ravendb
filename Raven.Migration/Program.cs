@@ -18,7 +18,6 @@ namespace Raven.Migration
 		private readonly OptionSet optionSet;
 		private string fileSystemName;
 		private bool use2NdConnection;
-		private bool deleteCopiedAttachments = false;
 		private int batchSize = 128;
 
 		public Program()
@@ -56,8 +55,7 @@ namespace Raven.Migration
 				use2NdConnection = true;
 				fsConnectionStringOptions.ApiKey = value;
 			});
-			optionSet.Add("bs|batch-size:", OptionCategory.None, "Batch size for downloading attachments at once and uploading one-by-one to the file system. Default: 128.", value => batchSize = int.Parse(value));
-			optionSet.Add("delete-copied-attachments", OptionCategory.None, "Delete an attachment after uploading it to the file system.", v => deleteCopiedAttachments = true);
+			optionSet.Add("bs|batch-size:", OptionCategory.None, "Batch size for downloading attachments at once and uploading one-by-one to the file system. Default: 128.", value => batchSize = int.Parse(value));			
 			optionSet.Add("h|?|help", OptionCategory.Help, string.Empty, v => PrintUsageAndExit(0));
 		}
 
@@ -82,16 +80,14 @@ namespace Raven.Migration
 			catch (Exception e)
 			{
 				PrintUsageAndExit(e);
-			}
-
-			// CopyAttachmentsToFileSystem is the only migration task right now
+			}			
 
 			if (string.IsNullOrEmpty(fileSystemName))
 				PrintUsageAndExit(-1);
 
 			try
 			{
-				new CopyAttachmentsToFileSystem(dbConnectionStringOptions, use2NdConnection ? fsConnectionStringOptions : dbConnectionStringOptions, fileSystemName, deleteCopiedAttachments, batchSize).Execute();
+                // No migration tasks. Put your migration code in here. 
 			}
 			catch (Exception ex)
 			{

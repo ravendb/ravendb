@@ -21,9 +21,6 @@ namespace Raven.Database.Storage
 		Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
 
 		Etag GetMostRecentDocumentEtag();
-
-        [Obsolete("Use RavenFS instead.")]
-		Etag GetMostRecentAttachmentEtag();
 		
         int GetIndexTouchCount(int view);
 	}
