@@ -99,6 +99,7 @@ namespace Raven.Client.FileSystem.Connection
                 try
                 {
                     var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
+
                     FailureCounters.FailureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
 					if (config != null)
@@ -172,7 +173,7 @@ namespace Raven.Client.FileSystem.Connection
 
         protected override string GetServerCheckUrl(string baseUrl)
         {
-            return baseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
+            return baseUrl + "/stats?check-server-reachable";
         }
     }
 }
