@@ -147,9 +147,10 @@ but the attachment itself was found. Data corruption?", key));
 
             var loweredKey = (Slice) CreateKey(key);
 
-            if (logger.IsDebugEnabled && !attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value) )
+            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value) )
 			{
-				logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+				if (logger.IsDebugEnabled)
+					logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
 
