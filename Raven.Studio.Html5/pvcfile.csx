@@ -9,8 +9,6 @@ pvc.Task("optimized-build", () => {
 		"App/views/**/*.html",
 		"App/widgets/**/*.html",
 		"App/main.js",
-		"fonts/*.woff",
-		"Content/**/*",
 		"Scripts/**/*.js",
 		"Scripts/**/*.css",
 		"index.html",
