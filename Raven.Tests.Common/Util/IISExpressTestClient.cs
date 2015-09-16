@@ -55,13 +55,15 @@ namespace Raven.Tests.Common.Util
 		{
 			if (iisExpress == null)
 			{
-				iisExpress = new IISExpressDriver();
+				iisExpress = new IISExpressDriver();                
 				var iisTestWebDirectory = DeployWebProjectToTestDirectory();
 
-				if (settings != null)
-				{
-					ModifyWebConfig(Path.Combine(iisTestWebDirectory, "web.config"), settings);
-				}
+                if (settings == null)
+                    settings = new Dictionary<string, string>();
+
+                settings["Raven/Voron/AllowOn32Bits"] = "true";
+
+				ModifyWebConfig(Path.Combine(iisTestWebDirectory, "web.config"), settings);
 
 				iisExpress.Start(iisTestWebDirectory, 8084);
 			}
@@ -69,6 +71,8 @@ namespace Raven.Tests.Common.Util
 			var url = iisExpress.Url;
 			if (fiddler)
 				url = url.Replace("localhost", "localhost.fiddler");
+
+
 			return new DocumentStore {Url = url}.Initialize();
 		}
 
