@@ -2155,35 +2155,6 @@ namespace Raven.Client.Connection.Async
 									 .AddRequestExecuterAndReplicationHeaders(this, currentServerUrl);
 		}
 
-		[Obsolete("Use RavenFS instead.")]
-		public Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata, CancellationToken token = default(CancellationToken))
-		{
-			return ExecuteWithReplication(HttpMethod.Post, operationMetadata => DirectUpdateAttachmentMetadata(key, metadata, etag, operationMetadata, token), token);
-		}
-
-		[Obsolete("Use RavenFS instead.")]
-		private async Task DirectUpdateAttachmentMetadata(string key, RavenJObject metadata, Etag etag, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
-		{
-			if (etag != null)
-			{
-				metadata[Constants.MetadataEtagField] = etag.ToString();
-			}
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, HttpMethod.Post, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
-			{
-				ErrorResponseException responseException;
-				try
-				{
-					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
-					return;
-				}
-				catch (ErrorResponseException e)
-				{
-					responseException = e;
-				}
-				if (!HandleException(responseException)) throw responseException;
-			}
-		}
-
 		public Task CommitAsync(string txId, CancellationToken token = default (CancellationToken))
 		{
 			return ExecuteWithReplication(HttpMethod.Post, operationMetadata => DirectCommit(txId, operationMetadata, token), token);

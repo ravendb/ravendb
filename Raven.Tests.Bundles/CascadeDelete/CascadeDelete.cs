@@ -70,7 +70,6 @@ namespace Raven.Tests.Bundles.CascadeDelete
 			{
 				session.Store(master);
 				session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray {"I_Dont_Exist"};
-				session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray {"Neither_Do_I"};
 				session.SaveChanges();
 			}
 

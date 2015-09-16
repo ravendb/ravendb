@@ -13,7 +13,7 @@ import messagePublisher = require("common/messagePublisher");
 
 class globalConfigReplications extends viewModelBase {
 
-    replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
+    replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
 
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);

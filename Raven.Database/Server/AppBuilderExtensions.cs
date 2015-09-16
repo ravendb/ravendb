@@ -241,9 +241,6 @@ namespace Owin
                             case 'S':
 				                switch (prev)
 				                {
-                                    case 'T':
-                                    case 't':
-                                        return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
                                     case 'o':
                                     case 'O':
                                         if (localPath[length - 4] == '/')

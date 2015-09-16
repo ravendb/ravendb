@@ -77,7 +77,6 @@ interface documentMetadataDto {
 
 interface databaseStatisticsDto {
     ApproximateTaskCount: number;
-    CountOfAttachments: number;
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
@@ -89,7 +88,6 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
-    LastAttachmentEtag: string;
     LastDocEtag: string;
     LastIndexingDateTime: string;
     Prefetches: futureBatchStatsDto[];
@@ -344,7 +342,6 @@ interface serverErrorDto {
 interface replicationStatsDocumentDto {
     Self: string; // e.g. "http://judah-pc:8080/databases/ReplSrc"
     MostRecentDocumentEtag: string;
-    MostRecentAttachmentEtag: string;
     Stats: replicationStatsDto[];
 }
 
@@ -772,7 +769,6 @@ interface conflictDto extends documentDto {
 
 interface replicationSourceDto extends documentDto {
     LastDocumentEtag?: string;
-    LastAttachmentEtag?: string;
     ServerInstanceId: string;
     Source: string;
 }
@@ -796,7 +792,6 @@ interface smugglerOptionsDto {
     IncludeDocuments: boolean;
     IncludeIndexes: boolean;
     IncludeTransformers: boolean;
-    IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
     NoneDefualtFileName: string;
 }
@@ -1077,7 +1072,6 @@ interface timeSeriesDto {
 enum ImportItemType {
     Documents = 0x1,
     Indexes = 0x2,
-    Attachments = 0x4,
     Transformers = 0x8,
     RemoveAnalyzers = 0x8000
 }
@@ -1242,7 +1236,6 @@ interface replicationTopologyConnectionDto {
     Destination: string;
     DestinationToSourceState: string;
     Errors: string[];
-    LastAttachmentEtag: string;
     LastDocumentEtag: string;
     ReplicationBehavior: string;
     SendServerId: string;
