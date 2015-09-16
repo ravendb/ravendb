@@ -724,6 +724,16 @@ namespace Raven.Database.Server.Controllers
 					return "application/x-silverlight-2";
 				case ".json":
 					return "application/json";
+				case ".eot":
+					return "application/vnd.ms-fontobject";
+				case ".svg":
+					return "image/svg+xml";
+				case ".ttf":
+					return "application/octet-stream";
+				case ".woff":
+					return "application/font-woff";
+				case ".woff2":
+					return "application/font-woff2";
 				default:
 					return "text/plain";
 			}
