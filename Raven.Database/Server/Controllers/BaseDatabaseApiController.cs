@@ -1,39 +1,63 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
-using Raven.Database.Config;
+using Raven.Database.Common;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class RavenDbApiController : RavenBaseApiController
+	public abstract class BaseDatabaseApiController : ResourceApiController<DocumentDatabase, DatabasesLandlord>
 	{
-	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+		public string DatabaseName
+		{
+			get
+			{
+				return ResourceName;
+			}
+		}
 
-		public string DatabaseName { get; private set; }
+		public DocumentDatabase Database
+		{
+			get
+			{
+				return Resource;
+			}
+		}
+
+		public override ResourceType ResourceType
+		{
+			get
+			{
+				return ResourceType.Database;
+			}
+		}
+
+		public override void MarkRequestDuration(long duration)
+		{
+			if (Resource == null)
+				return;
+			Resource.WorkContext.MetricsCounters.RequestDurationMetric.Update(duration);
+			Resource.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
+		}
 
 		private string queryFromPostRequest;
 		
@@ -42,131 +66,14 @@ namespace Raven.Database.Server.Controllers
 			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
 		}
 
-		public void InitializeFrom(RavenDbApiController other)
+		public void InitializeFrom(BaseDatabaseApiController other)
 		{
-			DatabaseName = other.DatabaseName;
+			ResourceName = other.ResourceName;
 			queryFromPostRequest = other.queryFromPostRequest;
 			if (other.Configuration != null)
 				Configuration = other.Configuration;
 			ControllerContext = other.ControllerContext;
 			ActionContext = other.ActionContext;
-		}
-
-		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
-		{
-			InnerInitialization(controllerContext);
-			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-			var result = new HttpResponseMessage();
-			if (InnerRequest.Method.Method != "OPTIONS")
-			{
-				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
-				{
-                    RequestManager.SetThreadLocalState(ReadInnerHeaders, DatabaseName);
-					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-				}, httpException =>
-				{
-				    var response = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
-
-				    var timeout = httpException.InnerException as TimeoutException;
-                    if (timeout != null)
-                    {
-                        response.Headers.Add("Raven-Database-Load-In-Progress", DatabaseName);
-                    }
-				    return response;
-				});
-			}
-
-			RequestManager.AddAccessControlHeaders(this, result);
-            RequestManager.ResetThreadLocalState();
-
-			return result;
-		}
-
-		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
-			MixedModeRequestAuthorizer authorizer)
-		{
-			if (SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized == false)
-			{
-				HttpResponseMessage authMsg;
-				if (authorizer.TryAuthorize(this, out authMsg) == false)
-					return authMsg;
-			}
-
-            if (IsInternalRequest == false)
-				RequestManager.IncrementRequestCount();
-
-			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
-			{
-				var msg = "Could not find a database named: " + DatabaseName;
-				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
-			}
-
-			var sp = Stopwatch.StartNew();
-
-			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
-			sp.Stop();
-			AddRavenHeader(result, sp);
-
-			return result;
-		}
-
-		protected ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
-		{
-			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
-			erroResponseMessage = null;
-			try
-			{
-				configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
-			}
-			catch (Exception e)
-			{
-				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
-				Log.ErrorException(errorMessage, e);
-				erroResponseMessage = GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
-				return null;
-			}
-
-			if (configurationDocument == null)
-			{
-				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
-				return null;
-			}
-
-			if (configurationDocument.MergedDocument.Destinations.Count != 0) 
-				return configurationDocument.MergedDocument;
-
-			erroResponseMessage = GetMessageWithObject(new
-			{
-				Message = @"Replication document found, but no destinations configured for index replication. 
-																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
-																Nothing to do in this case..."
-			},
-			HttpStatusCode.Accepted);
-			return null;
-		}
-
-		protected override void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			base.InnerInitialization(controllerContext);
-
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("MS_SubRoutes"))
-			{
-				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
-
-				if (selectedData != null)
-					DatabaseName = selectedData.Values["databaseName"] as string;
-				else
-					DatabaseName = null;
-			}
-			else
-			{
-				if (values.ContainsKey("databaseName"))
-					DatabaseName = values["databaseName"] as string;
-				else
-					DatabaseName = null;
-			}
 		}
 
 		public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
@@ -194,58 +101,6 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-        public override InMemoryRavenConfiguration SystemConfiguration
-        {
-            get { return DatabasesLandlord.SystemConfiguration; }
-        }
-
-	    private DocumentDatabase _currentDb;
-		public DocumentDatabase Database
-		{
-			get
-			{
-			    if (_currentDb != null)
-			        return _currentDb;
-
-				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
-				if (database == null)
-				{
-					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
-				}
-
-                return _currentDb = database.Result;
-			}
-		}
-
-		public void SetCurrentDatabase(DocumentDatabase db)
-		{
-			DatabaseName = db.Name;
-			_currentDb = db;
-		}
-
-	    public override InMemoryRavenConfiguration ResourceConfiguration
-	    {
-	        get { return Database.Configuration; }
-	    }
-
-	    protected bool EnsureSystemDatabase()
-		{
-			return DatabasesLandlord.SystemDatabase == Database;
-		}
-
-        protected bool IsAnotherRestoreInProgress(out string resourceName)
-        {
-            resourceName = null;
-            var restoreDoc = Database.Documents.Get(RestoreInProgress.RavenRestoreInProgressDocumentKey, null);
-            if (restoreDoc != null)
-            {
-                var restore = restoreDoc.DataAsJson.JsonDeserialization<RestoreInProgress>();
-                resourceName = restore.Resource;
-                return true;
-            }
-            return false;
-        }
-
 		protected TransactionInformation GetRequestTransaction()
 		{
 			if (InnerRequest.Headers.Contains("Raven-Transaction-Information") == false)
@@ -263,8 +118,6 @@ namespace Raven.Database.Server.Controllers
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
-
-	
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
@@ -572,7 +425,7 @@ namespace Raven.Database.Server.Controllers
 				return;
 			}
 
-			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			var replicationTask = Resource.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			if (replicationTask == null)
 			{
 				return;
@@ -584,109 +437,11 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-
-		public override async Task<RequestWebApiEventArgs> TrySetupRequestToProperResource()
-        {
-            var tenantId = DatabaseName;
-            var landlord = DatabasesLandlord;
-
-            if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
-            {                
-                landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-
-                return new RequestWebApiEventArgs
-                {
-                    Controller = this,
-                    IgnoreRequest = false,
-                    TenantId = "System",
-                    Database = landlord.SystemDatabase
-                };
-            }
-
-            Task<DocumentDatabase> resourceStoreTask;
-            bool hasDb;
-			string msg;
-            try
-            {
-                hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-            }
-            catch (Exception e)
-            {
-                msg = "Could not open database named: " + tenantId + " "  + e.Message;
-                Logger.WarnException(msg, e);
-                throw new HttpException(503, msg, e);
-            }
-            if (hasDb)
-            {
-                try
-                {
-					int timeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
-					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
-					{
-						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
-						{
-							msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
-							Logger.Warn(msg);
-							throw new TimeoutException(msg);
-						}
-
-						try
-						{
-                            if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForDatabaseToLoad))) != resourceStoreTask)
-							{
-								msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, timeToWaitForDatabaseToLoad);
-								Logger.Warn(msg);
-								throw new TimeoutException(msg);
-							}
-						}
-						finally
-						{
-							MaxNumberOfThreadsForDatabaseToLoad.Release();
-						}
-					}
-
-					landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-
-                    return new RequestWebApiEventArgs
-                    {
-                        Controller = this,
-                        IgnoreRequest = false,
-                        TenantId = tenantId,
-                        Database = resourceStoreTask.Result
-                    };
-                }
-                catch (Exception e)
-                {
-	                msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
-
-                    Logger.WarnException(msg, e);
-                    throw new HttpException(503, msg,e);
-                }
-            }
-
-			msg = "Could not find a database named: " + tenantId;
-                Logger.Warn(msg);
-                throw new HttpException(503, msg);
-            }
-
-	    public override string TenantName
-	    {
-            get { return DatabaseName; }
-	    }
-
-	    public override void MarkRequestDuration(long duration)
-	    {
-	        if (Database == null)
-	            return;
-	        Database.WorkContext.MetricsCounters.RequestDurationMetric.Update(duration);
-			Database.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
-	    }
-
 		protected Etag GetLastDocEtag()
 		{
 			var lastDocEtag = Etag.Empty;
 			long documentsCount = 0;
-			Database.TransactionalStorage.Batch(
+			Resource.TransactionalStorage.Batch(
 				accessor =>
 				{
 					lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
@@ -754,7 +509,7 @@ namespace Raven.Database.Server.Controllers
 					if (principalWithDatabaseAccess != null)
 					{
 						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
-						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
 					}
 					else
 					{
@@ -782,8 +537,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
-			var resourcesDocuments = Database.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
-				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+			var resourcesDocuments = Resource.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
+				GetPageSize(Resource.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
 			return resourcesDocuments;
 		}
@@ -812,7 +567,7 @@ namespace Raven.Database.Server.Controllers
 									windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
 				};
 
-				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
+				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Resource);
 
 				return windowsUser;
 			}
@@ -827,7 +582,7 @@ namespace Raven.Database.Server.Controllers
 					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
 						principalWithDatabaseAccess.IsAdministrator(
 							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Resource),
 					Databases =
 						principalWithDatabaseAccess.AdminDatabases.Concat(
 							principalWithDatabaseAccess.ReadOnlyDatabases)
@@ -844,7 +599,7 @@ namespace Raven.Database.Server.Controllers
 					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
 				};
 
-				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
 
 				return windowsUserWithDatabase;
 			}
@@ -858,7 +613,7 @@ namespace Raven.Database.Server.Controllers
 					Remark = "Using OAuth",
 					User = oAuthPrincipal.Name,
 					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Resource),
 					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
 											  .Select(db => db.TenantId != null ? new DatabaseInfo
 											  {

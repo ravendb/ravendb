@@ -2,7 +2,7 @@
 import resource = require("models/resources/resource");
 
 class disableResourceToggleCommand extends commandBase {
-    private oneDatabasePath = "/admin/databases/";
+    private oneDatabasePath = "/admin/databases-toggle-disable";
     private multipleDatabasesPath = "/admin/databases/batch-toggle-disable";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-toggle-disable";
@@ -36,16 +36,21 @@ class disableResourceToggleCommand extends commandBase {
         var resource = this.resources[0];
         this.reportInfo("Trying to " + action + " " + resource.name + "...");
 
-        var args = {
-            isSettingDisabled: this.isSettingDisabled
-        };
+	    var args = (resource.type === TenantType.Database) ? {
+		    id: resource.name,
+		    isSettingDisabled: this.isSettingDisabled
+	    } : {
+		    isSettingDisabled: this.isSettingDisabled
+	    };
+			
 
         var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
             resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
-            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
-        var url = disableOneResourcePath + resource.name + this.urlEncodeArgs(args);
+				resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
+	    var resourceName = (resource.type === TenantType.Database) ? "" : resource.name; 
+        var url = disableOneResourcePath + resourceName + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
-
+		
         toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + name));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + name, response.responseText, response.statusText));
         

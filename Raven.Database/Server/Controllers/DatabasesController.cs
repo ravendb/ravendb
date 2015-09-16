@@ -12,7 +12,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DatabasesController : RavenDbApiController
+	public class DatabasesController : BaseDatabaseApiController
 	{
 	    [HttpGet]
 		[RavenRoute("databases")]

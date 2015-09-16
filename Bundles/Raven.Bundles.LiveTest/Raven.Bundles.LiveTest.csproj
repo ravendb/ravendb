@@ -72,7 +72,9 @@
       <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Analyzer Include="..\..\SharedLibs\Raven.CodeAnalysis.dll" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>

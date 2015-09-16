@@ -727,8 +727,8 @@ namespace Raven.Database.Actions
                                                                                       UuidGenerator);
                     }
                 });
-
-                Log.Debug("Put document {0} with etag {1}", key, newEtag);
+				if (Log.IsDebugEnabled)
+					Log.Debug("Put document {0} with etag {1}", key, newEtag);
                 return new PutResult
                 {
                     Key = key,
@@ -750,7 +750,8 @@ namespace Raven.Database.Actions
             key = key.Trim();
 
             var deleted = false;
-            Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
             RavenJObject metadataVar = null;
             using (Database.DocumentLock.Lock())
             {

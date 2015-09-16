@@ -18,6 +18,9 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Common;
+using Raven.Database.Counters;
+using Raven.Database.FileSystem;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Queries;
@@ -102,27 +105,27 @@ namespace Raven.Database.Server.WebApi
 
 		private void OnBeforeRequest(object sender, RequestWebApiEventArgs args)
 		{
-			var documentDatabase = args.Database;
-			if (documentDatabase != null)
+			if (args.ResourceType == ResourceType.Database)
 			{
+				var documentDatabase = (DocumentDatabase)args.Resource;
 				documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
 				documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var fileSystem = args.FileSystem;
-			if (fileSystem != null)
+			if (args.ResourceType == ResourceType.FileSystem)
 			{
+				var fileSystem = (RavenFileSystem)args.Resource;
 				fileSystem.MetricsCounters.ConcurrentRequests.Mark();
 				fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var counters = args.Counters;
-			if (counters != null)
+			if (args.ResourceType == ResourceType.Counter)
 			{
+				var counters = (CounterStorage)args.Resource;
 				counters.MetricsCounters.RequestsPerSecondCounter.Mark();
 				Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
@@ -130,27 +133,26 @@ namespace Raven.Database.Server.WebApi
 
 		private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
 		{
-			var documentDatabase = args.Database;
-			if (documentDatabase != null)
+			if (args.ResourceType == ResourceType.Database)
 			{
+				var documentDatabase = (DocumentDatabase)args.Resource;
 				Interlocked.Decrement(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var fileSystem = args.FileSystem;
-			if (fileSystem != null)
+			if (args.ResourceType == ResourceType.FileSystem)
 			{
+				var fileSystem = (RavenFileSystem)args.Resource;
 				Interlocked.Decrement(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
 				return;
 			}
 
-			var counters = args.Counters;
-			if (counters != null)
+			if (args.ResourceType == ResourceType.Counter)
 			{
+				var counters = (CounterStorage)args.Resource;
 				Interlocked.Decrement(ref counters.MetricsCounters.ConcurrentRequestsCount);
 			}
 		}
-
 
 		public void Init()
 		{
@@ -184,7 +186,7 @@ namespace Raven.Database.Server.WebApi
 
 
 
-		public async Task<HttpResponseMessage> HandleActualRequest(RavenBaseApiController controller,
+		public async Task<HttpResponseMessage> HandleActualRequest(IResourceApiController controller,
 																   HttpControllerContext controllerContext,
 																   Func<Task<HttpResponseMessage>> action,
 																   Func<HttpException, HttpResponseMessage> onHttpException)
@@ -207,9 +209,9 @@ namespace Raven.Database.Server.WebApi
 
 					try
 					{
-						if (  controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+						if (controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-							if (controller.ResourceConfiguration.RejectClientsMode)
+							if (controller.Resource.Configuration.RejectClientsMode)
 							{
 								response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 								{
@@ -371,7 +373,7 @@ namespace Raven.Database.Server.WebApi
 		}
 
 
-		private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
+		private void FinalizeRequestProcessing(IResourceApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 			try
@@ -418,23 +420,38 @@ namespace Raven.Database.Server.WebApi
 
 			sw.Stop();
 
-			if (landlord.IsDatabaseLoaded(controller.TenantName ?? Constants.SystemDatabase))
-			{
-				controller.MarkRequestDuration(sw.ElapsedMilliseconds);
-			}
+			MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
 			var curReq = Interlocked.Increment(ref reqNum);
 
-			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
+			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
 
 			if (controller.IsInternalRequest == false)
 			{
-				TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName, response);
+				TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
 			}
 
-			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
+			RememberRecentRequests(logHttpRequestStatsParam, controller.ResourceName);
 		}
 
+		private void MarkRequestDuration(IResourceApiController controller, long elapsedMilliseconds)
+		{
+			switch (controller.ResourceType)
+			{
+				case ResourceType.Database:
+					if (landlord.IsDatabaseLoaded(controller.ResourceName ?? Constants.SystemDatabase))
+						controller.MarkRequestDuration(elapsedMilliseconds);
+					break;
+				case ResourceType.FileSystem:
+					break;
+				case ResourceType.TimeSeries:
+					break;
+				case ResourceType.Counter:
+					break;
+				default:
+					throw new NotSupportedException(controller.ResourceType.ToString());
+			}
+		}
 
 		private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
 		{
@@ -464,7 +481,7 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
+		private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)
 				return;
@@ -474,7 +491,7 @@ namespace Raven.Database.Server.WebApi
 			if (controller is IndexController)
 			{
 				var jsonContent = response.Content as JsonContent;
-				if (jsonContent != null && jsonContent.Data != null) 
+				if (jsonContent != null && jsonContent.Data != null)
 				{
 					timingsJson = jsonContent.Data.Value<RavenJObject>("TimingsInMilliseconds");
 				}
@@ -504,19 +521,16 @@ namespace Raven.Database.Server.WebApi
 				return "<system>";
 			}
 
-			if (resourceName.IndexOf("counters/") == 0)
-			{
-				return resourceName.Substring(9);
-			}
-
-			if (resourceName.IndexOf("fs/") == 0)
+			if (resourceName.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+			    resourceName.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+			    resourceName.StartsWith("ts/", StringComparison.OrdinalIgnoreCase))
 			{
 				return resourceName.Substring(3);
 			}
 
 			return resourceName;
 		}
-		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
+		private void LogHttpRequestStats(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
 		{
 			if (Logger.IsDebugEnabled == false)
 				return;
@@ -531,8 +545,9 @@ namespace Raven.Database.Server.WebApi
 				logHttpRequestStatsParams.ResponseStatusCode,
 				logHttpRequestStatsParams.RequestUri,
 				databaseName);
-			Logger.Debug(message);
-			if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+			if (Logger.IsDebugEnabled)
+				Logger.Debug(message);
+			if (Logger.IsDebugEnabled && string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
 			{
 				Logger.Debug(logHttpRequestStatsParams.CustomInfo);
 			}

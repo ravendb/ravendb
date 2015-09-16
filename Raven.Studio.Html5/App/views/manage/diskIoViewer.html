@@ -18,6 +18,8 @@
 					<ul class="dropdown-menu" role="menu" data-bind="foreach: performanceRuns">
 						<li><a href="#" data-bind="click: $root.switchReport.bind($root), text: displayName"></a></li>
 					</ul>
+                    
+                    <button data-bind="click: deleteReport, visible: currentPerformanceRun()" class="btn btn-default"><i class="fa fa-trash-o"></i></button>
 				</div>
 			</span>
 
@@ -34,7 +36,7 @@
 				</div>
 			</span>
 		</div>
-		<div id="diskMonitorContainer" class="with-3d-shadow with-transitions">
+		<div data-bind="visible: showChart()" id="diskMonitorContainer" class="with-3d-shadow with-transitions">
 			<svg height="300" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }"></svg>
 		</div>
 	</div>

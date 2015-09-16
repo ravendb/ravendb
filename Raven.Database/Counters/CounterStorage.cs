@@ -12,6 +12,7 @@ using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Counters.Notifications;

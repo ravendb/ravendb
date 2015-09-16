@@ -1,10 +1,12 @@
-﻿using Raven.Abstractions.Util;
+﻿using System;
+
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Database.Common
 {
-    public interface IResourceStore
+    public interface IResourceStore : IDisposable
     {
         string Name { get; }
 

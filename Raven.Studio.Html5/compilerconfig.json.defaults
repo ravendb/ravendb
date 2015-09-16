@@ -1,0 +1,20 @@
+{
+  "compilers": {
+    "less": {
+      "strictMath": false,
+      "strictUnits": false,
+      "relativeUrls": true,
+      "rootPath": ""
+    },
+    "sass": {
+      "indentType": "space",
+      "indentWidth": 2,
+      "outputStyle": "nested",
+      "Precision": 5
+    },
+    "coffeescript": {
+      "bare": false,
+      "runtimeMode": "node"
+    }
+  }
+}

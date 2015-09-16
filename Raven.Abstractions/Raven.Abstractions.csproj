@@ -527,5 +527,7 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <ItemGroup />
+  <ItemGroup>
+    <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
+  </ItemGroup>
 </Project>

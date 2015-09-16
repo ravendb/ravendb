@@ -346,7 +346,8 @@ namespace Raven.Database.Impl.DTC
 							Key = change.Key
 						};
 
-						log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+						if (log.IsDebugEnabled)
+							log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
 
 						// doc.Etag - represent the _modified_ document etag, and we already
 						// checked etags on previous PUT/DELETE, so we don't pass it here

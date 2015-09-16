@@ -89,7 +89,7 @@ namespace Raven.Tests.Raft
 
 			Console.WriteLine("Leader: " + leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri);
 
-			ClusterManagerFactory.InitializeTopology(leader.Options.ClusterManager.Value);
+			leader.Options.ClusterManager.Value.InitializeTopology();
 
 			Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 

@@ -124,10 +124,6 @@ namespace Rachis
 
 		public RaftEngine(RaftEngineOptions raftEngineOptions)
 		{
-//#if DEBUG
-//			Console.WriteLine("Press any key to continue loading Raft -> opportunity to attach debugger");
-//			Console.ReadLine();
-//#endif
 			_raftEngineOptions = raftEngineOptions;
 			Debug.Assert(raftEngineOptions.Stopwatch != null);
 
@@ -255,7 +251,14 @@ namespace Rachis
 			_log.Debug("{0} ==> {1}", oldState, state);
 		}
 
-		public Task StepDownAsync()
+
+        public void ForceCandidateState()
+        {
+            _log.Debug("Forced into candidate mode");
+            SetState(RaftEngineState.CandidateByRequest);
+        }
+
+        public Task StepDownAsync()
 		{
 			if (State != RaftEngineState.Leader)
 				throw new NotLeadingException("Not a leader, and only leaders can step down");
@@ -503,15 +506,16 @@ namespace Rachis
 				CurrentLeader = null;
 
 				SetState(RaftEngineState.Follower);
-				return;
+			}
+			else
+			{
+				if (_log.IsInfoEnabled)
+				{
+					_log.Info("Finished applying new topology: {0}{1}", _currentTopology,
+						tcc.Previous == null ? ", Previous topology was null - perhaps it is setting topology for the first time?" : String.Empty);
+				}
 			}
 
-			if (_log.IsInfoEnabled)
-			{
-				_log.Info("Finished applying new topology: {0}{1}", _currentTopology,
-					tcc.Previous == null ? ", Previous topology was null - perhaps it is setting topology for the first time?" : String.Empty);
-			}
-				
 			OnTopologyChanged(tcc);
 		}
 

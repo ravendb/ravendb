@@ -31,7 +31,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
 			{
 				if (Landlord.IsDatabaseLoaded(DatabaseName))
 				{
-					var database = Landlord.GetDatabaseInternal(DatabaseName).Result;
+					var database = Landlord.GetResourceInternal(DatabaseName).Result;
 					IndexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(IndexName);
 					if (IndexDefinition != null)
 						return GetData(database);

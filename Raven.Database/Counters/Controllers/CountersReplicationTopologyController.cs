@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class CountersReplicationTopologyController : RavenCountersApiController
+	public class CountersReplicationTopologyController : BaseCountersApiController
 	{
 		[HttpPost]
 		[RavenRoute("cs/{counterStorageName}/admin/replication/topology/discover")]
@@ -35,7 +35,7 @@ namespace Raven.Database.Counters.Controllers
 				from = await ReadJsonArrayAsync();
 			}
 
-			var replicationSchemaDiscoverer = new CountersReplicationTopologyDiscoverer(CounterStorage, from, ttl, Log);
+			var replicationSchemaDiscoverer = new CountersReplicationTopologyDiscoverer(Counters, from, ttl, Log);
 			var node = replicationSchemaDiscoverer.Discover();
 
 			return GetMessageWithObject(node);

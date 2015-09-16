@@ -196,12 +196,12 @@ namespace Raven.Server
 
 			public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
 			{
-				return options.DatabaseLandlord.GetDatabaseInternal(databaseName);
+				return options.DatabaseLandlord.GetResourceInternal(databaseName);
 			}
 
             public Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName)
             {
-                return options.FileSystemLandlord.GetFileSystemInternal(fileSystemName);
+                return options.FileSystemLandlord.GetResourceInternal(fileSystemName);
             }
 
 			public RequestManager RequestManager { get { return options.RequestManager; } }

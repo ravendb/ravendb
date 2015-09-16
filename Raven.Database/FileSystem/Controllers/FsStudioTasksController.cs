@@ -27,7 +27,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FsStudioTasksController : RavenFsApiController
+	public class FsStudioTasksController : BaseFileSystemApiController
 	{
 		[HttpPost]
 		[RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
@@ -151,7 +151,7 @@ namespace Raven.Database.FileSystem.Controllers
 			});
 
 			var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-				string.Format("Dump of {0}, {1}", this.FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+				string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
 				smugglerOptions.NoneDefualtFileName;
 			result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
 			{

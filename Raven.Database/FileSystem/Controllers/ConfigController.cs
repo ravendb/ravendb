@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class ConfigController : RavenFsApiController
+	public class ConfigController : BaseFileSystemApiController
 	{
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -96,7 +96,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
-			Log.Debug("Config '{0}' was inserted", name);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Config '{0}' was inserted", name);
 
 			return GetMessageWithObject(json, HttpStatusCode.Created)
 				.WithNoCache();
@@ -110,7 +111,8 @@ namespace Raven.Database.FileSystem.Controllers
 
 			Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
-			Log.Debug("Config '{0}' was deleted", name);
+			if (Log.IsDebugEnabled)
+				Log.Debug("Config '{0}' was deleted", name);
 
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}

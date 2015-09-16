@@ -58,7 +58,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity.",
@@ -68,7 +69,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 				
 				return GetMessageWithObject(new
 				{
@@ -115,7 +117,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity.",
@@ -125,7 +128,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 
 				return GetMessageWithObject(new
 				{
@@ -237,7 +241,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidOperationException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					Message = "Could not understand json, please check its validity.",
@@ -247,7 +252,8 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (InvalidDataException e)
 			{
-				Log.DebugException("Failed to deserialize index request. Error: ", e);
+				if (Log.IsDebugEnabled)
+					Log.DebugException("Failed to deserialize index request. Error: ", e);
 				return GetMessageWithObject(new
 				{
 					e.Message
@@ -616,12 +622,13 @@ namespace Raven.Database.Server.Controllers
 				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg, token);
 
 			sp.Stop();
-            Log.Debug(() =>
-            {
-                var sb = new StringBuilder();
-                ReportQuery(sb, indexQuery, sp, result);
-                return sb.ToString();
-            });
+			if (Log.IsDebugEnabled)
+				Log.Debug(() =>
+				{
+					var sb = new StringBuilder();
+					ReportQuery(sb, indexQuery, sp, result);
+					return sb.ToString();
+				});
 			AddRequestTraceInfo(sb => ReportQuery(sb, indexQuery, sp, result));
 
 			return result;

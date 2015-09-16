@@ -8,7 +8,7 @@ using System.Web.Http.Controllers;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class BundlesApiController : RavenDbApiController
+	public abstract class BundlesApiController : BaseDatabaseApiController
 	{
 		public abstract string BundleName { get; }
 
@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers
 			DocumentDatabase db;
             try
             {
-                db = await DatabasesLandlord.GetDatabaseInternal(DatabaseName);
+                db = await DatabasesLandlord.GetResourceInternal(DatabaseName);
             }
             catch (Exception e)
             {

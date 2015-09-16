@@ -78,15 +78,15 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
 				var destinationRdcManager = new RemoteRdcManager(synchronizationServerClient, localSignatureRepository, remoteSignatureCache);
-
-                log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
+				if (log.IsDebugEnabled)
+					log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
 
                 Cts.Token.ThrowIfCancellationRequested();
 
                 // first we need to create a local file signatures before we synchronize with remote ones
                 var localSignatureManifest = await localRdcManager.GetSignatureManifestAsync(FileDataInfo);
-
-                log.Debug("Number of a local file '{0}' signatures was {1}.", FileName, localSignatureManifest.Signatures.Count);
+				if (log.IsDebugEnabled)
+					log.Debug("Number of a local file '{0}' signatures was {1}.", FileName, localSignatureManifest.Signatures.Count);
 
                 if (localSignatureManifest.Signatures.Any())
                 {
@@ -159,8 +159,8 @@ namespace Raven.Database.FileSystem.Synchronization
 			multipartRequest = new SynchronizationMultipartRequest(synchronizationServerClient, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList);
 
 			var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
-
-			log.Debug(
+			if (log.IsDebugEnabled)
+				log.Debug(
 				"Synchronizing a file '{0}' (ETag {1}) to {2} by using multipart request. Need list length is {3}. Number of bytes that needs to be transfered is {4}",
 				FileName, FileETag, synchronizationServerClient, needList.Count, bytesToTransferCount);
 

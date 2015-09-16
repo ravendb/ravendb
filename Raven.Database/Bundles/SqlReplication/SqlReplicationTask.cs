@@ -100,7 +100,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					return;
 
 				replicationConfigs = null;
-				Log.Debug(() => "Sql Replication configuration was changed.");
+				if (Log.IsDebugEnabled)
+					Log.Debug(() => "Sql Replication configuration was changed.");
 			};
 
 			GetReplicationStatus();
@@ -326,7 +327,8 @@ namespace Raven.Database.Bundles.SqlReplication
 												{
 													if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
 													{
-														Log.Debug(
+														if (Log.IsDebugEnabled)
+															Log.Debug(
 															"Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
 															document.Key, replicationConfig.Name, info.TouchedEtag);
 														return false;
@@ -564,7 +566,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled, identifiers);
 				}
 				writer.Commit();
-				Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
+				if (Log.IsDebugEnabled)
+					Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
 			}
 
 			return true;
@@ -590,12 +593,14 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					if (writer.Execute(scriptResult))
 					{
-						Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+						if (Log.IsDebugEnabled)
+							Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.CompleteSuccess(countOfReplicatedItems);
 					}
 					else
 					{
-						Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+						if (Log.IsDebugEnabled)
+							Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.Success(countOfReplicatedItems);
 					}
 				}

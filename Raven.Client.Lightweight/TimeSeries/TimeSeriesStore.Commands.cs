@@ -81,7 +81,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Put, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/append/{2}?key={3}",
-					url, timeSeriesName, type, key);
+					url, timeSeriesName, type, Uri.EscapeDataString(key));
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 				{
 					await request.WriteWithObjectAsync(new TimeSeriesFullPoint
@@ -118,7 +118,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}",
-					url, timeSeriesName, type, key);
+					url, timeSeriesName, type, Uri.EscapeDataString(key));
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
 					return request.ReadResponseJsonAsync().WithCancellation(token);
@@ -163,7 +163,7 @@ namespace Raven.Client.TimeSeries
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-range/{2}?key={3}",
-					url, timeSeriesName, type, key);
+					url, timeSeriesName, type, Uri.EscapeDataString(key));
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
 					await request.WriteWithObjectAsync(new TimeSeriesDeleteRange

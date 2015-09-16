@@ -544,7 +544,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 
 				var currentEtag = GetQueryStringValue("currentEtag");
-				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
+				if (Log.IsDebugEnabled)
+					Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
 				return GetMessageWithObject(sourceReplicationInformation);
 			}
 		}
@@ -614,7 +615,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				var metadata = document == null ? new RavenJObject() : document.Metadata;
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
-				log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
+				if (log.IsDebugEnabled)
+					log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
 								  sourceReplicationInformation.LastDocumentEtag,
 								  sourceReplicationInformation.LastAttachmentEtag);
 

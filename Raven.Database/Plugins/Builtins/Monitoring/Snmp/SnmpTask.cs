@@ -215,29 +215,30 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
 			public void Log(ISnmpContext context)
 			{
-				if (log.IsDebugEnabled == false)
-					return;
-
-				var builder = new StringBuilder();
-				builder.AppendLine("SNMP:");
-				var requestedOids = context.Request.Scope.Pdu.Variables.Select(x => x.Id);
-				foreach (var oid in requestedOids)
+				if (log.IsDebugEnabled)
 				{
-					if (context.Response == null)
+
+					var builder = new StringBuilder();
+					builder.AppendLine("SNMP:");
+					var requestedOids = context.Request.Scope.Pdu.Variables.Select(x => x.Id);
+					foreach (var oid in requestedOids)
 					{
-						builder.AppendLine(string.Format("OID: {0}. Response: null", oid));
-						continue;
+						if (context.Response == null)
+						{
+							builder.AppendLine(string.Format("OID: {0}. Response: null", oid));
+							continue;
+						}
+
+						var responseData = context.Response.Scope.Pdu.Variables
+							.Where(x => x.Id == oid)
+							.Select(x => x.Data)
+							.FirstOrDefault();
+
+						builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
 					}
 
-					var responseData = context.Response.Scope.Pdu.Variables
-						.Where(x => x.Id == oid)
-						.Select(x => x.Data)
-						.FirstOrDefault();
-
-					builder.AppendLine(string.Format("OID: {0}. Response: {1}", oid, responseData != null ? responseData.ToString() : null));
+					log.Debug(builder.ToString);
 				}
-
-				log.Debug(builder.ToString);
 			}
 		}
 	}

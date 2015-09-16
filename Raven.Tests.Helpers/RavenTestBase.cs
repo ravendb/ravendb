@@ -618,28 +618,34 @@ namespace Raven.Tests.Helpers
 			return jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 		}
 
-		protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus)
+		protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus,
+			PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
 		{
-			WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus);
+			WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus, statusEtags);
 		}
 
-		protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus)
+		protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus,
+			PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
 		{
-			WaitForPeriodicExport(commands.Get, previousStatus);
+			WaitForPeriodicExport(commands.Get, previousStatus, statusEtags);
 		}
 
-		private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus)
+		private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus, 
+			PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
 		{
 			PeriodicExportStatus currentStatus = null;
 			var done = SpinWait.SpinUntil(() =>
 			{
 				currentStatus = GetPerodicBackupStatus(getDocument);
-				return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
-					   currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag ||
-					   currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
-					   currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
+				return  (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsEtag) && currentStatus.LastDocsEtag != previousStatus.LastDocsEtag) ||
+					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag) && currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag) ||
+					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsDeletionEtag) && currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag) ||
+					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag) && currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag);
+
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) throw new Exception("WaitForPeriodicExport failed");
+            if (!done) 
+				throw new Exception("WaitForPeriodicExport failed");
+
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;

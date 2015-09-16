@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class SynchronizationTopologyController : RavenFsApiController
+	public class SynchronizationTopologyController : BaseFileSystemApiController
 	{
 		[HttpPost]
 		[RavenRoute("fs/{fileSystemName}/admin/replication/topology/discover")]

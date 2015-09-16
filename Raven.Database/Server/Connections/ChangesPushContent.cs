@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Connections
         public ChangesPushContent(RavenBaseApiController controller)
 		{
 			Connected = true;
-            ResourceName = controller.TenantName;
+            ResourceName = controller.ResourceName;
 			Id = controller.GetQueryStringValue("id");
             
 			if (string.IsNullOrEmpty(Id))
@@ -104,7 +104,8 @@ namespace Raven.Database.Server.Connections
                         catch (Exception e)
                         {
                             Connected = false;
-                            log.DebugException("Error when using events transport", e);
+							if (log.IsDebugEnabled)
+								log.DebugException("Error when using events transport", e);
                             try
                             {
                                 writer.WriteLine(e.ToString());

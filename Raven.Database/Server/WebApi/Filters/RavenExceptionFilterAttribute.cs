@@ -122,7 +122,7 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
 		{
-			if (ctx.ActionContext.ControllerContext.Controller is RavenFsApiController)
+			if (ctx.ActionContext.ControllerContext.Controller is BaseFileSystemApiController)
 			{
 				ctx.Response = new HttpResponseMessage
 				{

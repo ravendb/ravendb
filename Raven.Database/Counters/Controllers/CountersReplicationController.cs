@@ -10,13 +10,13 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CountersReplicationController : RavenCountersApiController
+    public class CountersReplicationController : BaseCountersApiController
     {
 		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
 		public HttpResponseMessage GetLastEtag(Guid serverId)
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = Counters.CreateReader())
 			{
 				var lastEtag = reader.GetLastEtagFor(serverId);
 				return Request.CreateResponse(HttpStatusCode.OK, lastEtag);
@@ -33,7 +33,7 @@ namespace Raven.Database.Counters.Controllers
              *Store last ETag for servers we've successfully rpelicated to
              */
 			ReplicationMessage replicationMessage;
-            Storage.MetricsCounters.IncomingReplications.Mark();
+			Counters.MetricsCounters.IncomingReplications.Mark();
 
 			try
 			{
@@ -46,7 +46,7 @@ namespace Raven.Database.Counters.Controllers
 
 	        long lastEtag = 0;
             var wroteCounter = false;
-            using (var writer = Storage.CreateWriter())
+            using (var writer = Counters.CreateWriter())
             {
 				var counterChangeNotifications = new List<ChangeNotification>();
 	            foreach (var counter in replicationMessage.Counters)
@@ -79,12 +79,12 @@ namespace Raven.Database.Counters.Controllers
 					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
 
-	                using (var reader = Storage.CreateReader())
+	                using (var reader = Counters.CreateReader())
 	                {
 		                counterChangeNotifications.ForEach(change =>
 		                {
 			                change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
-							Storage.Publisher.RaiseNotification(change);
+							Counters.Publisher.RaiseNotification(change);
 		                });
 	                }
                 }
@@ -97,7 +97,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
-			var replicationTask = Storage.ReplicationTask;
+			var replicationTask = Counters.ReplicationTask;
             if (replicationTask == null)
             {
                 return GetMessageWithObject(new
@@ -115,7 +115,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage ReplicationsGet()
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = Counters.CreateReader())
 			{
 				var replicationData = reader.GetReplicationData();
 
@@ -132,7 +132,7 @@ namespace Raven.Database.Counters.Controllers
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
 			var newReplicationDocument = await ReadJsonObjectAsync<CountersReplicationDocument>();
-			using (var writer = Storage.CreateWriter())
+			using (var writer = Counters.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);
 				writer.Commit();

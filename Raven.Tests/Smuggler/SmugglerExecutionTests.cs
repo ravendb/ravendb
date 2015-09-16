@@ -438,11 +438,11 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 

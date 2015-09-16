@@ -30,6 +30,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 using Raven.Abstractions.Threading;
 using Raven.Abstractions;
+using Raven.Database.Common;
 
 namespace Raven.Database.FileSystem
 {

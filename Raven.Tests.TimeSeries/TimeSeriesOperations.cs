@@ -307,10 +307,13 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(4, fourValues.Fields.Length);
 				Assert.Equal(1, fourValues.KeysCount);
 				var keys = await store.Advanced.GetKeys(fourValues.Type);
-				Assert.Equal(1, keys.Length); var time = keys[0];
+				Assert.Equal(1, keys.Length);
+				var time = keys[0];
 				Assert.Equal("FourValues", time.Type.Type);
 				Assert.Equal("Time", time.Key);
 				Assert.Equal(4, time.PointsCount);
+				var points = await store.Advanced.GetPoints(fourValues.Type, time.Key);
+				Assert.Equal(points.Length, time.PointsCount);
 
 				var simple = types[1];
 				Assert.Equal("Simple", simple.Type);
@@ -326,6 +329,8 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal("Simple", money.Type.Type);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
+				points = await store.Advanced.GetPoints(fourValues.Type, money.Key, 1, int.MaxValue, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, cancellationToken);
+				Assert.Equal(points.Length, money.PointsCount - 1);
 
 				var stats = await store.GetStatsAsync(cancellationToken);
 				Assert.Equal(2, stats.TypesCount);

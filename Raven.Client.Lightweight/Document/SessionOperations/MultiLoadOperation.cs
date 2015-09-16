@@ -34,8 +34,8 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (ids == null)
 				return;
-
-			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
+			if (log.IsDebugEnabled)
+				log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterMultiLoadContext()

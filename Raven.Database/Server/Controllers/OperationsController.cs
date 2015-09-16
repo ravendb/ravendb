@@ -16,7 +16,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class OperationsController : RavenDbApiController
+	public class OperationsController : BaseDatabaseApiController
 	{
 		[HttpGet]
 		[RavenRoute("operation/status")]

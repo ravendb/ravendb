@@ -8,7 +8,7 @@ using System.Web.Http;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesChangesController : RavenTimeSeriesApiController
+	public class TimeSeriesChangesController : BaseTimeSeriesApiController
     {
 		[HttpGet]
 		[RavenRoute("ts/{timeSeriesName}/changes/config")]

@@ -136,7 +136,15 @@ namespace Raven.Database.Server.Tenancy
 			return document;
 		}
 
-		public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
+		public override async Task<CounterStorage> GetResourceInternal(string resourceName)
+		{
+			Task<CounterStorage> cs;
+			if (TryGetOrCreateResourceStore(resourceName, out cs))
+				return await cs.ConfigureAwait(false);
+			return null;
+		}
+
+		public override bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
 		{
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("CountersLandlord", "Server is shutting down, can't access any counters");
@@ -260,15 +268,6 @@ namespace Raven.Database.Server.Tenancy
 		}
 
 			Authentication.AssertLicensedBundles(config.ActiveBundles);
-		}
-
-
-		public async Task<CounterStorage> GetCounterInternal(string name)
-		{
-			Task<CounterStorage> cs;
-			if (TryGetOrCreateResourceStore(name, out cs))
-				return await cs.ConfigureAwait(false);
-			return null;
 		}
 
 		public void ForAllCountersInCacheOnly(Action<CounterStorage> action)

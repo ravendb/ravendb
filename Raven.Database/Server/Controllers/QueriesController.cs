@@ -44,7 +44,8 @@ namespace Raven.Database.Server.Controllers
 			    }
 				catch (InvalidOperationException e)
 				{
-					Log.DebugException("Failed to deserialize query request." , e);
+					if (Log.IsDebugEnabled)
+						Log.DebugException("Failed to deserialize query request." , e);
 					return GetMessageWithObject(new
 					{
 						Message = "Could not understand json, please check its validity."
@@ -53,7 +54,8 @@ namespace Raven.Database.Server.Controllers
 				}
 				catch (InvalidDataException e)
 				{
-					Log.DebugException("Failed to deserialize query request." , e);
+					if (Log.IsDebugEnabled)
+						Log.DebugException("Failed to deserialize query request." , e);
 					return GetMessageWithObject(new
 					{
 						e.Message

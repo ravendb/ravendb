@@ -80,7 +80,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-			logger.Debug("Adding attachment {0}", key);
+
+			if (logger.IsDebugEnabled)
+				logger.Debug("Adding attachment {0}", key);
 
 			return newETag;
 		}
@@ -92,7 +94,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 			{
-				logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+				if (logger.IsDebugEnabled)
+					logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
 			}
 
@@ -111,7 +114,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 			if (Api.TryMoveFirst(session, Details))
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
-			logger.Debug("Attachment with key '{0}' was deleted", key);
+			if (logger.IsDebugEnabled)
+				logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 
         [Obsolete("Use RavenFS instead.")]
