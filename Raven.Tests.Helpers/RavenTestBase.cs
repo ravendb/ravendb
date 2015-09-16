@@ -634,10 +634,8 @@ namespace Raven.Tests.Helpers
 			var done = SpinWait.SpinUntil(() =>
 			{
 				currentStatus = GetPerodicBackupStatus(getDocument);
-				return  (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsEtag) && currentStatus.LastDocsEtag != previousStatus.LastDocsEtag) ||
-					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag) && currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag) ||
-					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsDeletionEtag) && currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag) ||
-					   (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag) && currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag);
+			    return (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsEtag) && currentStatus.LastDocsEtag != previousStatus.LastDocsEtag) ||
+			           (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsDeletionEtag) && currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag);
 
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
             if (!done) throw new Exception("WaitForPeriodicExport failed");
