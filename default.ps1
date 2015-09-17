@@ -428,6 +428,9 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
+
+	Stop-WebAppPool "RavenDB 3"
+
 @'
 	<!doctype html>
 <html lang="en">
@@ -441,8 +444,8 @@ task UpdateLiveTest {
   <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
 </body>
 </html>
-'@ | out-file "$liveTest_dir\app_offline.htm" -Encoding UTF8 
-
+'@ | out-file "$liveTest_dir\app_offline.htm" -Encoding UTF8
+	
 	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
 	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
@@ -452,6 +455,8 @@ task UpdateLiveTest {
 	Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
 
 	Remove-Item "$liveTest_dir\app_offline.htm"
+
+	Start-WebAppPool "RavenDB 3"
 }
 
 task Upload {
