@@ -12,11 +12,11 @@ namespace Raven.Tests.FileSystem.Issues
 {
 	public class RavenDB_3499 : RavenFilesTestWithLogs
 	{
-		[Theory]
-		[PropertyData("Storages")]
-		public async Task TestLongFileName(string requestedStorage)
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task TestLongFileName(string requestedStorage)
 		{
-			using (var db = NewStore(requestedStorage: requestedStorage))
+            using (var db = NewStore(requestedStorage: requestedStorage))
 			{
 				var longpath = "mycollection/4942d4c8151a416a88d8b0f3e783b443/attachments/96cf29b3af625f5fe9d9ae6255a900f179b97c96/This_is_a_really_long_filename_that_breaks_things.pdf";
 				var longerPath = longpath + "bar";
@@ -43,33 +43,26 @@ namespace Raven.Tests.FileSystem.Issues
 			}
 		}
 
-		[Fact]
-		public void ValidateTooLongPath()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task EnsureVeryLongNamesAreSupported(string requestedStorage)
 		{
-			using (var db = NewStore())
+            using (var db = NewStore(requestedStorage: requestedStorage))
 			{
 				var client = db.AsyncFilesCommands;
 				var stringParts = Enumerable.Repeat("1234567\\", 125).ToList();
 				stringParts[stringParts.Count - 1] = "12345678";
 				var longPath = string.Concat(stringParts);
 
-				client.UploadAsync(longPath, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}});
+				await client.UploadAsync(longPath, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}});
 
 				longPath = string.Concat(longPath, "1");
-                Assert.Throws<AggregateException>(() =>
-				{
-					client.UploadAsync(longPath, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}}).Wait();
-					return null;
-				});
+                await client.UploadAsync(longPath, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", "1" } });
 
 				var shortName = "file.file";
-				client.UploadAsync(shortName, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}}).Wait();
-                Assert.Throws<AggregateException>(() =>
-				{
-					client.RenameAsync(shortName, longPath).Wait();
-					return null;
-				});
-			}
+				await client.UploadAsync(shortName, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", "1"}});
+                await client.RenameAsync(shortName, string.Concat(longPath,"2"));
+            }
 		}
 	}
 }
