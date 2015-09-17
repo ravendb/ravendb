@@ -375,7 +375,6 @@ namespace Raven.Tests.FileSystem.ClientApi
 
 		[Theory]
 		[InlineData(1000)]
-		[InlineData(10000)]
 		public async Task DeleteBigBatchOfFilesByQuery(int uploadSize)
 		{
 			using (var store = NewStore())
