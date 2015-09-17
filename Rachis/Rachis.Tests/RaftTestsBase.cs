@@ -310,9 +310,14 @@ namespace Rachis.Tests
 			return raftEngine;
 		}
 
-		public virtual void Dispose()
+		public void ReleaseAllNodes()
 		{
 			_nodes.ForEach(node => node.Dispose());
+		}
+
+		public virtual void Dispose()
+		{
+			ReleaseAllNodes();
 		}
 	}
 }
