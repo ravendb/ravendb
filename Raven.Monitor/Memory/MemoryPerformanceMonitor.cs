@@ -73,11 +73,8 @@ namespace Raven.Monitor.Memory
         }
 
 		private readonly int _pid;
-		private Timer _timer;
 		public void Dispose()
 		{
-			if (_timer != null)
-				_timer.Dispose();
 			reportDoc = null;
 		}
 	}

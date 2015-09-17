@@ -102,16 +102,21 @@ task Test -depends Compile {
 	Clear-Host
 
 	$test_prjs = @( `
-		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+		"$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.dll", `
 		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
+		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
+		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
+		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
+		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `											
+		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
+		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `	
+		"$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `				
+		"$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `				
+		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `						
+		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
 		"$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
+		
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -120,8 +125,8 @@ task Test -depends Compile {
 	$hasErrors = $false
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'voron';
-			Write-Host "Testing $_ (voron)"
+			$env:raventest_storage_engine = 'esent';
+			Write-Host "Testing $_ (esent)"
 		}
 		else {
 			$env:raventest_storage_engine = $null;
@@ -149,8 +154,8 @@ task StressTest -depends Compile {
 		Write-Host "Testing $_"
 		
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'voron';
-			Write-Host "Testing $_ (voron)"
+			$env:raventest_storage_engine = 'esent';
+			Write-Host "Testing $_ (esent)"
 			&"$xUnit" "$_"
 		}
 		else {

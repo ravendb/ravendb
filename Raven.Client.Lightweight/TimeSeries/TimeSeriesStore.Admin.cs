@@ -29,7 +29,9 @@ namespace Raven.Client.TimeSeries
 			/// Create new time series on the server.
 			/// </summary>
 			/// <param name="timeSeriesDocument">Settings for the time series. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-			/// <param name="timeSeriesName">Override time series name specified in client ctor. If null, the name already specified will be used</param>
+			/// <param name="shouldUpdateIfExists">Indicates if time series should be updated if they exist.</param>
+			/// <param name="credentials">Credentials used for this operation.</param>
+			/// <param name="token">Cancellation token used for this operation.</param>
 			public async Task<TimeSeriesStore> CreateTimeSeriesAsync(TimeSeriesDocument timeSeriesDocument, bool shouldUpdateIfExists = false, OperationCredentials credentials = null, CancellationToken token = default(CancellationToken))
 			{
 				if (timeSeriesDocument == null)

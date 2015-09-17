@@ -6,7 +6,6 @@ using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
-using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Traffic
@@ -14,13 +13,12 @@ namespace Raven.Traffic
 	public class TrafficWatchObserver : IObserver<string>
 	{
 		private readonly IDocumentStore store;
-		private string databaseName;
-		private ManualResetEvent _mre;
+		private readonly string databaseName;
+		private readonly ManualResetEvent _mre;
 		private DateTime _lastHeartbeat;
-		private Action<RavenJObject> _onRequestReceived;
-		private readonly DocumentConvention _conventions;
-		private Timer timeoutTimer;
+		private readonly Action<RavenJObject> _onRequestReceived;
 
+		private readonly Timer timeoutTimer;
 
 		public TrafficWatchObserver(IDocumentStore store, string databaseName, ManualResetEvent mre, TimeSpan timeout, Action<RavenJObject> onRequestReceived)
 		{

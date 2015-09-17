@@ -136,7 +136,9 @@ namespace Raven.Client.Connection.Request
 			var node = LeaderNode;
 			if (node == null)
 			{
+#pragma warning disable 4014
 				UpdateReplicationInformationIfNeededAsync(serverClient); // maybe start refresh task
+#pragma warning restore 4014
 
 				switch (serverClient.ClusterBehavior)
 				{

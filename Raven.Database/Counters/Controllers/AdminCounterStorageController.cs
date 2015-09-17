@@ -327,7 +327,9 @@ namespace Raven.Database.Counters.Controllers
 			var backupOperation = new BackupOperation(Counters, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
 				backupRequest.BackupLocation, Counters.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
 
+#pragma warning disable 4014
 			Task.Factory.StartNew(backupOperation.Execute);
+#pragma warning restore 4014
 
 			return GetEmptyMessage(HttpStatusCode.Accepted);
 		}

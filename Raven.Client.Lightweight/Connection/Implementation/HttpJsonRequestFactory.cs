@@ -175,6 +175,8 @@ namespace Raven.Client.Connection
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
+		/// <param name="httpMessageHandler"></param>
+		/// <param name="acceptGzipContent"></param>
 		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;

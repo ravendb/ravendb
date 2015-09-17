@@ -390,10 +390,12 @@ namespace Raven.Tests.Web.Controllers.Session
 		[Route("api/async/session/advanced/luceneQuery")]
 		public async Task<HttpResponseMessage> LuceneQuery()
 		{
+#pragma warning disable 618
 			await Session
 				.Advanced
 				.AsyncLuceneQuery<Person>()
 				.ToListAsync();
+#pragma warning restore 618
 
 			return new HttpResponseMessage();
 		}

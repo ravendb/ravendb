@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -446,7 +447,7 @@ namespace Raven.Tests.Common
 			Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
 
 			cts.Cancel();
-			return commands.Head(expectedId) != null;
+			return AsyncHelpers.RunSync(() => waitingTask.ContinueWith(t => commands.Head(expectedId) != null));
 		}
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)

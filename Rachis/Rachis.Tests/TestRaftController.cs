@@ -14,6 +14,8 @@ using System.Web.Http.Controllers;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
+
+using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis.Tests

@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Rachis.Messages;
 
+using Raven.Abstractions.Logging;
+
 namespace Rachis.Behaviors
 {
 	public class CandidateStateBehavior : AbstractRaftStateBehavior

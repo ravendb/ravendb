@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Jint.Parser;
+
 using Raven.Abstractions.Data;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common.Dto;
 using Raven.Tests.Helpers;
@@ -62,11 +56,11 @@ namespace Raven.Tests.Issues
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
@@ -137,11 +131,11 @@ namespace Raven.Tests.Issues
 
 						User doc;
 						Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-						users.Push(doc);
+						users.Add(doc);
 						Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-						users.Push(doc);
+						users.Add(doc);
 						Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-						users.Push(doc);
+						users.Add(doc);
 						var cnt = users.Count;
 						Assert.Equal(3, cnt);
 
@@ -213,11 +207,11 @@ namespace Raven.Tests.Issues
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                        users.Push(doc);
+                        users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 

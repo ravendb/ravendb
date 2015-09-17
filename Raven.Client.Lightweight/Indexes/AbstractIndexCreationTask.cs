@@ -192,11 +192,15 @@ namespace Raven.Client.Indexes
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
 
-        /// <summary>
-        /// Executes the index creation against the specified document store in side-by-side mode.
-        /// </summary>
-        /// <param name="store"></param>
-        public void SideBySideExecute(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+
+
+		/// <summary>
+		/// Executes the index creation against the specified document store in side-by-side mode.
+		/// </summary>
+		/// <param name="store"></param>
+		/// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+		/// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+		public void SideBySideExecute(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             store.SideBySideExecuteIndex(this, minimumEtagBeforeReplace, replaceTimeUtc);
         }
@@ -209,12 +213,14 @@ namespace Raven.Client.Indexes
             store.ExecuteIndex(this);
         }
 
-        /// <summary>
-        /// Executes the index creation using in side-by-side mode.
-        /// </summary>
-        /// <param name="databaseCommands"></param>
-        /// <param name="documentConvention"></param>
-        public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		/// <summary>
+		/// Executes the index creation using in side-by-side mode.
+		/// </summary>
+		/// <param name="databaseCommands"></param>
+		/// <param name="documentConvention"></param>
+		/// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+		/// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+		public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();

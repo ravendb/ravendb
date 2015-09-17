@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.TimeSeries;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.TimeSeries;
 using Raven.Database.Extensions;
@@ -69,7 +70,7 @@ namespace Raven.Tests.TimeSeries
 			base.Dispose();
 		}
 
-		protected async Task<bool> WaitForReplicationBetween(ITimeSeriesStore source, ITimeSeriesStore destination, string groupName, string timeSeriesName, int timeoutInSec = 30)
+		protected Task<bool> WaitForReplicationBetween(ITimeSeriesStore source, ITimeSeriesStore destination, string groupName, string timeSeriesName, int timeoutInSec = 30)
 		{
 			var waitStartingTime = DateTime.Now;
 			var hasReplicated = false;
@@ -94,7 +95,7 @@ namespace Raven.Tests.TimeSeries
 				Thread.Sleep(50);
 			}
 
-			return hasReplicated;
+			return new CompletedTask<bool>(hasReplicated);
 		}
 
 		protected static async Task SetupReplicationAsync(ITimeSeriesStore source, params ITimeSeriesStore[] destinations)
