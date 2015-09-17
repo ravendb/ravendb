@@ -53,6 +53,8 @@ namespace Raven.Client.Counters
 			/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 			/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
 			/// <param name="shouldUpateIfExists">If the storage already there, should we update it</param>
+			/// <param name="credentials">Credentials used for this operation.</param>
+			/// <param name="token">Cancellation token used for this operation.</param>
 			public async Task<CounterStore> CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, 
 				string counterStorageName, 
 				bool shouldUpateIfExists = false,

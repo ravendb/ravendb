@@ -1333,7 +1333,7 @@ namespace Raven.Client.Connection.Async
 					return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults, () =>
 						StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer, transformerParameters, skipAfter, token), conflictedResultId =>
 							new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
-								", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
+								", conflict must be resolved before the document will be accessible") { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
 				}
 			}, token);
 		}
@@ -1425,7 +1425,7 @@ namespace Raven.Client.Connection.Async
 						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () =>
 							QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
 								new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
-									", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
+									", conflict must be resolved before the document will be accessible") { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
 					}
 					catch (ErrorResponseException e)
 					{
@@ -1476,7 +1476,7 @@ namespace Raven.Client.Connection.Async
 				return await RetryOperationBecauseOfConflict(operationMetadataRef.Value, docResults, queryResult,
 					() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token),
 					conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
-							", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } },
+							", conflict must be resolved before the document will be accessible") { ConflictedVersionIds = new[] { conflictedResultId } },
 					token).ConfigureAwait(false);
 			}
 			catch (OperationCanceledException oce)
@@ -1767,7 +1767,7 @@ namespace Raven.Client.Connection.Async
 						conflictIds = new[] { "Cannot get conflict ids in HEAD requesT" };
 					}
 
-					throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true) { ConflictedVersionIds = conflictIds, Etag = responseException.Etag };
+					throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible") { ConflictedVersionIds = conflictIds, Etag = responseException.Etag };
 				}
 			}
 		}
@@ -2237,7 +2237,7 @@ namespace Raven.Client.Connection.Async
 					if (e.StatusCode == HttpStatusCode.NotFound) return null;
 					if (e.StatusCode == HttpStatusCode.Conflict)
 					{
-						throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true) { Etag = e.Etag };
+						throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict") { Etag = e.Etag };
 					}
 					throw;
 				}
@@ -2475,8 +2475,7 @@ namespace Raven.Client.Connection.Async
 
 			return
 				new ConflictException(
-					"Conflict detected on " + key + ", conflict must be resolved before the document will be accessible",
-												 true)
+					"Conflict detected on " + key + ", conflict must be resolved before the document will be accessible")
 				{
 					ConflictedVersionIds = conflictIds,
 					Etag = etag

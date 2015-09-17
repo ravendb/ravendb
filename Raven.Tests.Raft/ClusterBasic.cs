@@ -37,7 +37,7 @@ namespace Raven.Tests.Raft
 		}
 
 		[Fact]
-		public async Task CanCreateClusterAndModifyConfiguration()
+		public void CanCreateClusterAndModifyConfiguration()
 		{
 			var clusterStores = CreateRaftCluster(3);
 

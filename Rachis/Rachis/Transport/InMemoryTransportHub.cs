@@ -3,9 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using NLog;
+
 using Rachis.Interfaces;
 using Rachis.Messages;
+
+using Raven.Abstractions.Logging;
 
 namespace Rachis.Transport
 {
@@ -40,7 +42,7 @@ namespace Rachis.Transport
 			private readonly InMemoryTransportHub _parent;
 			private readonly string _from;
 
-			public readonly Logger Log;
+			public readonly ILog Log;
 
 			public InMemoryTransport(InMemoryTransportHub parent, string from)
 			{

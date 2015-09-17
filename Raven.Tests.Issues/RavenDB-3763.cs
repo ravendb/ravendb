@@ -77,7 +77,6 @@ namespace Raven.Tests.Issues
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					var queryToken = "ABC";
 					var entity = await session.Query<Entity, Index>()
 						.Customize(q => q.WaitForNonStaleResults())
 						.Where(e => e.Id == "solo")
