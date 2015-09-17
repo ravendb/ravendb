@@ -14,9 +14,9 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
-using NLog;
 using Rachis.Messages;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.OAuth;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -39,7 +39,7 @@ namespace Rachis.Transport
 
 		private readonly ConcurrentDictionary<NodeConnectionInfo, int> _connectionFailureCounts = new ConcurrentDictionary<NodeConnectionInfo, int>();
 
-		private readonly Logger _log;
+		private readonly ILog _log;
 
 		public HttpTransportSender(string name, HttpTransportBus bus, CancellationToken cancellationToken)
 		{

@@ -35,6 +35,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
+		/// <param name="databaseCommands">The commands.</param>
 		/// <param name="convention">The convention.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>

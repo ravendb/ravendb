@@ -40,10 +40,12 @@ namespace Raven.Client.FileSystem.Impl
         {
             var commands = session.Commands;
 
-            var pipe = new BlockingStream();           
+            var pipe = new BlockingStream();
 
-            Task.Run(() => StreamWriter(pipe))
-                                .ContinueWith(x => pipe.CompleteWriting())
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			Task.Run(() => StreamWriter(pipe))
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+								.ContinueWith(x => pipe.CompleteWriting())
                                 .ConfigureAwait(false);
 
             if (sessionOperations.EntityChanged(FileName))

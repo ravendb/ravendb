@@ -49,7 +49,7 @@ namespace TrafficRecorder
 						{
 							store.DatabaseCommands.GetStatistics();
 						}
-						catch (Exception e)
+						catch (Exception)
 						{
 							Console.WriteLine("Database does not exist");
 							return;

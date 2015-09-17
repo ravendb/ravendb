@@ -26,7 +26,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 	public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
 	{
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
-		private string dataPath;
+		private new string dataPath;
 
 		public EncryptedFileSystemBackupRestore()
         {

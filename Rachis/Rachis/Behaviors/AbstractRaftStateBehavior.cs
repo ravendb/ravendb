@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
+
 using Rachis.Commands;
 using Rachis.Messages;
 using Rachis.Storage;
+
+using Raven.Abstractions.Logging;
 
 namespace Rachis.Behaviors
 {
@@ -153,7 +155,7 @@ namespace Rachis.Behaviors
 
 		public abstract void HandleTimeout();
 
-		protected Logger _log;
+		protected ILog _log;
 
 		protected AbstractRaftStateBehavior(RaftEngine engine)
 		{
@@ -249,7 +251,8 @@ namespace Rachis.Behaviors
 				};
 			}
 
-			_log.Debug("Received RequestVoteRequest, req.CandidateId = {0}, term = {1}", req.From, req.Term);
+			if (_log.IsDebugEnabled)
+				_log.Debug("Received RequestVoteRequest, req.CandidateId = {0}, term = {1}", req.From, req.Term);
 
 			if (req.Term < Engine.PersistentState.CurrentTerm)
 			{
@@ -473,12 +476,16 @@ namespace Rachis.Behaviors
 			LastMessageTime = DateTime.UtcNow;
 			if (req.Entries.Length > 0)
 			{
-				_log.Debug("Appending log (persistant state), entries count: {0} (node state = {1})", req.Entries.Length,
+				if (_log.IsDebugEnabled)
+					_log.Debug("Appending log (persistant state), entries count: {0} (node state = {1})", req.Entries.Length,
 					Engine.State);
 
-				foreach (var logEntry in req.Entries)
+				if (_log.IsDebugEnabled)
 				{
-					_log.Debug("Entry {0} (term {1})", logEntry.Index, logEntry.Term);
+					foreach (var logEntry in req.Entries)
+					{
+						_log.Debug("Entry {0} (term {1})", logEntry.Index, logEntry.Term);
+					}
 				}
 
 				// if is possible that we'll get the same event multiple times (for example, if we took longer than a heartbeat

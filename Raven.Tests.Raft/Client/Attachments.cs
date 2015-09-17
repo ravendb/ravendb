@@ -26,12 +26,16 @@ namespace Raven.Tests.Raft.Client
 			{
 				var store = clusterStores[i];
 
+#pragma warning disable 618
 				store.DatabaseCommands.PutAttachment("keys/" + i, null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
+#pragma warning disable 618
 				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) != null));
+#pragma warning restore 618
 			}
 		}
 
@@ -47,24 +51,32 @@ namespace Raven.Tests.Raft.Client
 			{
 				var store = clusterStores[i];
 
+#pragma warning disable 618
 				store.DatabaseCommands.PutAttachment("keys/" + i, null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
+#pragma warning disable 618
 				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) != null));
+#pragma warning restore 618
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
 				var store = clusterStores[i];
 
+#pragma warning disable 618
 				store.DatabaseCommands.DeleteAttachment("keys/" + i, null);
+#pragma warning restore 618
 			}
 
 			for (int i = 0; i < clusterStores.Count; i++)
 			{
+#pragma warning disable 618
 				clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetAttachment("keys/" + i) == null));
+#pragma warning restore 618
 			}
 		}
 	}

@@ -23,6 +23,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="commands">The shard sessions.</param>
+		/// <param name="request">The request data.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
 		public T[] Apply<T>(IList<IDatabaseCommands> commands, ShardRequestData request, Func<IDatabaseCommands, int, T> operation)
