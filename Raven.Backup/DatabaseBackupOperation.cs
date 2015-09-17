@@ -33,12 +33,12 @@ namespace Raven.Backup
 
                 var serverHostname = serverUri.Scheme + Uri.SchemeDelimiter + serverUri.Host + ":" + serverUri.Port;
 
-                store = new DocumentStore { Url = serverHostname, DefaultDatabase = parameters.Database, ApiKey = parameters.ApiKey };
+                store = new DocumentStore { Url = serverHostname, DefaultDatabase = parameters.Database, ApiKey = parameters.ApiKey, Credentials = parameters.Credentials };
                 store.Initialize();
             }
             catch (Exception exc)
             {
-                Console.WriteLine(exc.Message);
+                Console.WriteLine(exc);
                 try
                 {
                     store.Dispose();
@@ -91,7 +91,7 @@ namespace Raven.Backup
 
             uriString += url;
 
-            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions, parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
+            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, parameters.Credentials), store.Conventions, parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 
         public override BackupStatus GetStatusDoc()

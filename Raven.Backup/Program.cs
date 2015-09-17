@@ -80,6 +80,9 @@ namespace Raven.Backup
                 Console.WriteLine(e.Message);
                 PrintUsage();
 
+                Console.WriteLine();
+                Console.WriteLine(e);
+
                 Environment.Exit((int)ExitCodes.InvalidArguments);
             }
         }
