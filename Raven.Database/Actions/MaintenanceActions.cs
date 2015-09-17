@@ -19,6 +19,7 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Actions
 {
@@ -55,7 +56,12 @@ namespace Raven.Database.Actions
             string storage;
             if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
             {	          
-			    storage = InMemoryRavenConfiguration.VoronTypeName;
+	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
+			        storage = InMemoryRavenConfiguration.VoronTypeName;
+	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+                    throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead.");
+				else // Default
+					storage = InMemoryRavenConfiguration.VoronTypeName;
             }
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))

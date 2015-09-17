@@ -10,15 +10,19 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using Raven.Database.Config;
+using Xunit.Extensions;
+using Raven.Server;
 
 namespace Raven.Tests.Bugs
 {
     public class NullableDateTime : RavenTest
     {
-        [Fact]
-        public void WillNotIncludeItemsWithNullDate()
+        [Theory]
+        [PropertyData("Storages")]
+        public void WillNotIncludeItemsWithNullDate(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -70,10 +74,11 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        [Fact]
-        public void CanLoadFromIndex()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanLoadFromIndex(string storage)
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore(requestedStorage: storage))
             {
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -96,35 +101,22 @@ namespace Raven.Tests.Bugs
 
         }
 
-        [Fact]
-        public void CanLoadFromIndex_Remote()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanLoadFromIndex_Remote(string storage)
         {
-	        var path = NewDataPath();
-
-            using (var server = new Raven.Server.RavenDbServer(new
-                                                                Raven.Database.Config.RavenConfiguration()
-                                                                {
-                                                                    HostName = "localhost",
-                                                                    DataDirectory = path,
-                                                                    Port = 8079,
-                                                                    AccessControlAllowOrigin = {"*"},
-                                                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                                                                })
+            using (var server = GetNewServer(requestedStorage: storage, enableAuthentication: false))
             {
-                UseEmbeddedHttpServer = true
-            })
-            {
-                server.Initialize();
                 using (IDocumentStore documentStore = NewRemoteDocumentStore(ravenDbServer: server))
                 {
                     using (IDocumentSession session = documentStore.OpenSession())
                     {
                         new UnsetDocs().Execute(documentStore);
                         session.Store(new Doc
-                                        {
-                                            Id = "test/doc1",
-                                            Date = SystemTime.UtcNow
-                                        });
+                        {
+                            Id = "test/doc1",
+                            Date = SystemTime.UtcNow
+                        });
                         session.Store(new Doc { Id = "test/doc2", Date = null });
                         session.SaveChanges();
 
@@ -135,7 +127,7 @@ namespace Raven.Tests.Bugs
                         session
                             .Query<Doc, UnsetDocs>()
                             .Customize(x => x.WaitForNonStaleResults())
-							.ProjectFromIndexFieldsInto<DocSummary>()
+                            .ProjectFromIndexFieldsInto<DocSummary>()
                             .ToArray();
                     }
                 }
@@ -158,10 +150,11 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        [Fact]
-        public void CanWorkWithNullableDateTime()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanWorkWithNullableDateTime(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 new DocsByDate().Execute(store);
 
