@@ -94,6 +94,7 @@ namespace Raven.Database.Actions
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             }), new RavenJObject(), null);
+
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
 

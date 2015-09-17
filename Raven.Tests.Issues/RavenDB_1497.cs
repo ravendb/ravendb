@@ -43,8 +43,9 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-            configuration.Settings[Constants.Voron.AllowIncrementalBackups] = "true"; //for now all tests run under Voron - so this is needed
+            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.RunInMemory = false;
 		}
 
 		public class Users_ByName : AbstractIndexCreationTask<User> 
