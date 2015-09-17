@@ -30,6 +30,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
+		[RavenRoute("admin/replication/purge-tombstones")]
 		[RavenRoute("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
@@ -66,6 +67,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
+		[RavenRoute("admin/replicationInfo")]
 		[RavenRoute("databases/{databaseName}/admin/replicationInfo")]
 		public async Task<HttpResponseMessage> ReplicationInfo()
 		{
@@ -85,6 +87,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
+		[RavenRoute("admin/replication/topology/view")]
 		[RavenRoute("databases/{databaseName}/admin/replication/topology/view")]
 		public Task<HttpResponseMessage> ReplicationTopology()
 		{
