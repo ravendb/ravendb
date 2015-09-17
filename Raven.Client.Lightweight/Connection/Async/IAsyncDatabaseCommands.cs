@@ -340,6 +340,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="name">The name of the transformer</param>
 		/// <param name="lockMode">The lock mode to be set</param>
+		/// <param name="token">The cancellation token.</param>
 		Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
 
         /// <summary>

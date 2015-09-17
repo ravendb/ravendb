@@ -495,6 +495,8 @@ namespace Raven.Client.Connection
 		///      Creates multiple side by side indexes with the specified name, using given index definitions and priorities
 		/// </summary>
 		/// <param name="indexesToAdd">indexes to add</param>
+		/// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+		/// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
 		string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
 		/// <summary>

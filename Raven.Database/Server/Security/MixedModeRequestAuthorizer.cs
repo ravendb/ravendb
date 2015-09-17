@@ -171,7 +171,8 @@ namespace Raven.Database.Server.Security
             object result;
             HttpStatusCode statusCode;
             IPrincipal user;
-            var success = TryAuthorizeSingleUseAuthToken(token, controller.ResourcePrefix + controller.ResourceName, out result, out statusCode, out user);
+	        var resourceName = controller.ResourceName == null ? null : controller.ResourcePrefix + controller.ResourceName;
+			var success = TryAuthorizeSingleUseAuthToken(token, resourceName, out result, out statusCode, out user);
             controller.User = user;
             msg = success == false ? controller.GetMessageWithObject(result, statusCode) : controller.GetEmptyMessage();
 

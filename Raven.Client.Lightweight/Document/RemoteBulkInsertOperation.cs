@@ -347,7 +347,9 @@ namespace Raven.Client.Document
             try
             {
                 await operationTask.ConfigureAwait(false);
+#pragma warning disable 4014
                 operationTask.AssertNotFailed();
+#pragma warning restore 4014
 
 	            if (previousTask == null)
 		            ReportInternal("Finished writing all results to server");

@@ -40,7 +40,7 @@ namespace Raven.Database.Plugins.Builtins
 				{
 					landlord.SystemDatabase.TimerManager.ReleaseTimer(licensingTimer);
 				}
-				catch (InvalidOperationException e)
+				catch (InvalidOperationException)
 				{
 					//We are trying to deactivate a timer that failed to register to the timer manager
 					// this should not happen but better safe than sorry
@@ -326,7 +326,7 @@ namespace Raven.Database.Plugins.Builtins
 						{
 							data = license.Data.JsonDeserialization<HotSpareLicenseDocument>();
 						}
-						catch (Exception e)
+						catch (Exception)
 						{
 							log.Warn(FailureToDeserializeHotSpareDocument);
 							continue;

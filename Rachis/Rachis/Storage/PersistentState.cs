@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using NLog;
+
 using Rachis.Commands;
 using Rachis.Interfaces;
 using Rachis.Messages;
 using Rachis.Transport;
 
+using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 
 using Voron;
@@ -82,11 +83,9 @@ namespace Rachis.Storage
 			}
 		}
 
-		private readonly Logger _log;
 		public PersistentState(string name, StorageEnvironmentOptions options, CancellationToken cancellationToken)
 		{
 			_name = name;
-			_log = LogManager.GetLogger(GetType().Name + "." + name);
 			_cancellationToken = cancellationToken;
 			_env = new StorageEnvironment(options);
 			InitializeDatabase();
