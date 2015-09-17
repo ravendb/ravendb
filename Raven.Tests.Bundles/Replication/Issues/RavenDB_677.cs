@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -35,10 +37,17 @@ namespace Raven.Tests.Bundles.Replication.Issues
 																			  HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
-            store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
+	        try
+	        {
+		        store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
+	        }
+	        catch (Exception e)
+	        {
+				Console.WriteLine(e.Message);
+		        Debugger.Break();
+	        }
 
-
-            servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
+	        servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
             {
                 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).ToArray());
             });
