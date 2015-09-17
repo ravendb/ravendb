@@ -440,7 +440,7 @@ task UpdateLiveTest {
   <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
 </body>
 </html>
-'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
+'@ | out-file "C:\Sites\RavenDB 3\Web\app_offline.htm" -Encoding UTF8 
 
 	Remove-Item "C:\Sites\RavenDB 3\Web\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB 3\Web\Plugins" -ErrorAction SilentlyContinue
@@ -450,7 +450,7 @@ task UpdateLiveTest {
 	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
 
-	Remove-Item "$build_dir\Output\Web\app_offline.htm"
+	Remove-Item "C:\Sites\RavenDB 3\Web\app_offline.htm"
 }
 
 task Upload {
