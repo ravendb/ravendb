@@ -16,10 +16,5 @@ namespace Raven.Database.Extensions
 
 			return new Guid(bytes);
 		}
-
-		public static byte[] TransformToValueForEsentSorting(this Guid guid)
-		{
-			return guid.ToByteArray();
-		}
 	}
 }

@@ -34,10 +34,17 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get(string name)
 		{
             RavenJObject config = null;
-            Storage.Batch(accessor => { config = accessor.GetConfig(name); });
-                
-            return GetMessageWithObject(config)
-                        .WithNoCache();
+
+            Storage.Batch(accessor => 
+            { 
+                if ( accessor.ConfigExists(name))
+                    config = accessor.GetConfig(name); 
+            });
+
+            HttpResponseMessage response = config != null ? GetMessageWithObject(config) 
+                                                          : GetEmptyMessage(HttpStatusCode.NotFound);
+
+            return response.WithNoCache();
 		}
 
         [HttpGet]

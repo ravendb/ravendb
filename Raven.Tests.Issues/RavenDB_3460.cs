@@ -20,11 +20,10 @@ namespace Raven.Tests.Issues
 				using (var store = NewRemoteDocumentStore())
 				{
 					var customers = SetupAndGetCustomers(store);
-					customers.Should().NotBeEmpty();
+                    Assert.True(customers.Any());
 
 					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url,store.DefaultDatabase);
-
-					GetResults(url).Values().Should().NotBeEmpty();
+                    Assert.True(GetResults(url).Values().Any());
 				}
 			}
 
@@ -34,11 +33,11 @@ namespace Raven.Tests.Issues
 				using (var store = NewRemoteDocumentStore())
 				{
 					var customers = SetupAndGetCustomers(store);
-					customers.Should().NotBeEmpty();
+                    Assert.True(customers.Any());
 
 					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
 
-					GetResults(url).Values().Should().NotBeEmpty();
+                    Assert.True(GetResults(url).Values().Any());
 				}
 			}
 

@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -22,12 +23,13 @@ namespace Raven.Tests.Issues
 			public string Phone { get; set; }
 		}
 
-		[Fact]
-		public void ShouldWork()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ShouldWork(string storage)
 		{
-			using (var store1 = CreateStore(requestedStorageType: "esent"))
-			using (var store2 = CreateStore(requestedStorageType: "esent"))
-			using (var store3 = CreateStore(requestedStorageType: "esent"))
+			using (var store1 = CreateStore(requestedStorage: storage))
+			using (var store2 = CreateStore(requestedStorage: storage))
+			using (var store3 = CreateStore(requestedStorage: storage))
 			{
 				DeployNorthwind(store1);
 

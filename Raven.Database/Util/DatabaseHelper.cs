@@ -56,9 +56,6 @@ namespace Raven.Database.Util
 			if (configuration.IndexStoragePath != null)
 				IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
 
-			if (configuration.Storage.Esent.JournalsStoragePath != null)
-				IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
-
 			if (configuration.Storage.Voron.JournalsStoragePath != null)
 				IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
 		}

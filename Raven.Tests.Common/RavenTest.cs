@@ -90,22 +90,6 @@ namespace Raven.Tests.Common
 
         }
 
-        protected static void EnsureDtcIsSupported(EmbeddableDocumentStore documentStore)
-        {
-            EnsureDtcIsSupported(documentStore.SystemDatabase);
-        }
-
-        protected static void EnsureDtcIsSupported(DocumentDatabase documentDatabase)
-        {
-            if (documentDatabase.TransactionalStorage.SupportsDtc == false)
-                throw new SkipException("This test requires DTC but the storage engine " + documentDatabase.TransactionalStorage.FriendlyName + " does not support it");
-        }
-
-        protected static void EnsureDtcIsSupported(RavenDbServer server)
-        {
-            EnsureDtcIsSupported(server.SystemDatabase);
-        }
-
         public double Timer(Action action)
         {
             var timer = Stopwatch.StartNew();
@@ -121,8 +105,7 @@ namespace Raven.Tests.Common
             {
                 return new[]
 				{
-					new object[] {"voron"},
-					new object[] {"esent"}
+					new object[] {"voron"}
 				};
             }
         }

@@ -37,8 +37,6 @@ namespace Raven.Database.Counters.Replication
 
 		public CountersReplicationTopologyRootNode Discover()
 		{
-			var nextStart = 0;
-
 			var root = new CountersReplicationTopologyRootNode(counterStorage.CounterStorageUrl, counterStorage.ServerId);
 
 			if (ttl <= 0)

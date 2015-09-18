@@ -14,6 +14,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -32,104 +33,111 @@ namespace Raven.Tests.Issues
 
 		private const string DatabaseName = "RavenDB_1041";
 
-		[Fact]
-		public async Task CanWaitForReplication()
+        [Theory]
+        [PropertyData("Storages")]
+		public async Task CanWaitForReplication(string storage)
 		{
-			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-			var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-			var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+			using (var store1 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
+			using (var store2 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
+            using (var store3 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
+            {
+                SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			SetupReplication(store1.DatabaseCommands, store2, store3);
+                using (var session = store1.OpenSession(DatabaseName))
+                {
+                    session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
-			using (var session = store1.OpenSession(DatabaseName))
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                    session.SaveChanges();
+                }
 
-				session.SaveChanges();
-			}
-
-			var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
-			Assert.Equal(2, i);
+                var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
+                Assert.Equal(2, i);
 
 
-			Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
-
+                Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+                Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+            }
 		}
 
-		[Fact]
-		public async Task CanWaitForReplicationOfParticularEtag()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task CanWaitForReplicationOfParticularEtag(string storage)
 		{
+            using (var store1 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store1"))
+            using (var store2 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store2"))
+            using (var store3 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store3"))
+            {
+                SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			var store1 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store1");
-			var store2 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store2");
-			var store3 = CreateStore(requestedStorageType: "esent", databaseName: "CanWaitForReplicationOfParticularEtag_Store3");
+                var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
+                var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-			SetupReplication(store1.DatabaseCommands, store2, store3);
+                var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
+                Assert.Equal(2, i);
 
-			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
-			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
+                Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+                Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-			var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
-			Assert.Equal(2, i);
+                i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
+                Assert.Equal(2, i);
 
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
-
-			i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
-			Assert.Equal(2, i);
-
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
-
+                Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
+                Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
+            }
 		}
 
-		[Fact]
-		public async Task CanWaitForReplicationInAsyncManner()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task CanWaitForReplicationInAsyncManner(string storage)
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+            using (var store1 = CreateStore(requestedStorage: storage))
+            using (var store2 = CreateStore(requestedStorage: storage))
+            using (var store3 = CreateStore(requestedStorage: storage))
+            {                
+                SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			SetupReplication(store1.DatabaseCommands, store2, store3);
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                    session.SaveChanges();
+                }
 
-				session.SaveChanges();
-			}
+                await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
 
-			await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
-
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
+                Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+                Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
+            }
 		}
 
-		[Fact]
-		public void CanSpecifyTimeoutWhenWaitingForReplication()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanSpecifyTimeoutWhenWaitingForReplication(string storage)
 		{
-		    ShowLogs = true;
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+            using (var store1 = CreateStore(requestedStorage: storage))
+            using (var store2 = CreateStore(requestedStorage: storage))
+            {
+                ShowLogs = true;
 
-			SetupReplication(store1.DatabaseCommands, store2);
+                SetupReplication(store1.DatabaseCommands, store2);
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-				session.SaveChanges();
-			}
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                    session.SaveChanges();
+                }
 
-			store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+                store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
+                Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+            }
 		}
 
-		[Fact]
-		public void ShouldThrowTimeoutException()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldThrowTimeoutException(string storage)
 		{
-			var store1 = CreateStore(requestedStorageType: "esent");
-			var store2 = CreateStore(requestedStorageType: "esent");
+            var store1 = CreateStore(requestedStorage: storage);
+			var store2 = CreateStore(requestedStorage: storage);
 
 			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
@@ -144,43 +152,48 @@ namespace Raven.Tests.Issues
 				AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
 		}
 
-		[Fact]
-		public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task ShouldThrowIfCannotReachEnoughDestinationServers(string storage)
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+            using (var store1 = CreateStore(requestedStorage: storage))
+            using (var store2 = CreateStore(requestedStorage: storage))
+            {
+                SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234", "http://localhost:1235"); // non of them is running
 
-			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234", "http://localhost:1235"); // non of them is running
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                    session.SaveChanges();
+                }
 
-				session.SaveChanges();
-			}
+                var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
+                Assert.Contains("Could only confirm that the specified Etag", exception.Message);
+            }
+	    }
 
-			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
-			Assert.Contains("Could only confirm that the specified Etag", exception.Message);
-		}
 
-		[Fact]
-		public async Task CanWaitForReplicationForOneServerEvenIfTheSecondOneIsDown()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task CanWaitForReplicationForOneServerEvenIfTheSecondOneIsDown(string storage)
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+            using (var store1 = CreateStore(requestedStorage: storage))
+            using (var store2 = CreateStore(requestedStorage: storage))
+            {
+                SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
-			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                    session.SaveChanges();
+                }
 
-				session.SaveChanges();
-			}
+                await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
 
-			await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
-
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+                Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+            }
 		}
 	}
 }

@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
-using Microsoft.Isam.Esent.Interop;
 using Mono.CSharp;
 using Mono.CSharp.Linq;
 using Raven.Abstractions.Data;

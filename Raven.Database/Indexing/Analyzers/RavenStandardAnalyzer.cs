@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing.Analyzers
 			// we failed so we generate a new token stream
 			return TokenStream(fieldName, reader);;
 		}
-		public const int DEFAULT_MAX_TOKEN_LENGTH = 255;
+
 		private readonly Version matchVersion;  
 	}
 }

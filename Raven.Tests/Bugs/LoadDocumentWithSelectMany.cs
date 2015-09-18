@@ -10,6 +10,7 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -52,10 +53,11 @@ namespace Raven.Tests.Bugs
 			
 		}
 
-		[Fact]
-		public void ShouldRecordReferncesProperly()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ShouldRecordReferncesProperly(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage:"esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var count = 2;
 				for (int i = 0; i < count; i++)

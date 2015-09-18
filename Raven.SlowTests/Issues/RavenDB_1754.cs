@@ -13,16 +13,18 @@ using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1754 : RavenTest
     {
-	    
-        [Fact]
-        public void ShouldntThrowCollectionModified()
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldntThrowCollectionModified(string storage)
         {
-            using (var store = NewDocumentStore(requestedStorage: "esent"))
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var o = new Test { Slugs = { { "FOO", "bar" } } };
                 using (var session = store.OpenSession())

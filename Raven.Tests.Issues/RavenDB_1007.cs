@@ -44,7 +44,6 @@ namespace Raven.Tests.Issues
 				DefaultStorageTypeName = storageName,
 				Settings =
 				{
-					{Constants.Esent.CircularLog, "false"},
 					{Constants.Voron.AllowIncrementalBackups, "true"}
 				}
 			}.Initialize(), null))

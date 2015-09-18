@@ -6,6 +6,8 @@
 
 using System;
 
+using Raven.Abstractions.Logging;
+
 namespace Rachis.Behaviors
 {
     public class FollowerStateBehavior : AbstractRaftStateBehavior

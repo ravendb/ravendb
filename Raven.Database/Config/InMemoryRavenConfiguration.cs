@@ -33,7 +33,6 @@ namespace Raven.Database.Config
 	public class InMemoryRavenConfiguration
 	{
 	    public const string VoronTypeName = "voron";
-	    public const string EsentTypeName = "esent";
 
 		private CompositionContainer container;
 		private bool containerExternallySet;
@@ -131,9 +130,6 @@ namespace Raven.Database.Config
 
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
-			// Important! this value is synchronized with the max sessions number in esent
-			// since we cannot have more requests in the system than we have sessions for them
-			// and we also need to allow sessions for background operations and for multi get requests
 			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
 
 			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
@@ -308,7 +304,6 @@ namespace Raven.Database.Config
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
 			Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
-			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
 		    Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 			
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
@@ -823,8 +818,8 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, voron
-		/// Default: esent
+        /// Allowed values: voron
+        /// Default: voron
 		/// </summary>
 		public string DefaultStorageTypeName
 		{
@@ -1243,9 +1238,6 @@ namespace Raven.Database.Config
 		{
 	        switch (typeName.ToLowerInvariant())
 	        {
-	            case EsentTypeName:
-					typeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-	                break;
 	            case VoronTypeName:
 					typeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 	                break;
@@ -1259,9 +1251,6 @@ namespace Raven.Database.Config
 		{
 			if (RunInMemory)
 			{
-				if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
-				    DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
-					return EsentTypeName;
                 return VoronTypeName;                
 			}
 
@@ -1271,12 +1260,8 @@ namespace Raven.Database.Config
 				{
                     return VoronTypeName;
 				}
-				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return EsentTypeName;
 			}
 
-		    if (string.IsNullOrEmpty(DefaultStorageTypeName))
-			    return EsentTypeName;
 			return DefaultStorageTypeName;
 		}
 
@@ -1366,18 +1351,10 @@ namespace Raven.Database.Config
 			public StorageConfiguration()
 			{
 				Voron = new VoronConfiguration();
-				Esent = new EsentConfiguration();
 	        }
             public bool PreventSchemaUpdate { get; set; }
 
 			public VoronConfiguration Voron { get; private set; }
-
-			public EsentConfiguration Esent { get; private set; }
-
-			public class EsentConfiguration
-			{
-				public string JournalsStoragePath { get; set; }
-			}
 
 			public class VoronConfiguration
 			{
@@ -1504,8 +1481,8 @@ namespace Raven.Database.Config
 
 			/// <summary>
 			/// What storage type to use in RavenFS (see: RavenFS Storage engines)
-			/// Allowed values: esent, voron
-			/// Default: esent
+			/// Allowed values: voron
+            /// Default: voron
 			/// </summary>
 			public string DefaultStorageTypeName
 			{

@@ -1,24 +1,14 @@
-//-----------------------------------------------------------------------
-// <copyright file="GeneralStorage.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-using System;
-using System.Threading;
-using Raven.Client.Embedded;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
+using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Tasks;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
-
-using Xunit;
+using System;
 using System.Linq;
-using Raven.Database.Config;
-using Raven.Storage.Esent;
-using Xunit.Extensions;
+using System.Threading;
+using Xunit;
 
 namespace Raven.Tests.Storage
 {

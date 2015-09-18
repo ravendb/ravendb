@@ -38,7 +38,6 @@ namespace Raven.Database.Linq
 			typeof(System.Transactions.Transaction).Namespace,
 			typeof(System.Reflection.Assembly).Namespace,
 			typeof(System.Configuration.ConfigurationManager).Namespace,
-			typeof(Microsoft.Isam.Esent.EsentException).Namespace,
 		};
 		
 		private static readonly Type[] forbiddenTypes = new[]

@@ -9,15 +9,17 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.MailingList;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB2537 : RavenTest
 	{
-		[Fact]
-		public void ShutdownDatabaseDuringPreparedTransaction()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ShutdownDatabaseDuringPreparedTransaction(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent", runInMemory: false))
+			using (var store = NewDocumentStore(requestedStorage: storage, runInMemory: false))
 			{
 				var transactionInformation = new TransactionInformation
 				{
@@ -33,7 +35,7 @@ namespace Raven.Tests.Issues
 				Assert.False(store.SystemDatabase.Documents.Get("test", null).DataAsJson.Value<bool>("Exists"));
 			}
 
-			using (var store = NewDocumentStore(requestedStorage: "esent", runInMemory: false))
+			using (var store = NewDocumentStore(requestedStorage: storage, runInMemory: false))
 			{
 				// can be loaded again
 			}

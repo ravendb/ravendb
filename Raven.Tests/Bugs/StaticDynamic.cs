@@ -4,15 +4,17 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
 	public class StaticDynamic : RavenTest
 	{
-		[Fact]
-		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated()
+        [Theory]
+        [PropertyData("Storages")]
+		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				new Docs_Flagged().Execute(store);
 				const int docsCount = 10;

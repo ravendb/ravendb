@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -48,17 +49,17 @@ namespace Raven.Tests.Common
 			Action<DocumentStore> configureStore = null, 
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
 			bool enableAuthorization = false, 
-			string requestedStorageType = "voron", 
+			string requestedStorage = "voron", 
 			bool useFiddler = false, 
 			[CallerMemberName] string databaseName = null, 
 			bool runInMemory = true)
         {
             var port = PortRangeStart - stores.Count;
-            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName, runInMemory);
+            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorage, useFiddler, databaseName, runInMemory);
         }
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "esent", [CallerMemberName] string databaseName = null)
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "voron", [CallerMemberName] string databaseName = null)
         {
             var port = PortRangeStart - stores.Count;
             return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode, requestedStorageType, databaseName);
@@ -142,7 +143,7 @@ namespace Raven.Tests.Common
 		    
 	    }
 
-	    private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent", string databaseName = null)
+	    private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "voron", string databaseName = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var store = NewDocumentStore(port: port,
@@ -446,7 +447,7 @@ namespace Raven.Tests.Common
 			Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
 
 			cts.Cancel();
-			return commands.Head(expectedId) != null;
+			return AsyncHelpers.RunSync(() => waitingTask.ContinueWith(t => commands.Head(expectedId) != null));
 		}
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)

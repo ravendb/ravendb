@@ -9,17 +9,19 @@ using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1280 : RavenTest
 	{
-		[Fact]
-		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
+        [Theory]
+        [PropertyData("Storages")]
+		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing(string storage)
 		{
 			const int iterations = 6000;
 
-			using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
+			using (var documentStore = NewRemoteDocumentStore(requestedStorage: storage))
 			{
 				Console.WriteLine("Making parallel inserts...");
                 var sp = Stopwatch.StartNew();

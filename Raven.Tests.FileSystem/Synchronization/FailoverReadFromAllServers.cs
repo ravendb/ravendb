@@ -15,9 +15,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 			store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers;
 		}
 
-		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [Theory]
+        [PropertyData("Storages")]
 		public async Task load_balancing_with_two_master_master_servers(string storage)
 		{
 			IAsyncFilesCommandsImpl sourceClient = null;

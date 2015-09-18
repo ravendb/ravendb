@@ -666,10 +666,6 @@ namespace Raven.Database.Indexing
 				{
 					configurationKey = Constants.Voron.MaxScratchBufferSize;
 				}
-				else if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.EsentTypeName, StringComparison.OrdinalIgnoreCase))
-				{
-					configurationKey = Constants.Esent.MaxVerPages;
-				}
 
 				Debug.Assert(configurationKey != null);
 

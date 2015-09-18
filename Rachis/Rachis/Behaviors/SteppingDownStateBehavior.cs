@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Linq;
 using Rachis.Messages;
 
+using Raven.Abstractions.Logging;
+
 namespace Rachis.Behaviors
 {
 	public class SteppingDownStateBehavior : LeaderStateBehavior

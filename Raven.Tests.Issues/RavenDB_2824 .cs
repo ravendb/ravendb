@@ -25,7 +25,6 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
 		{
-            config.Settings[Constants.Esent.CircularLog] = "false";
             config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
 			config.Storage.Voron.AllowIncrementalBackups = true;
 		}

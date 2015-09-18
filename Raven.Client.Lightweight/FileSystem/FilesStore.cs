@@ -135,7 +135,7 @@ namespace Raven.Client.FileSystem
 			if (string.IsNullOrEmpty(fsName) == false)
 			{
 				key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
-        }
+            }
 
 			var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
 			return result;
@@ -227,8 +227,9 @@ namespace Raven.Client.FileSystem
                     try
                     {
 	                    AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-		                    .EnsureFileSystemExistsAsync().ConfigureAwait(false)
-							.GetAwaiter().GetResult();
+		                        .EnsureFileSystemExistsAsync()
+							    .GetAwaiter()
+                                .GetResult();
                     }
                     catch(Exception)
                     {

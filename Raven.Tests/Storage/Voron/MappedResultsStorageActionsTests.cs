@@ -143,15 +143,6 @@ namespace Raven.Tests.Storage
 				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(404, "reduceKey4", ReduceType.MultiStep));
 				storage.Batch(accessor => Assert.Equal(3, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
-				if (requestedStorage == "esent")
-				{
-					storage.Batch(accessor => accessor.MapReduce.PutMappedResult(303, "doc1", "reduceKey1", new RavenJObject()));
-					storage.Batch(accessor => accessor.MapReduce.PutMappedResult(303, "doc2", "reduceKey1", new RavenJObject()));
-					storage.Batch(accessor => accessor.MapReduce.PutMappedResult(303, "doc3", "reduceKey1", new RavenJObject()));
-					storage.Batch(accessor => accessor.MapReduce.PutMappedResult(303, "doc4", "reduceKey1", new RavenJObject()));
-					storage.Batch(accessor => accessor.MapReduce.PutMappedResult(303, "doc5", "reduceKey1", new RavenJObject()));
-				}
-
 				storage.Batch(accessor =>
 				{
 					var reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 1).ToList();

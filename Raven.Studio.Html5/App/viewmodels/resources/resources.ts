@@ -414,12 +414,8 @@ class resources extends viewModelBase {
                 if (!clusterWide) {
                     settings["Raven-Non-Cluster-Database"] = "true";
                 }
-                if (incrementalBackup) {
-                    if (storageEngine === "esent") {
-                        settings["Raven/Esent/CircularLog"] = "false";
-                    } else {
+                if (incrementalBackup) {                    
                         settings["Raven/Voron/AllowIncrementalBackups"] = "true";
-                    }
                 }
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
                     settings["Raven/Voron/TempPath"] = tempPath;

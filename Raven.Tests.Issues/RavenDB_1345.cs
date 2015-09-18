@@ -10,13 +10,15 @@ namespace Raven.Tests.Issues
 	using Raven.Abstractions.Data;
 
 	using Xunit;
+    using Xunit.Extensions;
 
 	public class RavenDB_1345 : RavenTest
 	{
-		[Fact]
-		public void ExpandingIndexes()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ExpandingIndexes(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				var names = new[]
 				{

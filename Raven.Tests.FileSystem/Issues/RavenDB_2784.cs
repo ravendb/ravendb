@@ -15,8 +15,7 @@ namespace Raven.Tests.FileSystem.Issues
 	public class RavenDB_2784 : RavenFilesTestWithLogs
 	{
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task DownloadingWithZeroSize(string storage)
 		{
 			var client = NewAsyncClient(requestedStorage: storage);

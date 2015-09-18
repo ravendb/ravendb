@@ -43,9 +43,9 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-            configuration.Settings[Constants.Esent.CircularLog] = "false";
-            configuration.Settings[Constants.Voron.AllowIncrementalBackups] = "true"; //for now all tests run under Voron - so this is needed
+            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.RunInMemory = false;
 		}
 
 		public class Users_ByName : AbstractIndexCreationTask<User> 
@@ -64,10 +64,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void AfterRestoreOfIncrementalBackupAllIndexesShouldWork()
+        [Theory]
+        [PropertyData("Storages")]
+		public void AfterRestoreOfIncrementalBackupAllIndexesShouldWork(string storage)
 		{
-			using(var store = NewDocumentStore(requestedStorage: "esent"))
+			using(var store = NewDocumentStore(requestedStorage: storage))
 			{
 				new Users_ByName().Execute(store);
 
@@ -107,30 +108,21 @@ namespace Raven.Tests.Issues
 				var output = new StringBuilder();
 
 				MaintenanceActions.Restore(new RavenConfiguration
-				{
-					Settings =
-				{
-					{Constants.Esent.CircularLog, "false"},
-					{Constants.Voron.AllowIncrementalBackups, "true"}
-				}
-
-				}, new DatabaseRestoreRequest
-				{
-				    BackupLocation = BackupDir,
-                    Defrag = true,
-                    DatabaseLocation = DataDir
-				}, s => output.Append(s));
+				    {
+					    Settings =
+				        {
+					        {Constants.Voron.AllowIncrementalBackups, "true"}
+				        }
+				    }, new DatabaseRestoreRequest
+				    {
+				        BackupLocation = BackupDir,
+                        Defrag = true,
+                        DatabaseLocation = DataDir
+				    }, s => output.Append(s));
 
 				Assert.DoesNotContain("error", output.ToString().ToLower());
 
-				using (var db = new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir,
-					Settings =
-					{
-						{Constants.Esent.CircularLog, "false"}
-					}
-				}, null))
+				using (var db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null))
 				{
 					var indexStats = db.Statistics.Indexes;
 

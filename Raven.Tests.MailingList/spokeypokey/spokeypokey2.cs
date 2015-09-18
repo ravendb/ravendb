@@ -7,6 +7,7 @@ using Raven.Client.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList.spokeypokey
 {
@@ -134,10 +135,11 @@ namespace Raven.Tests.MailingList.spokeypokey
 		}
 
 		//1105376
-		[Fact]
-		public void Can_search_by_Zip()
+        [Theory]
+        [PropertyData("Storages")]
+		public void Can_search_by_Zip(string storage)
 		{
-			using (var ravenServer = GetNewServer(requestedStorage: "esent"))
+			using (var ravenServer = GetNewServer(requestedStorage: storage))
 			using (var store = NewRemoteDocumentStore(ravenDbServer:ravenServer))
 			{
 				CreateTestData(store);

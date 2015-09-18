@@ -6,16 +6,17 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using NLog;
+
 using Rachis.Messages;
+
+using Raven.Abstractions.Logging;
 
 namespace Rachis.Transport
 {
@@ -30,7 +31,7 @@ namespace Rachis.Transport
 			Log = LogManager.GetLogger(GetType().Name +"."+ name);
 		}
 
-		public Logger Log { get; private set; }
+		public ILog Log { get; private set; }
 
 		public bool TryReceiveMessage(int timeout, CancellationToken cancellationToken, out MessageContext messageContext)
 		{

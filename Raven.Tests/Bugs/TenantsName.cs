@@ -15,7 +15,6 @@ namespace Raven.Tests.Bugs
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.RunInMemory = false;
-			ravenConfiguration.DefaultStorageTypeName = "esent";
 		}
 
 		[Fact]
@@ -30,7 +29,7 @@ namespace Raven.Tests.Bugs
 
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 				var exception2 = Assert.Throws<ErrorResponseException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
-				Assert.Equal("Could not find a database named: " + tenantName, exception2.Message);
+				Assert.Equal("Could not find a resource named: " + tenantName, exception2.Message);
 			}
 		}
 	}

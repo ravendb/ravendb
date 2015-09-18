@@ -68,7 +68,7 @@ namespace Raven.Database.Server
 					task.Execute(this);
 				}
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
 				if (systemDatabase != null)
 					systemDatabase.Dispose();

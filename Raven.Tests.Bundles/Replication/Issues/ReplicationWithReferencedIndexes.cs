@@ -37,7 +37,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 		{
 			serverConfiguration.RunInMemory = false;
 			serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
-			serverConfiguration.DefaultStorageTypeName = "esent";
+			serverConfiguration.DefaultStorageTypeName = "voron";
 		}
 
 		[Fact]

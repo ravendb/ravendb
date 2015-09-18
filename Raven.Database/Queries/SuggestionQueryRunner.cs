@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;

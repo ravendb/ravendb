@@ -50,19 +50,19 @@ namespace Raven.Tests.Issues
 			{
 				AddWindowsUser(username, password);
 
-                this.Invoking(x =>
-				{
-					using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
-					{
-					}
-				}).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
+                Assert.Throws<ErrorResponseException>(() =>
+                {
+                    using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
+                    {
+                    }
+                });
 
-                this.Invoking(x =>
-				{
-					using (NewStore(enableAuthentication: true))
-					{
-					}
-				}).ShouldNotThrow<Exception>();
+                Assert.DoesNotThrow(() =>
+                {
+                    using (NewStore(enableAuthentication: true))
+                    {
+                    }
+                });
 			}
 			finally
 			{

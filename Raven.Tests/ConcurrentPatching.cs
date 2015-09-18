@@ -7,15 +7,17 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests
 {
 	public class ConcurrentPatching : RavenTest
 	{
-		[Fact]
-		public void CanConcurrentlyUpdateSameDocument()
+        [Theory]
+        [PropertyData("Storages")]
+		public void CanConcurrentlyUpdateSameDocument(string storage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: storage))
 			{
 				using (var s = store.OpenSession())
 				{

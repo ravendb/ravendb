@@ -7,6 +7,7 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -17,10 +18,11 @@ namespace Raven.Tests.Issues
 			 
 		}
 
-		[Fact]
-		public void ShouldProperlyDisposeEsentResourcesUsedByStreamingControllerWhenQuerying()
+        [Theory]
+        [PropertyData("Storages")]
+		public void ShouldProperlyDisposeEsentResourcesUsedByStreamingControllerWhenQuerying(string storage)
 		{
-			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
+			using (var store = NewRemoteDocumentStore(requestedStorage: storage))
 			{
 				using (var session = store.OpenSession())
 				{

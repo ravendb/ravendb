@@ -210,8 +210,7 @@ namespace Raven.StorageExporter
             storage = null;
             if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
-            else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
-                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.EsentTypeName, () => { }, () => { });
+
             if (storage != null)
             {
                 storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, new OrderedPartCollection<AbstractDocumentCodec>());

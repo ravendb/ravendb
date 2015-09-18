@@ -206,11 +206,6 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private string GetDebugInformation()
-		{
-			return Constants.IsReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(database.ServerUrl);
-		}
-
 		public override void Dispose()
 		{
 			if (timer != null)

@@ -8,15 +8,17 @@ using System.Transactions;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
 	public class MultiLoadInTransaction : RavenTest
 	{
-		[Fact]
-		public void InsertAndSingleSelect()
+        [Theory]
+        [PropertyData("Storages")]
+		public void InsertAndSingleSelect(string storage)
 		{
-            using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
+            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
 			{
 				var expected = new Bar { Id = "test/bar/1", Foo = "Some value" };
 				using (new TransactionScope())

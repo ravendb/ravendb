@@ -127,10 +127,10 @@ namespace Raven.Tests.Bundles.Replication
 			SetupReplication(store1.DatabaseCommands, new Dictionary<string, string> {{ "C2s", null }}, store2, store3);
 			
 
-			Assert.True(WaitForDocument(store2.DatabaseCommands, ids.Item2, 1000));
+			Assert.True(WaitForDocument(store2.DatabaseCommands, ids.Item2, 2000));
 			Assert.False(WaitForDocument(store2.DatabaseCommands, ids.Item1, 1000));
 
-			Assert.True(WaitForDocument(store3.DatabaseCommands, ids.Item2, 1000));
+			Assert.True(WaitForDocument(store3.DatabaseCommands, ids.Item2, 2000));
 			Assert.False(WaitForDocument(store3.DatabaseCommands, ids.Item1, 1000));
 
 		}

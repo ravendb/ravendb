@@ -49,8 +49,7 @@ namespace Raven.Database.Plugins.Builtins
 
 			options.DatabaseLandlord.ForAllDatabases(database =>
 			{
-				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });
-				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });				
 				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
 				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = database.Name, ResourceType = ResourceType.Database });
 			});
@@ -58,8 +57,7 @@ namespace Raven.Database.Plugins.Builtins
 			options.FileSystemLandlord.ForAllFileSystems(filesystem =>
 			{
 				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.DataDirectory, PathType = PathType.Data, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
-				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
-				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });				
 				pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
 			});
 

@@ -3,6 +3,7 @@
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.Iulian
 {
@@ -14,12 +15,13 @@ namespace Raven.Tests.Bugs.Iulian
 			public string Tag { get; set; }
 		}
 
-		[Fact]
-		public void Can_Load_entities_with_id_containing_url()
+        [Theory]
+        [PropertyData("Storages")]
+		public void Can_Load_entities_with_id_containing_url(string storage)
 		{
 			var id = @"mssage@msmq://local/Sample.AppService";
 
-			using (var server = GetNewServer(requestedStorage:"esent"))
+			using (var server = GetNewServer(requestedStorage:storage))
 			using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				using (var s = store.OpenSession())

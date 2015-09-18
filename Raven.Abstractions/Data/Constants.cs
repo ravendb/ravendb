@@ -128,8 +128,6 @@ namespace Raven.Abstractions.Data
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 
-		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
-
         public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
@@ -334,25 +332,6 @@ namespace Raven.Abstractions.Data
 
 		// Subscriptions
 		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
-
-		public static class Esent
-        {
-            public const string CircularLog = "Raven/Esent/CircularLog";
-
-            public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
-
-            public const string MaxVerPages = "Raven/Esent/MaxVerPages";
-
-            public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
-
-            public const string LogFileSize = "Raven/Esent/LogFileSize";
-
-            public const string LogBuffers = "Raven/Esent/LogBuffers";
-
-            public const string MaxCursors = "Raven/Esent/MaxCursors";
-
-            public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
-        }
 
         public static class Voron
         {

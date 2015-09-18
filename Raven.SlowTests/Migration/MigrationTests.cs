@@ -17,6 +17,7 @@ using Raven.SlowTests.Migration.Orders;
 using Raven.Tests.Common;
 
 using Xunit;
+using Raven.Database.Config;
 
 namespace Raven.SlowTests.Migration
 {
@@ -78,6 +79,14 @@ namespace Raven.SlowTests.Migration
 			}
 		}
 
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
+            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.RunInMemory = false;
+        }
+
+
 		[Fact]
 		public void BasicMigration()
 		{
@@ -85,7 +94,7 @@ namespace Raven.SlowTests.Migration
 			{
 				Console.WriteLine("Processing: " + file.Name);
 
-				using (var store = NewRemoteDocumentStore(runInMemory: false))
+				using (var store = NewRemoteDocumentStore())
 				{
 					store.DefaultDatabase = "Northwind";
 

@@ -749,10 +749,7 @@ Configuration databaseOptions:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 				}
-				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
-				{
-					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-				}
+
 				MaintenanceActions.Restore(ravenConfiguration, new DatabaseRestoreRequest
 				{
 					BackupLocation = backupLocation,

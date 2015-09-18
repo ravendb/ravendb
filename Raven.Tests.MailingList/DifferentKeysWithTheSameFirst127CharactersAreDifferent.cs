@@ -1,18 +1,20 @@
 ﻿using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
     public class KeyLength : RavenTest
     {
-        [Fact]
-        public void DifferentKeysWithTheSameFirst127CharactersAreDifferent()
+        [Theory]
+        [PropertyData("Storages")]
+        public void DifferentKeysWithTheSameFirst127CharactersAreDifferent(string storage)
         {
             var identicalPrefix = new string('x', 127);
             var aId = identicalPrefix + "a";
             var bId = identicalPrefix + "b";
-            using (var s = NewDocumentStore(requestedStorage: "esent"))
+            using (var s = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = s.OpenSession())
                 {

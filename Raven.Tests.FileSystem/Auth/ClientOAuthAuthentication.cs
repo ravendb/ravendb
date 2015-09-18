@@ -8,20 +8,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.FileSystem.Synchronization.IO;
+
 using Xunit;
-using Raven.Client.FileSystem;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Extensions;
-using Raven.Client.FileSystem.Connection;
 
 namespace Raven.Tests.FileSystem.Auth
 {

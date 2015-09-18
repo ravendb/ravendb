@@ -19,6 +19,7 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Actions
 {
@@ -54,13 +55,13 @@ namespace Raven.Database.Actions
 
             string storage;
             if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-            {
+            {	          
 	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-					storage = InMemoryRavenConfiguration.VoronTypeName;
+			        storage = InMemoryRavenConfiguration.VoronTypeName;
 	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-				else
-					storage = InMemoryRavenConfiguration.EsentTypeName;
+                    throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead.");
+				else // Default
+					storage = InMemoryRavenConfiguration.VoronTypeName;
             }
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
@@ -87,14 +88,6 @@ namespace Raven.Database.Actions
                 }
             }
 
-            bool enableIncrementalBackup;
-            if (incrementalBackup &&
-                TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(Database.Configuration.Settings[Constants.Esent.CircularLog], out enableIncrementalBackup) == false || enableIncrementalBackup))
-            {
-                throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
-            }
-
             if (incrementalBackup &&
                 TransactionalStorage is Raven.Storage.Voron.TransactionalStorage &&
                 Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
@@ -107,6 +100,7 @@ namespace Raven.Database.Actions
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             }), new RavenJObject(), null);
+
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
 
