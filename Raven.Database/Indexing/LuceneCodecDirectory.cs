@@ -310,8 +310,8 @@ namespace Raven.Database.Indexing
 		    {
                 if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
-                stream.Read(b, offset, len);
-		    }
+				stream.ReadEntireBlock(b, offset, len);
+			}
 
 		    protected override void Dispose(bool disposing)
 		    {
