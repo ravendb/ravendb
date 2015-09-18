@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Rachis.Commands;
 using Rachis.Messages;
 
+using Raven.Abstractions.Logging;
+
 namespace Rachis.Behaviors
 {
 	public class SnapshotInstallationStateBehavior : AbstractRaftStateBehavior

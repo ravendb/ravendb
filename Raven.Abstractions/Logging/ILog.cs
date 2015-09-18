@@ -4,6 +4,8 @@ namespace Raven.Abstractions.Logging
 {
 	public interface ILog
 	{
+		bool IsInfoEnabled { get; }
+
 		bool IsDebugEnabled { get; }
 
 		bool IsWarnEnabled { get; }

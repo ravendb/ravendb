@@ -183,7 +183,6 @@ namespace Raven.SlowTests.RavenThreadPool
 			using (var tp = new RTP(8, cts.Token).Start())
 			{
 				long sum = 0;
-				var wasReturnedPartially = false;
 				var range = Enumerable.Range(1, 6).ToList();
 				tp.ExecuteBatch(range, (int input) =>
 				{

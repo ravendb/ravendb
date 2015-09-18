@@ -276,8 +276,7 @@ namespace Raven.Tryouts
 
         private static void ParseDisks(BulkInsertOperation insert)
         {
-            int i = 0;
-            var parser = new Parser();
+	        var parser = new Parser();
             var buffer = new byte[1024 * 1024];// more than big enough for all files
 
             using (var bz2 = new BZip2InputStream(File.Open(@"I:\Temp\freedb-complete-20150101.tar.bz2", FileMode.Open)))

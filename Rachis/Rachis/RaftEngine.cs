@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using NLog;
 using Rachis.Behaviors;
 using Rachis.Commands;
 using Rachis.Interfaces;
@@ -20,6 +19,7 @@ using Rachis.Storage;
 using Rachis.Transport;
 using Rachis.Utils;
 
+using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Rachis
@@ -33,7 +33,7 @@ namespace Rachis
 
 		private Topology _currentTopology;
 
-		internal Logger _log;
+		internal ILog _log;
 
 		public IRaftStateMachine StateMachine { get { return _raftEngineOptions.StateMachine; } }
 
@@ -52,8 +52,8 @@ namespace Rachis
 			{
 				if (_currentLeader == value)
 					return;
-
-				_log.Debug("Setting CurrentLeader: {0}", value);
+				if (_log.IsDebugEnabled)
+					_log.Debug("Setting CurrentLeader: {0}", value);
 				_currentLeader = value;
 
 
@@ -178,13 +178,15 @@ namespace Rachis
 
 					if (hasMessage == false)
 					{
-						if (State != RaftEngineState.Leader)
+						if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
 							_log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
 						behavior.HandleTimeout();
 						OnStateTimeout();
 						continue;
 					}
-					_log.Debug("{0}: {1} {2}", State,
+
+					if (_log.IsDebugEnabled)
+						_log.Debug("{0}: {1} {2}", State,
 						message.Message.GetType().Name,
 						message.Message is BaseMessage ? JsonConvert.SerializeObject(message.Message) : string.Empty
 						);
@@ -202,7 +204,8 @@ namespace Rachis
 		{
 			PersistentState.UpdateTermTo(this, term);
 			SetState(RaftEngineState.Follower);
-			_log.Debug("UpdateCurrentTerm() setting new leader : {0}", leader ?? "no leader currently");
+			if (_log.IsDebugEnabled)
+				_log.Debug("UpdateCurrentTerm() setting new leader : {0}", leader ?? "no leader currently");
 			CurrentLeader = leader;
 		}
 
@@ -248,13 +251,15 @@ namespace Rachis
 
 			Debug.Assert(StateBehavior != null, "StateBehavior != null");
 			OnStateChanged(state);
-			_log.Debug("{0} ==> {1}", oldState, state);
+			if (_log.IsDebugEnabled)
+				_log.Debug("{0} ==> {1}", oldState, state);
 		}
 
 
         public void ForceCandidateState()
         {
-            _log.Debug("Forced into candidate mode");
+			if (_log.IsDebugEnabled)
+				_log.Debug("Forced into candidate mode");
             SetState(RaftEngineState.CandidateByRequest);
         }
 
@@ -269,7 +274,8 @@ namespace Rachis
 			}
 
 			_steppingDownCompletionSource = new TaskCompletionSource<object>();
-			_log.Debug("Got a request to step down from leadership position, personal reasons, you understand.");
+			if (_log.IsDebugEnabled)
+				_log.Debug("Got a request to step down from leadership position, personal reasons, you understand.");
 			SetState(RaftEngineState.SteppingDown);
 
 			return _steppingDownCompletionSource.Task;
@@ -347,7 +353,8 @@ namespace Rachis
 
 			try
 			{
-				_log.Debug("Topology change started on leader");
+				if (_log.IsDebugEnabled)
+					_log.Debug("Topology change started on leader");
 				StartTopologyChange(tcc);
 				AppendCommand(tcc);
 				return tcc.Completion.Task;
@@ -409,8 +416,8 @@ namespace Rachis
 					StateMachine.Apply(entry, command);
 
 					Debug.Assert(entry.Index == StateMachine.LastAppliedIndex);
-
-					_log.Debug("Committing entry #{0}", entry.Index);
+					if (_log.IsDebugEnabled)
+						_log.Debug("Committing entry #{0}", entry.Index);
 
 					var tcc = command as TopologyChangeCommand;
 					if (tcc != null)
@@ -502,7 +509,8 @@ namespace Rachis
 										 tcc.Previous.Contains(Name);
 			if (isRemovedFromTopology)
 			{
-				_log.Debug("This node is being removed from topology, setting its state to follower, it will be idle until a leader will join it to the cluster again");
+				if (_log.IsDebugEnabled)
+					_log.Debug("This node is being removed from topology, setting its state to follower, it will be idle until a leader will join it to the cluster again");
 				CurrentLeader = null;
 
 				SetState(RaftEngineState.Follower);

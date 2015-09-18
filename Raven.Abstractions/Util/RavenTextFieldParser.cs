@@ -37,7 +37,7 @@ namespace Raven.Abstractions.Util
 
 		public TextFieldParser(TextReader reader)
 		{
-			reader = reader;
+			this.reader = reader;
 		}
 
 		public TextFieldParser(string path)
@@ -68,7 +68,7 @@ namespace Raven.Abstractions.Util
 		public TextFieldParser(Stream stream, Encoding defaultEncoding, bool detectEncoding, bool leaveOpen)
 		{
 			reader = new StreamReader(stream, defaultEncoding, detectEncoding);
-			leaveOpen = leaveOpen;
+			this.leaveOpen = leaveOpen;
 		}
 
 		private string[] GetDelimitedFields()

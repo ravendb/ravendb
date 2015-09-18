@@ -51,7 +51,9 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/async/commands/deleteAttachment")]
 		public async Task<HttpResponseMessage> DeleteAttachment()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.DeleteAttachmentAsync("keys/1", null);
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
@@ -94,21 +96,27 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/async/commands/getAttachment")]
 		public async Task<HttpResponseMessage> GetAttachment()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.GetAttachmentAsync("attachment1");
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
 		[Route("api/async/commands/getAttachmentHeadersStartingWith")]
 		public async Task<HttpResponseMessage> GetAttachmentHeadersStartingWith()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync("attachments", 0, 128);
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
 		[Route("api/async/commands/getAttachments")]
 		public async Task<HttpResponseMessage> GetAttachments()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 128);
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
@@ -246,7 +254,9 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/async/commands/headAttachment")]
 		public async Task<HttpResponseMessage> HeadAttachment()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.HeadAttachmentAsync("keys/1");
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
@@ -315,7 +325,9 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/async/commands/putAttachment")]
 		public async Task<HttpResponseMessage> PutAttachment()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.PutAttachmentAsync("keys/1", null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
@@ -419,7 +431,9 @@ namespace Raven.Tests.Web.Controllers.Commands
 		[Route("api/async/commands/updateAttachmentMetadata")]
 		public async Task<HttpResponseMessage> UpdateAttachmentMetadata()
 		{
+#pragma warning disable 618
 			await DocumentStore.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("keys/1", null, new RavenJObject());
+#pragma warning restore 618
 			return new HttpResponseMessage();
 		}
 
