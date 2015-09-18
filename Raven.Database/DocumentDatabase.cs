@@ -560,12 +560,10 @@ namespace Raven.Database
                     disposable.Dispose();
             });
 
-			if (IndexStorage != null)
-				exceptionAggregator.Execute(IndexStorage.Dispose);
-
-			if (TransactionalStorage != null)
+            if (TransactionalStorage != null)
                 exceptionAggregator.Execute(TransactionalStorage.Dispose);
-           
+            if (IndexStorage != null)
+                exceptionAggregator.Execute(IndexStorage.Dispose);
 
             if (Configuration != null)
                 exceptionAggregator.Execute(Configuration.Dispose);
@@ -873,39 +871,49 @@ namespace Raven.Database
             }
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
-        {
-            TouchedDocumentInfo touch;
-            recentTouches.TryRemove(key, out touch);
-            log.Debug("Checking references for {0}", key);
-            foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
-            {
-                Etag preTouchEtag;
-                Etag afterTouchEtag;
-                try
-                {
-                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
-                }
-                catch (ConcurrencyException)
-                {
-                    log.Info("Concurrency exception when touching {0}", referencing);
-                    continue;
-                }
+		internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
+		{
+			TouchedDocumentInfo touch;
+			recentTouches.TryRemove(key, out touch);
 
-                if (preTouchEtag == null || afterTouchEtag == null)
-                    continue;
+			using (TransactionalStorage.DisableBatchNesting())
+			{
+				// in external transaction number of references will be >= from current transaction references
+				TransactionalStorage.Batch(externalActions =>
+				{
+					var referencingKeys = externalActions.Indexing.GetDocumentsReferencing(key);
+					if (participatingIds != null)
+						referencingKeys = referencingKeys.Except(participatingIds);
 
-                actions.General.MaybePulseTransaction();
+					foreach (var referencing in referencingKeys)
+					{
+						Etag preTouchEtag = null;
+						Etag afterTouchEtag = null;
+						try
+						{
+							actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+						}
+						catch (ConcurrencyException)
+						{
+							log.Info("Concurrency exception when touching {0}", referencing);
+						}
 
-                recentTouches.Set(referencing, new TouchedDocumentInfo
-                {
-                    PreTouchEtag = preTouchEtag,
-                    TouchedEtag = afterTouchEtag
-                });
-            }
-        }
+						if (preTouchEtag == null || afterTouchEtag == null)
+							continue;
 
-        public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
+						actions.General.MaybePulseTransaction();
+
+						recentTouches.Set(referencing, new TouchedDocumentInfo
+						{
+							PreTouchEtag = preTouchEtag,
+							TouchedEtag = afterTouchEtag
+						});
+					}
+				});
+			}
+		}
+
+		public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
             IStorageActionsAccessor actions,
             TransactionInformation transactionInformation)
         {
