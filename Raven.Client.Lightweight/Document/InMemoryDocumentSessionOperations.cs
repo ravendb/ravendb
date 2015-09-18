@@ -21,7 +21,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
-using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -76,14 +75,6 @@ namespace Raven.Client.Document
 			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
 		}
 
-		private bool hasEnlisted;
-		[ThreadStatic]
-		private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
-
-		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
-		{
-			get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
-		}
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
@@ -956,9 +947,6 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-			if (documentStore.EnlistInDistributedTransactions)
-				TryEnlistInAmbientTransaction();
-
 			PrepareForEntitiesDeletion(result, null);
 			PrepareForEntitiesPuts(result);
 
@@ -1045,8 +1033,6 @@ more responsive application.
 				}
 				else
 				{
-
-
 					Etag etag = null;
 					object existingEntity;
 					DocumentMetadata metadata = null;
@@ -1076,43 +1062,6 @@ more responsive application.
 			}
 			if (changes == null)
 				deletedEntities.Clear();
-		}
-
-		protected virtual void TryEnlistInAmbientTransaction()
-		{
-
-			if (hasEnlisted || Transaction.Current == null)
-				return;
-
-			var dbName = DatabaseName ?? Constants.SystemDatabase;
-			if (documentStore.CanEnlistInDistributedTransactions(dbName) == false)
-			{
-				throw new InvalidOperationException("The database " + dbName + " cannot be used with distributed transactions");
-			}
-
-			HashSet<string> registered;
-			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
-			if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
-			{
-				RegisteredStoresInTransaction[localIdentifier] =
-					registered = new HashSet<string>();
-			}
-
-			if (registered.Add(StoreIdentifier))
-			{
-				var transactionalSession = (ITransactionalDocumentSession)this;
-				var ravenClientEnlistment = new RavenClientEnlistment(documentStore, transactionalSession, () =>
-					{
-						RegisteredStoresInTransaction.Remove(localIdentifier);
-						if (documentStore.WasDisposed)
-							throw new ObjectDisposedException("RavenDB Session");
-					});
-				if (documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
-					Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
-				else
-					Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
-			}
-			hasEnlisted = true;
 		}
 
 		/// <summary>
@@ -1236,25 +1185,6 @@ more responsive application.
 		/// </summary>
 		public virtual void Dispose()
 		{
-		}
-
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public abstract void Commit(string txId);
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public abstract void Rollback(string txId);
-
-		/// <summary>
-		/// Clears the enlistment.
-		/// </summary>
-		protected void ClearEnlistment()
-		{
-			hasEnlisted = false;
 		}
 
 		/// <summary>

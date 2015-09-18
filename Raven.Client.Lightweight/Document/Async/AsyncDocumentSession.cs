@@ -928,24 +928,6 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override void Commit(string txId)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override void Rollback(string txId)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
 		/// Dynamically queries RavenDB using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>

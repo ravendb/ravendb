@@ -923,10 +923,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("debug/transactions")]
 		public HttpResponseMessage Transactions()
 		{
-			return GetMessageWithObject(new
-			{
-				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
-			});
+            throw new NotSupportedException("DTC is not supported.");
 		}
 
 		[HttpGet]

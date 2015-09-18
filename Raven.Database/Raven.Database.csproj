@@ -600,7 +600,6 @@
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Extensions\MetricExtension.cs" />
-    <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
     <Compile Include="Indexing\IndexMerging\IndexData.cs" />
     <Compile Include="Indexing\IndexMerging\IndexMerger.cs" />
@@ -831,12 +830,9 @@
     <Compile Include="Data\AddIncludesCommand.cs" />
     <Compile Include="Data\ExecutingQueryInfo.cs" />
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
-    <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
-    <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
-    <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -1285,7 +1281,6 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
-    <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

@@ -10,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
-using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -44,17 +43,13 @@ namespace Raven.Database.Storage
 		bool HandleException(Exception exception);
 
 		bool IsAlreadyInBatch { get; }
-        bool SupportsDtc { get; }
 
 		void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
 		Guid ChangeId();
 		void ClearCaches();
 		void DumpAllStorageTables();
-		InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
+		
         IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false);
-        List<TransactionContextData> GetPreparedTransactions();
-
-		object GetInFlightTransactionsInternalStateForDebugOnly();
 
 		ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();
 		/// <summary>

@@ -1111,13 +1111,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/transactions/rollbackAll")]
 		public HttpResponseMessage Transactions()
 		{
-			var transactions = Database.TransactionalStorage.GetPreparedTransactions();
-			foreach (var transactionContextData in transactions)
-			{
-				Database.Rollback(transactionContextData.Id);
-			}
-
-			return GetMessageWithObject(new { RolledBackTransactionsAmount = transactions.Count });
+            throw new NotSupportedException("DTC is not supported.");
 		}
 
 		[HttpPost]

@@ -716,28 +716,7 @@ namespace Raven.Database.Indexing
 			var lastModified = last.LastModified.Value;
 
 
-			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
-
-
-			//var filteredDocs = new ConcurrentQueue<Tuple<JsonDocument, object>>();
-			//context
-
-
-			/*Parallel.ForEach(jsonDocs.Where(x => x != null).AsParallel()
-				new ParallelOptions()
-				{
-					MaxDegreeOfParallelism = context.CurrentNumberOfParallelTasks
-				}, doc =>
-				{
-					if (doc != null)
-					{
-						var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
-						filteredDocs.Enqueue(
-							filteredDoc == null ?
-								Tuple.Create(doc, (object) new FilteredDocument(doc)) :
-								Tuple.Create(filteredDoc, JsonToExpando.Convert(doc.ToJson())));
-					}
-				});*/
+			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers);
 
 			var filteredDocs =
 				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
@@ -755,7 +734,7 @@ namespace Raven.Database.Indexing
 				});
 
             if ( Log.IsDebugEnabled ) 
-			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+			    Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 
 			var results = new ConcurrentQueue<IndexingBatchForIndex>();

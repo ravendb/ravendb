@@ -129,7 +129,6 @@ namespace Raven.Client.Embedded
                     DefaultDatabase = DefaultDatabase,
                     Credentials = Credentials,
                     ApiKey = ApiKey,
-                    EnlistInDistributedTransactions = EnlistInDistributedTransactions
                 };
             }
             else
@@ -143,7 +142,6 @@ namespace Raven.Client.Embedded
                     RunInMemory = RunInMemory,
                     DefaultDatabase = DefaultDatabase,
                     ResourceManagerId = ResourceManagerId,
-                    EnlistInDistributedTransactions = EnlistInDistributedTransactions
                 };
             }
 

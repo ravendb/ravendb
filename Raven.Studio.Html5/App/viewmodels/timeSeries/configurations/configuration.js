@@ -1,4 +1,4 @@
-var __extends = this.__extends || function (d, b) {
+var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
@@ -14,9 +14,11 @@ define(["require", "exports", "plugins/router", "common/appUrl", "viewmodels/vie
             this.bundleMap = { types: "Types" };
             this.appUrls = appUrl.forCurrentDatabase();
             var typesRoute = { route: 'timeSeries/settings/types', moduleId: 'viewmodels/timeSeries/configuration/types', title: 'Types', nav: true, hash: appUrl.forCurrentTimeSeries().timeSeriesConfigurationTypes };
-            this.router = durandalRouter.createChildRouter().map([
+            this.router = durandalRouter.createChildRouter()
+                .map([
                 typesRoute
-            ]).buildNavigationModel();
+            ])
+                .buildNavigationModel();
             appUrl.mapUnknownRoutes(this.router);
             this.activeSubViewTitle = ko.computed(function () {
                 // Is there a better way to get the active route?

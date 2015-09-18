@@ -16,7 +16,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
-using Raven.Database.Impl.DTC;
+
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
@@ -616,12 +616,6 @@ namespace Raven.Storage.Voron
 	        get { return tableStorage.Environment; }
 	    }
 
-		[CLSCompliant(false)]
-		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
-		{            
-		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
-		}
-
 		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
 		{
 			var seperator = new String('#', 80);
@@ -730,16 +724,6 @@ namespace Raven.Storage.Voron
 			}
 
 			return reportAsList;
-		}
-
-		public List<TransactionContextData> GetPreparedTransactions()
-		{
-			throw new NotSupportedException("Voron storage does not support DTC");
-		}
-
-		public object GetInFlightTransactionsInternalStateForDebugOnly()
-		{
-			throw new NotSupportedException("Voron storage does not support DTC");
 		}
 
 		internal IStorageActionsAccessor GetCurrentBatch()

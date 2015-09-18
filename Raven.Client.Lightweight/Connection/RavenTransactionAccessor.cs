@@ -58,22 +58,6 @@ namespace Raven.Client.Connection
 		
 		public static TimeSpan? DefaultTimeout { get; set; }
 
-		/// <summary>
-		/// Gets the transaction information for the current transaction
-		/// </summary>
-		/// <returns></returns>
-		public static TransactionInformation GetTransactionInformation()
-		{
-			if (CurrentRavenTransactions.Count > 0 && supressExplicitRavenTransaction == false)
-				return CurrentRavenTransactions.Peek();
-			if (Transaction.Current == null)
-				return null;
-			return new TransactionInformation
-			{
-                Id = Transaction.Current.TransactionInformation.LocalIdentifier,
-				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
-			};
-		}
 
 		internal static IDisposable SupressExplicitRavenTransaction()
 		{

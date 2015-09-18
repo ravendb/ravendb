@@ -137,7 +137,7 @@ namespace Raven.Database.Actions
 
                         docCount = 0;
 						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -149,10 +149,8 @@ namespace Raven.Database.Actions
                                 continue;
 
                             JsonDocument.EnsureIdInMetadata(doc);
-                            var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
 
-                            var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
-                            document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                            var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
                             if (document == null)
                                 continue;
 
@@ -439,7 +437,7 @@ namespace Raven.Database.Actions
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
                                         : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
@@ -451,11 +449,8 @@ namespace Raven.Database.Actions
                             etag = doc.Etag;
 
                         JsonDocument.EnsureIdInMetadata(doc);
-
-                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
                         
-                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                        var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
                         if (document == null)
                             continue;
                         
@@ -489,7 +484,7 @@ namespace Raven.Database.Actions
                 while (true)
                 {
                     var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x );
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
                     
                     int docCount = 0;
                     foreach (var doc in documents)
@@ -501,10 +496,7 @@ namespace Raven.Database.Actions
                         
                         JsonDocument.EnsureIdInMetadata(doc);
                         
-                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                       
-                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                        var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
                         if (document == null)
                             continue;
 
@@ -541,22 +533,23 @@ namespace Raven.Database.Actions
             key = key.Trim();
 
             JsonDocument document = null;
-            if (transactionInformation == null ||
-                Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
-            {
-                // first we check the dtc state, then the storage, to avoid race conditions
-                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
+            //if (transactionInformation == null || Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+            //{
+            //    // first we check the dtc state, then the storage, to avoid race conditions
+            //    var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
 
-                TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
+            //    TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
 
-                if (nonAuthoritativeInformationBehavior != null)
-                    document = nonAuthoritativeInformationBehavior(document);
-            }
+            //    if (nonAuthoritativeInformationBehavior != null)
+            //        document = nonAuthoritativeInformationBehavior(document);
+            //}
+
+            TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
 
             JsonDocument.EnsureIdInMetadata(document);
 
-            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
-                .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
+            return new DocumentRetriever(null, null, Database.ReadTriggers)
+                            .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
         }
 
         public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
@@ -564,22 +557,29 @@ namespace Raven.Database.Actions
             if (key == null)
                 throw new ArgumentNullException("key");
             key = key.Trim();
+
             JsonDocumentMetadata document = null;
-            if (transactionInformation == null ||
-                Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+            //if (transactionInformation == null || Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+            //{
+            //    var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
+            //    TransactionalStorage.Batch(actions =>
+            //    {
+            //        document = actions.Documents.DocumentMetadataByKey(key);
+            //    });
+            //    if (nonAuthoritativeInformationBehavior != null)
+            //        document = nonAuthoritativeInformationBehavior(document);
+            //}
+
+
+            TransactionalStorage.Batch(actions =>
             {
-                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
-                TransactionalStorage.Batch(actions =>
-                {
-                    document = actions.Documents.DocumentMetadataByKey(key);
-                });
-                if (nonAuthoritativeInformationBehavior != null)
-                    document = nonAuthoritativeInformationBehavior(document);
-            }
+                document = actions.Documents.DocumentMetadataByKey(key);
+            });
 
             JsonDocument.EnsureIdInMetadata(document);
-            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
-                .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
+
+            return new DocumentRetriever(null, null, Database.ReadTriggers)
+                            .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
@@ -604,7 +604,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                 using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
@@ -659,13 +659,10 @@ namespace Raven.Database.Actions
                     {
                         key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
                     }
+
                     AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
                     if (transactionInformation == null)
                     {
-                        if (Database.InFlightTransactionalState.IsModified(key))
-                            throw new ConcurrencyException("PUT attempted on : " + key +
-                                                           " while it is being locked by another transaction");
-
                         Database.PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
@@ -718,17 +715,20 @@ namespace Raven.Database.Actions
                     }
                     else
                     {
-                        var doc = actions.Documents.DocumentMetadataByKey(key);
-                        newEtag = Database.InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
-                                                                                      transactionInformation,
-                                                                                      doc == null
-                                                                                          ? Etag.Empty
-                                                                                          : doc.Etag,
-                                                                                      UuidGenerator);
+                        throw new NotSupportedException("DTC is not supported. Should we kill TransactionInformation?");
+
+                        //var doc = actions.Documents.DocumentMetadataByKey(key);
+                        //newEtag = Database.InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
+                        //                                                              transactionInformation,
+                        //                                                              doc == null
+                        //                                                                  ? Etag.Empty
+                        //                                                                  : doc.Etag,
+                        //                                                              UuidGenerator);
                     }
                 });
 				if (Log.IsDebugEnabled)
 					Log.Debug("Put document {0} with etag {1}", key, newEtag);
+
                 return new PutResult
                 {
                     Key = key,
@@ -800,13 +800,15 @@ namespace Raven.Database.Actions
                     }
                     else
                     {
-                        var doc = actions.Documents.DocumentMetadataByKey(key);
 
-                        Database.InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
-                                                                               etag,
-                                                                               doc == null ? Etag.Empty : doc.Etag,
-                                                                               UuidGenerator);
-                        deleted = doc != null;
+                        throw new NotSupportedException("DTC is not supported. Should we kill TransactionInformation too?");
+                        //var doc = actions.Documents.DocumentMetadataByKey(key);
+
+                        //Database.InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
+                        //                                                       etag,
+                        //                                                       doc == null ? Etag.Empty : doc.Etag,
+                        //                                                       UuidGenerator);
+                        //deleted = doc != null;
                     }
 
                     WorkContext.ShouldNotifyAboutWork(() => "DEL " + key);

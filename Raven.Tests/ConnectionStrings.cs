@@ -20,7 +20,6 @@ namespace Raven.Tests
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Null(store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
 
@@ -44,7 +43,6 @@ namespace Raven.Tests
 				Assert.Equal("http://localhost:8079", store.Identifier);
 				Assert.NotNull(store.Credentials);
 				Assert.Null(store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
 
@@ -60,7 +58,6 @@ namespace Raven.Tests
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
 
@@ -76,7 +73,6 @@ namespace Raven.Tests
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
 
@@ -91,7 +87,6 @@ namespace Raven.Tests
 				Assert.Equal("http://localhost:8079 (DB: DevMachine)", store.Identifier);
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
-				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
 

@@ -174,12 +174,6 @@
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\ChunkedRemoteBulkInsertOperation.cs" />
-    <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
-    <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
-    <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />
-    <Compile Include="Document\DTC\ITransactionRecoveryStorageContext.cs" />
-    <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
-    <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\IAsyncReliableSubscriptions.cs" />
     <Compile Include="Document\IReliableSubscriptions.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
@@ -331,7 +325,6 @@
     <Compile Include="Document\DocumentQuery.cs" />
     <Compile Include="Document\DocumentSession.cs" />
     <Compile Include="Document\DocumentStore.cs" />
-    <Compile Include="Document\DTC\PendingTransactionRecovery.cs" />
     <Compile Include="Document\HiLoKeyGenerator.cs" />
     <Compile Include="Document\HiLoKeyGeneratorBase.cs" />
     <Compile Include="Document\IAbstractDocumentQuery.cs" />
@@ -341,7 +334,6 @@
     <Compile Include="Document\DocumentSessionListeners.cs" />
     <Compile Include="Document\MultiLoaderWithInclude.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
-    <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ReflectionUtil.cs" />
     <Compile Include="Document\SessionOperations\LoadOperation.cs" />
     <Compile Include="Document\SessionOperations\MultiLoadOperation.cs" />
@@ -390,7 +382,6 @@
     <Compile Include="Indexes\IndexDefinitionHelper.cs" />
     <Compile Include="Indexes\RavenDocumentsByEntityName.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
-    <Compile Include="ITransactionalDocumentSession.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IDocumentQueryGenerator.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />

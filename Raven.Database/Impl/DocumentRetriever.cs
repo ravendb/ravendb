@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -36,7 +35,6 @@ namespace Raven.Database.Impl
         private readonly InMemoryRavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-        private readonly InFlightTransactionalState inFlightTransactionalState;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
         private readonly HashSet<string> itemsToInclude;
         private bool disableCache;
@@ -44,14 +42,12 @@ namespace Raven.Database.Impl
         public Etag Etag = Etag.Empty;
 
         public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
-            InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
         {
             this.configuration = configuration;
             this.actions = actions;
             this.triggers = triggers;
-            this.inFlightTransactionalState = inFlightTransactionalState;
             this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
             this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
         }
@@ -254,11 +250,10 @@ namespace Raven.Database.Impl
             if (doc != null && doc.Metadata != null)
                 doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 
-            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
-            if (nonAuthoritativeInformationBehavior != null)
-                doc = nonAuthoritativeInformationBehavior(doc);
+
             if (disableCache == false)
                 cache[key] = doc;
+
             if (cache.Count > 2048)
             {
                 // we are probably doing a stream here, no point in trying to cache things, we might be
