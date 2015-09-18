@@ -5,6 +5,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;
+using System.IO;
 using System.Net;
 using System.Threading;
 
@@ -74,7 +75,7 @@ namespace Raven.Backup
             }
             catch (Exception exc)
             {
-                Console.WriteLine(exc.Message);
+                Console.WriteLine(exc);
                 return false;
             }
 
@@ -108,7 +109,7 @@ namespace Raven.Backup
 			        var res = ex.Response as HttpWebResponse;
 			        if (res == null)
 			        {
-				        throw new Exception("Network error");
+				        throw new IOException("Network error", ex);
 			        }
 			        if (res.StatusCode == HttpStatusCode.NotFound)
 			        {

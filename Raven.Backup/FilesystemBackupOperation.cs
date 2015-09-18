@@ -7,6 +7,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.FileSystem;
 using Raven.Json.Linq;
+using System.IO;
 
 namespace Raven.Backup
 {
@@ -67,7 +68,7 @@ namespace Raven.Backup
             }
             catch (Exception exc)
             {
-                Console.WriteLine(exc.Message);
+                Console.WriteLine(exc);
                 return false;
             }
 
@@ -91,7 +92,7 @@ namespace Raven.Backup
 	        }
 	        catch (Exception ex)
 	        {
-		        throw new Exception("Network error", ex);
+		        throw new IOException("Network error", ex);
 	        }
         }
 
