@@ -4,15 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Web.Http.Controllers;
-
 using Raven.Database.Common;
 using Raven.Database.Config;
-using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class BaseAdminFileSystemApiController : BaseAdminDatabaseApiController
+	public class BaseAdminFileSystemApiController : AdminResourceApiController<RavenFileSystem, FileSystemsLandlord>
 	{
 		public override InMemoryRavenConfiguration ResourceConfiguration
 		{
@@ -22,48 +20,11 @@ namespace Raven.Database.FileSystem.Controllers
 			}
 		}
 
-		public override DocumentDatabase Database
-		{
-			get
-			{
-				throw new NotSupportedException("Use SystemDatabase instead.");
-			}
-		}
+		public string FileSystemName => ResourceName;
 
-		public override string DatabaseName
-		{
-			get
-			{
-				throw new NotSupportedException();
-			}
-		}
+		public RavenFileSystem FileSystem => Resource;
 
-		public string FileSystemName { get; private set; }
-
-		private RavenFileSystem _fileSystem;
-		public RavenFileSystem FileSystem
-		{
-			get
-			{
-				if (_fileSystem != null)
-					return _fileSystem;
-
-				var resource = FileSystemsLandlord.GetResourceInternal(FileSystemName);
-				if (resource == null)
-				{
-					throw new InvalidOperationException("Could not find a file system named: " + FileSystemName);
-				}
-
-				return _fileSystem = resource.Result;
-			}
-		}
-
-		protected override void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			base.InnerInitialization(controllerContext);
-
-			FileSystemName = GetResourceName(controllerContext, ResourceType.FileSystem);
-		}
+		public override ResourceType ResourceType => ResourceType.FileSystem;
 
 		public override void MarkRequestDuration(long duration)
 		{
