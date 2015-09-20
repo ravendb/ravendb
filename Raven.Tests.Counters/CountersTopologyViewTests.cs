@@ -3,21 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Counters;
 using Raven.Client.Document;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Counters.Replication;
-using Raven.Database.FileSystem.Synchronization;
 using Raven.Json.Linq;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Counters
