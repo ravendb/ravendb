@@ -118,6 +118,8 @@ namespace Raven.Tests.Counters
 		[Theory]
 		[InlineData(2)]
 		[InlineData(-2)]
+		[InlineData(5)]
+		[InlineData(-7)]
 		public async Task CountersDelete_should_work(int delta)
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))

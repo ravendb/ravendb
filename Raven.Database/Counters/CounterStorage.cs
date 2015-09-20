@@ -483,7 +483,11 @@ namespace Raven.Database.Counters
 				{
 					it.RequiredPrefix = counterName;
 					if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof (long))
-						throw new Exception("Counter doesn't exist!");
+					{
+						var e = new InvalidDataException("Counter doesn't exist!");
+						e.Data.Add("DoesntExist",true);
+						throw e;
+					}
 
 					var valueReader = it.CurrentKey.CreateReader();
 					valueReader.Skip(it.RequiredPrefix.Size);
@@ -847,7 +851,7 @@ namespace Raven.Database.Counters
 				var doesCounterExist = Store(groupName, counterName, parent.ServerId, sign, counterKeySlice =>
 				{
 					if (sign == ValueSign.Negative)
-						delta = -Math.Abs(delta);
+						delta = Math.Abs(delta);
 					counters.Increment(counterKeySlice, delta);
 				});
 

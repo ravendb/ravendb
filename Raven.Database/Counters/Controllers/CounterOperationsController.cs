@@ -402,8 +402,18 @@ namespace Raven.Database.Counters.Controllers
 			Storage.MetricsCounters.ClientRequests.Mark();
 			using (var reader = Storage.CreateReader())
 			{
-				var overallTotal = reader.GetCounterTotal(groupName, counterName);
-				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
+				try
+				{
+					var overallTotal = reader.GetCounterTotal(groupName, counterName);
+					return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
+				}
+				catch (InvalidDataException e)
+				{
+					if (e.Data.Contains("DoesntExist"))
+						return Request.CreateResponse(HttpStatusCode.NotFound, "Counter with specified group and name wasn't found");
+
+					return Request.CreateErrorResponse(HttpStatusCode.BadRequest, e);
+				}
 			}
         }
 
