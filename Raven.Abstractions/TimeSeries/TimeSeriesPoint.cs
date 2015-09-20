@@ -11,6 +11,10 @@ namespace Raven.Abstractions.TimeSeries
 
 	public class TimeSeriesPoint
 	{
+#if DEBUG
+		public string DebugKey { get; set; }
+#endif
+
 		public DateTimeOffset At { get; set; }
 
 		public double[] Values { get; set; }

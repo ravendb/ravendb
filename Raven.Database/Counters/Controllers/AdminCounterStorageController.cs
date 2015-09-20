@@ -1,8 +1,9 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="AdminFSController.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AdminCounterStorageController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +11,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -19,78 +19,34 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Counters.Backup;
 using Raven.Database.Counters.Replication;
 using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class AdminCounterStorageController : BaseAdminController
-    {
-	    private string currentCounterStorageName { get; set; }
-
-		protected override void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			base.InnerInitialization(controllerContext);
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("MS_SubRoutes"))
-			{
-				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
-
-				if (selectedData != null)
-					currentCounterStorageName = selectedData.Values["counterStorageName"] as string;
-			}
-			else
-			{
-				if (values.ContainsKey("counterStorageName"))
-					currentCounterStorageName = values["counterStorageName"] as string;
-			}
-		}
-
-	    public override string TenantName
-	    {
-		    get { return currentCounterStorageName; }
-	    }
-
-	    private CounterStorage Storage
-		{
-			get
-			{
-				if (string.IsNullOrWhiteSpace(currentCounterStorageName))
-					throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
-
-				var counterStorage = CountersLandlord.GetCounterInternal(currentCounterStorageName);
-				if (counterStorage == null)
-				{
-					throw new InvalidOperationException("Could not find a counter storage named: " + currentCounterStorageName);
-				}
-
-				return counterStorage.Result;
-			}
-		}
-
-	    [HttpGet]
+	public class AdminCounterStorageController : BaseAdminCountersApiController
+	{
+		[HttpGet]
 		[RavenRoute("admin/cs/{*counterStorageName}")]
-	    public async Task<HttpResponseMessage> Get()
-	    {
-		    var op = GetQueryStringValue("op");
-		    if (string.IsNullOrWhiteSpace(op))
-			    return GetMessageWithString("mandatory 'op' query parameter is missing",HttpStatusCode.BadRequest);
+		public async Task<HttpResponseMessage> Get()
+		{
+			var op = GetQueryStringValue("op");
+			if (string.IsNullOrWhiteSpace(op))
+				return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
-		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
-			    return await GetNamesAndGroups(currentCounterStorageName);
-		    if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
-				return await GetSummary(currentCounterStorageName);
-		    
+			if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
+				return await GetNamesAndGroups(CounterName);
+			if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
+				return await GetSummary(CounterName);
+
 			return GetMessageWithString("'op' query parameter is invalid - must be either group-names or summary", HttpStatusCode.BadRequest);
-	    }
+		}
 
-	    private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
+		private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
-			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -106,7 +62,7 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var counterStorage = await CountersLandlord.GetCounterInternal(id).ConfigureAwait(false);
+			var counterStorage = await CountersLandlord.GetResourceInternal(id).ConfigureAwait(false);
 			if (counterStorage == null)
 			{
 				return GetMessageWithObject(new
@@ -132,10 +88,10 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(counterSummaries);
 		}
 
-	    private async Task<HttpResponseMessage> GetSummary(string id)
+		private async Task<HttpResponseMessage> GetSummary(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
-			if (IsValidName(id, Database.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -151,7 +107,7 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var counterStorage = await CountersLandlord.GetCounterInternal(id).ConfigureAwait(false);
+			var counterStorage = await CountersLandlord.GetResourceInternal(id).ConfigureAwait(false);
 			if (counterStorage == null)
 			{
 				return GetMessageWithObject(new
@@ -171,12 +127,12 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(counterSummaries);
 		}
 
-        [HttpPut]
+		[HttpPut]
 		[RavenRoute("admin/cs/{*counterStorageName}")]
 		public async Task<HttpResponseMessage> Put(string counterStorageName)
-        {
-	        MessageWithStatusCode nameFormatErrorMsg;
-			if (IsValidName(counterStorageName, Database.Configuration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
+		{
+			MessageWithStatusCode nameFormatErrorMsg;
+			if (IsValidName(counterStorageName, SystemConfiguration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -195,23 +151,23 @@ namespace Raven.Database.Counters.Controllers
 			var docKey = Constants.Counter.Prefix + counterStorageName;
 
 			var isCounterStorageUpdate = ParseBoolQueryString("update");
-			var counterStorage = Database.Documents.Get(docKey, null);
+			var counterStorage = SystemDatabase.Documents.Get(docKey, null);
 			if (counterStorage != null && isCounterStorageUpdate == false)
-            {
+			{
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
-            }
+			}
 
-            var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
-            CountersLandlord.Protect(dbDoc);
-            var json = RavenJObject.FromObject(dbDoc);
-            json.Remove("Id");
+			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
+			CountersLandlord.Protect(dbDoc);
+			var json = RavenJObject.FromObject(dbDoc);
+			json.Remove("Id");
 
-            Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+			SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
-            return GetEmptyMessage(HttpStatusCode.Created);
-        }
+			return GetEmptyMessage(HttpStatusCode.Created);
+		}
 
-	    [HttpDelete]
+		[HttpDelete]
 		[RavenRoute("admin/cs/{*counterStorageName}")]
 		public HttpResponseMessage Delete(string counterStorageName)
 		{
@@ -222,7 +178,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -260,7 +216,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]
@@ -296,7 +252,7 @@ namespace Raven.Database.Counters.Controllers
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage wasn't found" };
 
 			var docKey = Constants.Counter.Prefix + id;
-			Database.Documents.Delete(docKey, null, null);
+			SystemDatabase.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded && configuration.RunInMemory == false)
 			{
@@ -309,7 +265,7 @@ namespace Raven.Database.Counters.Controllers
 		private MessageWithStatusCode ToggleCounterStorageDisabled(string id, bool isSettingDisabled)
 		{
 			var docKey = Constants.Counter.Prefix + id;
-			var document = Database.Documents.Get(docKey, null);
+			var document = SystemDatabase.Documents.Get(docKey, null);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage " + id + " wasn't found" };
 
@@ -323,7 +279,7 @@ namespace Raven.Database.Counters.Controllers
 			doc.Disabled = !doc.Disabled;
 			var json = RavenJObject.FromObject(doc);
 			json.Remove("Id");
-			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+			SystemDatabase.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
 			return new MessageWithStatusCode();
 		}
@@ -335,18 +291,18 @@ namespace Raven.Database.Counters.Controllers
 			var backupRequest = await ReadJsonObjectAsync<CounterStorageBackupRequest>();
 			var incrementalBackup = ParseBoolQueryString("incremental");
 
-			if (backupRequest.CounterStorageDocument == null && Storage.Name != null)
+			if (backupRequest.CounterStorageDocument == null && Counters.Name != null)
 			{
-				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Storage.Name, null);
+				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Counters.Name, null);
 				if (jsonDocument != null)
 				{
 					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 					CountersLandlord.Unprotect(backupRequest.CounterStorageDocument);
-					backupRequest.CounterStorageDocument.StoreName = Storage.Name;
+					backupRequest.CounterStorageDocument.StoreName = Counters.Name;
 				}
 			}
 
-			using (var reader = Storage.CreateReader())
+			using (var reader = Counters.CreateReader())
 			{
 				var backupStatus = reader.GetBackupStatus();
 				if (backupStatus != null && backupStatus.IsRunning)
@@ -354,12 +310,12 @@ namespace Raven.Database.Counters.Controllers
 			}
 
 			if (incrementalBackup &&
-				Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+				Counters.Configuration.Storage.Voron.AllowIncrementalBackups == false)
 			{
 				throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
 			}
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = Counters.CreateWriter())
 			{
 				writer.SaveBackupStatus(new BackupStatus
 				{
@@ -368,19 +324,21 @@ namespace Raven.Database.Counters.Controllers
 				});
 			}
 
-			var backupOperation = new BackupOperation(Storage, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
-				backupRequest.BackupLocation, Storage.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
+			var backupOperation = new BackupOperation(Counters, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
+				backupRequest.BackupLocation, Counters.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
 
+#pragma warning disable 4014
 			Task.Factory.StartNew(backupOperation.Execute);
+#pragma warning restore 4014
 
-			return GetEmptyMessage(HttpStatusCode.Created);
+			return GetEmptyMessage(HttpStatusCode.Accepted);
 		}
 
 		[HttpPost]
 		[RavenRoute("cs/{counterStorageName}/admin/replication/topology/view")]
 		public Task<HttpResponseMessage> ReplicationTopology()
 		{
-			var topologyDiscoverer = new CountersReplicationTopologyDiscoverer(Storage, new RavenJArray(), 10, Log);
+			var topologyDiscoverer = new CountersReplicationTopologyDiscoverer(Counters, new RavenJArray(), 10, Log);
 			var node = topologyDiscoverer.Discover();
 			var topology = node.Flatten();
 

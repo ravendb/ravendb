@@ -26,7 +26,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SubscriptionsController : RavenDbApiController
+	public class SubscriptionsController : BaseDatabaseApiController
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			Database.Subscriptions.DeleteSubscription(id);
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPost]

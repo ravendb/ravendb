@@ -229,7 +229,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				{
 					if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
 					{
-						logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
+						if (logger.IsDebugEnabled)
+							logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 						PulseTransaction();
 					}
 					return true;
@@ -237,7 +238,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
 				if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
 				{
-					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
+					if (logger.IsDebugEnabled)
+						logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
 				}
 				return true;

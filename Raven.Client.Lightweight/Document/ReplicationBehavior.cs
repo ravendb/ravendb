@@ -149,7 +149,8 @@ namespace Raven.Client.Document
 				}
 				catch (Exception e)
 				{
-					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
+					if (log.IsDebugEnabled)
+						log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
 
 					throw;
 				}
@@ -158,36 +159,37 @@ namespace Raven.Client.Document
 			}
 		}
 
-	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
+		private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
 				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
 				HttpMethods.Get,
-				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
+				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials),
 				documentStore.Conventions);
-		    try
-		    {
-		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
-		    {
-				    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
-				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
-				
-			    return new ReplicatedEtagInfo
-			    {
-				    DestinationUrl = destinationUrl,
-					DocumentEtag = etag 
-			    };
-		    }
-		}
+			try
+			{
+				using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
+				{
+					var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
+					if (log.IsDebugEnabled)
+						log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
+
+					return new ReplicatedEtagInfo
+					{
+						DestinationUrl = destinationUrl,
+						DocumentEtag = etag
+					};
+				}
+			}
 			catch (ErrorResponseException e)
-		    {
-				if(e.StatusCode == HttpStatusCode.ServiceUnavailable)
+			{
+				if (e.StatusCode == HttpStatusCode.ServiceUnavailable)
 					throw new OperationCanceledException("Got 'Service Unavailable' status code on response, aborting operation");
 
-			    throw;
-	}
-}
+				throw;
+			}
+		}
 	}
 }

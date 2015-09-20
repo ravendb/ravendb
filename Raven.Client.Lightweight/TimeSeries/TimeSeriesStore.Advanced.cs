@@ -38,12 +38,29 @@ namespace Raven.Client.TimeSeries
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
 				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
 				{
-					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/{2}/keys",
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/keys/{2}",
 						url, timeSeriesName, type);
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{
 						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
 						return result.JsonDeserialization<TimeSeriesKey[]>();
+					}
+				}, token);
+			}
+
+			public async Task<TimeSeriesPoint[]> GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token =  default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
+				{
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/points/{2}?key={3}&skip={4}&take={5}&start={6}&end={7}",
+						url, timeSeriesName, type, Uri.EscapeDataString(key), skip, take, start, end);
+					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+					{
+						var result = await request.ReadResponseJsonAsync().WithCancellation(token);
+						return result.JsonDeserialization<TimeSeriesPoint[]>();
 					}
 				}, token);
 			}

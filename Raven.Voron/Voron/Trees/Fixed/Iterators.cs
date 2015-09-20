@@ -13,6 +13,7 @@ namespace Voron.Trees.Fixed
     {
         public interface IFixedSizeIterator : IDisposable
         {
+	        bool SeekToLast();
             bool Seek(long key);
             long CurrentKey { get; }
             Slice Value { get; }
@@ -31,7 +32,12 @@ namespace Voron.Trees.Fixed
 
         public class NullIterator : IFixedSizeIterator
         {
-            public bool Seek(long key)
+	        public bool SeekToLast()
+	        {
+		        return false;
+	        }
+
+	        public bool Seek(long key)
             {
                 return false;
             }
@@ -59,7 +65,7 @@ namespace Voron.Trees.Fixed
 
 	        public bool Skip(int count)
 	        {
-				throw new InvalidOperationException("No current page");
+				return false;
 	        }
         }
 
@@ -78,7 +84,15 @@ namespace Voron.Trees.Fixed
                 _dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
             }
 
-            public bool Seek(long key)
+	        public bool SeekToLast()
+	        {
+				if (_header == null)
+					return false;
+		        _pos = _header->NumberOfEntries - 1;
+		        return true;
+	        }
+
+			public bool Seek(long key)
             {
 	            if (_header == null)
 		            return false;
@@ -165,7 +179,13 @@ namespace Voron.Trees.Fixed
 	            return _currentPage.LastMatch <= 0 || MoveNext();
             }
 
-            public long CurrentKey
+	        public bool SeekToLast()
+	        {
+				_currentPage = _parent.FindPageFor(long.MaxValue);
+		        return true;
+	        }
+
+			public long CurrentKey
             {
                 get
                 {

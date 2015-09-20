@@ -123,8 +123,6 @@ namespace Raven.Database.Server.Controllers
 			timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
-			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
-            maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -624,6 +622,12 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
+		public abstract void MarkRequestDuration(long duration);
+
+	    public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
+
+		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+
 		public HttpResponseMessage WriteFile(string filePath)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
@@ -720,6 +724,16 @@ namespace Raven.Database.Server.Controllers
 					return "application/x-silverlight-2";
 				case ".json":
 					return "application/json";
+				case ".eot":
+					return "application/vnd.ms-fontobject";
+				case ".svg":
+					return "image/svg+xml";
+				case ".ttf":
+					return "application/octet-stream";
+				case ".woff":
+					return "application/font-woff";
+				case ".woff2":
+					return "application/font-woff2";
 				default:
 					return "text/plain";
 			}
@@ -748,17 +762,15 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-		public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
+		public abstract string ResourcePrefix { get; }
 
-        public abstract string TenantName { get; }
+		public abstract string ResourceName { get; protected set; }
 
         private int innerRequestsCount;
 
         public int InnerRequestsCount { get { return innerRequestsCount;  } }
 
 		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
-
-		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
 	    protected void AddRequestTraceInfo(Action<StringBuilder> info)
 		{
@@ -780,9 +792,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
 		}
-
-	    public abstract void MarkRequestDuration(long duration);
-
 
         #region Landlords
 
@@ -852,29 +861,6 @@ namespace Raven.Database.Server.Controllers
 				return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
 			}
 		}
-
-		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
-        private int maxSecondsForTaskToWaitForDatabaseToLoad;
-        public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
-		{
-			get
-			{
-				if (Configuration == null)
-					return maxNumberOfThreadsForDatabaseToLoad;
-				return (SemaphoreSlim)Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
-			}
-		}
-        public int MaxSecondsForTaskToWaitForDatabaseToLoad
-        {
-            get
-            {
-                if (Configuration == null)
-                {
-                    return maxSecondsForTaskToWaitForDatabaseToLoad;
-                }
-                return (int)Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
-            }
-        }
         #endregion
     }
 }

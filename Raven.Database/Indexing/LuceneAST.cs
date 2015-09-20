@@ -48,11 +48,9 @@ namespace Raven.Database.Indexing
             {
                 case PrefixOperator.None:
                     return string.Empty;
-                    break;
-                case PrefixOperator.Plus:
+	            case PrefixOperator.Plus:
                     return "+";
-                    break;
-                case PrefixOperator.Minus:
+	            case PrefixOperator.Minus:
                     return "-";
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -337,12 +335,10 @@ This edge-case has a very slim chance of happening, but still we should not igno
 	        return phrase;
         }
 
-        public PrefixOperator Prefix { get; set; }
         public string Boost { get; set; }
         public string Similarity { get; set; }
         public string Proximity { get; set; }
-		private string term;
-        public string Term { get; set; }
+	    public string Term { get; set; }
         public TermType Type { get; set; }
 
         public enum TermType
@@ -516,8 +512,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
         {
             LeftNode = leftNode;
             RightNode = rightNode;
-            Operator parsedOperator;
-            Op = op;
+	        Op = op;
         }
         public override IEnumerable<LuceneASTNodeBase> Children
         {

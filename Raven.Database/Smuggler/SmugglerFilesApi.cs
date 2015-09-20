@@ -111,7 +111,7 @@ namespace Raven.Smuggler
                 shouldDispose = true;
 
                 var responseException = e as ErrorResponseException;
-                if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a file system named"))
+				if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a resource named:"))
                     throw new SmugglerException(
                         string.Format(
                             "Smuggler does not support file system creation (file system '{0}' on server '{1}' must exist before running Smuggler).",

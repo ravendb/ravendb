@@ -5,7 +5,6 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import changesContext = require("common/changesContext");
 import ace = require("ace/ace");
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");

@@ -7,30 +7,29 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class CountersStatsController : RavenCountersApiController
+	public class CountersStatsController : BaseCountersApiController
     {
 		[RavenRoute("cs/{counterStorageName}/stats")]
 		[HttpGet]
 		public HttpResponseMessage CounterStats()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateStats());
+			return GetMessageWithObject(Counters.CreateStats());
 		}
 
 		[RavenRoute("cs/{counterStorageName}/metrics")]
 		[HttpGet]
 		public HttpResponseMessage CounterMetrics()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateMetrics());
+			return GetMessageWithObject(Counters.CreateMetrics());
 		}
 
 		[RavenRoute("cs/{counterStorageName}/replications/stats")]
 		[HttpGet]
 		public HttpResponseMessage ReplicationStats()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK,
-				new CounterStorageReplicationStats()
+			return GetMessageWithObject(new CounterStorageReplicationStats
 				{
-					Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
+					Stats = Counters.ReplicationTask.DestinationStats.Values.ToList()
 				});
 		}
     }

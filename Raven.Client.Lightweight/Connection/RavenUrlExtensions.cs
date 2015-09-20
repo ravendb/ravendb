@@ -35,6 +35,14 @@ namespace Raven.Client.Connection
 			return url + "/cs/" + counter;
 		}
 
+		public static string ForTimeSeries(this string url, string timeSeries)
+		{
+			if (url.EndsWith("/"))
+				return url + "ts/" + timeSeries;
+
+			return url + "/ts/" + timeSeries;
+		}
+
 		public static string Indexes(this string url, string index)
 		{
 			return url + "/indexes/" + index;

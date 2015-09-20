@@ -36,8 +36,6 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		public SynchronizationTopologyRootNode Discover()
 		{
-			var nextStart = 0;
-
 			var root = new SynchronizationTopologyRootNode(filesystem.SynchronizationTask.FileSystemUrl, filesystem.Storage.Id);
 
 			if (ttl <= 0)

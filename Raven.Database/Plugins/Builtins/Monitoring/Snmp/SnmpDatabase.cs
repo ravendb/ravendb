@@ -119,7 +119,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 						return;
 
 					var database = databaseLandlord
-						.GetDatabaseInternal(databaseName)
+						.GetResourceInternal(databaseName)
 						.Result;
 
 					database.Notifications.OnIndexChange += (db, notification) =>

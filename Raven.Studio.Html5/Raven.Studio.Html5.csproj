@@ -30,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
@@ -37,50 +38,11 @@
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
     <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\deleteFilesMatchingQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getSynchronizationConfigCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\importFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\resolveConflictCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\saveIndexPriorityCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\deleteTypesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\deleteKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\timeSeries\deleteTypeCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\deletePointsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTypesCommand.ts" />
@@ -110,6 +72,7 @@
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
+    <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\typeChange.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\pointChange.ts" />
@@ -122,23 +85,9 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\file.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\folder.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\counters.ts" />
@@ -165,7 +114,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFilesMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
@@ -178,12 +126,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\licenseInformation.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
     <TypeScriptCompile Include="App\common\execJs.ts" />
@@ -210,9 +152,6 @@
     <Content Include="App\views\common\upgrade.html" />
     <Content Include="App\views\common\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\counter\counters.html" />
-    <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
     <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceStatsInfo.html" />
@@ -398,10 +337,11 @@
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
     <Content Include="App\views\shell.html" />
+    <Content Include="App\views\timeSeries\configuration\types.html" />
     <Content Include="App\views\timeSeries\deleteKey.html" />
     <Content Include="App\views\timeSeries\editTypeDialog.html" />
     <Content Include="App\views\timeSeries\editPointDialog.html" />
-    <Content Include="App\views\timeSeries\timeSeriesConfiguration.html" />
+    <Content Include="App\views\timeSeries\configuration\configuration.html" />
     <Content Include="App\views\timeSeries\timeSeriesStats.html" />
     <Content Include="App\views\timeSeries\timeSeriesPoints.html" />
     <Content Include="App\views\timeSeries\timeSeriesTypes.html" />
@@ -410,7 +350,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
+      <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-datetimepicker.min.css" />
@@ -465,7 +405,11 @@
       <DependentUpon>variables.css</DependentUpon>
     </Content>
     <Content Include="favicon.ico" />
+    <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\fontawesome-webfont.svg" />
+    <Content Include="fonts\fontawesome-webfont.ttf" />
+    <Content Include="fonts\fontawesome-webfont.woff" />
+    <Content Include="fonts\FontAwesome.otf" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Scripts\ace\ace.js" />
     <Content Include="Scripts\ace\anchor.js" />
@@ -688,6 +632,11 @@
     <Content Include="Scripts\durandal\viewLocator.js" />
     <Content Include="Content\less\bootstrap-datetimepicker-build.less" />
     <Content Include="Content\less\_bootstrap-datetimepicker.less" />
+    <None Include="compilerconfig.json" />
+    <Content Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </Content>
+    <Content Include="fonts\fontawesome-webfont.woff2" />
     <None Include="Scripts\jquery-2.1.3.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.3.js" />
     <Content Include="Scripts\jquery-2.1.3.min.js" />
@@ -708,10 +657,6 @@
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
     <Content Include="Content\functions.less" />
-    <Content Include="fonts\fontawesome-webfont.woff" />
-    <Content Include="fonts\fontawesome-webfont.ttf" />
-    <Content Include="fonts\fontawesome-webfont.eot" />
-    <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
@@ -830,14 +775,10 @@
     <TypeScriptCompile Include="App\commands\database\patch\executePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\patch\getPatchesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\patch\savePatchCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\dataExplorationCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\enableQueryTimings.ts" />
     <TypeScriptCompile Include="App\commands\database\query\getKillQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\query\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\query\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\conflictsResolveCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\replication\enableReplicationCommand.ts" />
@@ -973,13 +914,10 @@
     <TypeScriptCompile Include="App\common\pagedList.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
     <TypeScriptCompile Include="App\common\pair.ts" />
-    <TypeScriptCompile Include="App\common\queryUtil.ts" />
     <TypeScriptCompile Include="App\common\recentQueriesStorage.ts" />
     <TypeScriptCompile Include="App\common\serverBuildReminder.ts" />
     <TypeScriptCompile Include="App\common\serverSmugglingLocalStorage.ts" />
     <TypeScriptCompile Include="App\common\sqlReplicationStats.ts" />
-    <TypeScriptCompile Include="App\common\svgDownloader.ts" />
-    <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
     <TypeScriptCompile Include="App\models\auth\apiKey.ts" />
     <TypeScriptCompile Include="App\models\auth\license.ts" />
     <TypeScriptCompile Include="App\models\auth\windowsAuthData.ts" />
@@ -1181,9 +1119,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\transformers\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\transformers\transformers.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\transformers\transformersShell.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\configuration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\createConfigurationKey.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configurations\createConfigurationKey.ts" />
@@ -1256,10 +1191,11 @@
     <TypeScriptCompile Include="App\viewmodels\resources\filesystemSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\configuration\types.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\deleteKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editTypeDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\editPointDialog.ts" />
-    <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\timeSeries\configuration\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesPoints.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
@@ -1309,15 +1245,7 @@
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="fonts\fontawesome-webfont.woff" />
-    <Content Include="fonts\fontawesome-webfont.ttf" />
-    <Content Include="fonts\fontawesome-webfont.eot" />
-    <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\jquery-2.1.3.min.map" />
-    <Content Include="fonts\fontawesome-webfont.woff" />
-    <Content Include="fonts\fontawesome-webfont.ttf" />
-    <Content Include="fonts\fontawesome-webfont.eot" />
-    <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Content\bootstrap-select.css.map" />
     <Content Include="Content\bootstrap.css.map">
       <DependentUpon>bootstrap.css</DependentUpon>
@@ -1386,9 +1314,6 @@
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
-  <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <ProjectExtensions>
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
@@ -1425,7 +1350,9 @@
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
-  <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -1434,5 +1361,4 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets" />
 </Project>

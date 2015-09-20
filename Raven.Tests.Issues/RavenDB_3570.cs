@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
-using System.IO;
 using System.Net;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;

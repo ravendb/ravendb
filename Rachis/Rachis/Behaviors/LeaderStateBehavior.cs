@@ -16,6 +16,8 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 
+using Raven.Abstractions.Logging;
+
 namespace Rachis.Behaviors
 {
 	public class LeaderStateBehavior : AbstractRaftStateBehavior
@@ -280,7 +282,8 @@ namespace Rachis.Behaviors
 			Task snapshotInstallationTask;
 			if (resp.Success == false)
 			{
-				_log.Debug("Received CanInstallSnapshotResponse(Success=false) from {0}, Term = {1}, Index = {2}, updating and will try again",
+				if (_log.IsDebugEnabled)
+					_log.Debug("Received CanInstallSnapshotResponse(Success=false) from {0}, Term = {1}, Index = {2}, updating and will try again",
 					resp.From,
 					resp.Term,
 					resp.Index);
@@ -292,7 +295,8 @@ namespace Rachis.Behaviors
 			}
 			if (resp.IsCurrentlyInstalling)
 			{
-				_log.Debug("Received CanInstallSnapshotResponse(IsCurrentlyInstalling=false) from {0}, Term = {1}, Index = {2}, will retry when it is done",
+				if (_log.IsDebugEnabled)
+					_log.Debug("Received CanInstallSnapshotResponse(IsCurrentlyInstalling=false) from {0}, Term = {1}, Index = {2}, will retry when it is done",
 					resp.From,
 					resp.Term,
 					resp.Index);
@@ -300,7 +304,9 @@ namespace Rachis.Behaviors
 				_snapshotsPendingInstallation.TryRemove(resp.From, out snapshotInstallationTask);
 				return;
 			}
-			_log.Debug("Received CanInstallSnapshotResponse from {0}, starting snapshot streaming task", resp.From);
+
+			if (_log.IsDebugEnabled)
+				_log.Debug("Received CanInstallSnapshotResponse from {0}, starting snapshot streaming task", resp.From);
 
 
 			// problem, we can't just send the log entries, we have to send
@@ -345,7 +351,8 @@ namespace Rachis.Behaviors
 				return;
 			}
 
-			_log.Debug("Handling AppendEntriesResponse from {0}", resp.From);
+			if (_log.IsDebugEnabled)
+				_log.Debug("Handling AppendEntriesResponse from {0}", resp.From);
 
 			// there is a new leader in town, time to step down
 			if (resp.CurrentTerm > Engine.PersistentState.CurrentTerm)
@@ -359,13 +366,13 @@ namespace Rachis.Behaviors
 			_nextIndexes[resp.From] = resp.LastLogIndex + 1;
 			_matchIndexes[resp.From] = resp.LastLogIndex;
 			_lastContact[resp.From] = DateTime.UtcNow;
-
-
-			_log.Debug("Follower ({0}) has LastLogIndex = {1}", resp.From, resp.LastLogIndex);
+			if (_log.IsDebugEnabled)
+				_log.Debug("Follower ({0}) has LastLogIndex = {1}", resp.From, resp.LastLogIndex);
 
 			if (resp.Success == false)
 			{
-				_log.Debug("Received Success = false in AppendEntriesResponse from {1}. Now _nextIndexes[{1}] = {0}. Reason: {2}",
+				if (_log.IsDebugEnabled)
+					_log.Debug("Received Success = false in AppendEntriesResponse from {1}. Now _nextIndexes[{1}] = {0}. Reason: {2}",
 					_nextIndexes[resp.From], resp.From, resp.Message);
 				return;
 			}
@@ -380,7 +387,8 @@ namespace Rachis.Behaviors
 			var maxIndexOnCurrentQuorum = GetMaxIndexOnQuorum();
 			if (maxIndexOnCurrentQuorum <= Engine.CommitIndex)
 			{
-				_log.Debug("maxIndexOnCurrentQuorum = {0} <= Engine.CommitIndex = {1}.",
+				if (_log.IsDebugEnabled)
+					_log.Debug("maxIndexOnCurrentQuorum = {0} <= Engine.CommitIndex = {1}.",
 					maxIndexOnCurrentQuorum, Engine.CommitIndex);
 				return;
 			}
@@ -388,12 +396,14 @@ namespace Rachis.Behaviors
 		    var logEntry = Engine.PersistentState.GetLogEntry(maxIndexOnCurrentQuorum);
 		    if (logEntry == null)
 		    {
-                _log.Debug("maxIndexOnCurrentQuorum = {0} is null? This should probably never happen",maxIndexOnCurrentQuorum);
+				if (_log.IsDebugEnabled)
+					_log.Debug("maxIndexOnCurrentQuorum = {0} is null? This should probably never happen",maxIndexOnCurrentQuorum);
 		        return;
 		    }
 		    if (logEntry.Term != Engine.PersistentState.CurrentTerm)
 		    {
-                _log.Debug("maxIndexOnCurrentQuorum = {0} is from term {1} while this leader is on term {2}, cannot commit until the quorum index point to an entry in the leader term", 
+				if (_log.IsDebugEnabled)
+					_log.Debug("maxIndexOnCurrentQuorum = {0} is from term {1} while this leader is on term {2}, cannot commit until the quorum index point to an entry in the leader term", 
                     maxIndexOnCurrentQuorum,
                     logEntry.Term,
                     Engine.PersistentState.CurrentTerm
@@ -405,8 +415,8 @@ namespace Rachis.Behaviors
 			// that means that we are good to run without any issues. Further handling is done 
 			// in the HandleTimeout, to handle a situation where the leader can't talk to the clients
 			LastHeartbeatTime = DateTime.UtcNow;
-
-			_log.Debug(
+			if (_log.IsDebugEnabled)
+				_log.Debug(
 				"AppendEntriesResponse => applying commits, maxIndexOnQuorom = {0}, Engine.CommitIndex = {1}", maxIndexOnCurrentQuorum,
 				Engine.CommitIndex);
 			Engine.ApplyCommits(Engine.CommitIndex + 1, maxIndexOnCurrentQuorum);

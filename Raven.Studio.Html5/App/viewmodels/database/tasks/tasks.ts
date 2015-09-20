@@ -47,15 +47,6 @@ class tasks extends viewModelBase {
     activate(args: any) {
         super.activate(args);
     }
-
-    routeIsVisible(route: DurandalRouteConfiguration) {
-        var systemOnlyPages = ["Restore Database", "Database Settings", "Replication", "SQL Replication"];
-        if (jQuery.inArray(route.title, systemOnlyPages) !== -1) {
-            return this.isOnSystemDatabase();
-        } else {
-            return true;
-        }
-    }
 }
 
 export = tasks;

@@ -83,7 +83,8 @@ namespace Raven.Database.Actions
             do
             {
                 var doc = Database.Documents.Get(docId, transactionInformation);
-                Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
+				if (Log.IsDebugEnabled)
+					Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
 
                 if (etag != null && doc != null && doc.Etag != etag)
                 {
@@ -95,7 +96,8 @@ namespace Raven.Database.Actions
 		                return result;
 	                }
 
-                    Log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
+					if (Log.IsDebugEnabled)
+						Log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
                     throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
                     {
                         ActualETag = doc.Etag,
@@ -108,7 +110,8 @@ namespace Raven.Database.Actions
 
 	            if (jsonDoc == null)
                 {
-                    Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
+					if (Log.IsDebugEnabled)
+						Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
                     result.PatchResult = PatchResult.DocumentDoesNotExists;
                 }
                 else

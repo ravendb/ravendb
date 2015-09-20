@@ -4,17 +4,22 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Rachis;
+using Rachis.Commands;
+using Rachis.Storage;
 using Rachis.Transport;
-
+using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 
 namespace Raven.Database.Raft
 {
 	public class ClusterManager : IDisposable
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		public RaftEngine Engine { get; private set; }
 
 		public ClusterManagementHttpClient Client { get; private set; }
@@ -38,6 +43,44 @@ namespace Raven.Database.Raft
 					   NonVotingNodes = Engine.CurrentTopology.NonVotingNodes.ToArray(),
 					   TopologyId = Engine.CurrentTopology.TopologyId
 				   };
+		}
+
+		public void InitializeTopology(NodeConnectionInfo nodeConnection = null, bool isPartOfExistingCluster = false)
+		{
+			var topologyId = Guid.NewGuid();
+			var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection ?? Engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
+
+			var tcc = new TopologyChangeCommand
+			{
+				Requested = topology,
+				Previous = isPartOfExistingCluster ? Engine.CurrentTopology : null
+			};
+
+			Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
+			Engine.StartTopologyChange(tcc);
+			Engine.CommitTopologyChange(tcc);
+
+			if (isPartOfExistingCluster)
+				Engine.ForceCandidateState();
+			else
+				Engine.CurrentLeader = null;
+
+			Log.Info("Initialized Topology: " + topologyId);
+		}
+
+		public void InitializeEmptyTopologyWithId(Guid id)
+		{
+			var tcc = new TopologyChangeCommand
+			{
+				Requested = new Topology(id),
+				Previous = Engine.CurrentTopology
+			};
+
+			Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
+			Engine.StartTopologyChange(tcc);
+			Engine.CommitTopologyChange(tcc);
+
+			Log.Info("Changed topology id: " + id + " and set the empty cluster topology");
 		}
 
 		public void Dispose()

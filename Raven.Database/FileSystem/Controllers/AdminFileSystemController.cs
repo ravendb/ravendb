@@ -8,14 +8,13 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,61 +24,19 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
-using Raven.Database.FileSystem.Synchronization;
 
+using Raven.Database.FileSystem.Synchronization;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class AdminFileSystemController : BaseAdminController
+    public class AdminFileSystemController : BaseAdminFileSystemApiController
     {
-	    private string FileSystemName { get; set; }
-
-        protected override void InnerInitialization(HttpControllerContext controllerContext)
-        {
-            base.InnerInitialization(controllerContext);
-            var values = controllerContext.Request.GetRouteData().Values;
-            if (values.ContainsKey("MS_SubRoutes"))
-            {
-                var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-                var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("fileSystemName"));
-
-                if (selectedData != null)
-                    FileSystemName = selectedData.Values["fileSystemName"] as string;
-                else
-                    FileSystemName = null;
-            }
-            else
-            {
-                if (values.ContainsKey("fileSystemName"))
-                    FileSystemName = values["fileSystemName"] as string;
-                else
-                    FileSystemName = null;
-            }
-        }
-
-        public RavenFileSystem FileSystem
-        {
-            get
-            {
-                var filesystem = FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
-                if (filesystem == null)
-                {
-                    throw new InvalidOperationException("Could not find a filesystem named: " + FileSystemName);
-                }
-
-                return filesystem.Result;
-            }
-        }
-
         [HttpPut]
         [RavenRoute("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> Put(string id, bool update = false)
         {
-			
 			MessageWithStatusCode nameFormatErrorMessage;
-			if (IsValidName(id, Database.Configuration.FileSystem.DataDirectory, out nameFormatErrorMessage) == false)
+			if (IsValidName(id, SystemConfiguration.FileSystem.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -101,7 +58,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (!update)
             {
                 // As we are not updating, we should fail when the filesystem already exists.
-                var existingFilesystem = Database.Documents.Get(docKey, null);
+                var existingFilesystem = SystemDatabase.Documents.Get(docKey, null);
                 if (existingFilesystem != null)                   
                     return GetEmptyMessage(HttpStatusCode.Conflict);
             }
@@ -123,7 +80,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");
 
-            Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+            SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }
@@ -145,7 +102,7 @@ namespace Raven.Database.FileSystem.Controllers
 				return GetMessageWithString(message.Message, message.ErrorCode);
 			}
 
-			return GetEmptyMessage();
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpDelete]
@@ -219,7 +176,7 @@ namespace Raven.Database.FileSystem.Controllers
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system wasn't found" };
 
             var docKey = Constants.FileSystem.Prefix + id;
-			Database.Documents.Delete(docKey, null, null);
+			SystemDatabase.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded && configuration.RunInMemory == false)
 			{
@@ -235,7 +192,7 @@ namespace Raven.Database.FileSystem.Controllers
 		private MessageWithStatusCode ToggleFileSystemDisabled(string id, bool isSettingDisabled)
 		{
 			var docKey = Constants.FileSystem.Prefix + id;
-			var document = Database.Documents.Get(docKey, null);
+			var document = SystemDatabase.Documents.Get(docKey, null);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system " + id + " wasn't found" };
 
@@ -249,7 +206,7 @@ namespace Raven.Database.FileSystem.Controllers
 			doc.Disabled = !doc.Disabled;
 			var json = RavenJObject.FromObject(doc);
 			json.Remove("Id");
-			Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+			SystemDatabase.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
 			return new MessageWithStatusCode();
 		}
@@ -258,8 +215,8 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/admin/reset-index")]
         public HttpResponseMessage ResetIndex ()
         {
-            FileSystem.Search.ForceIndexReset();
-            return GetEmptyMessage(HttpStatusCode.OK);
+			FileSystem.Search.ForceIndexReset();
+            return GetEmptyMessage();
         }
 
         [HttpPost]
@@ -291,7 +248,7 @@ namespace Raven.Database.FileSystem.Controllers
             RavenJObject document = null;
             try
             {
-                FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
+				FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
             catch (FileNotFoundException)
             {
@@ -311,19 +268,19 @@ namespace Raven.Database.FileSystem.Controllers
             bool enableIncrementalBackup;
             if (incrementalBackup &&
                 transactionalStorage is Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(Database.Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
+                (bool.TryParse(FileSystem.Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
             {
                 throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
             }
 
             if (incrementalBackup &&
                 transactionalStorage is Storage.Voron.TransactionalStorage &&
-                Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+				FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
 
-            FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
+			FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
             {
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
@@ -356,7 +313,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-					var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternal(fs));
+					var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetResourceInternal(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
 			        {
                         bool skipProgressReport = false;
@@ -399,7 +356,7 @@ namespace Raven.Database.FileSystem.Controllers
             });
 
             long id;
-            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+            SystemDatabase.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.CompactFilesystem,
@@ -409,7 +366,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private static bool IsUpdateMessage(string msg)
@@ -517,7 +474,7 @@ namespace Raven.Database.FileSystem.Controllers
                     return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);
                 }
             }
-            Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+			SystemDatabase.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
             {
                 Resource = filesystemName
             }), new RavenJObject(), null);
@@ -573,12 +530,12 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 finally
                 {
-                    Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+					SystemDatabase.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
                 }
             }, TaskCreationOptions.LongRunning);
 
             long id;
-            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+			SystemDatabase.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.RestoreFilesystem,
@@ -588,7 +545,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private string FindFilesystemDocument(string rootBackupPath)

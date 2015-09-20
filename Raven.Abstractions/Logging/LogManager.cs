@@ -76,6 +76,8 @@ namespace Raven.Abstractions.Logging
 
 		public class NoOpLogger : ILog
 		{
+			public bool IsInfoEnabled { get { return false; } }
+
 			public bool IsDebugEnabled { get { return false; } }
 
 			public bool IsWarnEnabled { get { return false; } }

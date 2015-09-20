@@ -29,14 +29,14 @@ using BatchType = Raven.Abstractions.Counters.Notifications.BatchType;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class CounterOperationsController : RavenCountersApiController
+	public class CounterOperationsController : BaseCountersApiController
 	{
 		[RavenRoute("cs/{counterStorageName}/sinceEtag/{etag}")]
 		[HttpGet]
 		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024)
 		{
 			List<CounterState> deltas;
-			using (var reader = Storage.CreateReader())
+			using (var reader = Counters.CreateReader())
 				deltas = reader.GetCountersSinceEtag(etag + 1, skip, take).ToList();
 
 			return GetMessageWithObject(deltas);
@@ -46,19 +46,20 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = Counters.CreateWriter())
 			{
 				var counterChangeAction = writer.Store(groupName, counterName, delta);
 				if (delta == 0 && counterChangeAction != CounterChangeAction.Add)
-					return new HttpResponseMessage(HttpStatusCode.OK);
+					return GetEmptyMessage();
 
 				writer.Commit();
 
-				Storage.MetricsCounters.ClientRequests.Mark();
-				Storage.Publisher.RaiseNotification(new ChangeNotification
+				Counters.MetricsCounters.ClientRequests.Mark();
+				Counters.Publisher.RaiseNotification(new ChangeNotification
 				{
 					GroupName = groupName,
 					CounterName = counterName,
@@ -67,7 +68,7 @@ namespace Raven.Database.Counters.Controllers
 					Total = writer.GetCounterTotal(groupName, counterName)
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 		}
 
@@ -75,9 +76,9 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounterGroups()
 		{
-			using (var reader = Storage.CreateReader())
+			using (var reader = Counters.CreateReader())
 			{
-				Storage.MetricsCounters.ClientRequests.Mark();
+				Counters.MetricsCounters.ClientRequests.Mark();
 				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups().ToList());
 			}
 		}
@@ -101,36 +102,36 @@ namespace Raven.Database.Counters.Controllers
 
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-				var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
+				var token = authorizer.GenerateSingleUseAuthToken(CountersName, User);
 				return GetMessageWithObject(new
 				{
 					Token = token
 				});
 			}
 
-			Storage.MetricsCounters.ClientRequests.Mark();
+			Counters.MetricsCounters.ClientRequests.Mark();
 			if (HttpContext.Current != null)
 				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
 			var sp = Stopwatch.StartNew();
-			var status = new BatchStatus {IsTimedOut = false};
+			var status = new BatchStatus { IsTimedOut = false };
 			var timeoutTokenSource = new CancellationTokenSource();
 			var counterChanges = 0;
-			
+
 			var operationId = ExtractOperationId();
 			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var task = Task.Factory.StartNew(() =>
-            {
+			{
 				var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
 
 				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
-	            try
-	            {
-		            foreach (var changeBatch in changeBatches)
-		            {
-						using (var writer = Storage.CreateWriter())
+				try
+				{
+					foreach (var changeBatch in changeBatches)
+					{
+						using (var writer = Counters.CreateWriter())
 						{
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							Counters.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Started,
 								OperationId = operationId
@@ -138,53 +139,54 @@ namespace Raven.Database.Counters.Controllers
 
 							foreach (var change in changeBatch)
 							{
-								VerifyNameCorrect(change.Group);
-								VerifyNameCorrect(change.Name);
+								var verificationResult = VerifyGroupAndCounterName(change.Group, change.Name);
+								if (verificationResult != null)
+									throw new ArgumentException("Missing group or counter name");
 								writer.Store(change.Group, change.Name, change.Delta);
 							}
 							writer.Commit();
 
-							Storage.Publisher.RaiseNotification(new BulkOperationNotification
+							Counters.Publisher.RaiseNotification(new BulkOperationNotification
 							{
 								Type = BatchType.Ended,
 								OperationId = operationId
 							});
 						}
-		            }
-	            }
-	            catch (OperationCanceledException)
-	            {
+					}
+				}
+				catch (OperationCanceledException)
+				{
 					// happens on timeout
-		            Storage.Publisher.RaiseNotification(new BulkOperationNotification
-		            {
-			            Type = BatchType.Error,
-			            OperationId = operationId,
+					Counters.Publisher.RaiseNotification(new BulkOperationNotification
+					{
+						Type = BatchType.Error,
+						OperationId = operationId,
 						Message = "Operation cancelled, likely because of a batch timeout"
-		            });
-		            
-		            status.IsTimedOut = true;
-		            status.Faulted = true;
-		            throw;
-	            }
-	            catch (Exception e)
-	            {
-		            var errorMessage = e.SimplifyException().Message;
-					Storage.Publisher.RaiseNotification(new BulkOperationNotification
+					});
+
+					status.IsTimedOut = true;
+					status.Faulted = true;
+					throw;
+				}
+				catch (Exception e)
+				{
+					var errorMessage = e.SimplifyException().Message;
+					Counters.Publisher.RaiseNotification(new BulkOperationNotification
 					{
 						Type = BatchType.Error,
 						OperationId = operationId,
 						Message = errorMessage
 					});
 
-		            status.Faulted = true;
-		            status.State = RavenJObject.FromObject(new {Error = errorMessage});
-		            throw;
-	            }
-	            finally
-	            {
-		            status.Completed = true;
-		            status.Counters = counterChanges;
-	            }
+					status.Faulted = true;
+					status.State = RavenJObject.FromObject(new { Error = errorMessage });
+					throw;
+				}
+				finally
+				{
+					status.Completed = true;
+					status.Counters = counterChanges;
+				}
 			}, timeoutTokenSource.Token);
 
 			//TODO: do not forget to add task Id
@@ -203,7 +205,7 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeCounterFunc)
@@ -278,19 +280,20 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = Counters.CreateWriter())
 			{
 				var difference = writer.Reset(groupName, counterName);
 				if (difference != 0)
 				{
 					writer.Commit();
 
-					Storage.MetricsCounters.ClientRequests.Mark();
-					Storage.MetricsCounters.Resets.Mark();
-					Storage.Publisher.RaiseNotification(new ChangeNotification
+					Counters.MetricsCounters.ClientRequests.Mark();
+					Counters.MetricsCounters.Resets.Mark();
+					Counters.Publisher.RaiseNotification(new ChangeNotification
 					{
 						GroupName = groupName,
 						CounterName = counterName,
@@ -300,7 +303,7 @@ namespace Raven.Database.Counters.Controllers
 					});
 				}
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 		}
 
@@ -308,17 +311,18 @@ namespace Raven.Database.Counters.Controllers
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
-			using (var writer = Storage.CreateWriter())
+			using (var writer = Counters.CreateWriter())
 			{
 				writer.Delete(groupName, counterName);
 				writer.Commit();
 
-				Storage.MetricsCounters.ClientRequests.Mark();
-				Storage.MetricsCounters.Deletes.Mark();
-				Storage.Publisher.RaiseNotification(new ChangeNotification
+				Counters.MetricsCounters.ClientRequests.Mark();
+				Counters.MetricsCounters.Deletes.Mark();
+				Counters.Publisher.RaiseNotification(new ChangeNotification
 				{
 					GroupName = groupName,
 					CounterName = counterName,
@@ -327,7 +331,7 @@ namespace Raven.Database.Counters.Controllers
 					Total = 0
 				});
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage(HttpStatusCode.NoContent);
 			}
 		}
 
@@ -338,8 +342,9 @@ namespace Raven.Database.Counters.Controllers
 			groupName = groupName ?? string.Empty;
 			var deletedCount = 0;
 
-			while (true) {
-				using (var writer = Storage.CreateWriter())
+			while (true)
+			{
+				using (var writer = Counters.CreateWriter())
 				{
 					var changeNotifications = new List<ChangeNotification>();
 					var countersDetails = writer.GetCountersDetails(groupName).Take(1024).ToList();
@@ -360,11 +365,11 @@ namespace Raven.Database.Counters.Controllers
 					}
 					writer.Commit();
 
-					Storage.MetricsCounters.ClientRequests.Mark();
+					Counters.MetricsCounters.ClientRequests.Mark();
 					changeNotifications.ForEach(change =>
 					{
-						Storage.Publisher.RaiseNotification(change);
-						Storage.MetricsCounters.Deletes.Mark();
+						Counters.Publisher.RaiseNotification(change);
+						Counters.MetricsCounters.Deletes.Mark();
 					});
 
 					deletedCount += changeNotifications.Count;
@@ -379,12 +384,12 @@ namespace Raven.Database.Counters.Controllers
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
 			if (skip < 0)
-				throw new ArgumentException("Bad argument", "skip");
+				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
 			if (take <= 0)
-				throw new ArgumentException("Bad argument", "take");
+				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
 
-			Storage.MetricsCounters.ClientRequests.Mark();
-			using (var reader = Storage.CreateReader())
+			Counters.MetricsCounters.ClientRequests.Mark();
+			using (var reader = Counters.CreateReader())
 			{
 				group = group ?? string.Empty;
 				var counters = reader.GetCountersSummary(group, skip, take);
@@ -393,14 +398,15 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
-        [HttpGet]
+		[HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
-        {
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+		{
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
-			Storage.MetricsCounters.ClientRequests.Mark();
-			using (var reader = Storage.CreateReader())
+			Counters.MetricsCounters.ClientRequests.Mark();
+			using (var reader = Counters.CreateReader())
 			{
 				try
 				{
@@ -415,29 +421,39 @@ namespace Raven.Database.Counters.Controllers
 					return Request.CreateErrorResponse(HttpStatusCode.BadRequest, e);
 				}
 			}
-        }
+		}
 
 		[RavenRoute("cs/{counterStorageName}/getCounter/{groupName}/{counterName}")]
-        [HttpGet]
-        public HttpResponseMessage GetCounter(string groupName, string counterName)
+		[HttpGet]
+		public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{
-			VerifyNameCorrect(groupName);
-			VerifyNameCorrect(counterName);
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
 
-			Storage.MetricsCounters.ClientRequests.Mark();
-			using (var reader = Storage.CreateReader())
+			Counters.MetricsCounters.ClientRequests.Mark();
+			using (var reader = Counters.CreateReader())
 			{
 				var result = reader.GetCounter(groupName, counterName);
 				return GetMessageWithObject(result);
-            }
+			}
 		}
 
-// ReSharper disable once UnusedParameter.Local
+		// ReSharper disable once UnusedParameter.Local
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void VerifyNameCorrect(string name)
+		private HttpResponseMessage VerifyGroupAndCounterName(string groupName, string counterName)
 		{
-			if (string.IsNullOrEmpty(name))
-				throw new ArgumentException("A name can't be null");
+			if (string.IsNullOrEmpty(groupName))
+			{
+				return GetMessageWithString("Group name is mandatory.", HttpStatusCode.BadRequest);
+			}
+
+			if (string.IsNullOrEmpty(counterName))
+			{
+				return GetMessageWithString("Counter name is mandatory.", HttpStatusCode.BadRequest);
+			}
+
+			return null;
 		}
 	}
 }

@@ -12,6 +12,7 @@ using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Counters.Notifications;
@@ -42,7 +43,6 @@ namespace Raven.Database.Counters
 		private readonly JsonSerializer jsonSerializer;
 		private readonly Guid tombstoneId = Guid.Empty;
 		private readonly int sizeOfGuid;
-		private readonly Timer purgeTombstonesTimer;
 		private readonly TimeSpan tombstoneRetentionTime;
 		private readonly int deletedTombstonesInBatch;
 
@@ -294,9 +294,6 @@ namespace Raven.Database.Counters
 
 			if (metricsCounters != null)
 				exceptionAggregator.Execute(metricsCounters.Dispose);
-
-			if (purgeTombstonesTimer != null)
-				exceptionAggregator.Execute(purgeTombstonesTimer.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
 		}

@@ -69,6 +69,13 @@ namespace Raven.Database.Storage
 
 	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
+        internal struct IndexFailDetails
+        {
+            public string Reason;
+            public Exception Ex;
+        }
+        internal Dictionary<int, IndexFailDetails> IndexFailReason = new Dictionary<int, IndexFailDetails>();
+
 
 		[CLSCompliant(false)]
 		public IndexDefinitionStorage(
@@ -98,7 +105,8 @@ namespace Raven.Database.Storage
 
         private void ReadFromDisk()
         {
-			logger.Debug("Reading index definitions from disk...");
+			if (logger.IsDebugEnabled)
+				logger.Debug("Reading index definitions from disk...");
 
             foreach (var indexDefinition in ReadIndexDefinitionsFromDisk())
             {
@@ -113,15 +121,28 @@ namespace Raven.Database.Storage
                 }
                 catch (Exception e)
                 {
-					logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
+                    var reason = new IndexFailDetails
+                    {
+                        Reason = string.Format("Could Not Compile Index '{0} ({1})'", indexDefinition.IndexId, indexDefinition.Name),
+                        Ex = e
+                    };
+                    IndexFailReason.Add(indexDefinition.IndexId, reason);
+
+                    using (LogContext.WithDatabase(configuration.DatabaseName))
+                    {
+                        logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
+                    }
                 }
             }
 
-			logger.Debug("Read {0} index definitions", indexDefinitions.Count);
+	        if (logger.IsDebugEnabled)
+	        {
+		        logger.Debug("Read {0} index definitions", indexDefinitions.Count);
 
-			logger.Debug("Reading transformer definitions from disk...");
+		        logger.Debug("Reading transformer definitions from disk...");
+	        }
 
-			foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
+	        foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
             {
                 try
                 {
@@ -137,7 +158,8 @@ namespace Raven.Database.Storage
                 }
             }
 
-			logger.Debug("Read {0} transform definitions", transformDefinitions.Count);
+			if (logger.IsDebugEnabled)
+				logger.Debug("Read {0} transform definitions", transformDefinitions.Count);
         }
 
 	    private IEnumerable<IndexDefinition> ReadIndexDefinitionsFromDisk()
@@ -607,6 +629,14 @@ namespace Raven.Database.Storage
 			}, (s, transformerDefinition) => definition);
 			WriteTransformerDefinition(definition);
 		}
+
+        internal IndexFailDetails? GetFailReason(int id)
+        {
+            IndexFailDetails reason;
+            if (IndexFailReason.TryGetValue(id, out reason))
+                return reason;
+            return null;
+        }
     }
 
 }

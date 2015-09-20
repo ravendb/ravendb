@@ -7,18 +7,19 @@ import document = require("models/database/documents/document");
 class queryFacetsCommand extends commandBase {
 	constructor(private indexName: string, private queryText: string, private skip: number, private take: number, private facets: facetDto[], private db: database, private disableCache: boolean = false) {
         super();
-    }
-
-    execute(): JQueryPromise<pagedResultSet> {
-        
-        var argsUrl = this.urlEncodeArgs({
+        this.argsUrl = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,
             facetStart: this.skip,
-			facetPageSize: this.take,
-			disableCache: this.disableCache ? Date.now() : undefined,
+            facetPageSize: this.take,
+            disableCache: this.disableCache ? Date.now() : undefined,
             facets: JSON.stringify(this.facets)
         });
-        var url = "/facets/" + this.indexName + argsUrl;
+    }
+
+    public argsUrl: string;
+
+    execute(): JQueryPromise<pagedResultSet> {
+        var url = "/facets/" + this.indexName + this.argsUrl;
 
         // Querying facets returns a facetResultSetDto. We need to massage that
         // data into something that can be displayed in the grid: the pagedResultSet.

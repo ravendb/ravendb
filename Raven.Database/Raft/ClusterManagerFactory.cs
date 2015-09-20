@@ -25,8 +25,6 @@ namespace Raven.Database.Raft
 {
 	public static class ClusterManagerFactory
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
-
 		public static NodeConnectionInfo CreateSelfConnection(DocumentDatabase database)
 		{
 			var configuration = database.Configuration;
@@ -83,29 +81,6 @@ namespace Raven.Database.Raft
 			stateMachine.RaftEngine = raftEngine;
 
 			return new ClusterManager(raftEngine);
-		}
-
-		public static void InitializeTopology(NodeConnectionInfo nodeConnection, ClusterManager clusterManager)
-		{
-			var topologyId = Guid.Parse(nodeConnection.Name);
-			var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
-
-			var tcc = new TopologyChangeCommand
-					  {
-						  Requested = topology
-					  };
-
-			clusterManager.Engine.PersistentState.SetCurrentTopology(tcc.Requested, 0);
-			clusterManager.Engine.StartTopologyChange(tcc);
-			clusterManager.Engine.CommitTopologyChange(tcc);
-			clusterManager.Engine.CurrentLeader = null;
-
-			Log.Info("Initialized Topology: " + topologyId);
-		}
-
-		public static void InitializeTopology(ClusterManager engine)
-		{
-			InitializeTopology(engine.Engine.Options.SelfConnection, engine);
 		}
 	}
 }

@@ -198,6 +198,8 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		/// <param name="other">The other.</param>
 		/// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
+		/// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
+		/// <param name="ignoreMaxIndexOutput">Comparision ignores MaxIndexOutputsPerDocument</param>
 		/// <returns></returns>
 		public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false, bool ignoreMaxIndexOutput = false)
 		{
@@ -283,8 +285,6 @@ namespace Raven.Abstractions.Indexing
 		private IDictionary<string, string> analyzers;
 		[JsonIgnore]
 		private IList<string> fields;
-		[JsonIgnore]
-		private IDictionary<string, SuggestionOptions> suggestions;
 		[JsonIgnore]
 		private IDictionary<string, FieldTermVector> termVectors;
 		[JsonIgnore]

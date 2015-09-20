@@ -5,13 +5,13 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesStatsController : RavenTimeSeriesApiController
+	public class TimeSeriesStatsController : BaseTimeSeriesApiController
     {
 		[HttpGet]
 		[RavenRoute("ts/{timeSeriesName}/stats")]
 		public HttpResponseMessage TimeSeriesStats()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateStats());
+			return GetMessageWithObject(TimeSeries.CreateStats());
 		}
     }
 }

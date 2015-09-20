@@ -129,7 +129,8 @@ class appUrl {
         timeSeriesType: ko.computed(() => appUrl.forTimeSeriesType(null, appUrl.currentTimeSeries())),
         timeSeriesPoints: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
         timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
-        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries()))
+        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries())),
+        timeSeriesConfigurationTypes: ko.computed(() => appUrl.forTimeSeriesConfigurationTypes(appUrl.currentTimeSeries()))
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -204,6 +205,11 @@ class appUrl {
     static forTimeSeriesConfiguration(ts: timeSeries) {
         var part = appUrl.getEncodedTimeSeriesPart(ts);
         return "#timeseries/configuration?" + part;
+    }
+
+    static forTimeSeriesConfigurationTypes(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration/types?" + part;
     }
 
     static getEncodedTimeSeriesPart(ts: timeSeries): string {
@@ -737,6 +743,10 @@ class appUrl {
 
     static forIndexQueryRawData(db:database, indexName:string){
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
+    }
+
+    static forReportingRawData(db: database, indexName: string) {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
     }
 
     static forTransformersRawData(db: database): string {

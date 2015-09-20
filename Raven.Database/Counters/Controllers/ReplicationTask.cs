@@ -96,7 +96,8 @@ namespace Raven.Database.Counters.Controllers
 					return true;
 				}
 
-				Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
+				if (Log.IsDebugEnabled)
+					Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
 				return Monitor.Wait(waitForCounterUpdate, timeout);
 			}
 		}
@@ -353,7 +354,9 @@ namespace Raven.Database.Counters.Controllers
 			    {
 			        shouldReplicateTo = currentReplicationAttempts%2 == 0;
 			    }
-			    Log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
+
+				if (Log.IsDebugEnabled)
+					Log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
 			        destServerName, failureCount, shouldReplicateTo == false);
 			    return shouldReplicateTo;
 	        }

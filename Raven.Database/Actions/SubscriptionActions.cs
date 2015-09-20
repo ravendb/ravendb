@@ -268,7 +268,8 @@ namespace Raven.Database.Actions
 							PropertiesNotMatch = config.Criteria.PropertiesNotMatch == null ? null : config.Criteria.PropertiesNotMatch.Select(x => new
 							{
 								x.Key, x.Value
-							}).ToList()
+							}).ToList(),
+							config.Criteria.StartEtag
 						},
 						IsOpen = options != null,
 						ConnectionOptions = options

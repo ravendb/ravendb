@@ -275,10 +275,9 @@ namespace Raven.Database.Indexing
 			performanceStats.AddRange(writeToIndexStats);
 
 			InitializeIndexingPerformanceCompleteDelegate(performance, sourceCount, count, performanceStats);
-			
-			
 
-			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 
 			return performance;
 		}
@@ -431,7 +430,8 @@ namespace Raven.Database.Indexing
 			Write((writer, analyzer, stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
-				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
+				if (logIndexing.IsDebugEnabled)
+					logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
 					.Where(x => x != null)
 					.ToList();

@@ -28,7 +28,7 @@ using Raven.Imports.Newtonsoft.Json;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class BulkInsertController : RavenDbApiController
+    public class BulkInsertController : BaseDatabaseApiController
     {
         [HttpPost]
         [RavenRoute("bulkInsert")]
@@ -153,7 +153,7 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(CancellationTimeout timeout, Stream inputStream, ManualResetEventSlim mre, BulkInsertOptions options, Action<int> increaseDocumentsCount)

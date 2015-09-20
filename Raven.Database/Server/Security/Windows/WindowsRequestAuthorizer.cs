@@ -62,7 +62,7 @@ namespace Raven.Database.Server.Security.Windows
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var tenantId = controller.TenantName ?? Constants.SystemDatabase;
+			var tenantId = controller.ResourceName ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
@@ -108,11 +108,13 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("fs/"))
+						if (string.IsNullOrEmpty(tenantId) == false &&
+						    (tenantId.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+						     tenantId.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+						     tenantId.StartsWith("ts/", StringComparison.OrdinalIgnoreCase)))
+						{
 							tenantId = tenantId.Substring(3);
-
-						if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("counters/"))
-							tenantId = tenantId.Substring(9);
+						}
 
 					    if (user.AdminDatabases.Contains(tenantId) ||
 					        user.AdminDatabases.Contains("*") || ignoreDb)
@@ -248,10 +250,10 @@ namespace Raven.Database.Server.Security.Windows
 			WindowsSettingsChanged -= UpdateSettings;
 		}
 
-		public IPrincipal GetUser(RavenDbApiController controller)
+		public IPrincipal GetUser(RavenBaseApiController controller)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
+			var databaseName = controller.ResourceName ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
 			if (userCreated == false)
 				onRejectingRequest();

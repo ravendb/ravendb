@@ -62,11 +62,6 @@ namespace Raven.Database.TimeSeries
 			return hashCode;
 		}
 
-		public DateTime InRange(TimeSeriesQuery query)
-		{
-			throw new NotImplementedException();
-		}
-
 		public DateTimeOffset AddToDateTime(DateTimeOffset start)
 		{
 			switch (Type)
@@ -90,16 +85,17 @@ namespace Raven.Database.TimeSeries
 
 		public DateTimeOffset GetStartOfRangeForDateTime(DateTimeOffset pointAt)
 		{
+			pointAt = pointAt.ToUniversalTime();
 			switch (Type)
 			{
 				case PeriodType.Seconds:
-					return new DateTime(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute, pointAt.Second / Duration * Duration);
+					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute, pointAt.Second / Duration * Duration, TimeSpan.Zero);
 				case PeriodType.Minutes:
-					return new DateTime(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute / Duration * Duration, 0);
+					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute / Duration * Duration, 0, TimeSpan.Zero);
 				case PeriodType.Hours:
-					return new DateTime(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour / Duration * Duration, 0, 0);
+					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour / Duration * Duration, 0, 0, TimeSpan.Zero);
 				case PeriodType.Days:
-					return new DateTime(pointAt.Year, pointAt.Month, pointAt.Day, 0, 0, 0);
+					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, 0, 0, 0, TimeSpan.Zero);
 				case PeriodType.Months:
 				case PeriodType.Years:
 				default:

@@ -308,8 +308,8 @@ namespace Raven.Database.Indexing
             UpdateIndexingStats(context, stats);
 
             performance.OnCompleted = () => BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
-
-            logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 
             return performance;
         }
@@ -350,8 +350,9 @@ namespace Raven.Database.Indexing
                     var reduceValue = viewGenerator.GroupByExtraction(doc);
                     if (reduceValue == null)
                     {
-                        logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
-                                          viewGenerator.GroupByExtraction, currentKey);
+						if (logIndexing.IsDebugEnabled)
+							logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+											  viewGenerator.GroupByExtraction, currentKey);
                         continue;
                     }
                     string reduceKey = ReduceKeyToString(reduceValue);
@@ -504,7 +505,8 @@ namespace Raven.Database.Indexing
             Write((writer, analyzer, stats) =>
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
-                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+				if (logIndexing.IsDebugEnabled)
+					logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
                 return new IndexedItemsInfo(null)
                 {
@@ -765,8 +767,8 @@ namespace Raven.Database.Indexing
                 performanceStats.AddRange(writeToIndexStats);
 
                 parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
-
-                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
+				if (logIndexing.IsDebugEnabled)
+					logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
 
                 return performance;
             }

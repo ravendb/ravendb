@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Common;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -118,16 +119,16 @@ namespace Raven.Database.Server.Connections
 				switch (resourcePartsPathParts[1])
 				{
 					case DatabasesUrlPrefix:
-						activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
+						activeResource = await DatabasesLandlord.GetResourceInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
 						break;
 					case FileSystemsUrlPrefix:
-						activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
+						activeResource = await fileSystemsLandlord.GetResourceInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
 						break;
 					case CountersUrlPrefix:
-						activeResource = await countersLandlord.GetCounterInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
+						activeResource = await countersLandlord.GetResourceInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
 						break;
 					case TimeSeriesUrlPrefix:
-						activeResource = await timeSeriesLandlord.GetTimeSeriesInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2));
+						activeResource = await timeSeriesLandlord.GetResourceInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2));
 						break;
 					default:
 						throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");

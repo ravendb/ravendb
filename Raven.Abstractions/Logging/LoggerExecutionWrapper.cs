@@ -25,6 +25,11 @@ namespace Raven.Abstractions.Logging
 
 		#region ILog Members
 
+		public bool IsInfoEnabled
+		{
+			get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
+		}
+
 		public bool IsDebugEnabled
 		{
             get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }

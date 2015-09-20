@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Database.Common;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -143,8 +144,8 @@ namespace Raven.Database.Bundles.Encryption.Settings
 				}
 				if (settings.Codec.UsingSha1)
 					throw;
-				
-				log.Debug("Couldn't decrypt the database using MD5. Trying with SHA1.");
+				if (log.IsDebugEnabled)
+					log.Debug("Couldn't decrypt the database using MD5. Trying with SHA1.");
 				settings.Codec.UseSha1();
 				VerifyEncryptionKey(database, settings);
 				return;

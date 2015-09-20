@@ -168,6 +168,8 @@ Raven.Studio.Html5/App/viewmodels/filesystem/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/configurations/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/configurations/*.js.map
+Raven.Studio.Html5/App/viewmodels/timeSeries/configuration/*.js
+Raven.Studio.Html5/App/viewmodels/timeSeries/configuration/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/files/*.js
 Raven.Studio.Html5/App/viewmodels/filesystem/files/*.js.map
 Raven.Studio.Html5/App/viewmodels/filesystem/search/*.js

@@ -51,7 +51,7 @@ using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
-	public class AdminController : BaseAdminController
+	public class AdminController : BaseAdminDatabaseApiController
 	{
 		private static readonly HashSet<string> TasksToFilterOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		                                                           {
@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
 							targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
 						}
 
-						var source = await DatabasesLandlord.GetDatabaseInternal(serverSmugglingItem.Name);
+						var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name);
 
 						var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
 						{
@@ -134,7 +134,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private class ServerSmugglingOperationState : IOperationState
@@ -398,7 +398,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		private void GenerateNewDatabaseId(string databaseName)
@@ -568,7 +568,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			    try
 			    {
 
-					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
+					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetResourceInternal(db));
 
 			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
 			        {
@@ -622,7 +622,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
         private static bool IsUpdateMessage(string msg)
@@ -706,9 +706,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/stats")]
 		public HttpResponseMessage Stats()
 		{
-			if (Database != DatabasesLandlord.SystemDatabase)
-				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
-
 			var stats = CreateAdminStats();
 			return GetMessageWithObject(stats);
 		}
@@ -828,9 +825,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/gc")]
 		public HttpResponseMessage Gc()
 		{
-			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
-
 			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
 			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -844,10 +838,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/loh-compaction")]
 		public HttpResponseMessage LohCompaction()
 		{
-			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Large Object Heap Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
-
-
 			Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
 			Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -1226,16 +1216,13 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(new
 			{
 				OperationId = id
-			});
+			}, HttpStatusCode.Accepted);
 		}
 
 		[HttpPost]
 		[RavenRoute("admin/low-memory-notification")]
 		public HttpResponseMessage LowMemoryNotification()
 		{
-			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
-
 			MemoryStatistics.SimulateLowMemoryNotification();
 
 			return GetEmptyMessage();
@@ -1245,9 +1232,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/low-memory-handlers-statistics")]
 		public HttpResponseMessage GetLowMemoryStatistics()
 		{
-			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
-
 			return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
 			{
 				DatabaseName = x.Key,
