@@ -29,5 +29,6 @@ namespace Raven.Database.Common
 		int InnerRequestsCount { get; }
 		bool IsInternalRequest { get; }
 		void MarkRequestDuration(long elapsedMilliseconds);
+		bool RejectClientRequests { get; }
 	}
 }

@@ -22,11 +22,11 @@ namespace Raven.Database.TimeSeries.Controllers
     public class AdminTimeSeriesController : BaseAdminTimeSeriesApiController
     {
         [HttpPut]
-		[RavenRoute("admin/ts/{*timeSeriesName}")]
-		public async Task<HttpResponseMessage> Put(string timeSeriesName)
+		[RavenRoute("admin/ts/{*id}")]
+		public async Task<HttpResponseMessage> Put(string id)
         {
 			MessageWithStatusCode nameFormatErrorMessage;
-			if (IsValidName(timeSeriesName, SystemConfiguration.TimeSeries.DataDirectory, out nameFormatErrorMessage) == false)
+			if (IsValidName(id, SystemConfiguration.TimeSeries.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -42,13 +42,13 @@ namespace Raven.Database.TimeSeries.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var docKey = Constants.TimeSeries.Prefix + timeSeriesName;
+			var docKey = Constants.TimeSeries.Prefix + id;
 
 			var isTimeSeriesUpdate = ParseBoolQueryString("update");
 			var timeSeries = SystemDatabase.Documents.Get(docKey, null);
 			if (timeSeries != null && isTimeSeriesUpdate == false)
             {
-				return GetMessageWithString(string.Format("Time series {0} already exists!", timeSeriesName), HttpStatusCode.Conflict);
+				return GetMessageWithString(string.Format("Time series {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
             var dbDoc = await ReadJsonObjectAsync<TimeSeriesDocument>();
@@ -62,11 +62,11 @@ namespace Raven.Database.TimeSeries.Controllers
         }
 
 		[HttpDelete]
-		[RavenRoute("admin/ts/{*timeSeriesName}")]
-		public HttpResponseMessage Delete(string timeSeriesName)
+		[RavenRoute("admin/ts/{*id}")]
+		public HttpResponseMessage Delete(string id)
 		{
 			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
-			var message = DeleteTimeSeries(timeSeriesName, isHardDeleteNeeded);
+			var message = DeleteTimeSeries(id, isHardDeleteNeeded);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -101,10 +101,10 @@ namespace Raven.Database.TimeSeries.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/ts/{*timeSeriesName}")]
-		public HttpResponseMessage Disable(string timeSeriesName, bool isSettingDisabled)
+		[RavenRoute("admin/ts/{*id}")]
+		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
 		{
-			var message = ToggleTimeSeriesDisabled(timeSeriesName, isSettingDisabled);
+			var message = ToggleTimeSeriesDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
