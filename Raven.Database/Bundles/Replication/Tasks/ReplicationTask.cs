@@ -664,22 +664,30 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
+					try
 					{
-						var error = streamReader.ReadToEnd();
-						try
+						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 						{
-							var ravenJObject = RavenJObject.Parse(error);
-							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
-							errorMessage = error;
-							return false;
-						}
-						catch (Exception)
-						{
-						}
+							var error = streamReader.ReadToEnd();
+							try
+							{
+								var ravenJObject = RavenJObject.Parse(error);
+								log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
+								errorMessage = error;
+								return false;
+							}
+							catch (Exception)
+							{
+							}
 
-						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
-						errorMessage = error;
+							log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+							errorMessage = error;
+						}
+					}
+					catch (Exception)
+					{
+						errorMessage = response.StatusDescription;
+						log.WarnException("Replication to " + destination + " had failed. Network code " + e.Status + ", HTTP Code: " + response.StatusCode, e);
 					}
 				}
 				else
