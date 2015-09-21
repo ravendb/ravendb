@@ -133,7 +133,7 @@ namespace Raven.Bundles.Replication.Responders
 			return newDocumentConflictId;
 		}
 
-		private void ReplicateDelete(string id, RavenJObject metadata, TExternal incoming)
+		private void ReplicateDelete(string id, RavenJObject newMetadata, TExternal incoming)
 		{
 			TInternal existingItem;
 			Etag existingEtag;
@@ -144,26 +144,30 @@ namespace Raven.Bundles.Replication.Responders
 				log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring", id, Src);
 				return;
 			}
+
+			// we just got the same version from the same source - request playback again?
+			// at any rate, not an error, moving on
+			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) ==
+				newMetadata.Value<string>(Constants.RavenReplicationSource)
+				&&
+				existingMetadata.Value<long>(Constants.RavenReplicationVersion) ==
+				newMetadata.Value<long>(Constants.RavenReplicationVersion))
+			{
+				return;
+			}
+
 			if (existingMetadata.Value<bool>(Constants.RavenDeleteMarker)) //deleted locally as well
 			{
 				log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories", id, Src);
 				var existingHistory = new RavenJArray(ReplicationData.GetHistory(existingMetadata));
-				var newHistory = new RavenJArray(ReplicationData.GetHistory(metadata));
+				var newHistory = new RavenJArray(ReplicationData.GetHistory(newMetadata));
 
 				foreach (var item in newHistory)
 				{
+					if (existingHistory.Contains(item, RavenJTokenEqualityComparer.Default))
+						continue;
+
 					existingHistory.Add(item);
-				}
-
-
-				if (metadata.ContainsKey(Constants.RavenReplicationVersion) &&
-					metadata.ContainsKey(Constants.RavenReplicationSource))
-				{
-					existingHistory.Add(new RavenJObject
-						{
-							{Constants.RavenReplicationVersion, metadata[Constants.RavenReplicationVersion]},
-							{Constants.RavenReplicationSource, metadata[Constants.RavenReplicationSource]}
-						});
 				}
 
 				while (existingHistory.Length > Constants.ChangeHistoryLength)
@@ -171,28 +175,29 @@ namespace Raven.Bundles.Replication.Responders
 					existingHistory.RemoveAt(0);
 				}
 
-				MarkAsDeleted(id, metadata);
-				return;
-			}
-			if (Historian.IsDirectChildOfCurrent(metadata, existingMetadata))// not modified
-			{
-				log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
-				DeleteItem(id, existingEtag);
-				MarkAsDeleted(id, metadata);
+				MarkAsDeleted(id, newMetadata);
 				return;
 			}
 
-            if (TryResolveConflict(id, metadata, incoming, existingItem))
+			if (Historian.IsDirectChildOfCurrent(newMetadata, existingMetadata))// not modified
+			{
+				log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
+				DeleteItem(id, existingEtag);
+				MarkAsDeleted(id, newMetadata);
+				return;
+			}
+
+            if (TryResolveConflict(id, newMetadata, incoming, existingItem))
             {
-                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
-                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                if (newMetadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                    newMetadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
                     DeleteItem(id, null);
-                    MarkAsDeleted(id, metadata);
+                    MarkAsDeleted(id, newMetadata);
                 }
                 else
                 {
-                    AddWithoutConflict(id, existingEtag, metadata, incoming);
+                    AddWithoutConflict(id, existingEtag, newMetadata, incoming);
                 }
                 return;
             }
@@ -202,12 +207,12 @@ namespace Raven.Bundles.Replication.Responders
 			if (existingMetadata.Value<bool>(Constants.RavenReplicationConflict)) // locally conflicted
 			{
 				log.Debug("Replicating deleted item {0} from {1} that is already conflicted, adding to conflicts.", id, Src);
-				var savedConflictedItemId = SaveConflictedItem(id, metadata, incoming, existingEtag);
+				var savedConflictedItemId = SaveConflictedItem(id, newMetadata, incoming, existingEtag);
 				createdConflict = AppendToCurrentItemConflicts(id, savedConflictedItemId, existingMetadata, existingItem);
 			}
 			else
 			{
-				var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
+				var newConflictId = SaveConflictedItem(id, newMetadata, incoming, existingEtag);
 				log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
 				// we have a new conflict  move the existing doc to a conflict and create a conflict document

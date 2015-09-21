@@ -79,6 +79,7 @@ namespace Raven.Client.Document.SessionOperations
 			}
 
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			
 			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includePaths);
 
 			return finalResults;

@@ -72,6 +72,12 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentAssertions.Core">
+      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+    </Reference>
     <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
@@ -230,6 +236,7 @@
     <Compile Include="Bugs\LazyBug.cs" />
     <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
     <Compile Include="Bugs\PatchingWithDefault.cs" />
+    <Compile Include="Bugs\Queries\RavenDB_3630.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
@@ -242,7 +249,9 @@
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\GermanUmlauts.cs" />
     <Compile Include="Issues\IndexationTests.cs" />
+    <Compile Include="Issues\RavenDB-3619.cs" />
     <Compile Include="Issues\RavenDB-3136.cs" />
+    <Compile Include="Issues\RavenDB-3646.cs" />
     <Compile Include="Issues\RavenDB2537.cs" />
     <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
@@ -257,7 +266,6 @@
     <Compile Include="Issues\RavenDB_2909.cs" />
     <Compile Include="Issues\RavenDB_3106.cs" />
     <Compile Include="Issues\RavenDB_3276.cs" />
-    <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
@@ -860,6 +868,7 @@
     <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
     <Compile Include="MailingList\LazilyLoadByIdsWithTransformer.cs" />
+    <Compile Include="MailingList\LazyAggregationEmbedded.cs" />
     <Compile Include="MailingList\LazyEncoding.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\LazyTests.cs" />
@@ -1626,7 +1635,6 @@
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>

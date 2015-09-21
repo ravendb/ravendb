@@ -96,10 +96,10 @@ namespace Raven.Tests.Bugs.TransformResults
 				documentStore.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(),
-					                                              documentStore.DocumentDatabase.TransactionalStorage
-					                                                           .GetInFlightTransactionalState(documentStore.DocumentDatabase,
-						                                                           documentStore.DocumentDatabase.Put,
-						                                                           documentStore.DocumentDatabase.Delete));
+						documentStore.DocumentDatabase.TransactionalStorage
+							.GetInFlightTransactionalState(documentStore.DocumentDatabase,
+								(key, etag, document, metadata, transactionInformation) => documentStore.DocumentDatabase.Put(key, etag, document, metadata, transactionInformation),
+								(key, etag, transactionInformation) => documentStore.DocumentDatabase.Delete(key, etag, transactionInformation)));
 					var dynamicJsonObjects = new[] { new DynamicJsonObject(accessor.Documents.DocumentByKey("answer2s/" + answerId.ToString(), null).ToJson()), };
 					var transformResultsDefinition = abstractViewGenerator.TransformResultsDefinition(documentRetriever,
 																									  dynamicJsonObjects
