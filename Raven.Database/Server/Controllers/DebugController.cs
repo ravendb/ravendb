@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Controllers
 				var value = array[i].Value<string>();
 				try
 				{
-					results[i] = IndexPrettyPrinter.Format(value);
+					results[i] = IndexPrettyPrinter.FormatOrError(value);
 				}
 				catch (Exception e)
 				{

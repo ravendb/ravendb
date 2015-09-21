@@ -141,6 +141,10 @@ class replications extends viewModelBase {
         return deferred;
     }
 
+    toggleSkipIndexReplicationForAll() {
+        this.skipIndexReplicationForAll.toggle();
+    }
+
     createNewDestination() {
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));

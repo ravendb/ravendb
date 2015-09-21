@@ -309,7 +309,7 @@ namespace Raven.Database.Indexing
 
             performance.OnCompleted = () => BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
 
-            logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
+            logIndexing.Debug("Mapped {0} documents for {1}", count, PublicName);
 
             return performance;
         }
@@ -562,7 +562,7 @@ namespace Raven.Database.Indexing
                 {
                     object reduceKey = viewGenerator.GroupByExtraction(doc);
                     if (reduceKey == null)
-                        throw new InvalidOperationException("Could not find reduce key for " + indexId + " in the result: " + doc);
+                        throw new InvalidOperationException("Could not find reduce key for " + parent.PublicName + " in the result: " + doc);
 
                     return ReduceKeyToString(reduceKey);
                 }
@@ -726,7 +726,7 @@ namespace Raven.Database.Indexing
                             batchers.ApplyAndIgnoreAllErrors(
                                 ex =>
                                 {
-                                    logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+                                    logIndexing.WarnException("Failed to notify index update trigger batcher about an error in " + parent.PublicName, ex);
                                     Context.AddError(indexId, parent.indexDefinition.Name, null, ex, "AnErrorOccured Trigger");
                                 },
                                 x => x.AnErrorOccured(e));
@@ -740,7 +740,7 @@ namespace Raven.Database.Indexing
                             batchers.ApplyAndIgnoreAllErrors(
                                 e =>
                                 {
-                                    logIndexing.WarnException("Failed to dispose on index update trigger", e);
+                                    logIndexing.WarnException("Failed to dispose on index update trigger in " + parent.PublicName, e);
                                     Context.AddError(indexId, parent.indexDefinition.Name, null, e, "Dispose Trigger");
                                 },
                                 x => x.Dispose());
@@ -810,7 +810,7 @@ namespace Raven.Database.Indexing
                     {
                         logIndexing.WarnException(
                             string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-                                          indexId, reduceKeyAsString),
+                                          parent.PublicName, reduceKeyAsString),
                             exception);
                         Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception, "OnIndexEntryCreated Trigger");
                     },

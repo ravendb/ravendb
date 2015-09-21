@@ -5,9 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Database.Storage.Voron.Impl;
+using Raven.Tests.MailingList;
 
 namespace ConsoleApplication4
 {
@@ -19,20 +21,28 @@ namespace ConsoleApplication4
         }
         private static void Main(string[] args)
         {
-            var ds = new DocumentStore
+            using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",
-                DefaultDatabase = "mr"
-            }.Initialize();
-
-            using (var bulk = ds.BulkInsert())
+                DefaultDatabase = "r1"
+            }.Initialize())
             {
-                for (int i = 0; i < 1000 * 1000; i++)
+                for (int i = 0; i < 10; i++)
                 {
-                    bulk.Store(new Item { Number = 1 });
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        while (true)
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                session.Load<dynamic>("users/1");
+                            }
+                        }
+                    });
                 }
-            }
 
+                Console.ReadLine();
+            }
         }
 
     }
