@@ -121,10 +121,10 @@ namespace Raven.Database.FileSystem.Actions
 
 				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
 
-				using (var contentStream = await streamAsync())
+				using (var contentStream = await streamAsync().ConfigureAwait(false))
 				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, metadata))
 				{
-					await readFileToDatabase.Execute();
+					await readFileToDatabase.Execute().ConfigureAwait(false);
 
 					if (size != null && readFileToDatabase.TotalSizeRead != size)
 					{
