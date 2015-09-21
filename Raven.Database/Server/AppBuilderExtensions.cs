@@ -228,10 +228,20 @@ namespace Owin
                                     case 'l':
                                     case 'L':
                                         return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
-                                    default:
+									default:
 				                        return true;
-				                }    
-                            case 's':
+				                }
+							case 'D':
+							case 'd':
+								switch (prev)
+								{
+									case 'E':
+									case 'e':
+										return localPath.EndsWith("synchronization/MultipartProceed", StringComparison.OrdinalIgnoreCase) == false;
+									default:
+										return true;
+								}
+							case 's':
                             case 'S':
 				                switch (prev)
 				                {
