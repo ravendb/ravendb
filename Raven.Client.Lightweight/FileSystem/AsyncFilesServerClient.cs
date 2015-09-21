@@ -643,22 +643,39 @@ namespace Raven.Client.FileSystem
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
-	        using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+	        var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions, timeout: TimeSpan.FromHours(6))
+	        {
+		        DisableRequestCompression = true
+	        };
+
+	        using (var request = RequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).AddOperationHeaders(OperationsHeaders))
 	        {
 				metadata[Constants.FileSystem.RavenFsSize] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
 
 		        AddHeaders(metadata, request);
 				AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 
-		        try
+		        var response = await request.ExecuteRawRequestAsync((netStream, t) =>
+				{
+					try
+					{
+						source.CopyTo(netStream);
+						netStream.Flush();
+
+						t.TrySetResult(null);
+					}
+					catch (Exception e)
+					{
+						t.TrySetException(e);
+					}
+				}).ConfigureAwait(false);
+
+		        if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
 		        {
-			        await request.WriteAsync(source).ConfigureAwait(false);
-			        if (request.ResponseStatusCode == HttpStatusCode.BadRequest) throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
+			        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
 		        }
-		        catch (Exception e)
-		        {
-			        throw e.SimplifyException();
-		        }
+
+				await response.AssertNotFailingResponse().ConfigureAwait(false);
 	        }
         }
 
