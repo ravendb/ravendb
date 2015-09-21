@@ -145,7 +145,7 @@ namespace Raven.Database.FileSystem.Actions
 					MetadataUpdateResult updateMetadata = null;
 					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
 
-					int totalSizeRead = readFileToDatabase.TotalSizeRead;
+					long totalSizeRead = readFileToDatabase.TotalSizeRead;
 					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
 					Search.Index(name, metadata, updateMetadata.Etag);
