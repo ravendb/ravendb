@@ -643,7 +643,7 @@ namespace Raven.Client.FileSystem
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
-	        var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions, timeout: TimeSpan.FromHours(6))
+	        var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions, timeout: TimeSpan.FromHours(12))
 	        {
 		        DisableRequestCompression = true
 	        };
