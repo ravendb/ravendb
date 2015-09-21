@@ -201,8 +201,9 @@ namespace Owin
 				    {
                         var localPath = pathString.Value;
 				        var length = localPath.Length;
-				        if (length < 10)
+				        if (length < 10) // the shortest possible URL to consider here: fs/{fs_name_at_least_one_character}/files
 				            return true;
+
 				        var prev = localPath[length - 2];
 				        switch (localPath[length-1])
 				        {
@@ -237,12 +238,15 @@ namespace Owin
                                     case 'T':
                                     case 't':
                                         return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
-                                    case 'o':
-                                    case 'O':
+                                    case 'c':
+                                    case 'C':
                                         if (localPath[length - 4] == '/')
 				                        return true;
 				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
-                                    default:
+									case 'E':
+									case 'e':
+										return localPath.EndsWith("files", StringComparison.OrdinalIgnoreCase) == false || context.Request.Method != "PUT";
+									default:
 				                        return true;
 				                }
                             default:
