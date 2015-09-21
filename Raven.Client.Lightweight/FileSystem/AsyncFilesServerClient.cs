@@ -675,7 +675,19 @@ namespace Raven.Client.FileSystem
 			        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
 		        }
 
-				await response.AssertNotFailingResponse().ConfigureAwait(false);
+		        try
+		        {
+			        await response.AssertNotFailingResponse().ConfigureAwait(false);
+		        }
+		        catch (Exception e)
+		        {
+			        var simplified = e.SimplifyException();
+
+			        if (simplified != e)
+				        throw simplified;
+
+			        throw;
+		        }
 	        }
         }
 
