@@ -5,15 +5,12 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Connection;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -73,7 +70,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 				try
 				{
-					await request.WriteAsync(PrepareMultipartContent(token));
+					await request.WriteAsync(PrepareMultipartContent(token)).ConfigureAwait(false);
 
 					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));

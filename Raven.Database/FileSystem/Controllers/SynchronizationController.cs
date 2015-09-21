@@ -45,7 +45,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/ToDestination")]
         public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
         {
-            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + FileSystemName, forceSyncingAll);
+            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + FileSystemName, forceSyncingAll).ConfigureAwait(false);
             
             return GetMessageWithObject(result);
         }
@@ -56,11 +56,11 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             var canonicalFilename = FileHeader.Canonize(filename);
 
-		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>();
+		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>().ConfigureAwait(false);
 
             Log.Debug("Starting to synchronize a file '{0}' to {1}", canonicalFilename, destination.Url);
 
-            var result = await SynchronizationTask.SynchronizeFileToAsync(canonicalFilename, destination);
+            var result = await SynchronizationTask.SynchronizeFileToAsync(canonicalFilename, destination).ConfigureAwait(false);
 
             return GetMessageWithObject(result);
 		}
@@ -81,9 +81,9 @@ namespace Raven.Database.FileSystem.Controllers
 			Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.ContentUpdate, FileSystem)
-							{
-								MultipartContent = Request.Content
-							}.Execute();
+			{
+				MultipartContent = Request.Content
+			}.Execute().ConfigureAwait(false);
 
 			if (report.Exception == null)
 			{
@@ -112,7 +112,7 @@ namespace Raven.Database.FileSystem.Controllers
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.MetadataUpdate, FileSystem)
-								.Execute();
+				.Execute().ConfigureAwait(false);
 
 			if (report.Exception == null)
 				Log.Debug("Metadata of file '{0}' was synchronized successfully from {1}", fileName, sourceInfo);
@@ -134,7 +134,7 @@ namespace Raven.Database.FileSystem.Controllers
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.Delete, FileSystem)
-								.Execute();
+				.Execute().ConfigureAwait(false);
 
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was deleted during synchronization from {1}", fileName, sourceInfo);
@@ -159,7 +159,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var report = await new SynchronizationBehavior(fileName, sourceFileEtag, sourceMetadata, sourceInfo, SynchronizationType.Rename, FileSystem)
 			{
 				Rename = rename
-			}.Execute();
+			}.Execute().ConfigureAwait(false);
 
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was renamed to '{1}' during synchronization from {2}", fileName, rename, sourceInfo);
@@ -171,7 +171,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/Confirm")]
         public async Task<HttpResponseMessage> Confirm()
 		{
-			var contentStream = await Request.Content.ReadAsStreamAsync();
+			var contentStream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
 			var confirmingFiles = JsonExtensions.CreateDefaultJsonSerializer()
 				.Deserialize<IEnumerable<Tuple<string, Etag>>>(new JsonTextReader(new StreamReader(contentStream)));
@@ -345,7 +345,7 @@ namespace Raven.Database.FileSystem.Controllers
 		[RavenRoute("fs/{fileSystemName}/synchronization/ResolutionStrategyFromServerResolvers")]
 		public async Task<HttpResponseMessage> ResolutionStrategyFromServerResolvers()
 		{
-			var conflict = await ReadJsonObjectAsync<ConflictItem>();
+			var conflict = await ReadJsonObjectAsync<ConflictItem>().ConfigureAwait(false);
 
 			var localMetadata = Synchronizations.GetLocalMetadata(conflict.FileName);
             if (localMetadata == null)
@@ -374,7 +374,7 @@ namespace Raven.Database.FileSystem.Controllers
 			if (localMetadata == null)
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 
-			var contentStream = await Request.Content.ReadAsStreamAsync();
+			var contentStream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
 			var current = new HistoryItem
 			{
