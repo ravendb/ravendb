@@ -429,7 +429,7 @@ task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
 
-	Stop-WebAppPool "RavenDB 3"
+	Stop-WebAppPool "RavenDB 3" -ErrorAction SilentlyContinue # The error is probably because it was already stopped
 
 @'
 	<!doctype html>
