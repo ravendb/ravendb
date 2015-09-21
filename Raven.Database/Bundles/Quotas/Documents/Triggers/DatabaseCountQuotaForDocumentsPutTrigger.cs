@@ -10,8 +10,7 @@ namespace Raven.Bundles.Quotas.Documents.Triggers
 	[ExportMetadata("Bundle", "Quotas")]
 	public class DatabaseCountQuotaForDocumentsPutTrigger : AbstractPutTrigger
 	{
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata,
-		                                    TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
 			return DocQuotaConfiguration.GetConfiguration(Database).AllowPut();
 		}

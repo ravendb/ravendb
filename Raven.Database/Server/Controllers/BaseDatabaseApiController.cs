@@ -99,25 +99,7 @@ namespace Raven.Database.Server.Controllers
 			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
-		}
-
-		protected TransactionInformation GetRequestTransaction()
-		{
-			if (InnerRequest.Headers.Contains("Raven-Transaction-Information") == false)
-				return null;
-			var txInfo = InnerRequest.Headers.GetValues("Raven-Transaction-Information").FirstOrDefault();
-			if (string.IsNullOrEmpty(txInfo))
-				return null;
-			var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length != 2)
-				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
-			
-			return new TransactionInformation
-			{
-				Id = parts[0],
-				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
-			};
-		}
+		}		
 
 		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{

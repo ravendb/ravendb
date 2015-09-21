@@ -42,7 +42,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
                     new ResourceAccess {TenantId = databaseName, Admin = true}
 				}
-			}), new RavenJObject(), null);
+			}), new RavenJObject());
 		}
 
 		[Fact]

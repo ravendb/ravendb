@@ -7,7 +7,7 @@ namespace Raven.Bundles.Quotas.Size.Triggers
 	[ExportMetadata("Bundle", "Quotas")]
 	public class DatabaseSizeDocumentDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
+		public override void AfterDelete(string key)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

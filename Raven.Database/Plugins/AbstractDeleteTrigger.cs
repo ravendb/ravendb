@@ -22,7 +22,7 @@ namespace Raven.Database.Plugins
 		/// <param name="key">The document key</param>
 		/// <param name="transactionInformation">The current transaction, if any</param>
 		/// <returns>Whatever the delete was vetoed or not</returns>
-		public virtual VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+		public virtual VetoResult AllowDelete(string key)
 		{
 			return VetoResult.Allowed;
 		}
@@ -37,7 +37,7 @@ namespace Raven.Database.Plugins
 		///  Any call to the provided <seealso cref="DocumentDatabase" /> instance will be done under the
 		///  same transaction as the DELETE operation.
 		///  </remarks><param name="transactionInformation">The current transaction, if any</param><param name="key">The document key</param>
-		public virtual void OnDelete(string key, TransactionInformation transactionInformation)
+		public virtual void OnDelete(string key)
 		{
 			
 		}
@@ -50,7 +50,7 @@ namespace Raven.Database.Plugins
 		///  Any call to the provided <seealso cref="DocumentDatabase" /> instance will be done under the
 		///  same transaction as the DELETE operation.
 		///  </remarks><param name="transactionInformation">The current transaction, if any</param><param name="key">The document key</param>
-		public virtual void AfterDelete(string key, TransactionInformation transactionInformation)
+		public virtual void AfterDelete(string key)
 		{
 			
 		}

@@ -67,7 +67,7 @@ namespace Raven.Tests.Server.Runner.Controllers
 					new ResourceAccess {TenantId = "*", Admin = true},
 					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
 				}
-				}), new RavenJObject(), null);
+				}), new RavenJObject());
 			}
 
 			return Ok();

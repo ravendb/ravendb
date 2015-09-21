@@ -200,9 +200,6 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="Esent.Interop">
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
     <Reference Include="GeoAPI">
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
     </Reference>
@@ -578,7 +575,6 @@
     <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReadOnly.cs" />
-    <Compile Include="Bugs\RemoteTx.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ResettingIndex.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />

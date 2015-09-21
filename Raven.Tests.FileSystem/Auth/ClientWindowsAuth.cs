@@ -53,7 +53,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                   }
                                               }
                                           }
-                                      }), new RavenJObject(), null);
+                                      }), new RavenJObject());
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]

@@ -14,7 +14,7 @@ namespace Raven.Tests.MailingList
 	{
 		public class FilterEverything : AbstractReadTrigger
 		{
-			public override ReadVetoResult AllowRead(string key, Raven.Json.Linq.RavenJObject metadata, ReadOperation operation, Raven.Abstractions.Data.TransactionInformation transactionInformation)
+			public override ReadVetoResult AllowRead(string key, Raven.Json.Linq.RavenJObject metadata, ReadOperation operation)
 			{
 				if (operation == ReadOperation.Query)
 					return ReadVetoResult.Ignore;

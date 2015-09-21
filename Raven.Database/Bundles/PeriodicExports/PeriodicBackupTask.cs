@@ -178,7 +178,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private PeriodicExportStatus GetExportStatus()
 		{
-			var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
+			var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey);
 			return status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();			
 		}
 

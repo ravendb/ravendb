@@ -81,7 +81,7 @@ namespace Raven.Database.Server.Controllers.Admin
 						var documentKey = Constants.Database.Prefix + serverSmugglingItem.Name;
 						if (targetStore.DatabaseCommands.Head(documentKey) == null)
 						{
-							var databaseJson = Database.Documents.Get(documentKey, null);
+							var databaseJson = Database.Documents.Get(documentKey);
 							var databaseDocument = databaseJson.ToJson().JsonDeserialization<DatabaseDocument>();
 							databaseDocument.Id = documentKey;
 							DatabasesLandlord.Unprotect(databaseDocument);
@@ -190,7 +190,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 				else
 				{
-					var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Databases/" + Database.Name, null);
+					var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Databases/" + Database.Name);
 					if (jsonDocument != null)
 					{
 						backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (databaseName == Constants.SystemDatabase)
 				return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
 
-			var existingDatabase = Database.Documents.GetDocumentMetadata("Raven/Databases/" + databaseName, null);
+			var existingDatabase = Database.Documents.GetDocumentMetadata("Raven/Databases/" + databaseName);
 			if (existingDatabase != null)
 				return GetMessageWithString("Cannot do an online restore for an existing database, delete the database " + databaseName + " and restore again.", HttpStatusCode.BadRequest);
 
@@ -445,7 +445,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.Put(Constants.RavenReplicationDestinations, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
 			}
 
-			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName, null);
+			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName);
 			var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
 			var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
@@ -628,14 +628,16 @@ namespace Raven.Database.Server.Controllers.Admin
         private static bool IsUpdateMessage(string msg)
         {
             if (String.IsNullOrEmpty(msg)) return false;
+
             //Here we check if we the message is in voron update format
-            if (msg.StartsWith(VoronProgressString)) return true;
-            //Here we check if we the messafe is in esent update format
-            if (msg.Length > 42 && String.Compare(msg, 32, EsentProgressString, 0, 10) == 0) return true;
+            if (msg.StartsWith(VoronProgressString)) 
+                return true;
+
             return false;
         }
+
         private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
-        private static string EsentProgressString = "JET_SNPROG";
+
         private static string VoronProgressString = "Copied";
 
 		[HttpGet]

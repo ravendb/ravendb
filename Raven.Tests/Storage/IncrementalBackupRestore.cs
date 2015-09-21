@@ -90,14 +90,14 @@ namespace Raven.Tests.Storage
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-		    var fetchedData = db.Documents.Get("ayende", null);
+		    var fetchedData = db.Documents.Get("ayende");
             Assert.NotNull(fetchedData);
 
 		    var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("itamar", null);
+            fetchedData = db.Documents.Get("itamar");
             Assert.NotNull(fetchedData);
             
             jObject = fetchedData.ToJson();
@@ -153,21 +153,21 @@ namespace Raven.Tests.Storage
 
             db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("ayende", null);
+            var fetchedData = db.Documents.Get("ayende");
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("itamar", null);
+            fetchedData = db.Documents.Get("itamar");
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("michael", null);
+            fetchedData = db.Documents.Get("michael");
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();

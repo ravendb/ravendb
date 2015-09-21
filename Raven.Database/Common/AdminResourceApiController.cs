@@ -132,7 +132,7 @@ namespace Raven.Database.Common
 		protected bool IsAnotherRestoreInProgress(out string resourceName)
 		{
 			resourceName = null;
-			var restoreDoc = SystemDatabase.Documents.Get(RestoreInProgress.RavenRestoreInProgressDocumentKey, null);
+			var restoreDoc = SystemDatabase.Documents.Get(RestoreInProgress.RavenRestoreInProgressDocumentKey);
 			if (restoreDoc != null)
 			{
 				var restore = restoreDoc.DataAsJson.JsonDeserialization<RestoreInProgress>();

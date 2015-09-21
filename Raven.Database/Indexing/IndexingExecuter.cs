@@ -721,7 +721,7 @@ namespace Raven.Database.Indexing
 			var filteredDocs =
 				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
 				{
-					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, ReadOperation.Index);
 					return filteredDoc == null ? new
 					{
 						Doc = doc,

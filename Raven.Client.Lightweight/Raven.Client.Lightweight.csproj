@@ -281,7 +281,6 @@
     <Compile Include="Connection\Profiling\RequestStatus.cs" />
     <Compile Include="Connection\Profiling\RequestResultArgs.cs" />
     <Compile Include="Connection\Profiling\ProfilingInformation.cs" />
-    <Compile Include="Connection\RavenTransactionAccessor.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Connection\ReplicationInformerBase.cs" />
     <Compile Include="Connection\ReplicationInformerLocalCache.cs" />

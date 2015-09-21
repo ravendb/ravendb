@@ -11,7 +11,7 @@ namespace Raven.Bundles.CascadeDelete
 {
 	public class CascadeDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override void OnDelete(string key, TransactionInformation transactionInformation)
+		public override void OnDelete(string key)
 		{
 			if (CascadeDeleteContext.IsInCascadeDeleteContext)
 				return;
@@ -19,13 +19,13 @@ namespace Raven.Bundles.CascadeDelete
 			using (Database.DisableAllTriggersForCurrentThread())
 			using (CascadeDeleteContext.Enter())
 			{
-				RecursiveDelete(key, transactionInformation);
+				RecursiveDelete(key);
 			}
 		}
 
-		private void RecursiveDelete(string key, TransactionInformation transactionInformation)
+		private void RecursiveDelete(string key)
 		{
-			var document = Database.Documents.Get(key, transactionInformation);
+			var document = Database.Documents.Get(key);
 			if (document == null)
 				return;
 
@@ -38,8 +38,8 @@ namespace Raven.Bundles.CascadeDelete
 					if (!CascadeDeleteContext.HasAlreadyDeletedDocument(documentId))
 					{
 						CascadeDeleteContext.AddDeletedDocument(documentId);
-						RecursiveDelete(documentId, transactionInformation);
-						Database.Documents.Delete(documentId, null, transactionInformation);
+						RecursiveDelete(documentId);
+						Database.Documents.Delete(documentId, null);
 					}
 				}
 			}

@@ -6,7 +6,7 @@ namespace Raven.Tests.Common.Triggers
 {
 	public class HiddenDocumentsTrigger : AbstractReadTrigger
 	{
-		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation)
 		{
 			if (operation == ReadOperation.Index)
 				return ReadVetoResult.Allowed;

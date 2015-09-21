@@ -25,7 +25,6 @@ namespace Raven.Bundles.Authorization.Controllers
 
 			var docIds = GetQueryStringValues("id");
 			var operation = GetQueryStringValue("operation");
-			var transactionInformation = GetRequestTransaction();
 
 			if (docIds == null || string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(userId))
 			{
@@ -35,7 +34,7 @@ namespace Raven.Bundles.Authorization.Controllers
 			// we don't want security to take hold when we are trying to ask about security
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var documents = docIds.Select(docId => Database.Documents.GetDocumentMetadata(docId, transactionInformation)).ToArray();
+				var documents = docIds.Select(docId => Database.Documents.GetDocumentMetadata(docId)).ToArray();
 				var etag = CalculateEtag(documents, userId);
 				if (MatchEtag(etag))
 				{
@@ -81,7 +80,7 @@ namespace Raven.Bundles.Authorization.Controllers
 
 				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
 
-				var userDoc = Database.Documents.Get(userId, null);
+				var userDoc = Database.Documents.Get(userId);
 				if (userDoc == null)
 				{
 					etags.AddRange(Guid.Empty.ToByteArray());
@@ -90,7 +89,7 @@ namespace Raven.Bundles.Authorization.Controllers
 				{
 					etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
 					var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
-					foreach (var roleMetadata in user.Roles.Select(role => Database.Documents.GetDocumentMetadata(role, null)))
+					foreach (var roleMetadata in user.Roles.Select(role => Database.Documents.GetDocumentMetadata(role)))
 					{
 						etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
 					}

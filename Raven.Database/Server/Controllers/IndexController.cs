@@ -600,7 +600,7 @@ namespace Raven.Database.Server.Controllers
 					.Select(x => x["@metadata"].Value<string>("@id"))
 					.Where(x => x != null)
 				);
-			var command = new AddIncludesCommand(Database, GetRequestTransaction(),
+			var command = new AddIncludesCommand(Database,
 												 (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 			foreach (var result in queryResult.Results)
 			{

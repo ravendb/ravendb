@@ -155,7 +155,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private SqlReplicationStatus GetReplicationStatus()
 		{
-			var jsonDocument = Database.Documents.Get(RavenSqlReplicationStatus, null);
+			var jsonDocument = Database.Documents.Get(RavenSqlReplicationStatus);
 			return jsonDocument == null
 									? new SqlReplicationStatus()
 									: jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
@@ -698,7 +698,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				var stats = new SqlReplicationStatistics(sqlReplication.Name, false);
 
-				var jsonDocument = Database.Documents.Get(strDocumentId, null);
+				var jsonDocument = Database.Documents.Get(strDocumentId);
 				JsonDocument.EnsureIdInMetadata(jsonDocument);
 				var doc = jsonDocument.ToJson();
 				doc[Constants.DocumentIdFieldName] = jsonDocument.Key;

@@ -47,7 +47,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                       }
                                                   }
                                               }
-                                          }), new RavenJObject(), null);
+                                          }), new RavenJObject());
             }
         }
 

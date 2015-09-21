@@ -340,7 +340,7 @@ namespace Raven.Database.Indexing
                         documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
 
                         var indexReplaceDocumentKey = Constants.IndexReplacePrefix + indexName;
-                        var indexReplaceDocument = documentDatabase.Documents.Get(indexReplaceDocumentKey, null);
+                        var indexReplaceDocument = documentDatabase.Documents.Get(indexReplaceDocumentKey);
                         if (indexReplaceDocument == null)
                             return;
 

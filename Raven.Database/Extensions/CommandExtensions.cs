@@ -38,7 +38,7 @@ namespace Raven.Database.Extensions
 			var deleteCommandData = self as DeleteCommandData;
 			if (deleteCommandData != null)
 			{
-				var result = database.Documents.Delete(deleteCommandData.Key, deleteCommandData.Etag, deleteCommandData.TransactionInformation,participatingIds);
+				var result = database.Documents.Delete(deleteCommandData.Key, deleteCommandData.Etag,participatingIds);
 
 				if (batchResult != null)
 					batchResult.Deleted = result;
@@ -49,7 +49,7 @@ namespace Raven.Database.Extensions
 			var putCommandData = self as PutCommandData;
 			if (putCommandData != null)
 			{
-				var putResult = database.Documents.Put(putCommandData.Key, putCommandData.Etag, putCommandData.Document, putCommandData.Metadata, putCommandData.TransactionInformation, participatingIds);
+				var putResult = database.Documents.Put(putCommandData.Key, putCommandData.Etag, putCommandData.Document, putCommandData.Metadata, participatingIds);
 				putCommandData.Etag = putResult.ETag;
 				putCommandData.Key = putResult.Key;
 
@@ -61,13 +61,12 @@ namespace Raven.Database.Extensions
 			{
 				var result = database.Patches.ApplyPatch(patchCommandData.Key, patchCommandData.Etag,
 												 patchCommandData.Patches, patchCommandData.PatchesIfMissing, patchCommandData.Metadata,
-												 patchCommandData.TransactionInformation,
 												 skipPatchIfEtagMismatch: patchCommandData.SkipPatchIfEtagMismatch, participatingIds: participatingIds);
 
 				if (batchResult != null)
 					batchResult.PatchResult = result.PatchResult;
 
-				var doc = database.Documents.Get(patchCommandData.Key, patchCommandData.TransactionInformation);
+				var doc = database.Documents.Get(patchCommandData.Key);
 				if (doc != null)
 				{
 					database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
@@ -84,7 +83,7 @@ namespace Raven.Database.Extensions
 			{
 				var result = database.Patches.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,
 												 advPatchCommandData.Patch, advPatchCommandData.PatchIfMissing, advPatchCommandData.Metadata,
-												 advPatchCommandData.TransactionInformation, advPatchCommandData.DebugMode, participatingIds);
+												 advPatchCommandData.DebugMode, participatingIds);
 
 				if (batchResult != null)
 					batchResult.PatchResult = result.Item1.PatchResult;
@@ -97,7 +96,7 @@ namespace Raven.Database.Extensions
 					return;
 				}
 
-				var doc = database.Documents.Get(advPatchCommandData.Key, advPatchCommandData.TransactionInformation);
+				var doc = database.Documents.Get(advPatchCommandData.Key);
 				if (doc != null)
 				{
 					database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>

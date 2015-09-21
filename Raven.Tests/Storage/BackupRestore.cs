@@ -66,7 +66,7 @@ namespace Raven.Tests.Storage
 
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null);
 
-			var document = db.Documents.Get("ayende", null);
+			var document = db.Documents.Get("ayende");
 			Assert.NotNull(document);
 
 			var jObject = document.ToJson();
@@ -170,7 +170,7 @@ namespace Raven.Tests.Storage
 
 		private BackupStatus.BackupMessage GetStateOfLastStatusMessage()
 		{
-			JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+			JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
 			var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 			return backupStatus.Messages.Last();
 		}

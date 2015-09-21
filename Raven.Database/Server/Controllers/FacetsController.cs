@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Controllers
             }
             else
             {
-                var jsonDocument = Database.Documents.Get(facetSetupDoc, null);
+                var jsonDocument = Database.Documents.Get(facetSetupDoc);
 	            if (jsonDocument == null)
 		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
 

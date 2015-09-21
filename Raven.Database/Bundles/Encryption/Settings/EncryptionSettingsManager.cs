@@ -133,7 +133,7 @@ namespace Raven.Database.Bundles.Encryption.Settings
 			JsonDocument doc;
 			try
 			{
-				doc = database.Documents.Get(Constants.InResourceKeyVerificationDocumentName, null);
+				doc = database.Documents.Get(Constants.InResourceKeyVerificationDocumentName);
 			}
 			catch (Exception e)
 			{

@@ -78,7 +78,7 @@ namespace Raven.Tests.Core.Auth
                                             }
                                     }
                             }
-                    }), new RavenJObject(), null);
+                    }), new RavenJObject());
 
             using (var store = new DocumentStore
                 {

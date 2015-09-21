@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-            var document = Database.Documents.Get(docId, GetRequestTransaction());
+            var document = Database.Documents.Get(docId);
             if (document == null)
             {
                 msg.StatusCode = HttpStatusCode.NotFound;

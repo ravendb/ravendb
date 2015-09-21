@@ -39,7 +39,7 @@ namespace Raven.Tests.FileSystem.Auth
                     new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
 					new ResourceAccess {TenantId = fileSystemName}
                 },
-            }), new RavenJObject(), null);
+            }), new RavenJObject());
         }
 
         [Fact]

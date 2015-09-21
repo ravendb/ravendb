@@ -47,11 +47,11 @@ namespace Raven.Tests.Issues
 				documentDatabase.Documents.Put("abc/1", null, new RavenJObject(), new RavenJObject(), null);
 				systemDatabase.Documents.Put("cba/1", null, new RavenJObject(), new RavenJObject(), null);
 
-				Assert.NotNull(documentDatabase.Documents.Get("abc/1", null));
-				Assert.Null(documentDatabase.Documents.Get("cba/1", null));
+				Assert.NotNull(documentDatabase.Documents.Get("abc/1"));
+				Assert.Null(documentDatabase.Documents.Get("cba/1"));
 
-				Assert.NotNull(systemDatabase.Documents.Get("cba/1", null));
-				Assert.Null(systemDatabase.Documents.Get("abc/1", null));
+				Assert.NotNull(systemDatabase.Documents.Get("cba/1"));
+				Assert.Null(systemDatabase.Documents.Get("abc/1"));
 			}
 		}
 	}

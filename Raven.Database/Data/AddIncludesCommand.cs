@@ -16,8 +16,7 @@ namespace Raven.Database.Data
 	public class AddIncludesCommand
 	{
 		public AddIncludesCommand(
-			DocumentDatabase database, 
-			TransactionInformation transactionInformation, 
+			DocumentDatabase database, 			
 			Action<Etag, RavenJObject> add, 
 			string[] includes,
 			HashSet<string> loadedIds)
@@ -25,7 +24,6 @@ namespace Raven.Database.Data
 			Add = add;
 			Includes = includes;
 			Database = database;
-			TransactionInformation = transactionInformation;
 			LoadedIds = loadedIds;
 		}
 
@@ -42,8 +40,6 @@ namespace Raven.Database.Data
 		private Action<Etag,RavenJObject> Add { get; set; }
 
 		private DocumentDatabase Database { get; set; }
-
-		private TransactionInformation TransactionInformation { get; set; }
 
 		private HashSet<string> LoadedIds { get; set; }
 
@@ -67,7 +63,7 @@ namespace Raven.Database.Data
 		    if (LoadedIds.Add(value) == false)
 		        return true;
 
-			var includedDoc = Database.Documents.Get(value, TransactionInformation);
+			var includedDoc = Database.Documents.Get(value);
 		    if (includedDoc == null)
 		        return false;
 

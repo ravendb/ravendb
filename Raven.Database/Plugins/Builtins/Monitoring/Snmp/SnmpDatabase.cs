@@ -212,14 +212,14 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 		{
 			var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/" + type;
 
-			return databaseLandlord.SystemDatabase.Documents.Get(key, null);
+			return databaseLandlord.SystemDatabase.Documents.Get(key);
 		}
 
 		private long GetOrAddIndex(string name, MappingDocumentType mappingDocumentType, DocumentDatabase systemDatabase)
 		{
 			var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/" + mappingDocumentType;
 
-			var mappingDocument = systemDatabase.Documents.Get(key, null) ?? new JsonDocument();
+			var mappingDocument = systemDatabase.Documents.Get(key) ?? new JsonDocument();
 
 			RavenJToken value;
 			if (mappingDocument.DataAsJson.TryGetValue(name, out value))

@@ -120,7 +120,7 @@ namespace Raven.Database.Server.Tenancy
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
-				jsonDocument = systemDatabase.Documents.Get(ResourcePrefix + tenantId, null);
+				jsonDocument = systemDatabase.Documents.Get(ResourcePrefix + tenantId);
 			if (jsonDocument == null || jsonDocument.Metadata == null ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))

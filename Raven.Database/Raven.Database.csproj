@@ -97,9 +97,6 @@
     <LuceneQuery-Raven-Database-IndexingParser>$(ProjectDir)Indexing\LuceneQuery</LuceneQuery-Raven-Database-IndexingParser>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop">
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
     <Reference Include="HtmlAgilityPack, Version=1.4.9.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
       <HintPath>..\packages\HtmlAgilityPack.1.4.9\lib\Net45\HtmlAgilityPack.dll</HintPath>
       <Private>True</Private>
@@ -906,7 +903,7 @@
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\DynamicCompilerBase.cs" />
-    <Compile Include="Linq\DynamicTransofrmerCompiler.cs" />
+    <Compile Include="Linq\DynamicTransformerCompiler.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
     <Compile Include="Linq\Mono.Reflection\Disassembler.cs" />
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />

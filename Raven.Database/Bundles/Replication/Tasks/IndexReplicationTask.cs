@@ -214,7 +214,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			try
 			{
-				indexReplaceDocument = database.Documents.Get(Constants.IndexReplacePrefix + sideBySideIndexDefinition.Name, null).DataAsJson.JsonDeserialization<IndexReplaceDocument>();
+				indexReplaceDocument = database.Documents.Get(Constants.IndexReplacePrefix + sideBySideIndexDefinition.Name).DataAsJson.JsonDeserialization<IndexReplaceDocument>();
 			}
 			catch (Exception e)
 			{

@@ -139,7 +139,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 
 		private void ExecuteRemoveConflictOnPutTrigger(string id, RavenJObject metadata, RavenJObject resolvedItemJObject)
 		{
-//since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,
+            //since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,
 			//we need to execute the relevant trigger manually
 			// --> AddWithoutConflict() does PUT, but because of 'No Triggers' context the trigger itself is executed
 			var removeConflictTrigger = Database.PutTriggers.GetAllParts()
@@ -148,7 +148,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				.FirstOrDefault();
 
 			Debug.Assert(removeConflictTrigger != null, "If this is null, this means something is very wrong - replication configured, and no relevant plugin is there.");
-			removeConflictTrigger.OnPut(id, resolvedItemJObject, new RavenJObject(metadata), null);
+			removeConflictTrigger.OnPut(id, resolvedItemJObject, new RavenJObject(metadata));
 		}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }

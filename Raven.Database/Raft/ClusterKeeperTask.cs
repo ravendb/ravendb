@@ -102,7 +102,7 @@ namespace Raven.Database.Raft
 
 		private void HandleClusterConfigurationChanges(List<string> removedNodeUrls = null)
 		{
-			var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+			var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 			if (configurationJson == null)
 				return;
 
@@ -114,7 +114,7 @@ namespace Raven.Database.Raft
 		private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
 		{
 			var currentTopology = clusterManager.Engine.CurrentTopology;
-			var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName, null);
+			var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName);
 			var replicationDocument = replicationDocumentJson != null
 				? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
 				: new ReplicationDocument();

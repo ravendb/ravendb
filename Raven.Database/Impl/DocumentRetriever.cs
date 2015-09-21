@@ -54,19 +54,18 @@ namespace Raven.Database.Impl
 
         public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
         {
-            return ExecuteReadTriggers(ProcessReadVetoes(
-                RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck),
-                null, ReadOperation.Query), null, ReadOperation.Query);
+            return ExecuteReadTriggers(
+                        ProcessReadVetoes( 
+                            RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck), ReadOperation.Query), ReadOperation.Query);
         }
 
 
-        public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+        public JsonDocument ExecuteReadTriggers(JsonDocument document, ReadOperation operation)
         {
-            return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
-                                             transactionInformation, operation);
+            return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, operation), operation);
         }
 
-        private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
+        private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, ReadOperation operation)
         {
             if (resultingDocument == null)
                 return null;
@@ -92,8 +91,7 @@ namespace Raven.Database.Impl
 
             triggers.Apply(
                 trigger =>
-                trigger.OnRead(doc.Key, doc.DataAsJson, doc.Metadata, operation,
-                               transactionInformation));
+                trigger.OnRead(doc.Key, doc.DataAsJson, doc.Metadata, operation));
 
             return doc;
         }
@@ -280,18 +278,18 @@ namespace Raven.Database.Impl
 
             if (doc == null)
                 return false;
-            doc = ProcessReadVetoes(doc, null, ReadOperation.Query);
+            doc = ProcessReadVetoes(doc, ReadOperation.Query);
             return doc != null;
         }
 
-        public T ProcessReadVetoes<T>(T document, TransactionInformation transactionInformation, ReadOperation operation)
+        public T ProcessReadVetoes<T>(T document, ReadOperation operation)
             where T : class, IJsonDocumentMetadata, new()
         {
             if (document == null)
                 return null;
             foreach (var readTrigger in triggers)
             {
-                var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
+                var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation);
                 switch (readVetoResult.Veto)
                 {
                     case ReadVetoResult.ReadAllow.Allow:
@@ -366,7 +364,7 @@ namespace Raven.Database.Impl
         public dynamic Load(string id)
         {
             var document = GetDocumentWithCaching(id);
-            document = ProcessReadVetoes(document, null, ReadOperation.Load);
+            document = ProcessReadVetoes(document,  ReadOperation.Load);
             if (document == null)
             {
                 Etag = Etag.HashWith(Etag.Empty);

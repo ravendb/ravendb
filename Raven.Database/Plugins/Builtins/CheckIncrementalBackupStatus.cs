@@ -62,7 +62,7 @@ namespace Raven.Database.Plugins.Builtins
 
 		        var dbStatusKey =  "Raven/BackupStatus/" +dbName;
 
-                var incrementalBackupStatus = systemDatabase.Documents.Get(dbStatusKey, null);
+                var incrementalBackupStatus = systemDatabase.Documents.Get(dbStatusKey);
                 if (incrementalBackupStatus == null) continue;
                 var dbStatus = incrementalBackupStatus.DataAsJson.JsonDeserialization<DatabaseOperationsStatus>();
 		        var now = SystemTime.UtcNow;

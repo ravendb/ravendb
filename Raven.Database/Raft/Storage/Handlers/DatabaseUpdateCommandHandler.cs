@@ -28,7 +28,7 @@ namespace Raven.Database.Raft.Storage.Handlers
 
 			var key = DatabaseHelper.GetDatabaseKey(command.Document.Id);
 
-			var documentJson = Database.Documents.Get(key, null);
+			var documentJson = Database.Documents.Get(key);
 			if (documentJson != null)
 			{
 				var document = documentJson.DataAsJson.JsonDeserialization<DatabaseDocument>();

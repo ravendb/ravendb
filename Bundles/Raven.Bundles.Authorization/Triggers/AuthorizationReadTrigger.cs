@@ -20,8 +20,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);	
 		}
 
-		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation readOperation,
-		                                         TransactionInformation transactionInformation)
+		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation readOperation)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

@@ -9,9 +9,9 @@ namespace Raven.Database.Queries
 {
 	public static class MoreLikeThisQueryExtensions
 	{
-		public static MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(this DocumentDatabase self, MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25)
+		public static MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(this DocumentDatabase self, MoreLikeThisQuery query, int pageSize = 25)
 		{
-			return new MoreLikeThisQueryRunner(self).ExecuteMoreLikeThisQuery(query, transactionInformation, pageSize);
+			return new MoreLikeThisQueryRunner(self).ExecuteMoreLikeThisQuery(query, pageSize);
 		}
 	}
 }

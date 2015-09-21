@@ -45,7 +45,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			var docKey = Constants.TimeSeries.Prefix + timeSeriesName;
 
 			var isTimeSeriesUpdate = ParseBoolQueryString("update");
-			var timeSeries = SystemDatabase.Documents.Get(docKey, null);
+			var timeSeries = SystemDatabase.Documents.Get(docKey);
 			if (timeSeries != null && isTimeSeriesUpdate == false)
             {
 				return GetMessageWithString(string.Format("Time series {0} already exists!", timeSeriesName), HttpStatusCode.Conflict);
@@ -159,7 +159,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		private MessageWithStatusCode ToggleTimeSeriesDisabled(string id, bool isSettingDisabled)
 		{
 			var docKey = Constants.TimeSeries.Prefix + id;
-			var document = SystemDatabase.Documents.Get(docKey, null);
+			var document = SystemDatabase.Documents.Get(docKey);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Time series " + id + " wasn't found" };
 

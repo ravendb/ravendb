@@ -50,7 +50,7 @@ namespace Raven.Database.Indexing
 					return;
 				}
 
-				var document = db.Documents.Get(notification.Id, null);
+				var document = db.Documents.Get(notification.Id);
 				var replaceIndexId = HandleIndexReplaceDocument(document);
 
 				if (replaceIndexId != null)
@@ -237,7 +237,7 @@ namespace Raven.Database.Indexing
 		private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
 		{
 			var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
-			var originalReplaceDocument = Database.Documents.Get(key, null);
+			var originalReplaceDocument = Database.Documents.Get(key);
 			var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
 			var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
 			if (wasReplaced)

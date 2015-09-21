@@ -151,7 +151,7 @@ namespace Raven.Database.Counters.Controllers
 			var docKey = Constants.Counter.Prefix + counterStorageName;
 
 			var isCounterStorageUpdate = ParseBoolQueryString("update");
-			var counterStorage = SystemDatabase.Documents.Get(docKey, null);
+			var counterStorage = SystemDatabase.Documents.Get(docKey);
 			if (counterStorage != null && isCounterStorageUpdate == false)
 			{
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
@@ -265,7 +265,7 @@ namespace Raven.Database.Counters.Controllers
 		private MessageWithStatusCode ToggleCounterStorageDisabled(string id, bool isSettingDisabled)
 		{
 			var docKey = Constants.Counter.Prefix + id;
-			var document = SystemDatabase.Documents.Get(docKey, null);
+			var document = SystemDatabase.Documents.Get(docKey);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Counter storage " + id + " wasn't found" };
 
@@ -293,7 +293,7 @@ namespace Raven.Database.Counters.Controllers
 
 			if (backupRequest.CounterStorageDocument == null && Counters.Name != null)
 			{
-				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Counters.Name, null);
+				var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Counter.Prefix + Counters.Name);
 				if (jsonDocument != null)
 				{
 					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();

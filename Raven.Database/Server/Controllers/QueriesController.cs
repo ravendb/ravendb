@@ -81,7 +81,7 @@ namespace Raven.Database.Server.Controllers
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
 			var transformerParameters = this.ExtractTransformerParameters();
-			var transactionInformation = GetRequestTransaction();
+
 			var includedEtags = new List<byte>();
 
 		    if (string.IsNullOrEmpty(transformer) == false)
@@ -101,8 +101,8 @@ namespace Raven.Database.Server.Controllers
 					if (loadedIds.Add(value) == false)
 						continue;
 					var documentByKey = string.IsNullOrEmpty(transformer)
-										? Database.Documents.Get(value, transactionInformation)
-                                        : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
+										? Database.Documents.Get(value)
+                                        : Database.Documents.GetWithTransformer(value, transformer, transformerParameters, out includedIds);
 				    if (documentByKey == null)
 				    {
                         if(ClientIsV3OrHigher(Request))
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 				}
 
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+				var addIncludesCommand = new AddIncludesCommand(Database, (etag, includedDoc) =>
 				{
 					includedEtags.AddRange(etag.ToByteArray());
 					result.Includes.Add(includedDoc);
@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 
 			foreach (var includedId in includedIds)
 		    {
-		        var doc = Database.Documents.Get(includedId, transactionInformation);
+		        var doc = Database.Documents.Get(includedId);
 		        if (doc == null)
 		        {
                     continue;

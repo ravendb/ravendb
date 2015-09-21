@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25)
+		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, int pageSize = 25)
 		{
 			if (query == null) throw new ArgumentNullException("query");
 
@@ -78,7 +78,7 @@ namespace Raven.Database.Queries
 
 				if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
 				{
-					var stopWordsDoc = database.Documents.Get(query.StopWordsDocumentId, null);
+					var stopWordsDoc = database.Documents.Get(query.StopWordsDocumentId);
 					if (stopWordsDoc == null)
 						throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
 
@@ -128,7 +128,7 @@ namespace Raven.Database.Queries
 					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
 					includedEtags.AddRange(database.Indexes.GetIndexEtag(query.IndexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
-					var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
+					var addIncludesCommand = new AddIncludesCommand(database, (etag, includedDoc) =>
 					{
 						includedEtags.AddRange(etag.ToByteArray());
 						result.Includes.Add(includedDoc);
@@ -216,7 +216,7 @@ namespace Raven.Database.Queries
 					.Distinct();
 
 				return documentIds
-					.Select(docId => database.Documents.Get(docId, null))
+					.Select(docId => database.Documents.Get(docId))
 					.Where(it => it != null)
 					.ToArray();
 			}

@@ -12,7 +12,7 @@ namespace Raven.Tests.Common.Triggers
 {
 	public class UpperCaseNamesTrigger : AbstractReadTrigger
 	{
-		public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation)
 		{
 			var name = document["name"];
 			if (name != null)

@@ -81,10 +81,10 @@ namespace Raven.Database.Actions
         }
 
 
-        private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
+        private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document)
         {
             var vetoResult = Database.PutTriggers
-                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata, transactionInformation) })
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata) })
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
@@ -150,7 +150,7 @@ namespace Raven.Database.Actions
 
                             JsonDocument.EnsureIdInMetadata(doc);
 
-                            var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+                            var document = documentRetriever.ExecuteReadTriggers(doc, ReadOperation.Load);
                             if (document == null)
                                 continue;
 
@@ -228,10 +228,10 @@ namespace Raven.Database.Actions
             }
         }
 
-        private void AssertDeleteOperationNotVetoed(string key, TransactionInformation transactionInformation)
+        private void AssertDeleteOperationNotVetoed(string key)
         {
             var vetoResult = Database.DeleteTriggers
-                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key, transactionInformation) })
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
@@ -285,7 +285,7 @@ namespace Raven.Database.Actions
 								        keys.Add(doc.Key);
 							        documents++;
 							        batch++;
-							        AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+							        AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson);
 
 							        if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
 							        {
@@ -297,7 +297,7 @@ namespace Raven.Database.Actions
 
 							        foreach (var trigger in Database.PutTriggers)
 							        {
-								        trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+								        trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata);
 							        }
 
 							        var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
@@ -322,7 +322,7 @@ namespace Raven.Database.Actions
 
 							        foreach (var trigger in Database.PutTriggers)
 							        {
-								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag);
 							        }
 
 									Database.WorkContext.UpdateFoundWork();
@@ -450,7 +450,7 @@ namespace Raven.Database.Actions
 
                         JsonDocument.EnsureIdInMetadata(doc);
                         
-                        var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+                        var document = documentRetriever.ExecuteReadTriggers(doc, ReadOperation.Load);
                         if (document == null)
                             continue;
                         
@@ -496,7 +496,7 @@ namespace Raven.Database.Actions
                         
                         JsonDocument.EnsureIdInMetadata(doc);
                         
-                        var document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+                        var document = documentRetriever.ExecuteReadTriggers(doc, ReadOperation.Load);
                         if (document == null)
                             continue;
 
@@ -526,51 +526,33 @@ namespace Raven.Database.Actions
             return etag;
         }
 
-        public JsonDocument Get(string key, TransactionInformation transactionInformation)
+        public JsonDocument Get(string key)
         {
             if (key == null)
                 throw new ArgumentNullException("key");
+
             key = key.Trim();
 
             JsonDocument document = null;
-            //if (transactionInformation == null || Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
-            //{
-            //    // first we check the dtc state, then the storage, to avoid race conditions
-            //    var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
-
-            //    TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
-
-            //    if (nonAuthoritativeInformationBehavior != null)
-            //        document = nonAuthoritativeInformationBehavior(document);
-            //}
-
-            TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
+            TransactionalStorage.Batch(actions =>
+            {
+                document = actions.Documents.DocumentByKey(key);
+            });
 
             JsonDocument.EnsureIdInMetadata(document);
 
             return new DocumentRetriever(null, null, Database.ReadTriggers)
-                            .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
+                            .ExecuteReadTriggers(document, ReadOperation.Load);
         }
 
-        public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
+        public JsonDocumentMetadata GetDocumentMetadata(string key)
         {
             if (key == null)
                 throw new ArgumentNullException("key");
+
             key = key.Trim();
 
             JsonDocumentMetadata document = null;
-            //if (transactionInformation == null || Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
-            //{
-            //    var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
-            //    TransactionalStorage.Batch(actions =>
-            //    {
-            //        document = actions.Documents.DocumentMetadataByKey(key);
-            //    });
-            //    if (nonAuthoritativeInformationBehavior != null)
-            //        document = nonAuthoritativeInformationBehavior(document);
-            //}
-
-
             TransactionalStorage.Batch(actions =>
             {
                 document = actions.Documents.DocumentMetadataByKey(key);
@@ -579,7 +561,7 @@ namespace Raven.Database.Actions
             JsonDocument.EnsureIdInMetadata(document);
 
             return new DocumentRetriever(null, null, Database.ReadTriggers)
-                            .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
+                            .ProcessReadVetoes(document, ReadOperation.Load);
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
@@ -597,7 +579,7 @@ namespace Raven.Database.Actions
         }
 
 
-        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> transformerParameters, out HashSet<string> itemsToInclude)
+        public JsonDocument GetWithTransformer(string key, string transformer, Dictionary<string, RavenJToken> transformerParameters, out HashSet<string> itemsToInclude)
         {
             JsonDocument result = null;
             DocumentRetriever docRetriever = null;
@@ -607,7 +589,7 @@ namespace Raven.Database.Actions
                 docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                 using (new CurrentTransformationScope(Database, docRetriever))
                 {
-                    var document = Get(key, transactionInformation);
+                    var document = Get(key);
                     if (document == null)
                         return;
 
@@ -643,7 +625,7 @@ namespace Raven.Database.Actions
 
 
 
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, string[] participatingIds = null)
+        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, string[] participatingIds = null)
         {
             WorkContext.MetricsCounters.DocsPerSecond.Mark();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
@@ -660,72 +642,58 @@ namespace Raven.Database.Actions
                         key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
                     }
 
-                    AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
-                    if (transactionInformation == null)
+                    AssertPutOperationNotVetoed(key, metadata, document);
+
+                    Database.PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata));
+
+                    var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
+                    newEtag = addDocumentResult.Etag;
+
+                    Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
+                    metadata[Constants.LastModified] = addDocumentResult.SavedAt;
+
+                    metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+                    document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+
+                    actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
                     {
-                        Database.PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
+                        Metadata = metadata,
+                        Key = key,
+                        DataAsJson = document,
+                        Etag = newEtag,
+                        LastModified = addDocumentResult.SavedAt,
+                        SkipDeleteFromIndex = addDocumentResult.Updated == false
+                    }, documents =>
+                    {
+						if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
+							return;
 
-                        var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
-                        newEtag = addDocumentResult.Etag;
+	                    Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                    });
 
-                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
-                        metadata[Constants.LastModified] = addDocumentResult.SavedAt;
-                        metadata.EnsureSnapshot(
-                            "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-                        document.EnsureSnapshot(
-                            "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+                    Database.PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag));
 
-                        actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
+                    TransactionalStorage
+                        .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                         {
-                            Metadata = metadata,
-                            Key = key,
-                            DataAsJson = document,
-                            Etag = newEtag,
-                            LastModified = addDocumentResult.SavedAt,
-                            SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents =>
-                        {
-							if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
-								return;
-
-	                        Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                            Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
+	                            
+							var newDocumentChangeNotification =
+		                        new DocumentChangeNotification
+		                        {
+			                        Id = key,
+			                        Type = DocumentChangeTypes.Put,
+			                        TypeName = metadata.Value<string>(Constants.RavenClrType),
+			                        CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+			                        Etag = newEtag
+		                        };
+	                            
+							Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                         });
 
-                        Database.PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
-
-                        TransactionalStorage
-                            .ExecuteImmediatelyOrRegisterForSynchronization(() =>
-                            {
-                                Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-	                            
-								var newDocumentChangeNotification =
-		                            new DocumentChangeNotification
-		                            {
-			                            Id = key,
-			                            Type = DocumentChangeTypes.Put,
-			                            TypeName = metadata.Value<string>(Constants.RavenClrType),
-			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
-			                            Etag = newEtag
-		                            };
-	                            
-								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
-                            });
-
-                        WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);
-                    }
-                    else
-                    {
-                        throw new NotSupportedException("DTC is not supported. Should we kill TransactionInformation?");
-
-                        //var doc = actions.Documents.DocumentMetadataByKey(key);
-                        //newEtag = Database.InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
-                        //                                                              transactionInformation,
-                        //                                                              doc == null
-                        //                                                                  ? Etag.Empty
-                        //                                                                  : doc.Etag,
-                        //                                                              UuidGenerator);
-                    }
+                    WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);
                 });
+
 				if (Log.IsDebugEnabled)
 					Log.Debug("Put document {0} with etag {1}", key, newEtag);
 
@@ -737,79 +705,67 @@ namespace Raven.Database.Actions
             }
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, string[] participatingIds = null)
+        public bool Delete(string key, Etag etag, string[] participatingIds = null)
         {
             RavenJObject metadata;
-            return Delete(key, etag, transactionInformation, out metadata, participatingIds);
+            return Delete(key, etag, out metadata, participatingIds);
         }
 
-		public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, string[] participatingIds = null)
+		public bool Delete(string key, Etag etag,  out RavenJObject metadata, string[] participatingIds = null)
         {
             if (key == null)
                 throw new ArgumentNullException("key");
+
             key = key.Trim();
 
             var deleted = false;
+
 			if (Log.IsDebugEnabled)
 				Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+
             RavenJObject metadataVar = null;
             using (Database.DocumentLock.Lock())
             {
                 TransactionalStorage.Batch(actions =>
                 {
-                    AssertDeleteOperationNotVetoed(key, transactionInformation);
-                    if (transactionInformation == null)
+                    AssertDeleteOperationNotVetoed(key);
+
+                    Database.DeleteTriggers.Apply(trigger => trigger.OnDelete(key));
+
+	                string collection = null;
+                    Etag deletedETag;
+                    if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
                     {
-                        Database.DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
+                        deleted = true;
+                        actions.Indexing.RemoveAllDocumentReferencesFrom(key);
+                        WorkContext.MarkDeleted(key);
 
-	                    string collection = null;
-                        Etag deletedETag;
-                        if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
-                        {
-                            deleted = true;
-                            actions.Indexing.RemoveAllDocumentReferencesFrom(key);
-                            WorkContext.MarkDeleted(key);
+                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
 
-                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
-
-							collection = metadataVar.Value<string>(Constants.RavenEntityName);
+						collection = metadataVar.Value<string>(Constants.RavenEntityName);
 							
-							DeleteDocumentFromIndexesForCollection(key, collection, actions);
-                            if (deletedETag != null)
-                                Database.Prefetcher.AfterDelete(key, deletedETag);
-                            Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
-                        }
+						DeleteDocumentFromIndexesForCollection(key, collection, actions);
+                        if (deletedETag != null)
+                            Database.Prefetcher.AfterDelete(key, deletedETag);
+                        Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key));
+                    }
 
-                        TransactionalStorage
-                            .ExecuteImmediatelyOrRegisterForSynchronization(() =>
+                    TransactionalStorage
+                        .ExecuteImmediatelyOrRegisterForSynchronization(() =>
+                        {
+                            Database.DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+							if (string.IsNullOrEmpty(collection) == false)
+								Database.LastCollectionEtags.Update(collection);
+
+                            Database.Notifications.RaiseNotifications(new DocumentChangeNotification
                             {
-                                Database.DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-								if (string.IsNullOrEmpty(collection) == false)
-									Database.LastCollectionEtags.Update(collection);
+                                Id = key,
+                                Type = DocumentChangeTypes.Delete,
+                                TypeName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenClrType) : null,
+                                CollectionName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenEntityName) : null
 
-                                Database.Notifications.RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Delete,
-                                    TypeName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenClrType) : null,
-                                    CollectionName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenEntityName) : null
-
-                                }, metadataVar);
-                            });
-
-                    }
-                    else
-                    {
-
-                        throw new NotSupportedException("DTC is not supported. Should we kill TransactionInformation too?");
-                        //var doc = actions.Documents.DocumentMetadataByKey(key);
-
-                        //Database.InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
-                        //                                                       etag,
-                        //                                                       doc == null ? Etag.Empty : doc.Etag,
-                        //                                                       UuidGenerator);
-                        //deleted = doc != null;
-                    }
+                            }, metadataVar);
+                        });
 
                     WorkContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
