@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 
@@ -78,7 +79,10 @@ namespace Rachis.Transport
 
 			public void SendInternal(string dest, string from, object msg)
 			{
-				_parent.AddToQueue(this, dest, msg);
+				InMemoryTransport srcTransport;
+				if(!_parent._transports.TryGetValue(from, out srcTransport))
+					throw new ArgumentException("Invalid from node","from");
+				_parent.AddToQueue(srcTransport, dest, msg);
 			}
 
 			public void Send(NodeConnectionInfo dest, TimeoutNowRequest req)
@@ -118,7 +122,7 @@ namespace Rachis.Transport
 
 		private void AddToQueue<T>(InMemoryTransport src, string dest, T message, Stream stream = null,
 			bool evenIfDisconnected = false)
-		{
+		{			
 			//if destination is considered disconnected --> drop the message so it never arrives
 			if ((
 				_disconnectedNodes.Contains(dest) ||

@@ -128,11 +128,11 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[HttpPut]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public async Task<HttpResponseMessage> Put(string counterStorageName)
+		[RavenRoute("admin/cs/{*id}")]
+		public async Task<HttpResponseMessage> Put(string id)
 		{
 			MessageWithStatusCode nameFormatErrorMsg;
-			if (IsValidName(counterStorageName, SystemConfiguration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
+			if (IsValidName(id, SystemConfiguration.Counter.DataDirectory, out nameFormatErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -148,13 +148,13 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var docKey = Constants.Counter.Prefix + counterStorageName;
+			var docKey = Constants.Counter.Prefix + id;
 
 			var isCounterStorageUpdate = ParseBoolQueryString("update");
 			var counterStorage = SystemDatabase.Documents.Get(docKey, null);
 			if (counterStorage != null && isCounterStorageUpdate == false)
 			{
-				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
+				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
 			}
 
 			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
@@ -168,11 +168,11 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[HttpDelete]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public HttpResponseMessage Delete(string counterStorageName)
+		[RavenRoute("admin/cs/{*id}")]
+		public HttpResponseMessage Delete(string id)
 		{
 			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
-			var message = DeleteCounterStorage(counterStorageName, isHardDeleteNeeded);
+			var message = DeleteCounterStorage(id, isHardDeleteNeeded);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -207,10 +207,10 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public HttpResponseMessage Disable(string counterStorageName, bool isSettingDisabled)
+		[RavenRoute("admin/cs/{*id}")]
+		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
 		{
-			var message = ToggleCounterStorageDisabled(counterStorageName, isSettingDisabled);
+			var message = ToggleCounterStorageDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);

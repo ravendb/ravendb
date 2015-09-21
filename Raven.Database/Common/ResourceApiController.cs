@@ -196,21 +196,18 @@ namespace Raven.Database.Common
 			ResourceName = GetResourceName(controllerContext, ResourceType);
 		}
 
-		protected string GetResourceName(HttpControllerContext controllerContext, ResourceType resourceType)
+		private string GetResourceName(HttpControllerContext controllerContext, ResourceType resourceType)
 		{
 			var resourceNameUrlKey = GetResourceNameUrlKey(resourceType);
 			var values = controllerContext.Request.GetRouteData().Values;
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey(resourceNameUrlKey));
-
-				if (selectedData != null)
-				{
-					return selectedData.Values[resourceNameUrlKey] as string;
-				}
-
-				return null;
+				var method = controllerContext.Request.Method;
+				return routeDatas
+					.Where(x => x.Values.ContainsKey(resourceNameUrlKey) && x.Route.DataTokens.ContainsKey("actions") && ((HttpActionDescriptor[])x.Route.DataTokens["actions"]).Any(y => y.SupportedHttpMethods.Contains(method)))
+					.Select(x => x.Values[resourceNameUrlKey] as string)
+					.FirstOrDefault();
 			}
 
 			if (values.ContainsKey(resourceNameUrlKey))
@@ -291,6 +288,24 @@ namespace Raven.Database.Common
 			msg = "Could not find a resource named: " + resourceName;
 			Log.Warn(msg);
 			throw new HttpException(503, msg);
+		}
+
+		public bool RejectClientRequests
+		{
+			get
+			{
+				switch (ResourceType)
+				{
+					case ResourceType.Database:
+						return Resource.Configuration.RejectClientsMode;
+					case ResourceType.FileSystem:
+					case ResourceType.Counter:
+					case ResourceType.TimeSeries:
+						return false;
+					default:
+						throw new NotSupportedException(ResourceType.ToString());
+				}
+			}
 		}
 
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
