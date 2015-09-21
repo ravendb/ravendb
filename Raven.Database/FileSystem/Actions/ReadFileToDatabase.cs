@@ -33,7 +33,7 @@ namespace Raven.Database.FileSystem.Actions
 		private readonly OrderedPartCollection<AbstractFilePutTrigger> putTriggers;
 
 		private readonly IHashEncryptor md5Hasher;
-		public int TotalSizeRead;
+		public long TotalSizeRead;
 		private int pos;
 
 		public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, OrderedPartCollection<AbstractFilePutTrigger> putTriggers, Stream inputStream, string filename, RavenJObject headers)
@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Actions
 		{
 			while (true)
 			{
-				var read = await inputStream.ReadAsync(buffer);
+				var read = await inputStream.ReadAsync(buffer).ConfigureAwait(false);
 
 				TotalSizeRead += read;
 
