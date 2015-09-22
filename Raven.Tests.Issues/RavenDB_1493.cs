@@ -88,11 +88,7 @@ namespace Raven.Tests.Issues
 		{
 			using (IDocumentSession session = store.OpenSession())
 			{
-				session.Advanced.AllowNonAuthoritativeInformation = false;
-
-				IEnumerable<TestDoc> loadOperation =
-					from id in documentIds
-					select session.Load<TestDoc>(id);
+				var loadOperation = from id in documentIds select session.Load<TestDoc>(id);
 
 				return loadOperation.ToArray();
 			}

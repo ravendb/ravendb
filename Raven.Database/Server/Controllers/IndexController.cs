@@ -608,7 +608,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			command.AlsoInclude(queryResult.IdsToInclude);
 
-			return GetMessageWithObject(queryResult, queryResult.NonAuthoritativeInformation ? HttpStatusCode.NonAuthoritativeInformation : HttpStatusCode.OK, indexEtag);
+			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}
 
 		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)

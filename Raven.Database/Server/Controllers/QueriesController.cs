@@ -114,7 +114,8 @@ namespace Raven.Database.Server.Controllers
 					if (documentByKey.Etag != null)
 						includedEtags.AddRange(documentByKey.Etag.ToByteArray());
 
-					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
+                    // TODO: Revise this. 
+					includedEtags.Add((false) ? (byte)0 : (byte)1);
 				}
 
 				var addIncludesCommand = new AddIncludesCommand(Database, (etag, includedDoc) =>

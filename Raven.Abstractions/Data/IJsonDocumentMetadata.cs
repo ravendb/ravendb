@@ -19,11 +19,6 @@ namespace Raven.Abstractions.Data
 		string Key { get; set; }
 
 		/// <summary>
-		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
-		/// </summary>
-		bool? NonAuthoritativeInformation { get; set; }
-
-		/// <summary>
 		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
 		Etag Etag { get; set; }

@@ -76,17 +76,14 @@ namespace Raven.Database.Impl
                 Etag = resultingDocument.Etag,
                 LastModified = resultingDocument.LastModified,
                 SerializedSizeOnDisk = resultingDocument.SerializedSizeOnDisk,
-                SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,
-                NonAuthoritativeInformation = resultingDocument.NonAuthoritativeInformation,
+                SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,  
                 TempIndexScore = resultingDocument.TempIndexScore,
-                DataAsJson =
-                    resultingDocument.DataAsJson.IsSnapshot
-                        ? (RavenJObject)resultingDocument.DataAsJson.CreateSnapshot()
-                        : resultingDocument.DataAsJson,
-                Metadata =
-                    resultingDocument.Metadata.IsSnapshot
-                        ? (RavenJObject)resultingDocument.Metadata.CreateSnapshot()
-                        : resultingDocument.Metadata,
+                DataAsJson = resultingDocument.DataAsJson.IsSnapshot
+                                    ? (RavenJObject)resultingDocument.DataAsJson.CreateSnapshot()
+                                    : resultingDocument.DataAsJson,
+                Metadata = resultingDocument.Metadata.IsSnapshot
+                                ? (RavenJObject)resultingDocument.Metadata.CreateSnapshot()
+                                : resultingDocument.Metadata,
             };
 
             triggers.Apply(
@@ -299,7 +296,6 @@ namespace Raven.Database.Impl
                         {
                             Etag = Etag.Empty,
                             LastModified = DateTime.MinValue,
-                            NonAuthoritativeInformation = false,
                             Key = document.Key,
                             Metadata = new RavenJObject
                                                       {

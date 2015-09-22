@@ -178,7 +178,6 @@ namespace Raven.Database.Actions
                                     var transformedJsonDocument = new JsonDocument
                                     {
                                         Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
-                                        NonAuthoritativeInformation = document.NonAuthoritativeInformation,
                                         LastModified = document.LastModified,
 										DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
                                     };
@@ -613,7 +612,6 @@ namespace Raven.Database.Actions
                     result = new JsonDocument
                     {
                         Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(docRetriever.Etag),
-                        NonAuthoritativeInformation = document.NonAuthoritativeInformation,
                         LastModified = document.LastModified,
 						DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
                     };

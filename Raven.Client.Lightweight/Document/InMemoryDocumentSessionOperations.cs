@@ -146,18 +146,10 @@ namespace Raven.Client.Document
 			this.theListeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
 			UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
-			AllowNonAuthoritativeInformation = true;
-			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
-
-		/// <summary>
-		/// Gets or sets the timeout to wait for authoritative information if encountered non authoritative document.
-		/// </summary>
-		/// <value></value>
-		public TimeSpan NonAuthoritativeInformationTimeout { get; set; }
 
 		/// <summary>
 		/// Gets the store identifier for this session.
@@ -394,13 +386,6 @@ more responsive application.
 		/// <returns></returns>
 		public object TrackEntity(Type entityType, JsonDocument documentFound)
 		{
-			if (documentFound.NonAuthoritativeInformation.HasValue
-				&& documentFound.NonAuthoritativeInformation.Value
-				&& AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
-				" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
 			if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
 			{
 				return GetDefaultValue(entityType); // document is not really there.
@@ -445,12 +430,6 @@ more responsive application.
 				return entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			if (metadata.Value<bool>("Non-Authoritative-Information") &&
-				AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + key +
-					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
 
 			if (noTracking == false)
 			{
@@ -579,19 +558,6 @@ more responsive application.
 		{
 			return type.IsValueType ? Activator.CreateInstance(type) : null;
 		}
-
-		/// <summary>
-		/// Gets or sets a value indicating whether non authoritative information is allowed.
-		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
-		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
-		/// will fail, because it is already modified.
-		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout"/> for the transaction to commit to get an
-		/// authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout"/>, <see cref="NonAuthoritativeInformationException"/> is thrown.
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
-		/// </value>
-		public bool AllowNonAuthoritativeInformation { get; set; }
 
 		/// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.

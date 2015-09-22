@@ -71,7 +71,6 @@ namespace Raven.Client.Connection
 				LastModified = lastModified,
 				Etag = etag,
 				TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
-				NonAuthoritativeInformation = nai,
 				Metadata = metadata.FilterHeadersToObject(),
 				DataAsJson = doc,
 			};
@@ -160,9 +159,6 @@ namespace Raven.Client.Connection
 					result.Results.Add((RavenJObject)r);
 			}
 
-			if (json.ContainsKey("NonAuthoritativeInformation"))
-				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());
-
 			if (json.ContainsKey("DurationMilliseconds"))
 				result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
 
@@ -205,7 +201,6 @@ namespace Raven.Client.Connection
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
-				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = GetLastModifiedDate(headers),
@@ -225,7 +220,6 @@ namespace Raven.Client.Connection
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
-				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = GetLastModifiedDate(headers),
@@ -278,7 +272,6 @@ namespace Raven.Client.Connection
 
 			return new JsonDocumentMetadata
 			{
-				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = lastModifiedDate,
@@ -309,7 +302,6 @@ namespace Raven.Client.Connection
 
 			return new JsonDocumentMetadata
 			{
-				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = lastModifiedDate,

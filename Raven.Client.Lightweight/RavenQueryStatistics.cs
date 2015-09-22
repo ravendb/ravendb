@@ -62,12 +62,6 @@ namespace Raven.Client
 		public Etag IndexEtag { get; set; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether any of the documents returned by this query
-		/// are non authoritative (modified by uncommitted transaction).
-		/// </summary>
-		public bool NonAuthoritativeInformation { get; set; }
-
-		/// <summary>
 		/// The timestamp of the last time the index was queried
 		/// </summary>
 		public DateTime LastQueryTime { get; set; }
@@ -94,7 +88,6 @@ namespace Raven.Client
 		{
 			IsStale = qr.IsStale;
 			DurationMilliseconds = qr.DurationMilliseconds;
-			NonAuthoritativeInformation= qr.NonAuthoritativeInformation;
 			TotalResults = qr.TotalResults;
 			SkippedResults = qr.SkippedResults;
 			Timestamp = qr.IndexTimestamp;

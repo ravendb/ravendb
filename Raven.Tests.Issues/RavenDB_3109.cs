@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
 					Assert.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId", alerts.Alerts[0].Title);
 				}
 
-				SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(11);
+				SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(1);
 
 				using (var session = store3.OpenSession("DBX"))
 				{

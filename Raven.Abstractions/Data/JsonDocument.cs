@@ -57,11 +57,6 @@ namespace Raven.Abstractions.Data
 		public string Key { get; set; }
 
 		/// <summary>
-		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
-		/// </summary>
-		public bool? NonAuthoritativeInformation { get; set; }
-
-		/// <summary>
 		/// Current document etag.
 		/// </summary>
 		public Etag Etag { get; set; }
@@ -106,8 +101,6 @@ namespace Raven.Abstractions.Data
 			}
 			if (Etag != null)
 				metadata["@etag"] = Etag.ToString();
-			if (NonAuthoritativeInformation != null)
-				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
             if (checkForId && metadata.ContainsKey("@id") == false)
 				metadata["@id"] = Key;
 			doc["@metadata"] = metadata;

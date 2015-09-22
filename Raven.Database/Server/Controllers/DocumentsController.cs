@@ -137,14 +137,11 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			Debug.Assert(documentMetadata.Etag != null);
-			if (MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
+			if (MatchEtag(documentMetadata.Etag))
 			{
 				msg.StatusCode = HttpStatusCode.NotModified;
 				return msg;
 			}
-
-			if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
-				msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
 
 			documentMetadata.Metadata[Constants.DocumentIdFieldName] = documentMetadata.Key;
 			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
@@ -173,13 +170,11 @@ namespace Raven.Database.Server.Controllers
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
-					if (MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation != true)
+					if (MatchEtag(documentMetadata.Etag))
 					{
 						msg.StatusCode = HttpStatusCode.NotModified;
 						return;
 					}
-					if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
-						msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
 
 					msg = GetDocumentDirectly(docId, msg);
 				});
@@ -261,6 +256,7 @@ namespace Raven.Database.Server.Controllers
 				msg.StatusCode = HttpStatusCode.NotFound;
 				return msg;
 			}
+
 			var doc = Database.Documents.Get(docId);
 			if (doc == null)
 			{
@@ -268,10 +264,8 @@ namespace Raven.Database.Server.Controllers
 				return msg;
 			}
 
-			if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
-				msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
-
 			Debug.Assert(doc.Etag != null);
+
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
 			doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key ?? string.Empty);
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };

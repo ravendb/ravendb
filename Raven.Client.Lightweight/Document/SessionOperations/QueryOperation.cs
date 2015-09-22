@@ -114,14 +114,6 @@ namespace Raven.Client.Document.SessionOperations
 			return sessionOperations.DocumentStore.DisableAggressiveCaching();
 		}
 
-		public bool ShouldQueryAgain(Exception e)
-		{
-			if (e is NonAuthoritativeInformationException == false)
-				return false;
-
-			return sp.Elapsed <= sessionOperations.NonAuthoritativeInformationTimeout;
-		}
-
 		public IList<T> Complete<T>()
 		{
 			var queryResult = currentQueryResults.CreateSnapshot();
@@ -237,51 +229,35 @@ namespace Raven.Client.Document.SessionOperations
 
 		public bool IsAcceptable(QueryResult result)
 		{
-			if (sessionOperations.AllowNonAuthoritativeInformation == false &&
-				result.NonAuthoritativeInformation)
-			{
-				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
-				{
-					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
-									  sp.ElapsedMilliseconds));
-				}
-
-				if (log.IsDebugEnabled)
-					log.Debug(
-						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
-				return false;
-			}
 			if (waitForNonStaleResults && result.IsStale)
 			{
 				if (sp.Elapsed > timeout)
 				{
 					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-									  sp.ElapsedMilliseconds));
+					throw new TimeoutException( string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
 				}
 
 				if (log.IsDebugEnabled)
-					log.Debug(
-						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
+                {
+                    log.Debug( "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                        indexQuery.Query,
+                        indexName,
+                        sessionOperations.StoreIdentifier,
+                        result.IndexEtag);
+
+                }
 				return false;
 			}
-			currentQueryResults = result;
+			
+            currentQueryResults = result;
 			currentQueryResults.EnsureSnapshot();
-			if (log.IsDebugEnabled)
-				log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
-											  result.TotalResults, result.IsStale ? "stale " : "");
-			return true;
+
+            if (log.IsDebugEnabled)
+            {
+                log.Debug("Query returned {0}/{1} {2}results", result.Results.Count, result.TotalResults, result.IsStale ? "stale " : "");
+            }
+			
+            return true;
 		}
 	}
 }
