@@ -71,6 +71,7 @@
     <Compile Include="Comparers.cs" />
     <Compile Include="Hashing.cs" />
     <Compile Include="Hashing.Iterative.cs" />
+    <Compile Include="Hashing.Streamed.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Platform\Posix\PosixUnmanagedMemory.cs" />

@@ -110,6 +110,7 @@ namespace Sparrow.Tests
                     new object[] {90},
                     new object[] {128},
                     new object[] {129},
+                    new object[] {1000},
 				};
             }
         }
@@ -164,6 +165,89 @@ namespace Sparrow.Tests
            int h1 = Hashing.CombineInline(1991, 13);
            int h2 = Hashing.CombineInline(1991, 12);
            Assert.NotEqual(h1, h2);
+        }
+
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void StreamedHashingEquivalence32(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.XXHash32.Alignment * iteration;
+
+                var context = Hashing.Streamed.XXHash32.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.XXHash32.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.XXHash32.EndProcess(context);
+                var expected = Hashing.XXHash32.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
+        }
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void StreamedHashingEquivalence64(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.XXHash64.Alignment * iteration;
+
+                var context = Hashing.Streamed.XXHash64.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.XXHash64.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.XXHash64.EndProcess(context);
+                var expected = Hashing.XXHash64.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
         }
 
     }
