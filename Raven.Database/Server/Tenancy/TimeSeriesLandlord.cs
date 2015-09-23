@@ -136,7 +136,7 @@ namespace Raven.Database.Server.Tenancy
 		{
 			Task<TimeSeriesStorage> cs;
 			if (TryGetOrCreateResourceStore(resourceName, out cs))
-				return await cs;
+				return await cs.ConfigureAwait(false);
 			return null;
 		}
 

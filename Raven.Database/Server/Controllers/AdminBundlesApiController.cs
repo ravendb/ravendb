@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			return await base.ExecuteAsync(controllerContext, cancellationToken);
+			return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 		}
 	}
 }

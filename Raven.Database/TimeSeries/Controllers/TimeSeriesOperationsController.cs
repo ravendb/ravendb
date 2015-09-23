@@ -64,7 +64,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpPut]
 		public async Task<HttpResponseMessage> AppendPoint()
 		{
-			var point = await ReadJsonObjectAsync<TimeSeriesFullPoint>();
+			var point = await ReadJsonObjectAsync<TimeSeriesFullPoint>().ConfigureAwait(false);
 			if (point == null || string.IsNullOrEmpty(point.Type) || string.IsNullOrEmpty(point.Key) || point.Values == null || point.Values.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
@@ -305,7 +305,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpDelete]
 		public async Task<HttpResponseMessage> DeletePoints()
 		{
-			var points = await ReadJsonObjectAsync<TimeSeriesPointId[]>();
+			var points = await ReadJsonObjectAsync<TimeSeriesPointId[]>().ConfigureAwait(false);
             if (points == null || points.Length == 0)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
@@ -341,7 +341,7 @@ namespace Raven.Database.TimeSeries.Controllers
 		[HttpDelete]
 		public async Task<HttpResponseMessage> DeleteRange()
 		{
-			var range = await ReadJsonObjectAsync<TimeSeriesDeleteRange>();
+			var range = await ReadJsonObjectAsync<TimeSeriesDeleteRange>().ConfigureAwait(false);
             if (range == null || string.IsNullOrEmpty(range.Type) || string.IsNullOrEmpty(range.Key))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 

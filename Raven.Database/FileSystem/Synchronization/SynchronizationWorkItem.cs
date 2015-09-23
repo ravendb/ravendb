@@ -99,7 +99,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				var history = new List<HistoryItem>(conflict.RemoteHistory);
 				history.RemoveAt(conflict.RemoteHistory.Count - 1);
 
-				await synchronizationServerClient.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl);
+				await synchronizationServerClient.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -114,15 +114,15 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		protected async Task<SynchronizationReport> HandleConflict(ISynchronizationServerClient synchronizationServerClient, ConflictItem conflict, ILog log)
 		{
-			var conflictResolutionStrategy = await synchronizationServerClient.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata);
+			var conflictResolutionStrategy = await synchronizationServerClient.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata).ConfigureAwait(false);
 
 			switch (conflictResolutionStrategy)
 			{
 				case ConflictResolutionStrategy.NoResolution:
-					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log);
+					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
 				case ConflictResolutionStrategy.CurrentVersion:
-					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log);
-					await synchronizationServerClient.ResolveConflictAsync(FileName, conflictResolutionStrategy);
+					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
+					await synchronizationServerClient.ResolveConflictAsync(FileName, conflictResolutionStrategy).ConfigureAwait(false);
 					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
 				case ConflictResolutionStrategy.RemoteVersion:
 					// we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side

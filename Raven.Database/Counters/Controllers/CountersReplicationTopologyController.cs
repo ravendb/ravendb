@@ -32,7 +32,7 @@ namespace Raven.Database.Counters.Controllers
 			else
 			{
 				ttl = int.Parse(ttlAsString);
-				from = await ReadJsonArrayAsync();
+				from = await ReadJsonArrayAsync().ConfigureAwait(false);
 			}
 
 			var replicationSchemaDiscoverer = new CountersReplicationTopologyDiscoverer(Counters, from, ttl, Log);

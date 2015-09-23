@@ -37,9 +37,9 @@ namespace Raven.Abstractions.OAuth
 				var requestUri = oauthSource;
 				var response = await httpClient.GetAsync(requestUri)
 											   .ConvertSecurityExceptionToServerNotFound()
-											   .AddUrlIfFaulting(new Uri(requestUri));
+											   .AddUrlIfFaulting(new Uri(requestUri)).ConfigureAwait(false);
 
-				var stream = await response.GetResponseStreamWithHttpDecompression();
+				var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
 				using (var reader = new StreamReader(stream))
 				{
                     var currentOauthToken = reader.ReadToEnd();

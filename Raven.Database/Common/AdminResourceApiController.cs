@@ -52,7 +52,7 @@ namespace Raven.Database.Common
 			var accessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
 			if (accessMode == AnonymousUserAccessMode.Admin || accessMode == AnonymousUserAccessMode.All ||
 			(accessMode == AnonymousUserAccessMode.Get && InnerRequest.Method.Method == "GET"))
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 
 			var user = authorizer.GetUser(this);
 			if (user == null)
@@ -70,7 +70,7 @@ namespace Raven.Database.Common
 				}, HttpStatusCode.Unauthorized);
 			}
 
-			return await base.ExecuteAsync(controllerContext, cancellationToken);
+			return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 		}
 
 		private bool SupportedByAnyAdditionalRoles(IPrincipal user)

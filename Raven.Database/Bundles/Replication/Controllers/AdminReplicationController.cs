@@ -71,7 +71,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/admin/replicationInfo")]
 		public async Task<HttpResponseMessage> ReplicationInfo()
 		{
-			var replicationDocument = await ReadJsonObjectAsync<ReplicationDocument>();
+			var replicationDocument = await ReadJsonObjectAsync<ReplicationDocument>().ConfigureAwait(false);
 
 			if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
 			{

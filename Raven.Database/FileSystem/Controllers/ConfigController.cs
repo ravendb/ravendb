@@ -97,7 +97,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
-			var json = await ReadJsonAsync();
+			var json = await ReadJsonAsync().ConfigureAwait(false);
 
 			Storage.Batch(accessor => accessor.SetConfig(name, json));
 

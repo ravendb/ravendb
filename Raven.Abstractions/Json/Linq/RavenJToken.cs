@@ -272,11 +272,11 @@ namespace Raven.Json.Linq
         public static async Task<RavenJToken> TryLoadAsync(Stream stream)
         {
             var jsonTextReader = new JsonTextReaderAsync(new StreamReader(stream));
-            if (await jsonTextReader.ReadAsync() == false || jsonTextReader.TokenType == JsonToken.None)
+            if (await jsonTextReader.ReadAsync().ConfigureAwait(false) == false || jsonTextReader.TokenType == JsonToken.None)
             {
                 return null;
             }
-            return await ReadFromAsync(jsonTextReader);
+            return await ReadFromAsync(jsonTextReader).ConfigureAwait(false);
         }
 
         /// <summary>

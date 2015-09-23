@@ -164,7 +164,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					multiLoadResult = await cmd.MoreLikeThisAsync(parameters);
+					multiLoadResult = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
 				}
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 

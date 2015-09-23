@@ -148,7 +148,7 @@ namespace Raven.Client.Counters.Operations
 
 			try
 			{
-				var status = await GetOperationStatusAsync(operationId);
+				var status = await GetOperationStatusAsync(operationId).ConfigureAwait(false);
 
 				if (status == null)
 					return true;

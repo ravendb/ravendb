@@ -337,7 +337,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-							exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath});
+							exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath}).ConfigureAwait(false);
 
 							if (fullBackup == false)
 							{

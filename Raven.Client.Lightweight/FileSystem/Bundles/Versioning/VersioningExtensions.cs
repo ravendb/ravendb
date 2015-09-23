@@ -15,7 +15,7 @@ namespace Raven.Client.FileSystem.Bundles.Versioning
 		public static async Task<FileHeader[]> GetRevisionsForAsync(this IAsyncFilesSession session, string name, int start, int pageSize)
 		{
 			var inMemoryFilesSessionOperations = (InMemoryFilesSessionOperations)session;
-			var revisions = await session.Commands.StartsWithAsync(name + "/revisions/", null, start, pageSize);
+			var revisions = await session.Commands.StartsWithAsync(name + "/revisions/", null, start, pageSize).ConfigureAwait(false);
 			return revisions
 				.Select(file =>
 				{
@@ -27,7 +27,7 @@ namespace Raven.Client.FileSystem.Bundles.Versioning
 
 		public static async Task<string[]> GetRevisionNamesForAsync(this IAsyncFilesSession session, string name, int start, int pageSize)
 		{
-			var revisions = await session.Commands.StartsWithAsync(name + "/revisions/", null, start, pageSize);
+			var revisions = await session.Commands.StartsWithAsync(name + "/revisions/", null, start, pageSize).ConfigureAwait(false);
 			return revisions
 				.Select(x => x.FullPath)
 				.ToArray();

@@ -163,7 +163,7 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var parser = WebSocketsRequestParser;
-                await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+                await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]).ConfigureAwait(false);
             }
             catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
             {
@@ -175,14 +175,14 @@ namespace Raven.Database.Server.Connections
             {
                 var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
-                await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled);
+                await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled).ConfigureAwait(false);
             }
 
             try
             {
                 var buffer = new ArraySegment<byte>(new byte[1024]);
                 var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
-                var receiveResult = await receiveAsync(buffer, callCancelled);
+                var receiveResult = await receiveAsync(buffer, callCancelled).ConfigureAwait(false);
 
                 if (receiveResult.Item1 == WebSocketCloseMessageType)
                 {
@@ -191,7 +191,7 @@ namespace Raven.Database.Server.Connections
 
                     if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                     {
-                        await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+                        await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled).ConfigureAwait(false);
                     }
                 }
             }
@@ -297,13 +297,13 @@ namespace Raven.Database.Server.Connections
             Exception captured = null;
             try
             {
-                await RunInternal(websocketContext);
+                await RunInternal(websocketContext).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 captured = e;
             }
-            await CloseConnection(websocketContext);
+            await CloseConnection(websocketContext).ConfigureAwait(false);
             if (captured != null)
                 throw new InvalidOperationException("Failure when running web sockets", captured);
         }
@@ -322,7 +322,7 @@ namespace Raven.Database.Server.Connections
 
                 while (cancellationTokenSource.IsCancellationRequested == false)
                 {
-                    var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
+                    var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token).ConfigureAwait(false);
                     if (cancellationTokenSource.IsCancellationRequested)
                         break;
 
@@ -330,11 +330,11 @@ namespace Raven.Database.Server.Connections
                     {
                         await SendMessage(memoryStream, serializer,
                             new {Type = "Heartbeat", Time = SystemTime.UtcNow},
-                            sendAsync, cancellationTokenSource.Token);
+                            sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
 
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
+                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
                             lastMessageEnqueuedAndNotSent = null;
                             lastMessageSentTick = Environment.TickCount;
                         }
@@ -355,7 +355,7 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token);
+                        await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
                         lastMessageEnqueuedAndNotSent = null;
                         lastMessageSentTick = Environment.TickCount;
                     }
@@ -384,7 +384,7 @@ namespace Raven.Database.Server.Connections
                         disconnectBecauseOfGcToken).Token;
                 try
                 {
-                    await closeAsync((int) status, "Heartbeat bad response", token);
+                    await closeAsync((int) status, "Heartbeat bad response", token).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -409,7 +409,7 @@ namespace Raven.Database.Server.Connections
                         WebSocketReceiveResult receiveResult = null;
                         try
                         {
-                            receiveResult = await receiveAsync(buffer, cancellationTokenSource.Token);
+                            receiveResult = await receiveAsync(buffer, cancellationTokenSource.Token).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
@@ -419,7 +419,7 @@ namespace Raven.Database.Server.Connections
                         {
                             try
                             {
-                                await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None);
+                                await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None).ConfigureAwait(false);
                                 manualResetEvent.Set();
                             }
                             catch (Exception e)
@@ -436,7 +436,7 @@ namespace Raven.Database.Server.Connections
 
                             if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                             {
-                                await closeAsync(clientCloseStatus, clientCloseDescription, cancellationTokenSource.Token);
+                                await closeAsync(clientCloseStatus, clientCloseDescription, cancellationTokenSource.Token).ConfigureAwait(false);
                                 manualResetEvent.Set();
                             }
 
@@ -461,7 +461,7 @@ namespace Raven.Database.Server.Connections
             jsonTextWriter.Flush();
 
             var arraySegment = new ArraySegment<byte>(memoryStream.GetBuffer(), 0, (int)memoryStream.Position);
-            await sendAsync(arraySegment, 1, true, callCancelled);
+            await sendAsync(arraySegment, 1, true, callCancelled).ConfigureAwait(false);
         }
 
         private void OnDisconnection()
@@ -484,7 +484,7 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var parser = WebSocketsRequestParser;
-                var request = await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+                var request = await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]).ConfigureAwait(false);
 
                 Id = request.Id;
                 ActiveTenant = request.ActiveResource;

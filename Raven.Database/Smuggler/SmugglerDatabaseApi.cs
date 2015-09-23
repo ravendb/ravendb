@@ -42,7 +42,7 @@ namespace Raven.Smuggler
 		        var exportStoreFeatures = new Reference<ServerSupportedFeatures>();
 		        var exportOperations = new SmugglerRemoteDatabaseOperations(() => exportStore, () => exportBulkOperation, () => exportStoreFeatures.Value.IsDocsStreamingSupported, () => exportStoreFeatures.Value.IsTransformersSupported, () => exportStoreFeatures.Value.IsIdentitiesSmugglingSupported);
 
-		        exportStoreFeatures.Value = await DetectServerSupportedFeatures(exportOperations, betweenOptions.From);
+		        exportStoreFeatures.Value = await DetectServerSupportedFeatures(exportOperations, betweenOptions.From).ConfigureAwait(false);
 
 		        using (var importStore = CreateStore(betweenOptions.To))
 				using (var importBulkOperation = CreateBulkInsertOperation(importStore))
@@ -50,7 +50,7 @@ namespace Raven.Smuggler
 					var importStoreFeatures = new Reference<ServerSupportedFeatures>();
 					var importOperations = new SmugglerRemoteDatabaseOperations(() => importStore, () => importBulkOperation, () => importStoreFeatures.Value.IsDocsStreamingSupported, () => importStoreFeatures.Value.IsTransformersSupported, () => importStoreFeatures.Value.IsIdentitiesSmugglingSupported);
 
-			        importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To);
+			        importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To).ConfigureAwait(false);
 
 					await new SmugglerDatabaseBetweenOperation
 					{
@@ -61,7 +61,8 @@ namespace Raven.Smuggler
 						From = exportOperations,
 						To = importOperations,
 						IncrementalKey = betweenOptions.IncrementalKey
-					}, Options);
+					}, Options)
+					.ConfigureAwait(false);
 		        }
 	        }
 		}
@@ -89,9 +90,9 @@ namespace Raven.Smuggler
 				try
 				{
 					if (operation != null)
-						await operation.DisposeAsync();
+						await operation.DisposeAsync().ConfigureAwait(false);
 					operation = CreateBulkInsertOperation(store);
-					await base.ImportData(importOptions, stream);
+					await base.ImportData(importOptions, stream).ConfigureAwait(false);
 				}
 				finally
 				{
@@ -101,7 +102,7 @@ namespace Raven.Smuggler
 
 				if (disposeTask != null)
 				{
-					await disposeTask;
+					await disposeTask.ConfigureAwait(false);
 				}
 			}
 		}
@@ -151,12 +152,12 @@ namespace Raven.Smuggler
 			return s;
 		}
 
-        public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
+		public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
-            using (store = CreateStore(exportOptions.From))
+			using (store = CreateStore(exportOptions.From))
 			{
-                return await base.ExportData(exportOptions);
+				return await base.ExportData(exportOptions).ConfigureAwait(false);
 			}
-					}
-			}
-			}
+		}
+	}
+}

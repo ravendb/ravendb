@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Actions
 		{
 			while (true)
 			{
-				var read = await inputStream.ReadAsync(buffer);
+				var read = await inputStream.ReadAsync(buffer).ConfigureAwait(false);
 
 				TotalSizeRead += read;
 

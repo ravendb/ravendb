@@ -69,7 +69,7 @@ namespace Raven.Database.FileSystem.Controllers
 					smugglerOptions.BatchSize = batchSize;
 					smugglerOptions.CancelToken = cts;
 
-					await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath });
+					await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{

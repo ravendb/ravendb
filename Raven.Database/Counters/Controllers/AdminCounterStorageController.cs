@@ -36,9 +36,9 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
 			if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
-				return await GetNamesAndGroups(CounterName);
+				return await GetNamesAndGroups(CounterName).ConfigureAwait(false);
 			if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
-				return await GetSummary(CounterName);
+				return await GetSummary(CounterName).ConfigureAwait(false);
 
 			return GetMessageWithString("'op' query parameter is invalid - must be either group-names or summary", HttpStatusCode.BadRequest);
 		}
@@ -157,7 +157,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
 			}
 
-			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
+			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>().ConfigureAwait(false);
 			CountersLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
@@ -288,7 +288,7 @@ namespace Raven.Database.Counters.Controllers
 		[RavenRoute("cs/{counterStorageName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
-			var backupRequest = await ReadJsonObjectAsync<CounterStorageBackupRequest>();
+			var backupRequest = await ReadJsonObjectAsync<CounterStorageBackupRequest>().ConfigureAwait(false);
 			var incrementalBackup = ParseBoolQueryString("incremental");
 
 			if (backupRequest.CounterStorageDocument == null && Counters.Name != null)

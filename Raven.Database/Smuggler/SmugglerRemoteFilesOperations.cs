@@ -52,12 +52,12 @@ namespace Raven.Smuggler
 
         public virtual async Task<FileSystemStats[]> GetStats()
         {
-            return await PrimaryStore.AsyncFilesCommands.Admin.GetStatisticsAsync();
+            return await PrimaryStore.AsyncFilesCommands.Admin.GetStatisticsAsync().ConfigureAwait(false);
         }
 
         public virtual async Task<string> GetVersion(FilesConnectionStringOptions server)
         {
-            var buildNumber = await DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+            var buildNumber = await DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
             return buildNumber.ProductVersion;
         }
 
@@ -73,7 +73,7 @@ namespace Raven.Smuggler
         public virtual async Task<IAsyncEnumerator<FileHeader>> GetFiles(Etag lastEtag, int take)
         {
             ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-            return await PrimaryStore.AsyncFilesCommands.StreamFileHeadersAsync(lastEtag, pageSize: take);
+            return await PrimaryStore.AsyncFilesCommands.StreamFileHeadersAsync(lastEtag, pageSize: take).ConfigureAwait(false);
         }
 
         public virtual Task<Stream> DownloadFile(FileHeader file)
@@ -88,13 +88,13 @@ namespace Raven.Smuggler
 
 	    public virtual async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
 	    {
-		    var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take);
+		    var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take).ConfigureAwait(false);
 
 			var results = new List<KeyValuePair<string, RavenJObject>>(names.Length);
 
 		    foreach (var name in names)
 		    {
-			    results.Add(new KeyValuePair<string, RavenJObject>(name, await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>(name)));
+			    results.Add(new KeyValuePair<string, RavenJObject>(name, await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>(name).ConfigureAwait(false)));
 		    }
 
 		    return results;

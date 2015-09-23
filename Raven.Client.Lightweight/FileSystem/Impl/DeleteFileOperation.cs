@@ -31,7 +31,7 @@ namespace Raven.Client.FileSystem.Impl
             
             FileHeader fileHeader = null;
             if (!sessionOperations.TryGetFromCache(FileName, out fileHeader))
-                fileHeader = await session.LoadFileAsync(FileName);
+                fileHeader = await session.LoadFileAsync(FileName).ConfigureAwait(false);
 
             foreach (var deleteListener in sessionOperations.Listeners.DeleteListeners)
             {

@@ -94,7 +94,7 @@ namespace Owin
 			if (accept == null)
 			{
 				// Not a websocket request
-				await next();
+				await next().ConfigureAwait(false);
 				return;
 			}
 
@@ -102,7 +102,7 @@ namespace Owin
 
 			if (webSocketsTrasport != null)
 			{
-				if (await webSocketsTrasport.TrySetupRequest())
+				if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
 				{
 					accept(new Dictionary<string, object>()
 					{
@@ -295,7 +295,7 @@ namespace Owin
 				// Pre request stuff
                 try
                 {
-                    await Next.Invoke(context);
+                    await Next.Invoke(context).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -317,7 +317,7 @@ namespace Owin
             {
                 try
                 {
-                    await Next.Invoke(context);
+                    await Next.Invoke(context).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

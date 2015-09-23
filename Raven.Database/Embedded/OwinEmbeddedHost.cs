@@ -78,7 +78,7 @@ namespace Raven.Database.Embedded
             owinContext.Response.Headers.Append("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
             owinContext.Response.Headers.Append("Cache-Control", "post-check=0, pre-check=0");
             owinContext.Response.Headers.Set("Pragma", "no-cache");
-            await _next.Invoke(environment);
+            await _next.Invoke(environment).ConfigureAwait(false);
         }
 
         private class OwinEmbeddedServerFactory

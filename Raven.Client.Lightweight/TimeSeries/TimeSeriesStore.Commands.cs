@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.TimeSeries;
 using Raven.Abstractions.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.TimeSeries
 {
@@ -21,17 +22,17 @@ namespace Raven.Client.TimeSeries
 			if (fields.Length < 1)
 				throw new InvalidOperationException("Number of fields should be at least 1");
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Put, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types/{2}",
 					url, timeSeriesName, type);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 				{
-					await request.WriteWithObjectAsync(new TimeSeriesType {Type = type, Fields = fields});
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					await request.WriteWithObjectAsync(new TimeSeriesType {Type = type, Fields = fields}).ConfigureAwait(false);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
 
 		public async Task DeleteTypeAsync(string type, CancellationToken token = default(CancellationToken))
@@ -41,7 +42,7 @@ namespace Raven.Client.TimeSeries
 			if (string.IsNullOrEmpty(type))
 				throw new InvalidOperationException("Prefix cannot be empty");
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types/{2}",
@@ -50,7 +51,7 @@ namespace Raven.Client.TimeSeries
 				{
 					return request.ReadResponseJsonAsync().WithCancellation(token);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
 
 		public Task AppendAsync(string type, string key, DateTimeOffset at, double value, CancellationToken token = new CancellationToken())
@@ -77,7 +78,7 @@ namespace Raven.Client.TimeSeries
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key) || at < DateTimeOffset.MinValue || values == null || values.Length == 0)
 				throw new InvalidOperationException("Append data is invalid");
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Put, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/append/{2}?key={3}",
@@ -90,10 +91,10 @@ namespace Raven.Client.TimeSeries
 						Key = key,
 						At = at,
 						Values = values
-					});
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					}).ConfigureAwait(false);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
 
 		[Obsolete("You must use DateTimeOffset", true)]
@@ -114,7 +115,7 @@ namespace Raven.Client.TimeSeries
 			if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(key))
 				throw new InvalidOperationException("Data is invalid");
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}",
@@ -123,7 +124,7 @@ namespace Raven.Client.TimeSeries
 				{
 					return request.ReadResponseJsonAsync().WithCancellation(token);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
 
 		public Task DeletePointAsync(string type, string key, DateTimeOffset at, CancellationToken token = new CancellationToken())
@@ -136,17 +137,17 @@ namespace Raven.Client.TimeSeries
 		{
 			AssertInitialized();
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-points",
 					url, timeSeriesName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
-					await request.WriteWithObjectAsync(points);
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					await request.WriteWithObjectAsync(points).ConfigureAwait(false);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
 
 		public async Task DeleteRangeAsync(string type, string key, DateTimeOffset start, DateTimeOffset end, CancellationToken token = new CancellationToken())
@@ -159,7 +160,7 @@ namespace Raven.Client.TimeSeries
 			if (start > end)
 				throw new InvalidOperationException("start cannot be greater than end");
 
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-range/{2}?key={3}",
@@ -169,10 +170,10 @@ namespace Raven.Client.TimeSeries
 					await request.WriteWithObjectAsync(new TimeSeriesDeleteRange
 					{
 						Type = type, Key = key, Start = start, End = end
-					});
-					return await request.ReadResponseJsonAsync().WithCancellation(token);
+					}).ConfigureAwait(false);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
-			}, token);
+			}, token).ConfigureAwait(false);
 		}
     }
 }
