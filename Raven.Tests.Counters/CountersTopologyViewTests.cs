@@ -36,8 +36,7 @@ namespace Raven.Tests.Counters
 					await SetupReplicationAsync(storeE, storeA);
 
 					await storeA.ChangeAsync("group", "counter", 2);
-
-					//TODO: wait for replicaiton to last store
+					await WaitForReplicationBetween(storeA, storeE, "group", "counter");
 
 					var url = storeA.Url.ForCounter(DefaultCounterStorageName + "A1") + "/admin/replication/topology/view";
 
