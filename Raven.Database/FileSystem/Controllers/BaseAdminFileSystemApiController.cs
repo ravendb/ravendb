@@ -3,66 +3,29 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Web.Http.Controllers;
-
 using Raven.Database.Common;
-using Raven.Database.Config;
-using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class BaseAdminFileSystemApiController : BaseAdminDatabaseApiController
+	public class BaseAdminFileSystemApiController : AdminResourceApiController<RavenFileSystem, FileSystemsLandlord>
 	{
-		public override InMemoryRavenConfiguration ResourceConfiguration
+		public string FileSystemName
 		{
-			get
-			{
-				throw new NotSupportedException("Use FileSystem.Configuration instead.");
-			}
+			get { return ResourceName; }
 		}
 
-		public override DocumentDatabase Database
-		{
-			get
-			{
-				throw new NotSupportedException("Use SystemDatabase instead.");
-			}
-		}
-
-		public override string DatabaseName
-		{
-			get
-			{
-				throw new NotSupportedException();
-			}
-		}
-
-		public string FileSystemName { get; private set; }
-
-		private RavenFileSystem _fileSystem;
 		public RavenFileSystem FileSystem
 		{
-			get
-			{
-				if (_fileSystem != null)
-					return _fileSystem;
-
-				var resource = FileSystemsLandlord.GetResourceInternal(FileSystemName);
-				if (resource == null)
-				{
-					throw new InvalidOperationException("Could not find a file system named: " + FileSystemName);
-				}
-
-				return _fileSystem = resource.Result;
-			}
+			get { return Resource; }
 		}
 
-		protected override void InnerInitialization(HttpControllerContext controllerContext)
+		public override ResourceType ResourceType
 		{
-			base.InnerInitialization(controllerContext);
-
-			FileSystemName = GetResourceName(controllerContext, ResourceType.FileSystem);
+			get
+			{
+				return ResourceType.FileSystem;
+			}
 		}
 
 		public override void MarkRequestDuration(long duration)

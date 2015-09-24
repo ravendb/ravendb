@@ -48,7 +48,7 @@ namespace Raven.Database.Counters.Replication
 			using (var reader = counterStorage.CreateReader())
 			{
 				replicationData = reader.GetReplicationData();
-				serverSources = reader.GetServerSources();
+				serverSources = reader.GetServerSources().ToList();
 			}
 
             if (@from.Contains(counterStorage.CounterStorageUrl) == false)

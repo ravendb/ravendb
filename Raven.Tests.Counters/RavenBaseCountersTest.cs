@@ -34,7 +34,7 @@ namespace Raven.Tests.Counters
 			ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
 			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
-		}
+		}			
 
 		protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
 		{
@@ -86,6 +86,9 @@ namespace Raven.Tests.Counters
 
 			try
 			{
+				foreach(var server in servers)
+					IOExtensions.DeleteDirectory(server.Configuration.DataDirectory); //for failover tests that have runInMemory = false
+				IOExtensions.DeleteDirectory("Counters");
 				base.Dispose();
 			}
 			catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed
@@ -93,7 +96,7 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)
+		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 3)
 		{
 			var waitStartingTime = DateTime.Now;
 			var hasReplicated = false;
@@ -105,15 +108,22 @@ namespace Raven.Tests.Counters
 			{
 				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
 					break;
-
-				var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
-				var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
-				if (sourceValue == targetValue)
+				try
 				{
-					hasReplicated = true;
-					break;
+					var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
+					var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
+					if (sourceValue == targetValue)
+					{
+						hasReplicated = true;
+						break;
+					}
 				}
-
+				catch (InvalidOperationException e)
+				{
+					var exception = e.InnerException as ErrorResponseException;
+					if (exception != null && exception.StatusCode != HttpStatusCode.NotFound)
+						throw;
+				}
 				Thread.Sleep(50);
 			}
 

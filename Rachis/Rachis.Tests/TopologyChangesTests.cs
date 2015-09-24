@@ -303,28 +303,34 @@ namespace Rachis.Tests
 		[InlineData(4)]
 		public void Leader_removed_from_cluster_modifies_member_lists_on_remaining_nodes(int nodeCount)
 		{
+			try
+			{
+				var leader = CreateNetworkAndGetLeader(nodeCount);
+				var raftNodes = Nodes.ToList();
+				var nonLeaderNode = raftNodes.FirstOrDefault(n => n.State != RaftEngineState.Leader);
+				Assert.NotNull(leader);
+				Assert.NotNull(nonLeaderNode);
 
-			var leader = CreateNetworkAndGetLeader(nodeCount);
-			var raftNodes = Nodes.ToList();
-			var nonLeaderNode = raftNodes.FirstOrDefault(n => n.State != RaftEngineState.Leader);
-			Assert.NotNull(leader);
-			Assert.NotNull(nonLeaderNode);
+				raftNodes.Remove(leader);
+				var waitForNewLeaderAsync = WaitForNewLeaderAsync();
 
-			raftNodes.Remove(leader);
-			var waitForNewLeaderAsync = WaitForNewLeaderAsync();
+				leader.StepDownAsync().Wait();
 
-			leader.StepDownAsync().Wait();
+				var waitForToplogyChangeOnCluster = WaitForToplogyChangeOnCluster(raftNodes);
 
-			var waitForToplogyChangeOnCluster = WaitForToplogyChangeOnCluster(raftNodes);
+				waitForNewLeaderAsync.Result.RemoveFromClusterAsync(new NodeConnectionInfo {Name = leader.Name}).Wait();
 
-			waitForNewLeaderAsync.Result.RemoveFromClusterAsync(new NodeConnectionInfo { Name = leader.Name }).Wait();
+				Assert.True(waitForToplogyChangeOnCluster.Wait(300));
 
-			Assert.True(waitForToplogyChangeOnCluster.Wait(300));
+				var expectedNodeNameList = raftNodes.Select(x => x.Name).ToList();
 
-			var expectedNodeNameList = raftNodes.Select(x => x.Name).ToList();
-
-			raftNodes.ForEach(node => node.CurrentTopology.AllNodeNames.Should()
-				.BeEquivalentTo(expectedNodeNameList, "node " + node.Name + " should have expected AllVotingNodes list"));
+				raftNodes.ForEach(node => node.CurrentTopology.AllNodeNames.Should()
+					.BeEquivalentTo(expectedNodeNameList, "node " + node.Name + " should have expected AllVotingNodes list"));
+			}
+			finally
+			{
+				ReleaseAllNodes();
+			}
 		}
 
 		[Fact]
