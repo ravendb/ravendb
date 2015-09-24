@@ -835,7 +835,7 @@ namespace Raven.Database.Counters
 
 			public Writer(CounterStorage parent, Transaction tx)
 			{
-				if (transaction.Flags != TransactionFlags.ReadWrite) //precaution
+				if (tx.Flags != TransactionFlags.ReadWrite) //precaution
 					throw new InvalidOperationException(string.Format("Counters writer cannot be created with read-only transaction. (tx id = {0})", transaction.Id));
 
 				this.parent = parent;
