@@ -292,8 +292,11 @@ namespace Raven.Database.Server.Tenancy
 				{
 					var id = GetCounterIdFromDocumentKey(doc);
 					Debug.Assert(String.IsNullOrWhiteSpace(id) == false,"key of counter should not be empty");
+					Task<CounterStorage> counterFetchTask;
+					if (!TryGetOrCreateResourceStore(id, out counterFetchTask))
+						throw new InvalidOperationException(string.Format("Could not get counter specified by counter storage document. The id that wasn't found is {0}", id));
 
-					var counter = AsyncHelpers.RunSync(() => GetCounterInternal(id));
+					var counter = AsyncHelpers.RunSync(() => counterFetchTask);
 					action(counter);
 				}
 			}
