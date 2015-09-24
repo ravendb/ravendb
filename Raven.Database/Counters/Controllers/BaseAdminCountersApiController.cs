@@ -3,28 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using Raven.Database.Common;
-using Raven.Database.Config;
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Counters.Controllers
 {
 	public abstract class BaseAdminCountersApiController : AdminResourceApiController<CounterStorage, CountersLandlord>
 	{
-		public override InMemoryRavenConfiguration ResourceConfiguration
+		public override ResourceType ResourceType
 		{
 			get
 			{
-				throw new NotSupportedException("Use Counters.Configuration instead.");
+				return ResourceType.Counter;
 			}
 		}
 
-		public string CounterName => ResourceName;
+		public string CounterName
+		{
+			get { return ResourceName; }
+		}
 
-		public CounterStorage Counters => Resource;
-
-		public override ResourceType ResourceType => ResourceType.Counter;
+		public CounterStorage Counters
+		{
+			get { return Resource; }
+		}
 
 		public override void MarkRequestDuration(long duration)
 		{

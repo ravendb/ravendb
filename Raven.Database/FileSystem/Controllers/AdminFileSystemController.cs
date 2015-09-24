@@ -388,9 +388,6 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/admin/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
-            if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Restore is only possible from the system database", HttpStatusCode.BadRequest);
-
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
@@ -415,7 +412,7 @@ namespace Raven.Database.FileSystem.Controllers
                                 : "A filesystem name must be supplied if the restore location does not contain a valid " + Constants.FilesystemDocumentFilename + " file";
 
                 restoreStatus.Messages.Add(errorMessage);
-                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+                SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
                 return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
             }

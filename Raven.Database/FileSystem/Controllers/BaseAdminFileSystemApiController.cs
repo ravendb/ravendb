@@ -3,28 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using Raven.Database.Common;
-using Raven.Database.Config;
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.FileSystem.Controllers
 {
 	public class BaseAdminFileSystemApiController : AdminResourceApiController<RavenFileSystem, FileSystemsLandlord>
 	{
-		public override InMemoryRavenConfiguration ResourceConfiguration
+		public string FileSystemName
+		{
+			get { return ResourceName; }
+		}
+
+		public RavenFileSystem FileSystem
+		{
+			get { return Resource; }
+		}
+
+		public override ResourceType ResourceType
 		{
 			get
 			{
-				throw new NotSupportedException("Use FileSystem.Configuration instead.");
+				return ResourceType.FileSystem;
 			}
 		}
-
-		public string FileSystemName => ResourceName;
-
-		public RavenFileSystem FileSystem => Resource;
-
-		public override ResourceType ResourceType => ResourceType.FileSystem;
 
 		public override void MarkRequestDuration(long duration)
 		{

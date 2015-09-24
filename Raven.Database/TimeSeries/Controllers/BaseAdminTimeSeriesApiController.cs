@@ -3,28 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using Raven.Database.Common;
-using Raven.Database.Config;
 using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.TimeSeries.Controllers
 {
 	public class BaseAdminTimeSeriesApiController : AdminResourceApiController<TimeSeriesStorage, TimeSeriesLandlord>
 	{
-		public override InMemoryRavenConfiguration ResourceConfiguration
+		public string TimeSeriesName
+		{
+			get { return ResourceName; }
+		}
+
+		public TimeSeriesStorage TimeSeries
+		{
+			get { return Resource; }
+		}
+
+		public override ResourceType ResourceType
 		{
 			get
 			{
-				throw new NotSupportedException("Use TimeSeries.Configuration instead.");
+				return ResourceType.TimeSeries;
 			}
 		}
-
-		public string TimeSeriesName => ResourceName;
-
-		public TimeSeriesStorage TimeSeries => Resource;
-
-		public override ResourceType ResourceType => ResourceType.TimeSeries;
 
 		public override void MarkRequestDuration(long duration)
 		{
