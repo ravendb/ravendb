@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Counters;
+using Raven.Database.Counters;
 using Raven.Database.Extensions;
-using Raven.Database.Smuggler;
 using Xunit;
 using Xunit.Extensions;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {
@@ -47,12 +43,15 @@ namespace Raven.Tests.Counters
 
 				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
 
-				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-2);
-				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(2);
+				var deltaForGandC = deltas.First(x => x.CounterName == "c" && x.GroupName == "g");
+				Assert.True(deltaForGandC.Value == 2 && deltaForGandC.Sign == ValueSign.Negative);
+				var deltaForG1andC2 = deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1");
+				Assert.True(deltaForG1andC2.Value == 2 && deltaForG1andC2.Sign == ValueSign.Positive);
 
 				await counterStore.ChangeAsync("g", "c", -3);
 				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
-				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-3);
+				deltaForGandC = deltas.First(x => x.CounterName == "c" && x.GroupName == "g");
+				Assert.True(deltaForGandC.Value == 5 && deltaForGandC.Sign == ValueSign.Negative);
 			}
 		}
 

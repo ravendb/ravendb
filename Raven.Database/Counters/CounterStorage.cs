@@ -804,6 +804,11 @@ namespace Raven.Database.Counters
 				public byte[] CounterNameWithId = new byte[0];
 			}
 
+			public string Name
+			{
+				get { return parent.Name; }
+			}
+
 			public Writer(CounterStorage parent, Transaction tx)
 			{
 				if (tx.Flags != TransactionFlags.ReadWrite) //precaution

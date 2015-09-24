@@ -34,7 +34,7 @@ namespace Raven.Tests.Counters
 			ravenStore = NewRemoteDocumentStore(fiddler:true);
 			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
-		}
+		}			
 
 		protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
 		{
@@ -96,7 +96,7 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 30)
+		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 3)
 		{
 			var waitStartingTime = DateTime.Now;
 			var hasReplicated = false;
