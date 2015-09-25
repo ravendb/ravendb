@@ -294,7 +294,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				synchronizingFile.Dispose();
 				metadata["Content-MD5"] = synchronizingFile.FileHash;
 
-				MetadataUpdateResult updateResult = null;
+				FileUpdateResult updateResult = null;
 				fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, metadata, null));
 
 				fs.Storage.Batch(accessor =>
