@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow.Binary;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -78,10 +79,10 @@ namespace Sparrow
                                 state.V4 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
                                 buffer += sizeof(uint);
 
-                                state.V1 = XXHashHelpers.RotateLeft32(state.V1, 13);
-                                state.V2 = XXHashHelpers.RotateLeft32(state.V2, 13);
-                                state.V3 = XXHashHelpers.RotateLeft32(state.V3, 13);
-                                state.V4 = XXHashHelpers.RotateLeft32(state.V4, 13);
+                                state.V1 = Bits.RotateLeft32(state.V1, 13);
+                                state.V2 = Bits.RotateLeft32(state.V2, 13);
+                                state.V3 = Bits.RotateLeft32(state.V3, 13);
+                                state.V4 = Bits.RotateLeft32(state.V4, 13);
 
                                 state.V1 *= XXHash32Constants.PRIME32_1;
                                 state.V2 *= XXHash32Constants.PRIME32_1;
@@ -89,7 +90,7 @@ namespace Sparrow
                                 state.V4 *= XXHash32Constants.PRIME32_1;
                             }
 
-                            h32 = XXHashHelpers.RotateLeft32(state.V1, 1) + XXHashHelpers.RotateLeft32(state.V2, 7) + XXHashHelpers.RotateLeft32(state.V3, 12) + XXHashHelpers.RotateLeft32(state.V4, 18);
+                            h32 = Bits.RotateLeft32(state.V1, 1) + Bits.RotateLeft32(state.V2, 7) + Bits.RotateLeft32(state.V3, 12) + Bits.RotateLeft32(state.V4, 18);
                         }
                         else
                         {
@@ -101,14 +102,14 @@ namespace Sparrow
                         while (buffer + 4 <= bEnd)
                         {
                             h32 += *((uint*)buffer) * XXHash32Constants.PRIME32_3;
-                            h32 = XXHashHelpers.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
+                            h32 = Bits.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
                             buffer += 4;
                         }
 
                         while (buffer < bEnd)
                         {
                             h32 += (uint)(*buffer) * XXHash32Constants.PRIME32_5;
-                            h32 = XXHashHelpers.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
+                            h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
                             buffer++;
                         }
 
@@ -156,10 +157,10 @@ namespace Sparrow
                             v4 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
                             buffer += sizeof(uint);
 
-                            v1 = XXHashHelpers.RotateLeft32(v1, 13);
-                            v2 = XXHashHelpers.RotateLeft32(v2, 13);
-                            v3 = XXHashHelpers.RotateLeft32(v3, 13);
-                            v4 = XXHashHelpers.RotateLeft32(v4, 13);
+                            v1 = Bits.RotateLeft32(v1, 13);
+                            v2 = Bits.RotateLeft32(v2, 13);
+                            v3 = Bits.RotateLeft32(v3, 13);
+                            v4 = Bits.RotateLeft32(v4, 13);
 
                             v1 *= XXHash32Constants.PRIME32_1;
                             v2 *= XXHash32Constants.PRIME32_1;

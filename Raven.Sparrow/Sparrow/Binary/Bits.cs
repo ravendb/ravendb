@@ -212,5 +212,29 @@ namespace Sparrow.Binary
 
             return v;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint RotateLeft32(uint value, int count)
+        {
+            return (value << count) | (value >> (32 - count));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint RotateRight32(uint value, int count)
+        {
+            return (value >> count) | (value << (32 - count));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong RotateLeft64(ulong value, int count)
+        {
+            return (value << count) | (value >> (64 - count));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong RotateRight64(ulong value, int count)
+        {
+            return (value >> count) | (value << (64 - count));
+        }
     }
 }

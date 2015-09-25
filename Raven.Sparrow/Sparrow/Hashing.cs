@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow.Binary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,20 +10,14 @@ namespace Sparrow
 {
     public unsafe static partial class Hashing
     {
+        #region XXHash32 & XXHash64
+
         public struct XXHash32Values
         {
             public uint V1;
             public uint V2;
             public uint V3;
             public uint V4;
-        }
-
-        public struct XXHash64Values
-        {
-            public ulong V1;
-            public ulong V2;
-            public ulong V3;
-            public ulong V4;
         }
 
         internal static class XXHash32Constants
@@ -32,30 +27,6 @@ namespace Sparrow
             internal static uint PRIME32_3 = 3266489917U;
             internal static uint PRIME32_4 = 668265263U;
             internal static uint PRIME32_5 = 374761393U;
-        }
-
-        internal static class XXHash64Constants
-        {
-            internal static ulong PRIME64_1 = 11400714785074694791UL;
-            internal static ulong PRIME64_2 = 14029467366897019727UL;
-            internal static ulong PRIME64_3 = 1609587929392839161UL;
-            internal static ulong PRIME64_4 = 9650029242287828579UL;
-            internal static ulong PRIME64_5 = 2870177450012600261UL;
-        }
-
-        internal static class XXHashHelpers
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static uint RotateLeft32(uint value, int count)
-            {
-                return (value << count) | (value >> (32 - count));
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static ulong RotateLeft64(ulong value, int count)
-            {
-                return (value << count) | (value >> (64 - count));
-            }
         }
 
         /// <summary>
@@ -93,10 +64,10 @@ namespace Sparrow
                             v4 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
                             buffer += sizeof(uint);
 
-                            v1 = XXHashHelpers.RotateLeft32(v1, 13);
-                            v2 = XXHashHelpers.RotateLeft32(v2, 13);
-                            v3 = XXHashHelpers.RotateLeft32(v3, 13);
-                            v4 = XXHashHelpers.RotateLeft32(v4, 13);
+                            v1 = Bits.RotateLeft32(v1, 13);
+                            v2 = Bits.RotateLeft32(v2, 13);
+                            v3 = Bits.RotateLeft32(v3, 13);
+                            v4 = Bits.RotateLeft32(v4, 13);
 
                             v1 *= XXHash32Constants.PRIME32_1;
                             v2 *= XXHash32Constants.PRIME32_1;
@@ -105,7 +76,7 @@ namespace Sparrow
                         }
                         while (buffer <= limit);
 
-                        h32 = XXHashHelpers.RotateLeft32(v1, 1) + XXHashHelpers.RotateLeft32(v2, 7) + XXHashHelpers.RotateLeft32(v3, 12) + XXHashHelpers.RotateLeft32(v4, 18);
+                        h32 = Bits.RotateLeft32(v1, 1) + Bits.RotateLeft32(v2, 7) + Bits.RotateLeft32(v3, 12) + Bits.RotateLeft32(v4, 18);
                     }
                     else
                     {
@@ -118,14 +89,14 @@ namespace Sparrow
                     while (buffer + 4 <= bEnd)
                     {
                         h32 += *((uint*)buffer) * XXHash32Constants.PRIME32_3;
-                        h32 = XXHashHelpers.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
+                        h32 = Bits.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
                         buffer += 4;
                     }
 
                     while (buffer < bEnd)
                     {
                         h32 += (uint)(*buffer) * XXHash32Constants.PRIME32_5;
-                        h32 = XXHashHelpers.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
+                        h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
                         buffer++;
                     }
 
@@ -184,6 +155,24 @@ namespace Sparrow
             }
         }
 
+        public struct XXHash64Values
+        {
+            public ulong V1;
+            public ulong V2;
+            public ulong V3;
+            public ulong V4;
+        }
+
+        internal static class XXHash64Constants
+        {
+            internal static ulong PRIME64_1 = 11400714785074694791UL;
+            internal static ulong PRIME64_2 = 14029467366897019727UL;
+            internal static ulong PRIME64_3 = 1609587929392839161UL;
+            internal static ulong PRIME64_4 = 9650029242287828579UL;
+            internal static ulong PRIME64_5 = 2870177450012600261UL;
+        }
+
+
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 64bits 
         /// </summary>
@@ -217,10 +206,10 @@ namespace Sparrow
                         v4 += *((ulong*)buffer) * XXHash64Constants.PRIME64_2;
                         buffer += sizeof(ulong);
 
-                        v1 = XXHashHelpers.RotateLeft64(v1, 31);
-                        v2 = XXHashHelpers.RotateLeft64(v2, 31);
-                        v3 = XXHashHelpers.RotateLeft64(v3, 31);
-                        v4 = XXHashHelpers.RotateLeft64(v4, 31);
+                        v1 = Bits.RotateLeft64(v1, 31);
+                        v2 = Bits.RotateLeft64(v2, 31);
+                        v3 = Bits.RotateLeft64(v3, 31);
+                        v4 = Bits.RotateLeft64(v4, 31);
 
                         v1 *= XXHash64Constants.PRIME64_1;
                         v2 *= XXHash64Constants.PRIME64_1;
@@ -229,28 +218,28 @@ namespace Sparrow
                     }
                     while (buffer <= limit);
 
-                    h64 = XXHashHelpers.RotateLeft64(v1, 1) + XXHashHelpers.RotateLeft64(v2, 7) + XXHashHelpers.RotateLeft64(v3, 12) + XXHashHelpers.RotateLeft64(v4, 18);
+                    h64 = Bits.RotateLeft64(v1, 1) + Bits.RotateLeft64(v2, 7) + Bits.RotateLeft64(v3, 12) + Bits.RotateLeft64(v4, 18);
 
                     v1 *= XXHash64Constants.PRIME64_2;
-                    v1 = XXHashHelpers.RotateLeft64(v1, 31);
+                    v1 = Bits.RotateLeft64(v1, 31);
                     v1 *= XXHash64Constants.PRIME64_1;
                     h64 ^= v1;
                     h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
                     v2 *= XXHash64Constants.PRIME64_2;
-                    v2 = XXHashHelpers.RotateLeft64(v2, 31);
+                    v2 = Bits.RotateLeft64(v2, 31);
                     v2 *= XXHash64Constants.PRIME64_1;
                     h64 ^= v2;
                     h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
                     v3 *= XXHash64Constants.PRIME64_2;
-                    v3 = XXHashHelpers.RotateLeft64(v3, 31);
+                    v3 = Bits.RotateLeft64(v3, 31);
                     v3 *= XXHash64Constants.PRIME64_1;
                     h64 ^= v3;
                     h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
                     v4 *= XXHash64Constants.PRIME64_2;
-                    v4 = XXHashHelpers.RotateLeft64(v4, 31);
+                    v4 = Bits.RotateLeft64(v4, 31);
                     v4 *= XXHash64Constants.PRIME64_1;
                     h64 ^= v4;
                     h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
@@ -267,24 +256,24 @@ namespace Sparrow
                 {
                     ulong k1 = *((ulong*)buffer);
                     k1 *= XXHash64Constants.PRIME64_2;
-                    k1 = XXHashHelpers.RotateLeft64(k1, 31);
+                    k1 = Bits.RotateLeft64(k1, 31);
                     k1 *= XXHash64Constants.PRIME64_1;
                     h64 ^= k1;
-                    h64 = XXHashHelpers.RotateLeft64(h64, 27) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
+                    h64 = Bits.RotateLeft64(h64, 27) * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
                     buffer += 8;
                 }
 
                 if (buffer + 4 <= bEnd)
                 {
                     h64 ^= *(uint*)buffer * XXHash64Constants.PRIME64_1;
-                    h64 = XXHashHelpers.RotateLeft64(h64, 23) * XXHash64Constants.PRIME64_2 + XXHash64Constants.PRIME64_3;
+                    h64 = Bits.RotateLeft64(h64, 23) * XXHash64Constants.PRIME64_2 + XXHash64Constants.PRIME64_3;
                     buffer += 4;
                 }
 
                 while (buffer < bEnd)
                 {
                     h64 ^= ((ulong)*buffer) * XXHash64Constants.PRIME64_5;
-                    h64 = XXHashHelpers.RotateLeft64(h64, 11) * XXHash64Constants.PRIME64_1;
+                    h64 = Bits.RotateLeft64(h64, 11) * XXHash64Constants.PRIME64_1;
                     buffer++;
                 }
 
@@ -340,9 +329,11 @@ namespace Sparrow
                     return CalculateInline((byte*)buffer, len * sizeof(int), seed);
                 }
             }
-
-
         }
+
+        #endregion
+
+        #region Downsampling Hashing
 
         public static int Combine(int x, int y)
         {
@@ -429,5 +420,161 @@ namespace Sparrow
             return (uint)key;
         }
 
+        #endregion
+
+
+        #region Metro128
+
+        public struct Metro128Values
+        {
+            public uint V1;
+            public uint V2;
+            public uint V3;
+            public uint V4;
+        }
+
+        public struct Metro128Hash
+        {
+            public ulong H1;
+            public ulong H2;
+        }
+
+        internal static class Metro128Constants
+        {                       
+            public const ulong K0 = 0xC83A91E1;
+            public const ulong K1 = 0x8648DBDB;
+            public const ulong K2 = 0x7BDEC03B;
+            public const ulong K3 = 0x2F5870A5;
+        }
+
+        public static class Metro128
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static unsafe Metro128Hash CalculateInline(void* buffer, int length, ulong seed = 0)
+            {
+                byte* ptr = (byte*)buffer;
+                byte* end = ptr + length;
+
+                ulong v0 = (seed - Metro128Constants.K0) * Metro128Constants.K3;
+                ulong v1 = (seed + Metro128Constants.K1) * Metro128Constants.K2;
+
+                if (length >= 32)
+                {
+                    ulong v2 = (seed + Metro128Constants.K0) * Metro128Constants.K2;
+                    ulong v3 = (seed - Metro128Constants.K1) * Metro128Constants.K3;
+
+                    do
+                    {
+                        v0 += *((ulong*)ptr) * Metro128Constants.K0;
+                        ptr += sizeof(ulong); 
+                        v0 = Bits.RotateRight64(v0, 29) + v2;
+
+                        v1 += *((ulong*)ptr) * Metro128Constants.K1;
+                        ptr += sizeof(ulong);
+                        v1 = Bits.RotateRight64(v1, 29) + v3;
+
+                        v2 += *((ulong*)ptr) * Metro128Constants.K2; 
+                        ptr += sizeof(ulong); 
+                        v2 = Bits.RotateRight64(v2, 29) + v0;
+
+                        v3 += *((ulong*)ptr) * Metro128Constants.K3;
+                        ptr += 8;
+                        v3 = Bits.RotateRight64(v3, 29) + v1;
+                    }
+                    while (ptr <= (end - 32));
+
+                    v2 ^= Bits.RotateRight64(((v0 + v3) * Metro128Constants.K0) + v1, 21) * Metro128Constants.K1;
+                    v3 ^= Bits.RotateRight64(((v1 + v2) * Metro128Constants.K1) + v0, 21) * Metro128Constants.K0;
+                    v0 ^= Bits.RotateRight64(((v0 + v2) * Metro128Constants.K0) + v3, 21) * Metro128Constants.K1;
+                    v1 ^= Bits.RotateRight64(((v1 + v3) * Metro128Constants.K1) + v2, 21) * Metro128Constants.K0;
+                }
+
+                if ((end - ptr) >= 16)
+                {
+                    v0 += *((ulong*)ptr) * Metro128Constants.K2; ptr += sizeof(ulong); v0 = Bits.RotateRight64(v0, 33) * Metro128Constants.K3;
+                    v1 += *((ulong*)ptr) * Metro128Constants.K2; ptr += sizeof(ulong); v1 = Bits.RotateRight64(v1, 33) * Metro128Constants.K3;
+                    v0 ^= Bits.RotateRight64((v0 * Metro128Constants.K2) + v1, 45) * Metro128Constants.K1;
+                    v1 ^= Bits.RotateRight64((v1 * Metro128Constants.K3) + v0, 45) * Metro128Constants.K0;
+                }
+
+                if ((end - ptr) >= 8)
+                {
+                    v0 += *((ulong*)ptr) * Metro128Constants.K2; ptr += sizeof(ulong); v0 = Bits.RotateRight64(v0, 33) * Metro128Constants.K3;
+                    v0 ^= Bits.RotateRight64((v0 * Metro128Constants.K2) + v1, 27) * Metro128Constants.K1;
+                }
+
+                if ((end - ptr) >= 4)
+                {
+                    v1 += *((uint*)ptr) * Metro128Constants.K2; ptr += sizeof(uint); v1 = Bits.RotateRight64(v1, 33) * Metro128Constants.K3;
+                    v1 ^= Bits.RotateRight64((v1 * Metro128Constants.K3) + v0, 46) * Metro128Constants.K0;
+                }
+
+                if ((end - ptr) >= 2)
+                {
+                    v0 += *((ushort*)ptr) * Metro128Constants.K2; ptr += sizeof(ushort); v0 = Bits.RotateRight64(v0, 33) * Metro128Constants.K3;
+                    v0 ^= Bits.RotateRight64((v0 * Metro128Constants.K2) + v1, 22) * Metro128Constants.K1;
+                }
+
+                if ((end - ptr) >= 1)
+                {
+                    v1 += *((byte*)ptr) * Metro128Constants.K2; v1 = Bits.RotateRight64(v1, 33) * Metro128Constants.K3;
+                    v1 ^= Bits.RotateRight64((v1 * Metro128Constants.K3) + v0, 58) * Metro128Constants.K0;
+                }
+
+                v0 += Bits.RotateRight64((v0 * Metro128Constants.K0) + v1, 13);
+                v1 += Bits.RotateRight64((v1 * Metro128Constants.K1) + v0, 37);
+                v0 += Bits.RotateRight64((v0 * Metro128Constants.K2) + v1, 13);
+                v1 += Bits.RotateRight64((v1 * Metro128Constants.K3) + v0, 37);
+
+                return new Metro128Hash { H1 = v0, H2 = v1 };
+            }
+
+            public static unsafe Metro128Hash Calculate(byte* buffer, int len, ulong seed = 0)
+            {
+                return CalculateInline(buffer, len, seed);
+            }
+
+            public static Metro128Hash Calculate(string value, Encoding encoder, ulong seed = 0)
+            {
+                var buf = encoder.GetBytes(value);
+
+                fixed (byte* buffer = buf)
+                {
+                    return CalculateInline(buffer, buf.Length, seed);
+                }
+            }
+
+            public static Metro128Hash CalculateRaw(string buf, ulong seed = 0)
+            {
+                fixed (char* buffer = buf)
+                {
+                    return CalculateInline((byte*)buffer, buf.Length * sizeof(char), seed);
+                }
+            }
+
+            public static Metro128Hash Calculate(byte[] buf, int len = -1, ulong seed = 0)
+            {
+                if (len == -1)
+                    len = buf.Length;
+
+                fixed (byte* buffer = buf)
+                {
+                    return CalculateInline(buffer, len, seed);
+                }
+            }
+
+            public static Metro128Hash Calculate(int[] buf, int len = -1, ulong seed = 0)
+            {
+                if (len == -1)
+                    len = buf.Length;
+
+                fixed (int* buffer = buf)
+                {
+                    return CalculateInline((byte*)buffer, len * sizeof(int), seed);
+                }
+            }
+        }
+
+        #endregion
     }
 }
