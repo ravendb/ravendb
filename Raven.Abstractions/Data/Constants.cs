@@ -317,6 +317,9 @@ namespace Raven.Abstractions.Data
 
 			public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
 
+			//in milliseconds
+			public const string ReplicationLatencyMs = "Raven/Counter/ReplicationLatency";
+
 			public const string UrlPrefix = "cs";
 		}
 

@@ -18,7 +18,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		protected CounterStorage Counters
+		protected CounterStorage CounterStorage
 		{
 			get
 			{

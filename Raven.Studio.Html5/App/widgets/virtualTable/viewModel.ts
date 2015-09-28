@@ -316,7 +316,7 @@ class ctor {
             
 	        var editUrl: string;
 			if (rowData instanceof counterSummary) {
-				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group"], rowData["Name"]);
+				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["GroupName"], rowData["Name"]);
             } else if (rowData instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
 			} else {
@@ -334,7 +334,7 @@ class ctor {
 
 			var editUrl: string;
 			if (selectedItem instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group"], selectedItem["Name"]);
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["GroupName"], selectedItem["Name"]);
             } else if (selectedItem instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
             } else {
