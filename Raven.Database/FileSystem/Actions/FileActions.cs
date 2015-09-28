@@ -131,10 +131,6 @@ namespace Raven.Database.FileSystem.Actions
 
 					if (size != null && readFileToDatabase.TotalSizeRead != size)
 					{
-						using (FileSystem.DisableAllTriggersForCurrentThread())
-						{
-							IndicateFileToDelete(name, null);
-						}
 						throw new HttpResponseException(HttpStatusCode.BadRequest);
 					}
 
