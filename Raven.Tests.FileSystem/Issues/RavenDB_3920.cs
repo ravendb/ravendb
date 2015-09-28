@@ -78,12 +78,7 @@ namespace Raven.Tests.FileSystem.Issues
 				// await store.AsyncFilesCommands.RenameAsync(fileName, newName);
 				// let's create a config to indicate rename operation - for example restart in the middle could happen
 				var renameOpConfig = RavenFileNameHelper.RenameOperationConfigNameForFile(name);
-				var renameOperation = new RenameFileOperation
-				{
-					Name = name,
-					Rename = renamed,
-					MetadataAfterOperation = new RavenJObject { { "version", 1 } }
-				};
+				var renameOperation = new RenameFileOperation(name, renamed, (await store.AsyncFilesCommands.GetAsync(new [] {name}))[0].Etag, new RavenJObject {{"version", 1}});
 
 				rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
 
@@ -95,6 +90,8 @@ namespace Raven.Tests.FileSystem.Issues
 				var version2 = await store.AsyncFilesCommands.GetMetadataForAsync(name);
 				Assert.NotNull(version2);
 				Assert.Equal(2, version2["version"]);
+
+				Assert.DoesNotContain(RavenFileNameHelper.RenameOperationConfigNameForFile(renameOperation.Name), await store.AsyncFilesCommands.Configuration.GetKeyNamesAsync());
 			}
 		}
 	}

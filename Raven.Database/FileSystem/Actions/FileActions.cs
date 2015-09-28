@@ -489,6 +489,19 @@ namespace Raven.Database.FileSystem.Actions
 				if (IsRenameInProgress(renameOperation.Name))
 					continue;
 
+				FileHeader existingFile = null;
+
+				Storage.Batch(accessor => existingFile = accessor.ReadFile(renameOperation.Name));
+
+				if (existingFile == null)
+					continue;
+
+				if (renameOperation.Etag != null && renameOperation.Etag != existingFile.Etag)
+				{
+					Storage.Batch(accessor => accessor.DeleteConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(renameOperation.Name)));
+					continue;
+				}
+
 				Log.Debug("Starting to resume a rename operation of a file '{0}' to '{1}'", renameOperation.Name,
 						  renameOperation.Rename);
 
