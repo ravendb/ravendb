@@ -20,7 +20,7 @@ pvc.Task("optimized-build", () => {
 	pvc.Source(list.ToArray())
 
 	// Compile all the TypeScript files into JavaScript.
-	.Pipe(new PvcTypeScript("--module amd --target ES5"))
+	.Pipe(new PvcTypeScript("1.5", "--module amd --target ES5"))
 
 	// Convert all the RequireJS modules into named modules. 
 	// Required for concatenation.
