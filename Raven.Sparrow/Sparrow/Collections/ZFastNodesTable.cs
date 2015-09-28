@@ -168,7 +168,6 @@ namespace Sparrow.Collections
                 int lastDuplicated = -1;
                 uint numProbes = 1; // how many times we've probed
 
-                uint nHash;
                 do
                 {
                     if ((entries[bucket].Signature & kSignatureMask) == signature)
@@ -350,7 +349,6 @@ namespace Sparrow.Collections
             {
                 var builder = new StringBuilder();
 
-                bool first = true;
                 builder.AppendLine("NodesTable: {");
 
                 for ( int i = 0; i < this._entries.Length; i++ )

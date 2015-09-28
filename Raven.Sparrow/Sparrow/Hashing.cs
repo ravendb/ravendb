@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace Sparrow
 {
+    public struct Metro128Hash
+    {
+        public ulong H1;
+        public ulong H2;
+    }
+
     public unsafe static partial class Hashing
     {
         #region XXHash32 & XXHash64
@@ -422,7 +428,6 @@ namespace Sparrow
 
         #endregion
 
-
         #region Metro128
 
         public struct Metro128Values
@@ -431,12 +436,6 @@ namespace Sparrow
             public uint V2;
             public uint V3;
             public uint V4;
-        }
-
-        public struct Metro128Hash
-        {
-            public ulong H1;
-            public ulong H2;
         }
 
         internal static class Metro128Constants
@@ -450,9 +449,9 @@ namespace Sparrow
         public static class Metro128
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static unsafe Metro128Hash CalculateInline(void* buffer, int length, ulong seed = 0)
+            public static unsafe Metro128Hash CalculateInline(byte* buffer, int length, ulong seed = 0)
             {
-                byte* ptr = (byte*)buffer;
+                byte* ptr = buffer;
                 byte* end = ptr + length;
 
                 ulong v0 = (seed - Metro128Constants.K0) * Metro128Constants.K3;
@@ -465,21 +464,19 @@ namespace Sparrow
 
                     do
                     {
-                        v0 += *((ulong*)ptr) * Metro128Constants.K0;
-                        ptr += sizeof(ulong); 
-                        v0 = Bits.RotateRight64(v0, 29) + v2;
+                        v0 += ((ulong*)ptr)[0] * Metro128Constants.K0;
+                        v1 += ((ulong*)ptr)[1] * Metro128Constants.K1;
 
-                        v1 += *((ulong*)ptr) * Metro128Constants.K1;
-                        ptr += sizeof(ulong);
+                        v0 = Bits.RotateRight64(v0, 29) + v2;
                         v1 = Bits.RotateRight64(v1, 29) + v3;
 
-                        v2 += *((ulong*)ptr) * Metro128Constants.K2; 
-                        ptr += sizeof(ulong); 
-                        v2 = Bits.RotateRight64(v2, 29) + v0;
+                        v2 += ((ulong*)ptr)[2] * Metro128Constants.K2;
+                        v3 += ((ulong*)ptr)[3] * Metro128Constants.K3;
 
-                        v3 += *((ulong*)ptr) * Metro128Constants.K3;
-                        ptr += 8;
+                        v2 = Bits.RotateRight64(v2, 29) + v0;
                         v3 = Bits.RotateRight64(v3, 29) + v1;
+
+                        ptr += 4 * sizeof(ulong);
                     }
                     while (ptr <= (end - 32));
 
@@ -491,8 +488,14 @@ namespace Sparrow
 
                 if ((end - ptr) >= 16)
                 {
-                    v0 += *((ulong*)ptr) * Metro128Constants.K2; ptr += sizeof(ulong); v0 = Bits.RotateRight64(v0, 33) * Metro128Constants.K3;
-                    v1 += *((ulong*)ptr) * Metro128Constants.K2; ptr += sizeof(ulong); v1 = Bits.RotateRight64(v1, 33) * Metro128Constants.K3;
+                    v0 += ((ulong*)ptr)[0] * Metro128Constants.K2;
+                    v1 += ((ulong*)ptr)[1] * Metro128Constants.K2;
+
+                    v0 = Bits.RotateRight64(v0, 33) * Metro128Constants.K3;
+                    v1 = Bits.RotateRight64(v1, 33) * Metro128Constants.K3;
+
+                    ptr += 2 * sizeof(ulong);
+
                     v0 ^= Bits.RotateRight64((v0 * Metro128Constants.K2) + v1, 45) * Metro128Constants.K1;
                     v1 ^= Bits.RotateRight64((v1 * Metro128Constants.K3) + v0, 45) * Metro128Constants.K0;
                 }
