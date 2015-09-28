@@ -6,6 +6,11 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Issues
@@ -13,7 +18,7 @@ namespace Raven.Tests.FileSystem.Issues
 	public class RavenDB_3920 : RavenFilesTestWithLogs
 	{
 		[Fact]
-		public async Task ShouldWork()
+		public async Task cleanup_of_deleted_files_wont_delete_existing_file_if_its_previous_upload_failed_and_broken_file_was_indicated_to_delete()
 		{
 			const string fileName = "file.bin";
 
@@ -52,8 +57,44 @@ namespace Raven.Tests.FileSystem.Issues
 				var downloaded = new MemoryStream();
 
 				(await store.AsyncFilesCommands.DownloadAsync(fileName)).CopyTo(downloaded);
-				
+
 				Assert.Equal(3, downloaded.Length);
+			}
+		}
+
+		[Fact]
+		public async Task resumed_rename_operation_needs_to_take_into_account_file_etag_to_avoid_renaming_next_version_of_file()
+		{
+			string name = FileHeader.Canonize("file.bin");
+			string renamed = FileHeader.Canonize("renamed.bin");
+
+			using (var store = NewStore())
+			{
+				var rfs = GetFileSystem();
+
+				await store.AsyncFilesCommands.UploadAsync(name, new MemoryStream(), new RavenJObject { { "version", 1 } });
+
+				// instead of this:
+				// await store.AsyncFilesCommands.RenameAsync(fileName, newName);
+				// let's create a config to indicate rename operation - for example restart in the middle could happen
+				var renameOpConfig = RavenFileNameHelper.RenameOperationConfigNameForFile(name);
+				var renameOperation = new RenameFileOperation
+				{
+					Name = name,
+					Rename = renamed,
+					MetadataAfterOperation = new RavenJObject { { "version", 1 } }
+				};
+
+				rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
+
+				// upload new file under the same name, before ResumeFileRenamingAsync is called
+				await store.AsyncFilesCommands.UploadAsync(name, new MemoryStream(), new RavenJObject { { "version", 2 } });
+
+				await rfs.Files.ResumeFileRenamingAsync();
+
+				var version2 = await store.AsyncFilesCommands.GetMetadataForAsync(name);
+				Assert.NotNull(version2);
+				Assert.Equal(2, version2["version"]);
 			}
 		}
 	}
