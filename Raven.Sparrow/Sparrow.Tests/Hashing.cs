@@ -348,5 +348,45 @@ namespace Sparrow.Tests
             while (blockSize <= bufferSize);
         }
 
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void Metro128_StreamedHashingEquivalence(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.Metro128.Alignment * iteration;
+
+                var context = Hashing.Streamed.Metro128.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.Metro128.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.Metro128.EndProcess(context);
+                var expected = Hashing.Metro128.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
+        }
     }
 }

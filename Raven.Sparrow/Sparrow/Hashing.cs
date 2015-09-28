@@ -432,10 +432,10 @@ namespace Sparrow
 
         public struct Metro128Values
         {
-            public uint V1;
-            public uint V2;
-            public uint V3;
-            public uint V4;
+            public ulong V0;
+            public ulong V1;
+            public ulong V2;
+            public ulong V3;
         }
 
         internal static class Metro128Constants
