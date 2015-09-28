@@ -65,7 +65,7 @@ namespace Raven.Database.FileSystem.Actions
 
 				if (read == 0) // nothing left to read
 				{
-					FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
+					FileHash = IOExtensions.GetAsHex(md5Hasher.TransformFinalBlock());
 					headers["Content-MD5"] = FileHash;
 					storage.Batch(accessor =>
 					{

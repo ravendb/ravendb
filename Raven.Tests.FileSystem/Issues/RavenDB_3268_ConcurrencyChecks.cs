@@ -187,7 +187,7 @@ namespace Raven.Tests.FileSystem.Issues
 
 					var fileContent = await session.Commands.DownloadAsync("test.file");
 
-					Assert.Equal(CreateUniformFileStream(128, 'z').GetMD5Hash(), fileContent.GetMD5Hash());
+					Assert.Equal(CreateUniformFileStream(128, 'z').GetHashAsHex(), fileContent.GetHashAsHex());
 				}
 			}
 		}

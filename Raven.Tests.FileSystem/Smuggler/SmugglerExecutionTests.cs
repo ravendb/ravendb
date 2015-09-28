@@ -402,7 +402,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                             var stream = session.DownloadAsync(file).Result;
 
-                            Assert.Equal(fileContent.GetMD5Hash(), stream.GetMD5Hash());
+                            Assert.Equal(fileContent.GetHashAsHex(), stream.GetHashAsHex());
                         }
                     });
 
@@ -464,7 +464,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                                 var stream = session.DownloadAsync(file).Result;
 
                                 files[i].Position = 0;
-                                Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
+                                Assert.Equal(files[i].GetHashAsHex(), stream.GetHashAsHex());
                             }
                         }
                     });
@@ -526,7 +526,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                                 var stream = session.DownloadAsync(file).Result;
 
                                 files[i].Position = 0;
-                                Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
+                                Assert.Equal(files[i].GetHashAsHex(), stream.GetHashAsHex());
                             }
                         }
                     });

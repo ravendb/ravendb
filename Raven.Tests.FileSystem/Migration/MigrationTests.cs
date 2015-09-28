@@ -181,7 +181,7 @@ namespace Raven.Tests.FileSystem.Migration
 				var metadata = new Reference<RavenJObject>();
 				var stream = await source.DownloadAsync(SynchronizedFileName(i), metadata);
 
-				Assert.Equal(stream.GetMD5Hash(), CreateUniformFileStream(i, (char) i).GetMD5Hash());
+				Assert.Equal(stream.GetHashAsHex(), CreateUniformFileStream(i, (char) i).GetHashAsHex());
 			}
 
 			var search = await source.SearchAsync("");
@@ -203,11 +203,11 @@ namespace Raven.Tests.FileSystem.Migration
 				var metadata = new Reference<RavenJObject>();
 				var stream = await destination.DownloadAsync(SynchronizedFileName(i), metadata);
 
-				Assert.Equal(stream.GetMD5Hash(), CreateUniformFileStream(i, (char) i).GetMD5Hash());
+				Assert.Equal(stream.GetHashAsHex(), CreateUniformFileStream(i, (char) i).GetHashAsHex());
 
 				stream = await destination.DownloadAsync(FileName(i), metadata);
 
-				Assert.Equal(stream.GetMD5Hash(), CreateUniformFileStream(i, (char) i).GetMD5Hash());
+				Assert.Equal(stream.GetHashAsHex(), CreateUniformFileStream(i, (char) i).GetHashAsHex());
 
 				var searchResult = await destination.SearchAsync("ETag:" + metadata.Value[Constants.MetadataEtagField]);
 

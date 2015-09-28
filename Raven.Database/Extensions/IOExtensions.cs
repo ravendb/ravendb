@@ -191,7 +191,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static string GetMD5Hex(byte[] input)
+        public static string GetAsHex(byte[] input)
 		{
 			var sb = new StringBuilder();
 			foreach (byte t in input)
@@ -200,11 +200,11 @@ namespace Raven.Database.Extensions
 			return sb.ToString();
 		}
 
-		public static string GetMD5Hash(this Stream stream)
+		public static string GetHashAsHex(this Stream stream)
 		{
 			using (var md5 = Encryptor.Current.CreateHash())
 			{
-				return GetMD5Hex(md5.Compute16(stream));
+                return GetAsHex(md5.Compute16(stream));
 			}
 		}
 	}

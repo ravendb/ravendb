@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Util
 			{
 				base.Dispose(disposing);
 
-			    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
+			    FileHash = IOExtensions.GetAsHex(md5Hasher.TransformFinalBlock());
 				md5Hasher.Dispose();
 			}
 		}

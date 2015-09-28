@@ -46,7 +46,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 					Assert.Equal(1, revisions.Length);
 
-					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetMD5Hash(), (await dstSession.DownloadAsync(revisions[0])).GetMD5Hash());
+					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetHashAsHex(), (await dstSession.DownloadAsync(revisions[0])).GetHashAsHex());
 				}
 
 				await source.AsyncFilesCommands.UploadAsync("file.txt", CreateUniformFileStream(2048));
@@ -60,7 +60,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 					Assert.Equal(2, revisions.Length);
 
-					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetMD5Hash(), (await dstSession.DownloadAsync(revisions[1])).GetMD5Hash());
+					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetHashAsHex(), (await dstSession.DownloadAsync(revisions[1])).GetHashAsHex());
 				}
 
 				await source.AsyncFilesCommands.UploadAsync("file.txt", StringToStream("123456789"));
@@ -74,7 +74,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 					Assert.Equal(maxRevisions, revisions.Length); // cannot be more revisions than defined in configuration
 
-					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetMD5Hash(), (await dstSession.DownloadAsync(revisions[1])).GetMD5Hash());
+					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetHashAsHex(), (await dstSession.DownloadAsync(revisions[1])).GetHashAsHex());
 				}
 
 				using (var dstSession = destination.OpenAsyncSession())
@@ -117,7 +117,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
 					Assert.Equal(1, revisions.Length);
 
-					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetMD5Hash(), (await dstSession.DownloadAsync(revisions[0])).GetMD5Hash());
+					Assert.Equal((await dstSession.DownloadAsync("file.txt")).GetHashAsHex(), (await dstSession.DownloadAsync(revisions[0])).GetHashAsHex());
 				}
 
 				await source.AsyncFilesCommands.UpdateMetadataAsync("file.txt", new RavenJObject { { "New", "Metadata" } });

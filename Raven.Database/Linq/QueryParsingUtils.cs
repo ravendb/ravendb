@@ -6,7 +6,6 @@
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
-
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
@@ -19,7 +18,7 @@ using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
-
+using Sparrow;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;
@@ -412,8 +411,9 @@ namespace Raven.Database.Linq
 
 		private static string GetIndexFilePath(string source, string indexCacheDir, out int numberHash)
 		{
-			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
-			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+            var hash = Hashing.XXHash64.CalculateRaw(source);
+
+            var sourceHashed = hash.ToString("X");
 			numberHash = IndexingUtil.StableInvariantIgnoreCaseStringHash(source);
 			var indexFilePath = Path.Combine(indexCacheDir,
 				numberHash + "." + sourceHashed + "." +

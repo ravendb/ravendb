@@ -12,6 +12,7 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Data;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
+using Sparrow;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -142,8 +143,8 @@ namespace Raven.Database.Server.Controllers
 		        result.Includes.Add(doc.ToJson());
 		    }
 
-            var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
-            Etag computedEtag = Etag.Parse(computeHash);
+            var computeHash = Hashing.Metro128.Calculate(includedEtags.ToArray());
+            Etag computedEtag = Etag.FromHash(computeHash);
 
 			if (MatchEtag(computedEtag))
 			{

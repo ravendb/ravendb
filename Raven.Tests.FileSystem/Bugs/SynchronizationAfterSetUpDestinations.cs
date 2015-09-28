@@ -33,7 +33,7 @@ namespace Raven.Tests.FileSystem.Bugs
 			fileContent.Position = 0;
 
             var metadata = await destination.GetMetadataForAsync("renamed.bin");
-            Assert.Equal(fileContent.GetMD5Hash(), metadata.Value<string>("Content-MD5"));
+            Assert.Equal(fileContent.GetHashAsHex(), metadata.Value<string>("Content-MD5"));
 		}
 	}
 }

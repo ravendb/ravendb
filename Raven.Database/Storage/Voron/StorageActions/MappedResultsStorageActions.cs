@@ -1271,11 +1271,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             storageActionsAccessor.General.MaybePulseTransaction();
         }
-
-        private static string HashKey(string key)
-        {
-            return Convert.ToBase64String(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
-        }
 	}
 
     internal class ScheduledReductionDeleter

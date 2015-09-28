@@ -23,6 +23,7 @@ using Raven.Database.Linq;
 using Raven.Json.Linq;
 
 using Index = Raven.Database.Indexing.Index;
+using Sparrow;
 
 namespace Raven.Database.Queries
 {
@@ -152,8 +153,7 @@ namespace Raven.Database.Queries
 
 					addIncludesCommand.AlsoInclude(idsToLoad);
 
-				    var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
-                    Etag computedEtag = Etag.Parse(computeHash);
+                    Etag computedEtag = Etag.FromHash(Hashing.Metro128.Calculate(includedEtags.ToArray()));
 
 					return new MoreLikeThisQueryResult
 					{

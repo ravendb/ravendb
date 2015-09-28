@@ -430,7 +430,7 @@ namespace Raven.Database.Server.Controllers
 					documentsCount = accessor.Documents.GetDocumentsCount();
 				});
 
-			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+			lastDocEtag = lastDocEtag.CombineHashWith(BitConverter.GetBytes(documentsCount));
 			return lastDocEtag;
 		}
 
