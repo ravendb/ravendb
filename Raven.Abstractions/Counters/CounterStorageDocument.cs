@@ -6,10 +6,7 @@ namespace Raven.Abstractions.Counters
 
     public class CounterStorageDocument
     {
-        /// <summary>
-        /// The ID can be either the counters storage name ("CounterName") or the full document name ("Raven/Counters/CounterName").
-        /// </summary>
-        public string StoreName { get; set; }
+        public string Id { get; set; }
 
         public Dictionary<string, string> Settings { get; set; }
 

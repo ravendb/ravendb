@@ -290,12 +290,28 @@ namespace Raven.Database.Server.Tenancy
 
 				foreach (var doc in counterDocs)
 				{
-					Debug.Assert(((IEnumerable<KeyValuePair<string, RavenJToken>>)doc).Any(x => x.Key == "StoreName"));
+					var id = GetCounterIdFromDocumentKey(doc);
+					Debug.Assert(String.IsNullOrWhiteSpace(id) == false,"key of counter should not be empty");
+					Task<CounterStorage> counterFetchTask;
+					if (!TryGetOrCreateResourceStore(id, out counterFetchTask))
+						throw new InvalidOperationException(string.Format("Could not get counter specified by counter storage document. The id that wasn't found is {0}", id));
 
-					var counter = AsyncHelpers.RunSync(() => GetResourceInternal(doc.Value<string>("StoreName")));
+					var counter = AsyncHelpers.RunSync(() => counterFetchTask);
 					action(counter);
 				}
 			}
+		}
+
+		private static string GetCounterIdFromDocumentKey(RavenJToken doc)
+		{
+			var metadata = doc.Value<RavenJObject>("@metadata");
+			var docKey = metadata.Value<string>("@id");
+			var startIndex = docKey.LastIndexOf('/') + 1;
+			if (startIndex >= docKey.Length)
+				throw new InvalidOperationException(string.Format("Counter document key is invalid. (got {0})", docKey));
+
+			var id = docKey.Substring(startIndex);
+			return id;
 		}
 
 

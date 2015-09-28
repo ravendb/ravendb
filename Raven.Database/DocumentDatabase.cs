@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -1343,9 +1344,20 @@ namespace Raven.Database
 
 			public void ExecuteAlterConfiguration()
 			{
-				foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+				try
 				{
-					alterConfiguration.AlterConfiguration(configuration);
+					foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+					{
+						alterConfiguration.AlterConfiguration(configuration);
+					}
+				}
+				catch (ReflectionTypeLoadException e)
+				{
+					//throw more informative exception
+					if (e.LoaderExceptions != null && e.LoaderExceptions.Length > 0)
+						throw e.LoaderExceptions.First();
+
+					throw;
 				}
 			}
 

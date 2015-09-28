@@ -58,7 +58,7 @@ namespace Raven.Client.Counters
 					//this statement will essentially overwrite the counter storage, therefore it should not be called if the storage is already there
 					Admin.CreateCounterStorageAsync(new CounterStorageDocument
 					{
-						StoreName = Name,
+						Id = Constants.Counter.Prefix + Name,
 						Settings = new Dictionary<string, string>
 						{
 							{"Raven/Counters/DataDir", @"~\Counters\" + Name}

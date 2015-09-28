@@ -26,24 +26,24 @@ using Raven.Json.Linq;
 namespace Raven.Database.Counters.Controllers
 {
 	public class AdminCounterStorageController : BaseAdminCountersApiController
-	{
-		[HttpGet]
+    {
+	    [HttpGet]
 		[RavenRoute("admin/cs/{*counterStorageName}")]
-		public async Task<HttpResponseMessage> Get()
-		{
-			var op = GetQueryStringValue("op");
-			if (string.IsNullOrWhiteSpace(op))
-				return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
+	    public async Task<HttpResponseMessage> Get()
+	    {
+		    var op = GetQueryStringValue("op");
+		    if (string.IsNullOrWhiteSpace(op))
+			    return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
-			if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
+		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
 				return await GetNamesAndGroups(CounterName);
-			if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
+		    if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
 				return await GetSummary(CounterName);
 
 			return GetMessageWithString("'op' query parameter is invalid - must be either group-names or summary", HttpStatusCode.BadRequest);
-		}
+	    }
 
-		private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
+	    private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
 			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
@@ -88,7 +88,7 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(counterSummaries);
 		}
 
-		private async Task<HttpResponseMessage> GetSummary(string id)
+	    private async Task<HttpResponseMessage> GetSummary(string id)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
 			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
@@ -153,21 +153,21 @@ namespace Raven.Database.Counters.Controllers
 			var isCounterStorageUpdate = ParseBoolQueryString("update");
 			var counterStorage = SystemDatabase.Documents.Get(docKey, null);
 			if (counterStorage != null && isCounterStorageUpdate == false)
-			{
+            {
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
-			}
+            }
 
-			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
-			CountersLandlord.Protect(dbDoc);
-			var json = RavenJObject.FromObject(dbDoc);
-			json.Remove("Id");
+            var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
+            CountersLandlord.Protect(dbDoc);
+            var json = RavenJObject.FromObject(dbDoc);
+            json.Remove("Id");
 
 			SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
-			return GetEmptyMessage(HttpStatusCode.Created);
-		}
+            return GetEmptyMessage(HttpStatusCode.Created);
+        }
 
-		[HttpDelete]
+	    [HttpDelete]
 		[RavenRoute("admin/cs/{*id}")]
 		public HttpResponseMessage Delete(string id)
 		{
@@ -298,7 +298,7 @@ namespace Raven.Database.Counters.Controllers
 				{
 					backupRequest.CounterStorageDocument = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 					CountersLandlord.Unprotect(backupRequest.CounterStorageDocument);
-					backupRequest.CounterStorageDocument.StoreName = Counters.Name;
+					backupRequest.CounterStorageDocument.Id = Counters.Name;
 				}
 			}
 

@@ -13,14 +13,14 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage CounterStats()
 		{
-			return GetMessageWithObject(Counters.CreateStats());
+			return GetMessageWithObject(CounterStorage.CreateStats());
 		}
 
 		[RavenRoute("cs/{counterStorageName}/metrics")]
 		[HttpGet]
 		public HttpResponseMessage CounterMetrics()
 		{
-			return GetMessageWithObject(Counters.CreateMetrics());
+			return GetMessageWithObject(CounterStorage.CreateMetrics());
 		}
 
 		[RavenRoute("cs/{counterStorageName}/replications/stats")]
@@ -29,7 +29,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			return GetMessageWithObject(new CounterStorageReplicationStats
 				{
-					Stats = Counters.ReplicationTask.DestinationStats.Values.ToList()
+					Stats = CounterStorage.ReplicationTask.DestinationStats.Values.ToList()
 				});
 		}
     }
