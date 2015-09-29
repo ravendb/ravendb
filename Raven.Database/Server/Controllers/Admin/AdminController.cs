@@ -58,7 +58,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			                                                          typeof(AuthenticationForCommercialUseOnly).FullName,
 																	  typeof(RemoveBackupDocumentStartupTask).FullName,
 																	  typeof(CreateFolderIcon).FullName,
-																	  typeof(DeleteRemovedIndexes).FullName
 		                                                           };
 
 		[HttpPost]

@@ -714,6 +714,7 @@ namespace Raven.Database.Actions
             var deleteIndexTask = Task.Run(() =>
             {
                 Debug.Assert(Database.IndexStorage != null);
+                Log.Info("Starting async deletion of index {0}", indexName);
                 Database.IndexStorage.DeleteIndexData(id); // Data can take a while
 
                 TransactionalStorage.Batch(actions =>
