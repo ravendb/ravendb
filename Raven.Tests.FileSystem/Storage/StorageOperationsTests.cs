@@ -217,12 +217,7 @@ namespace Raven.Tests.FileSystem
 
 			// create config to say to the server that rename operation performed last time were not finished
 			var renameOpConfig = RavenFileNameHelper.RenameOperationConfigNameForFile(fileName);
-            var renameOperation =  new RenameFileOperation
-				                        {
-					                        Name = fileName,
-					                        Rename = rename,
-                                            MetadataAfterOperation = new RavenJObject()
-				                        };
+			var renameOperation = new RenameFileOperation(fileName, rename, client.GetAsync(new[] { fileName }).Result[0].Etag, new RavenJObject());
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
 
@@ -256,12 +251,7 @@ namespace Raven.Tests.FileSystem
 
 			// create config to say to the server that rename operation performed last time were not finished
 			var renameOpConfig = RavenFileNameHelper.RenameOperationConfigNameForFile(fileName);
-            var renameOperation = new RenameFileOperation
-				                    {
-					                    Name = fileName,
-					                    Rename = rename,
-                                        MetadataAfterOperation = new RavenJObject()
-				                    };
+			var renameOperation = new RenameFileOperation(fileName, rename, client.GetAsync(new[] {fileName}).Result[0].Etag, new RavenJObject());
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation ));
 

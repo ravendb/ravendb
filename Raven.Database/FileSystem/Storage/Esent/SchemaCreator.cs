@@ -7,7 +7,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "0.6";
+		public const string SchemaVersion = "0.7";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -220,8 +220,20 @@ namespace Raven.Database.FileSystem.Storage.Esent
 							   80);
 
 			indexDef = "+name\0+file_pos\0\0";
-			Api.JetCreateIndex(session, tableid, "by_name_and_pos", CreateIndexGrbit.None, indexDef, indexDef.Length,
-							   80);
+
+			Api.JetCreateIndex2(session, tableid, new[]
+			{
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name_and_pos",
+					cbKey = indexDef.Length,
+					cbKeyMost = SystemParameters.KeyMost,
+					cbVarSegMac = SystemParameters.KeyMost,
+					szKey = indexDef,
+					grbit = CreateIndexGrbit.None,
+					ulDensity = 80
+				}
+			}, 1);
 		}
 		private void CreateFilesTable(JET_DBID dbid)
 		{

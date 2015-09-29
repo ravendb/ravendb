@@ -28,7 +28,7 @@ namespace Raven.Client.Document.Async
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
 	{
 		private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
@@ -931,18 +931,26 @@ namespace Raven.Client.Document.Async
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public override void Commit(string txId)
+		public override async Task Commit(string txId)
 		{
-			throw new NotImplementedException();
+			await AsyncDatabaseCommands.CommitAsync(txId).ConfigureAwait(false);
+			ClearEnlistment();
 		}
 
 		/// <summary>
 		/// Rollbacks the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public override void Rollback(string txId)
+		public override async Task Rollback(string txId)
 		{
-			throw new NotImplementedException();
+			await AsyncDatabaseCommands.RollbackAsync(txId).ConfigureAwait(false);
+			ClearEnlistment();
+		}
+
+		public async Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+		{
+			await AsyncDatabaseCommands.PrepareTransactionAsync(txId, resourceManagerId, recoveryInformation).ConfigureAwait(false);
+			ClearEnlistment();
 		}
 
 		/// <summary>

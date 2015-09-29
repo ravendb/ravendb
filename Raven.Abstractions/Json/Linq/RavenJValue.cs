@@ -444,7 +444,17 @@ namespace Raven.Json.Linq
 							return false;
 					}
 					break;
-				default:
+                case JTokenType.Float:
+                    switch (v2._valueType)
+                    {
+                        case JTokenType.String:
+                        case JTokenType.Float:
+                            break;
+                        default:
+                            return false;
+                    }
+                    break;
+                default:
 					if (v1._valueType != v2._valueType)
 						return false;
 					break;

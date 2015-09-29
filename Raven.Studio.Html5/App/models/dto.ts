@@ -234,7 +234,7 @@ interface serverBuildVersionDto {
     BuildType: buildType;
 }
 
-enum buildType {
+const enum buildType {
     Stable = 0,
     Unstable = 1,
 }
@@ -1075,7 +1075,7 @@ interface timeSeriesDto {
     Path?: string;
 }
 
-enum ImportItemType {
+const enum ImportItemType {
     Documents = 0x1,
     Indexes = 0x2,
     Attachments = 0x4,
@@ -1358,7 +1358,7 @@ interface destinationInformationDto {
     LastDocumentEtag: string;
 }
 
-enum ResponseCodes {
+const enum ResponseCodes {
     Forbidden = 403,
     NotFound = 404,
     PreconditionFailed = 412,

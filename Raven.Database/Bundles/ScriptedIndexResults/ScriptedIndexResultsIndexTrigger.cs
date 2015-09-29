@@ -99,22 +99,31 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 								{
 									foreach (var entry in kvp.Value)
 									{
-										patcher.Apply(scope, entry, new ScriptedPatchRequest
+										try
 										{
-											Script = scriptedIndexResults.DeleteScript,
-											Values =
-								            {
-									            {
-										            "key", kvp.Key
-									            }
-								            }
-										});
-
-										if (Log.IsDebugEnabled && patcher.Debug.Count > 0)
+											patcher.Apply(scope, entry, new ScriptedPatchRequest
+											{
+												Script = scriptedIndexResults.DeleteScript,
+												Values =
+												{
+													{
+														"key", kvp.Key
+													}
+												}
+											});
+										}
+										catch (Exception e)
 										{
-											Log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+											Log.Warn("Could not apply delete script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
+										}
+										finally
+										{
+											if (Log.IsDebugEnabled && patcher.Debug.Count > 0)
+											{
+												Log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
 
-											patcher.Debug.Clear();
+												patcher.Debug.Clear();
+											}
 										}
 									}
 
@@ -133,11 +142,11 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 											{
 												Script = scriptedIndexResults.IndexScript,
 												Values =
-									            {
-										            {
-											            "key", kvp.Key
-										            }
-									            }
+												{
+													{
+														"key", kvp.Key
+													}
+												}
 											});
 										}
 

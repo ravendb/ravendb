@@ -271,7 +271,6 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public async Task Destination_should_not_override_last_etag_if_greater_value_exists()
 		{
-			var sourceContent = new RandomStream(10);
             var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
@@ -280,8 +279,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-            await sourceClient.UploadAsync("test1.bin", sourceContent, sourceMetadata);
-            await sourceClient.UploadAsync("test2.bin", sourceContent, sourceMetadata);
+            await sourceClient.UploadAsync("test1.bin", new RandomStream(10), sourceMetadata);
+            await sourceClient.UploadAsync("test2.bin", new RandomStream(10), sourceMetadata);
 
 			await sourceClient.Synchronization.StartAsync("test2.bin", destinationClient);
 			await sourceClient.Synchronization.StartAsync("test1.bin", destinationClient);
@@ -326,15 +325,14 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public async Task Should_change_history_after_upload()
 		{
-			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewAsyncClient(1);
-            await sourceClient.UploadAsync("test.bin", sourceContent1);
+            await sourceClient.UploadAsync("test.bin", new RandomStream(10));
             var historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
             var history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
 			Assert.Equal(0, history.Count());
 
-            await sourceClient.UploadAsync("test.bin", sourceContent1);
+            await sourceClient.UploadAsync("test.bin", new RandomStream(10));
             historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
             history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 

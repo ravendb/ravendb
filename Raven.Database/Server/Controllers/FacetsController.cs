@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -131,7 +132,12 @@ namespace Raven.Database.Server.Controllers
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);
-            return GetMessageWithObjectAsTask(results, HttpStatusCode.OK, indexEtag);
+            var token = RavenJToken.FromObject(results, new JsonSerializer
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+            });
+            return GetMessageWithObjectAsTask(token, HttpStatusCode.OK, indexEtag);
         }
 
         private HttpResponseMessage TryGetFacetsFromString(string facetsJson, out List<Facet> facets)

@@ -1242,12 +1242,12 @@ more responsive application.
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public abstract void Commit(string txId);
+		public abstract Task Commit(string txId);
 		/// <summary>
 		/// Rollbacks the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public abstract void Rollback(string txId);
+		public abstract Task Rollback(string txId);
 
 		/// <summary>
 		/// Clears the enlistment.

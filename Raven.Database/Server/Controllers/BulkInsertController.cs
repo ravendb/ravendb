@@ -236,12 +236,12 @@ namespace Raven.Database.Server.Controllers
 		{
 			using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
 			{
-				for (var i = 0; i < count; i++)
-				{
-					timeout.Delay();
+                for (var i = 0; i < count; i++)
+                {
+                    timeout.Delay();
 
 					while (jsonReader.Read())
-					{
+                                                                 {
 						if (jsonReader.TokenType == JsonToken.StartObject)
 							break;
 					}
@@ -294,6 +294,13 @@ namespace Raven.Database.Server.Controllers
                     if (string.IsNullOrEmpty(id))
                         throw new InvalidOperationException("Could not get id from metadata");
 
+	                if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
+		                continue; //its just a token document, should not get written into the database
+								  //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
+								  //during long pauses in the bulk insert operation.
+								  // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
+								  //continuation token and lots of document skips
+								  
                     doc.Remove("@metadata");
 
             return new JsonDocument

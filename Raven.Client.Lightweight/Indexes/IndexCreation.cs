@@ -23,7 +23,7 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
-	    private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
@@ -48,15 +48,7 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
 				databaseCommands.PutIndexes(indexesToAdd);
 
 				foreach (var task in tasks)
@@ -85,39 +77,31 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-        /// Creates the indexes found in the specified catalog
-        /// </summary>
-        public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
-        {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+		/// Creates the indexes found in the specified catalog
+		/// </summary>
+		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
+		{
+			var indexCompilationExceptions = new List<IndexCompilationException>();
 			var failed = false;
-	        try
-	        {
-		        var tasks = catalogToGetnIndexingTasksFrom
+			try
+			{
+				var tasks = catalogToGetnIndexingTasksFrom
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
 				await databaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
-		        foreach (var task in tasks)
+				foreach (var task in tasks)
 					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
-	        }
+			}
 			// For old servers that don't have the new endpoint for executing multiple indexes
-	        catch (Exception)
-	        {
-		        failed = true;		        
-	        }
-	        if (failed)
-	        {
+			catch (Exception)
+			{
+				failed = true;
+			}
+			if (failed)
+			{
 				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
 					try
@@ -129,13 +113,13 @@ namespace Raven.Client.Indexes
 						indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 					}
 				}
-	        }
+			}
 
-	        await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
+			await CreateTransformersAsync(catalogToGetnIndexingTasksFrom, databaseCommands, conventions).ConfigureAwait(false);
 
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
-        }
+			if (indexCompilationExceptions.Any())
+				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+		}
 
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
@@ -153,10 +137,10 @@ namespace Raven.Client.Indexes
 
 				documentStore.ExecuteIndexes(tasks);
 			}
-			// Old servers that don't have the new endpoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception ex)
 			{
-			    Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+				Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
 				foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 				{
 					try
@@ -202,21 +186,13 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, documentStore.Conventions);
 				await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
 				foreach (var task in tasks)
 					await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
 			}
-			// For old servers that don't have the new entrypoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception)
 			{
 				failed = true;
@@ -267,15 +243,7 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
 				databaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
 
 				foreach (var task in tasks)
@@ -316,21 +284,13 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
 				await databaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 
 				foreach (var task in tasks)
 					await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
 			}
-			// For old servers that don't have the new endpoint for executing multiple indexes
+				// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception)
 			{
 				failed = true;
@@ -374,7 +334,7 @@ namespace Raven.Client.Indexes
 
 				documentStore.SideBySideExecuteIndexes(tasks, minimumEtagBeforeReplace, replaceTimeUtc);
 			}
-			// Old servers that don't have the new endpoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception ex)
 			{
 				Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
@@ -427,21 +387,13 @@ namespace Raven.Client.Indexes
 					.GetExportedValues<AbstractIndexCreationTask>()
 					.ToList();
 
-				var indexesToAdd = tasks
-					.Select(x => new IndexToAdd
-					{
-						Definition = x.CreateIndexDefinition(),
-						Name = x.IndexName,
-						Priority = x.Priority ?? IndexingPriority.Normal
-					})
-					.ToArray();
-
+				var indexesToAdd = CreateIndexesToAdd(tasks, documentStore.Conventions);
 				await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
 				foreach (var task in tasks)
 					await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
 			}
-			// For old servers that don't have the new entrypoint for executing multiple indexes
+			// For old servers that don't have the new endpoint for executing multiple indexes
 			catch (Exception)
 			{
 				failed = true;
@@ -497,6 +449,24 @@ namespace Raven.Client.Indexes
 			{
 				await task.ExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
 			}
+		}
+
+		public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConvention conventions)
+		{
+			var indexesToAdd = indexCreationTasks
+				.Select(x =>
+				{
+					x.Conventions = conventions;
+					return new IndexToAdd
+					{
+						Definition = x.CreateIndexDefinition(),
+						Name = x.IndexName,
+						Priority = x.Priority ?? IndexingPriority.Normal
+					};
+				})
+				.ToArray();
+
+			return indexesToAdd;
 		}
 	}
 }
