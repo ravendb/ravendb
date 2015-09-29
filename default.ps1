@@ -430,21 +430,6 @@ task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 task UpdateLiveTest {
 
 	Stop-WebAppPool "RavenDB 3" -ErrorAction SilentlyContinue # The error is probably because it was already stopped
-
-@'
-	<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-
-  <title>Maintenance work</title>
-</head>
-<body>
-  <h1>Maintenance work</h1>
-  <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
-</body>
-</html>
-'@ | out-file "$liveTest_dir\app_offline.htm" -Encoding UTF8
 	
 	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
@@ -453,8 +438,6 @@ task UpdateLiveTest {
 	Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
-
-	Remove-Item "$liveTest_dir\app_offline.htm"
 
 	Start-WebAppPool "RavenDB 3"
 }
