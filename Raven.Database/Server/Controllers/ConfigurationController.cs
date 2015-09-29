@@ -67,7 +67,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> GlobalSettingsPut()
 		{
 			var etag = GetEtag();
-			var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>();
+			var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>().ConfigureAwait(false);
 
 			GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
 			var json = RavenJObject.FromObject(globalSettingsDoc);

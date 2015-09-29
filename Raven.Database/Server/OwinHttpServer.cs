@@ -53,7 +53,7 @@ namespace Raven.Database.Server
 				{
 					context.Response.StatusCode = 404;
 					context.Response.ReasonPhrase = "Not Found";
-					await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length);
+					await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length).ConfigureAwait(false);
 				});
 			});
 		}

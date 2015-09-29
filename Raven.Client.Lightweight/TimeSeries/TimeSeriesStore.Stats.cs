@@ -13,7 +13,7 @@ namespace Raven.Client.TimeSeries
 		public async Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}ts/{1}/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
@@ -26,7 +26,7 @@ namespace Raven.Client.TimeSeries
 		public async Task<TimeSeriesMetrics> GetTimeSeriesMetricsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}ts/{1}/metrics", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
@@ -39,7 +39,7 @@ namespace Raven.Client.TimeSeries
 		public async Task<List<TimeSeriesReplicationStats>> GetTimeSeriesReplicationStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}ts/{1}/replications/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))

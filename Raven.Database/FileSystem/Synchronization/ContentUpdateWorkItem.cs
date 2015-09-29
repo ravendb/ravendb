@@ -53,21 +53,21 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var destinationMetadata = await synchronizationServerClient.GetMetadataForAsync(FileName);
+			var destinationMetadata = await synchronizationServerClient.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (destinationMetadata == null)
             {
                 // if file doesn't exist on destination server - upload it there
-				return await UploadToAsync(synchronizationServerClient);
+				return await UploadToAsync(synchronizationServerClient).ConfigureAwait(false);
             }
 
-			var destinationServerRdcStats = await synchronizationServerClient.GetRdcStatsAsync();
+			var destinationServerRdcStats = await synchronizationServerClient.GetRdcStatsAsync().ConfigureAwait(false);
             if (!IsRemoteRdcCompatible(destinationServerRdcStats))
                 throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
             var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, FileSystemInfo.Url);
 	        if (conflict != null)
 	        {
-				var report = await HandleConflict(synchronizationServerClient, conflict, log);
+				var report = await HandleConflict(synchronizationServerClient, conflict, log).ConfigureAwait(false);
 
 		        if (report != null)
 			        return report;
@@ -84,20 +84,20 @@ namespace Raven.Database.FileSystem.Synchronization
                 Cts.Token.ThrowIfCancellationRequested();
 
                 // first we need to create a local file signatures before we synchronize with remote ones
-                var localSignatureManifest = await localRdcManager.GetSignatureManifestAsync(FileDataInfo);
+                var localSignatureManifest = await localRdcManager.GetSignatureManifestAsync(FileDataInfo).ConfigureAwait(false);
 				if (log.IsDebugEnabled)
 					log.Debug("Number of a local file '{0}' signatures was {1}.", FileName, localSignatureManifest.Signatures.Count);
 
                 if (localSignatureManifest.Signatures.Any())
                 {
-                    var destinationSignatureManifest = await destinationRdcManager.SynchronizeSignaturesAsync(FileDataInfo, Cts.Token);
+                    var destinationSignatureManifest = await destinationRdcManager.SynchronizeSignaturesAsync(FileDataInfo, Cts.Token).ConfigureAwait(false);
                     if (destinationSignatureManifest.Signatures.Any())
                     {
-						return await SynchronizeTo(synchronizationServerClient, localSignatureRepository, remoteSignatureCache, localSignatureManifest, destinationSignatureManifest);
+						return await SynchronizeTo(synchronizationServerClient, localSignatureRepository, remoteSignatureCache, localSignatureManifest, destinationSignatureManifest).ConfigureAwait(false);
                     }
                 }
 
-				return await UploadToAsync(synchronizationServerClient);
+				return await UploadToAsync(synchronizationServerClient).ConfigureAwait(false);
             }
         }
 
@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Synchronization
 					needList = needListGenerator.CreateNeedsList(seedSignatureInfo, sourceSignatureInfo, Cts.Token);
 				}
 
-				return await PushByUsingMultipartRequest(synchronizationServerClient, localFile, needList);
+				return await PushByUsingMultipartRequest(synchronizationServerClient, localFile, needList).ConfigureAwait(false);
 			}
 		}
 
@@ -147,7 +147,7 @@ namespace Raven.Database.FileSystem.Synchronization
 							                     }
 					                     };
 
-				return await PushByUsingMultipartRequest(synchronizationServerClient, sourceFileStream, onlySourceNeed);
+				return await PushByUsingMultipartRequest(synchronizationServerClient, sourceFileStream, onlySourceNeed).ConfigureAwait(false);
 			}
 		}
 

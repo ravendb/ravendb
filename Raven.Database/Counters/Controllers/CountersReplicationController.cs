@@ -37,7 +37,7 @@ namespace Raven.Database.Counters.Controllers
 
 			try
 			{
-				replicationMessage = await ReadJsonObjectAsync<ReplicationMessage>();
+				replicationMessage = await ReadJsonObjectAsync<ReplicationMessage>().ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -131,7 +131,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
-			var newReplicationDocument = await ReadJsonObjectAsync<CountersReplicationDocument>();
+			var newReplicationDocument = await ReadJsonObjectAsync<CountersReplicationDocument>().ConfigureAwait(false);
 			using (var writer = CounterStorage.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);

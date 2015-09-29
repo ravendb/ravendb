@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
@@ -88,7 +87,8 @@ namespace Raven.Tests.Counters
 							From = ConnectionStringTo(counterStoreA, badApikey)
 						})));
 
-					e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+                    Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+					
 
 					Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
 						smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
@@ -104,9 +104,9 @@ namespace Raven.Tests.Counters
 							To = ConnectionStringTo(counterStoreB, badApikey)
 						})));
 
-					e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+                    Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
 
-					Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
+                    Assert.DoesNotThrow(() => AsyncHelpers.RunSync(() =>
 						smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 						{
 							FromFile = CounterDumpFilename,
@@ -124,11 +124,11 @@ namespace Raven.Tests.Counters
 			{
 				var smugglerApi = new SmugglerCounterApi();
 
-				this.Invoking(x => AsyncHelpers.RunSync(() => smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
+				Assert.Throws<FailingStreamException>(() => AsyncHelpers.RunSync(() => smugglerApi.ExportData(new SmugglerExportOptions<CounterConnectionStringOptions>
 				{
 					ToStream = stream,
 					From = ConnectionStringTo(counterStore)
-				}))).ShouldThrow<FailingStreamException>();
+				})));
 			}
 		}
 
@@ -141,7 +141,7 @@ namespace Raven.Tests.Counters
 			{
 				var smugglerApi = new SmugglerCounterApi();
 
-				this.Invoking(x => AsyncHelpers.RunSync(() => smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
+                Assert.Throws<FailingStreamException>(() => AsyncHelpers.RunSync(() => smugglerApi.ImportData(new SmugglerImportOptions<CounterConnectionStringOptions>
 				{
 					FromStream = stream,
 					To = new CounterConnectionStringOptions
@@ -149,7 +149,7 @@ namespace Raven.Tests.Counters
 						Url = counterStore.Url,
 						CounterStoreId = counterStore.Name
 					}
-				}))).ShouldThrow<FailingStreamException>();
+				})));
 			}
 		}
 
@@ -172,8 +172,8 @@ namespace Raven.Tests.Counters
 				});
 
 				var fileInfo = new FileInfo(CounterDumpFilename);
-				fileInfo.Exists.Should().BeTrue();
-				fileInfo.Length.Should().BeGreaterThan(0);
+				Assert.True(fileInfo.Exists);
+				Assert.True(fileInfo.Length > 0);
 			}
 		}
 
@@ -206,10 +206,10 @@ namespace Raven.Tests.Counters
 
 				var incrementalFolder = new DirectoryInfo(CounterDumpFilename);
 
-				incrementalFolder.Exists.Should().BeTrue();
+				Assert.True(incrementalFolder.Exists);
 				var dumpFiles = incrementalFolder.GetFiles();
-				dumpFiles.Should().HaveCount(3);
-				dumpFiles.Should().OnlyContain(x => x.Length > 0);
+                Assert.Equal(3, dumpFiles.Length);
+                Assert.True(dumpFiles.All(x=>x.Length>0));
 			}			
 		}
 
@@ -264,16 +264,14 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
+                Assert.Equal(3, summary.Length);//sanity check
+                Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
+                Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
+                Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c" && x.GroupName == "g"));
 
-				summary.Should().HaveCount(3); //sanity check
-
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
-
-				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(5);
-				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(3);
-				summary.First(x => x.CounterName == "c" && x.GroupName == "g").Total.Should().Be(-2);
+                Assert.Equal(5, summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total);
+                Assert.Equal(3, summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total);
+                Assert.Equal(-2, summary.First(x => x.CounterName == "c" && x.GroupName == "g").Total);
 			}
 		}
 
@@ -307,15 +305,14 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
+                Assert.Equal(3, summary.Length); //sanity check
+                Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
+			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
+			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));
 
-				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
-
-				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(6); //change + inc
-				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(-1);
+                Assert.Equal(6, summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total);//change + inc
+                Assert.Equal(1, summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total);
+                Assert.Equal(-1, summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total);
 			}
 		}
 
@@ -338,15 +335,14 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
-
-				summary.Should().HaveCount(3); //sanity check
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
-				summary.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g2");
-
-				summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total.Should().Be(2); 
-				summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total.Should().Be(1);
-				summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total.Should().Be(4);
+                Assert.Equal(3, summary.Length); //sanity check
+				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
+                Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
+				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));
+				
+                Assert.Equal(2, summary.First(x => x.CounterName == "c1" && x.GroupName == "g1").Total);
+				Assert.Equal(1, summary.First(x => x.CounterName == "c2" && x.GroupName == "g1").Total);
+			    Assert.Equal(4, summary.First(x => x.CounterName == "c1" && x.GroupName == "g2").Total);
 			}
 		}
 

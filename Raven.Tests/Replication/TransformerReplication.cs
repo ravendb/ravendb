@@ -5,8 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using FluentAssertions;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -281,9 +279,9 @@ namespace Raven.Tests.Replication
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 
@@ -393,9 +391,9 @@ namespace Raven.Tests.Replication
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 	
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 

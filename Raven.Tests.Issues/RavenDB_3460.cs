@@ -7,105 +7,106 @@ using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using System.Collections.Generic;
 using Xunit;
-using FluentAssertions;
 
 namespace Raven.Tests.Issues
 {
 
-		public class RavenDB_3460 : RavenTestBase
-		{						
-			[Fact]
-			public void DoubleEncodingInHttpQueryShouldWork()
-			{
-				using (var store = NewRemoteDocumentStore())
-				{
-					var customers = SetupAndGetCustomers(store);
-                    Assert.True(customers.Any());
+    public class RavenDB_3460 : RavenTestBase
+    {
+        [Fact]
+        public void DoubleEncodingInHttpQueryShouldWork()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                var customers = SetupAndGetCustomers(store);
+                Assert.NotEmpty(customers);
 
-					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url,store.DefaultDatabase);
-                    Assert.True(GetResults(url).Values().Any());
-				}
-			}
+                var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
 
-			[Fact]
-			public void SingleEncodingInHttpQueryShouldWork()
-			{
-				using (var store = NewRemoteDocumentStore())
-				{
-					var customers = SetupAndGetCustomers(store);
-                    Assert.True(customers.Any());
+                Assert.NotEmpty(GetResults(url).Values());
+            }
+        }
 
-					var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
+        [Fact]
+        public void SingleEncodingInHttpQueryShouldWork()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                var customers = SetupAndGetCustomers(store);
+                Assert.NotEmpty(customers);
 
-                    Assert.True(GetResults(url).Values().Any());
-				}
-			}
 
-			private IEnumerable<Customer> SetupAndGetCustomers(IDocumentStore store)
-			{
-				new CustomersIndex().Execute(store);
+                var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Customer() { Number = 1 });
+                Assert.NotEmpty(GetResults(url).Values());
+            }
+        }
 
-					session.SaveChanges();
-				}
+        private IEnumerable<Customer> SetupAndGetCustomers(IDocumentStore store)
+        {
+            new CustomersIndex().Execute(store);
 
-				using (var session = store.OpenSession())
-				{
-					var customers = session.Query<Customer, CustomersIndex>()
-									.Customize(c => c.WaitForNonStaleResultsAsOfNow())
-									.Where(x => x.Number == 1).ToList();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Customer() { Number = 1 });
 
-					return customers;
-				}
-			}
+                session.SaveChanges();
+            }
 
-			private RavenJToken GetResults(string url)
-			{
-				var request = WebRequest.Create(url);
+            using (var session = store.OpenSession())
+            {
+                var customers = session.Query<Customer, CustomersIndex>()
+                                .Customize(c => c.WaitForNonStaleResultsAsOfNow())
+                                .Where(x => x.Number == 1).ToList();
 
-				using (var response = request.GetResponse())
-				{
-					using (var stream = response.GetResponseStream())
-					{
-						if (stream != null)
-						{
-							var bytes = new byte[10000];
+                return customers;
+            }
+        }
 
-							stream.Read(bytes, 0, 10000);
+        private RavenJToken GetResults(string url)
+        {
+            var request = WebRequest.Create(url);
 
-							var data = Encoding.UTF8.GetString(bytes);
+            using (var response = request.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
+                {
+                    if (stream != null)
+                    {
+                        var bytes = new byte[10000];
 
-							var o = RavenJObject.Parse(data);
+                        stream.Read(bytes, 0, 10000);
 
-							var results = o["Results"];
+                        var data = Encoding.UTF8.GetString(bytes);
 
-							return results;
-						}
-					}
-				}
+                        var o = RavenJObject.Parse(data);
 
-				return null;
-			}
-		}
+                        var results = o["Results"];
 
-		public class Customer
-		{
-			public int Number { get; set; }
-		}
+                        return results;
+                    }
+                }
+            }
 
-		public class CustomersIndex : AbstractIndexCreationTask<Customer>
-		{
-			public CustomersIndex()
-			{
-				Map = docs => from doc in docs
-							  select new
-							  {
-								  doc.Number
-							  };
-			}
-		}
-	}
+            return null;
+        }
+    }
+
+    public class Customer
+    {
+        public int Number { get; set; }
+    }
+
+    public class CustomersIndex : AbstractIndexCreationTask<Customer>
+    {
+        public CustomersIndex()
+        {
+            Map = docs => from doc in docs
+                          select new
+                          {
+                              doc.Number
+                          };
+        }
+    }
+}
 

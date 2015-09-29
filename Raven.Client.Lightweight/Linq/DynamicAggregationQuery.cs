@@ -156,7 +156,7 @@ namespace Raven.Client.Linq
 
 		public async Task<FacetResults> ToListAsync()
 		{
-			return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)));
+			return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
 		}
 
 	    private FacetResults HandlRenames(FacetResults facetResults)

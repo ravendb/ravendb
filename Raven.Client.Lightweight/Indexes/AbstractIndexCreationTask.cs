@@ -353,7 +353,7 @@ namespace Raven.Client.Indexes
                 return;
                 try
                 {
-				await serverClient.ReplicateIndexAsync(IndexName);
+				await serverClient.ReplicateIndexAsync(IndexName).ConfigureAwait(false);
                 }
 			catch
                 {
@@ -407,7 +407,7 @@ namespace Raven.Client.Indexes
 				if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, sideBySideDef, indexDefinition))
 					return;
 
-				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention);
+				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention).ConfigureAwait(false);
 				return;
 			}
 
@@ -417,13 +417,13 @@ namespace Raven.Client.Indexes
 	            if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
 					return;
 
-				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention);
+				await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention).ConfigureAwait(false);
             }
             else
             {
                 // since index doesn't exist yet - create it in normal mode
                 await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, token).ConfigureAwait(false);
-				await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token);
+				await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
             }
         }
 
@@ -438,7 +438,7 @@ namespace Raven.Client.Indexes
 				    new RavenJObject(),
 				    token).ConfigureAwait(false);
 
-		    await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token);
+		    await AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
 	    }
 
         /// <summary>

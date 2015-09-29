@@ -31,20 +31,20 @@ namespace Raven.Database.Server.WebApi.Handlers
 			bool waiting = false;
 			try
 			{
-				waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+				waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
 				if (waiting == false)
 				{
 					try
 					{
 						Logger.Info("Too many concurrent requests, throttling!");
-						return await HandleTooBusyError(request);
+						return await HandleTooBusyError(request).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
 						Logger.WarnException("Could not send a too busy error to the client", e);
 					}
 				}
-				return await base.SendAsync(request, cancellationToken);
+				return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 			}
 			finally
 			{

@@ -90,7 +90,7 @@ namespace Raven.Database.FileSystem.Controllers
 				if (fsTask.IsCompleted == false)
 					continue; // we don't care about in process of starting file systems
 
-				var ravenFileSystem = await fsTask;
+				var ravenFileSystem = await fsTask.ConfigureAwait(false);
 				var fsStats = ravenFileSystem.GetFileSystemStats();
 				stats.Add(fsStats);
 			}

@@ -128,7 +128,7 @@ namespace Raven.Database.Server.Tenancy
 
 			Task<DocumentDatabase> db;
 			if (TryGetOrCreateResourceStore(resourceName, out db))
-				return await db;
+				return await db.ConfigureAwait(false);
 			return null;
 		}
 

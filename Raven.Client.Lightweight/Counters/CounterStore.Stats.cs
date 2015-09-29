@@ -13,7 +13,7 @@ namespace Raven.Client.Counters
 		public async Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}/cs/{1}/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
@@ -26,7 +26,7 @@ namespace Raven.Client.Counters
 		public async Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}/cs/{1}/metrics", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
@@ -39,7 +39,7 @@ namespace Raven.Client.Counters
 		public async Task<List<CounterStorageReplicationStats>> GetCounterReplicationStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync(); 
+			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
 			var requestUriString = String.Format("{0}/cs/{1}/replications/stats", Url, Name);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))

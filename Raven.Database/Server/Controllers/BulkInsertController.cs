@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = operationId.ToString()
                                                  }, out id, tre);
 
-            await task;
+            await task.ConfigureAwait(false);
 
             if (error != null)
             {

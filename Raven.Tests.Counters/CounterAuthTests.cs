@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -47,7 +46,8 @@ namespace Raven.Tests.Counters
 			{
 				store.Initialize();
 				var e = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => store.Admin.GetCounterStoragesNamesAsync()));
-				e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+				
+                Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
 			}
 
 			using (var store = new CounterStore
@@ -60,7 +60,8 @@ namespace Raven.Tests.Counters
 				store.Initialize();
 				var storageNames = new string[0];
 				Assert.DoesNotThrow(() => storageNames = AsyncHelpers.RunSync(() => store.Admin.GetCounterStoragesNamesAsync()));
-				storageNames.Should().HaveCount(1);
+				
+                Assert.Equal(1, storageNames.Length);
 			}
 		}
 
@@ -87,8 +88,9 @@ namespace Raven.Tests.Counters
 			{
 				store.Initialize();
 				var e = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => store.IncrementAsync("G", "C")));
-				e.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-			}
+
+                Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+            }
 
 			using (var store = new CounterStore
 			{

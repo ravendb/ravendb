@@ -310,7 +310,7 @@ namespace Raven.Smuggler
 
                             ValidateDatabaseParameters(smugglerApi, action);
                             var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                            await databaseDispatcher.Execute(action);
+                            await databaseDispatcher.Execute(action).ConfigureAwait(false);
                         }
                         break;
                     case SmugglerMode.Filesystem:
@@ -331,7 +331,7 @@ namespace Raven.Smuggler
                                 smugglerFilesApi.Options.Incremental = true;
 
                             var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                            await filesDispatcher.Execute(action);
+                            await filesDispatcher.Execute(action).ConfigureAwait(false);
                         }
                         break;
 					case SmugglerMode.Counter:
@@ -366,7 +366,7 @@ namespace Raven.Smuggler
 						smugglerCounterApi.Options.BackupPath = args[2];
 						
 						var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
-						await countersDispatcher.Execute(action);
+						await countersDispatcher.Execute(action).ConfigureAwait(false);
 					}
 						break;
 				}

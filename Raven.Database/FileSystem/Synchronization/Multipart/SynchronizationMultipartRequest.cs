@@ -69,7 +69,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 				try
 				{
-					await request.WriteAsync(PrepareMultipartContent(token));
+					await request.WriteAsync(PrepareMultipartContent(token)).ConfigureAwait(false);
 
 					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
@@ -132,7 +132,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 			{
 				using (stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
-					await base.SerializeToStreamAsync(stream, context);
+					await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
 			}
 		}
 

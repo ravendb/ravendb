@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Controllers
 
 	            try
 	            {
-		            jsonCommandArray = await ReadJsonArrayAsync();
+		            jsonCommandArray = await ReadJsonArrayAsync().ConfigureAwait(false);
 	            }
 	            catch (InvalidOperationException e)
 	            {
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
             RavenJArray patchRequestJson;
 	        try
 			{
-				patchRequestJson = await ReadJsonArrayAsync();
+				patchRequestJson = await ReadJsonArrayAsync().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -158,7 +158,7 @@ namespace Raven.Database.Server.Controllers
 
 	        try
 	        {
-				advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+				advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{

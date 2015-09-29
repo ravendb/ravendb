@@ -227,7 +227,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var array = await ReadJsonArrayAsync();
+			var array = await ReadJsonArrayAsync().ConfigureAwait(false);
 			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
 

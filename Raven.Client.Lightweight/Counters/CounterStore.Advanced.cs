@@ -35,7 +35,7 @@ namespace Raven.Client.Counters
 			public async Task<List<CounterState>> GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
-				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync();
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 
 				//TODO : perhaps this call should not be with failover? discuss with Oren
 				var states = await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get,async (url, counterStoreName) =>
@@ -47,7 +47,7 @@ namespace Raven.Client.Counters
 						var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 						return response.ToObject<List<CounterState>>();
 					}
-				}, token);
+				}, token).ConfigureAwait(false);
 				
 				return states;
 			}

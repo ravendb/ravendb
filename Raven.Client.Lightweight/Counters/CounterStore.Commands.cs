@@ -28,12 +28,12 @@ namespace Raven.Client.Counters
 
 		public async Task IncrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			await ChangeAsync(groupName, counterName, 1, token);
+			await ChangeAsync(groupName, counterName, 1, token).ConfigureAwait(false);
 		}
 
 		public async Task DecrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			await ChangeAsync(groupName, counterName, -1, token);
+			await ChangeAsync(groupName, counterName, -1, token).ConfigureAwait(false);
 		}
 
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))

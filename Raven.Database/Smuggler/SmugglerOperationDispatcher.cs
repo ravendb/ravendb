@@ -26,13 +26,13 @@ namespace Raven.Smuggler
                 switch (action)
                 {
                     case SmugglerAction.Import:
-                        await PerformImportAsync(Options);
+                        await PerformImportAsync(Options).ConfigureAwait(false);
                         break;
                     case SmugglerAction.Export:
-                        await PerformExportAsync(Options);
+                        await PerformExportAsync(Options).ConfigureAwait(false);
                         break;
                     case SmugglerAction.Between:
-                        await PerformBetweenAsync(Options);
+                        await PerformBetweenAsync(Options).ConfigureAwait(false);
                         break;
                 }
             }

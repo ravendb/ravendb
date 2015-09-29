@@ -105,7 +105,7 @@ namespace Raven.Client.Document
 			disposed = true;
 
 			if (current != null)
-				return await (current.DisposeAsync());
+				return await current.DisposeAsync().ConfigureAwait(false);
 
 			return 0;
 		}

@@ -114,7 +114,7 @@ namespace Raven.Client.Connection.Async
 		{
 			using (var request = adminRequest.CreateRestoreRequest())
 			{
-				await request.WriteAsync(RavenJObject.FromObject(restoreRequest)).WithCancellation(token);
+				await request.WriteAsync(RavenJObject.FromObject(restoreRequest)).WithCancellation(token).ConfigureAwait(false);
 
 				var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
@@ -140,7 +140,7 @@ namespace Raven.Client.Connection.Async
 			{
 				using (var request = adminRequest.GetDatabaseConfiguration(operationMetadata.Url))
 				{
-					return (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token);
+					return (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token);
 		}

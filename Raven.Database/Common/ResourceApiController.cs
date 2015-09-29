@@ -259,7 +259,7 @@ namespace Raven.Database.Common
 
 						try
 						{
-							if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForResourceToLoad))) != resourceStoreTask)
+							if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForResourceToLoad))).ConfigureAwait(false) != resourceStoreTask)
 							{
 								msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad);
 								Log.Warn(msg);
@@ -318,7 +318,7 @@ namespace Raven.Database.Common
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
 					RequestManager.SetThreadLocalState(ReadInnerHeaders, ResourceName);
-					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
+					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer).ConfigureAwait(false);
 				}, httpException =>
 				{
 					var response = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
@@ -329,7 +329,7 @@ namespace Raven.Database.Common
 						response.Headers.Add("Raven-Database-Load-In-Progress", ResourceName);
 					}
 					return response;
-				});
+				}).ConfigureAwait(false);
 			}
 
 			RequestManager.AddAccessControlHeaders(this, result);
@@ -354,7 +354,7 @@ namespace Raven.Database.Common
 				RequestManager.IncrementRequestCount();
 			}
 
-			if (ResourceName != null && await ResourceLandlord.GetResourceInternal(ResourceName) == null)
+			if (ResourceName != null && await ResourceLandlord.GetResourceInternal(ResourceName).ConfigureAwait(false) == null)
 			{
 				var msg = "Could not find a resource named: " + ResourceName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
@@ -362,7 +362,7 @@ namespace Raven.Database.Common
 
 			var sp = Stopwatch.StartNew();
 
-			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+			var result = await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 			sp.Stop();
 			AddRavenHeader(result, sp);
 
