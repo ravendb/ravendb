@@ -271,9 +271,11 @@ namespace Raven.Tests.Replication
 				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
-						{ userTransformer.TransformerName, 
-							anotherTransformer.TransformerName, 
-							yetAnotherTransformer.TransformerName };
+				{ 
+                    anotherTransformer.TransformerName, 
+                    userTransformer.TransformerName, 							
+					yetAnotherTransformer.TransformerName 
+                };
 
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
@@ -373,9 +375,11 @@ namespace Raven.Tests.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
-						{ userTransformer.TransformerName, 
-							anotherTransformer.TransformerName, 
-							yetAnotherTransformer.TransformerName };
+				{ 
+                    anotherTransformer.TransformerName, 
+                    userTransformer.TransformerName, 							
+					yetAnotherTransformer.TransformerName 
+                };
 				
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
