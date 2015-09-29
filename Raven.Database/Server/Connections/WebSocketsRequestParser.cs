@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Connections
 				Token = token
 			};
 
-			await ValidateRequest(request);
+			await ValidateRequest(request).ConfigureAwait(false);
 			AuthenticateRequest(request);
 
 			return request;
@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Connections
 				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Id is mandatory.");
 			}
 
-			request.ActiveResource = await GetActiveResource(request);
+			request.ActiveResource = await GetActiveResource(request).ConfigureAwait(false);
 			request.ResourceName = request.ActiveResource.ResourceName ?? Constants.SystemDatabase;
 		}
 
@@ -119,16 +119,16 @@ namespace Raven.Database.Server.Connections
 				switch (resourcePartsPathParts[1])
 				{
 					case DatabasesUrlPrefix:
-						activeResource = await DatabasesLandlord.GetResourceInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
+						activeResource = await DatabasesLandlord.GetResourceInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2)).ConfigureAwait(false);
 						break;
 					case FileSystemsUrlPrefix:
-						activeResource = await fileSystemsLandlord.GetResourceInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
+						activeResource = await fileSystemsLandlord.GetResourceInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2)).ConfigureAwait(false);
 						break;
 					case CountersUrlPrefix:
-						activeResource = await countersLandlord.GetResourceInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
+						activeResource = await countersLandlord.GetResourceInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2)).ConfigureAwait(false);
 						break;
 					case TimeSeriesUrlPrefix:
-						activeResource = await timeSeriesLandlord.GetResourceInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2));
+						activeResource = await timeSeriesLandlord.GetResourceInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2)).ConfigureAwait(false);
 						break;
 					default:
 						throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");
@@ -215,7 +215,7 @@ namespace Raven.Database.Server.Connections
 
 		protected override async Task ValidateRequest(WebSocketRequest request)
 		{
-			await base.ValidateRequest(request);
+			await base.ValidateRequest(request).ConfigureAwait(false);
 
             if (request.ResourceName != Constants.SystemDatabase)
 				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");

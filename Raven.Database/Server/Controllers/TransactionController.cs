@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 			Guid resourceManagerId;
 			if (Guid.TryParse(resourceManagerIdStr, out resourceManagerId))
 			{
-				var recoveryInformation = await Request.Content.ReadAsByteArrayAsync();
+				var recoveryInformation = await Request.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
 				if (recoveryInformation == null || recoveryInformation.Length == 0)
 					throw new InvalidOperationException("Recovery information is mandatory if resourceManagerId is specified");
 

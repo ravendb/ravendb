@@ -103,7 +103,7 @@ namespace Raven.Smuggler
 		[Obsolete("Use RavenFS instead.")]
 		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
-			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
+			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords).ConfigureAwait(false);
 
 			return attachments.ToList();
 		}
@@ -111,7 +111,7 @@ namespace Raven.Smuggler
 		[Obsolete("Use RavenFS instead.")]
 		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
 		{
-			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key).ConfigureAwait(false);
 			if (attachment == null)
 				return null;
 
@@ -128,7 +128,7 @@ namespace Raven.Smuggler
 			if (isDocsStreamingSupported())
 			{
 				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-				return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: take);
+				return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: take).ConfigureAwait(false);
 			}
 
 			int retries = RetriesCount;
@@ -143,7 +143,7 @@ namespace Raven.Smuggler
 				{
 					try
 					{
-						await ((AsyncServerClient)Store.AsyncDatabaseCommands).GetDocumentsAsync(lastEtag, Math.Min(Options.BatchSize, take));
+						await ((AsyncServerClient)Store.AsyncDatabaseCommands).GetDocumentsAsync(lastEtag, Math.Min(Options.BatchSize, take)).ConfigureAwait(false);
 
 					}
 					catch (Exception e)
@@ -165,7 +165,7 @@ namespace Raven.Smuggler
 
 		public async Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			var indexes = await Store.AsyncDatabaseCommands.GetIndexesAsync(totalCount, Options.BatchSize);
+			var indexes = await Store.AsyncDatabaseCommands.GetIndexesAsync(totalCount, Options.BatchSize).ConfigureAwait(false);
 			var result = new RavenJArray();
 
 			foreach (var index in indexes)
@@ -190,7 +190,7 @@ namespace Raven.Smuggler
 			if (isTransformersSupported() == false)
 				return new RavenJArray();
 
-			var transformers = await Store.AsyncDatabaseCommands.GetTransformersAsync(start, Options.BatchSize);
+			var transformers = await Store.AsyncDatabaseCommands.GetTransformersAsync(start, Options.BatchSize).ConfigureAwait(false);
 			var result = new RavenJArray();
 
 			foreach (var transformer in transformers)
@@ -207,7 +207,7 @@ namespace Raven.Smuggler
 
 		public async Task<string> GetVersion(RavenConnectionStringOptions server)
 		{
-			var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+			var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
 			return buildNumber.ProductVersion;
 		}
 
@@ -221,7 +221,7 @@ namespace Raven.Smuggler
 		{
 			if (attachmentExportInfo != null)
 			{
-				await Store.AsyncDatabaseCommands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
+				await Store.AsyncDatabaseCommands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata).ConfigureAwait(false);
 			}
 		}
 
@@ -262,7 +262,7 @@ namespace Raven.Smuggler
 			if (transformer != null)
 			{
 				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
-				await Store.AsyncDatabaseCommands.PutTransformerAsync(transformerName, transformerDefinition);
+				await Store.AsyncDatabaseCommands.PutTransformerAsync(transformerName, transformerDefinition).ConfigureAwait(false);
 			}
 		}
 
@@ -345,7 +345,7 @@ namespace Raven.Smuggler
 				var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
 				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
 				{
-					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
+					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
 
 					foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))

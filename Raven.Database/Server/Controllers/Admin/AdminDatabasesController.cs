@@ -67,7 +67,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString(error, HttpStatusCode.BadRequest);
 			}
-			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
 			
 			string bundles;			
 			if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))

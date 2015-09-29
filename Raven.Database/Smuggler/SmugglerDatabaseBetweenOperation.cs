@@ -147,7 +147,7 @@ namespace Raven.Smuggler
 			var totalCount = 0;
 			while (true)
 			{
-				var indexes = await exportOperations.GetIndexes(totalCount);
+				var indexes = await exportOperations.GetIndexes(totalCount).ConfigureAwait(false);
 				if (indexes.Length == 0)
 				{
 					ShowProgress("Done with reading indexes, total: {0}", totalCount);

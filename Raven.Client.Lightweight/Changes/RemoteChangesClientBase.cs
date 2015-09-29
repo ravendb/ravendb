@@ -155,7 +155,7 @@ namespace Raven.Client.Changes
 
             clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
-            await SubscribeOnServer();
+            await SubscribeOnServer().ConfigureAwait(false);
         }
 
         private void ClientSideHeartbeat(object _)

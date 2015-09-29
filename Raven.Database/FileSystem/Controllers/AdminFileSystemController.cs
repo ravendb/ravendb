@@ -63,7 +63,7 @@ namespace Raven.Database.FileSystem.Controllers
                     return GetEmptyMessage(HttpStatusCode.Conflict);
             }
 
-            var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
+            var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>().ConfigureAwait(false);
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
 	        string bundles;
@@ -224,7 +224,7 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/admin/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
-            var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
+            var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>().ConfigureAwait(false);
             var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
             bool incrementalBackup;
             if (bool.TryParse(incrementalString, out incrementalBackup) == false)
@@ -390,7 +390,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
-            var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
+            var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>().ConfigureAwait(false);
        
             var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
@@ -456,7 +456,7 @@ namespace Raven.Database.FileSystem.Controllers
                             var token = cts.Token;
                             do
                             {
-                                await Task.Delay(500, token);
+                                await Task.Delay(500, token).ConfigureAwait(false);
                             }
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }

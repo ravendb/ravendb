@@ -237,7 +237,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				jsonIndex = await ReadJsonAsync();
+				jsonIndex = await ReadJsonAsync().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -328,7 +328,7 @@ namespace Raven.Database.Server.Controllers
 
             if ("hasChanged".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
-                var data = await ReadJsonObjectAsync<IndexDefinition>();
+                var data = await ReadJsonObjectAsync<IndexDefinition>().ConfigureAwait(false);
                 if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 
@@ -340,7 +340,7 @@ namespace Raven.Database.Server.Controllers
 
 			if ("true".Equals(GetQueryStringValue("postQuery"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				var postedQuery = await ReadStringAsync();
+				var postedQuery = await ReadStringAsync().ConfigureAwait(false);
 				
 				SetPostRequestQuery(postedQuery);
 				return IndexGet(id);

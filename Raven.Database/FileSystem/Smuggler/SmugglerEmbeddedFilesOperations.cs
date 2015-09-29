@@ -116,7 +116,7 @@ namespace Raven.Database.FileSystem.Smuggler
 			await filesystem.Files.PutAsync(file.FullPath, null, file.Metadata, () => new CompletedTask<Stream>(data), new FileActions.PutOperationOptions
 			{
 				ContentLength = dataSize
-			});
+			}).ConfigureAwait(false);
 		}
 
 		public void Initialize(SmugglerFilesOptions options)

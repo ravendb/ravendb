@@ -353,7 +353,7 @@ namespace Raven.Client.Connection.Async
 		public async Task<string[]> DirectPutIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
 		{
 			var requestUri = operationMetadata.Url + "/indexes";
-			return await PutIndexes(operationMetadata, token, requestUri, indexesToAdd);
+			return await PutIndexes(operationMetadata, token, requestUri, indexesToAdd).ConfigureAwait(false);
 		}
 
 		public async Task<string[]> DirectPutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token = default(CancellationToken))
@@ -366,7 +366,7 @@ namespace Raven.Client.Connection.Async
 			};
 
 			var requestUri = operationMetadata.Url + "/side-by-side-indexes";
-			return await PutIndexes(operationMetadata, token, requestUri, sideBySideIndexes);
+			return await PutIndexes(operationMetadata, token, requestUri, sideBySideIndexes).ConfigureAwait(false);
 		}
 
 		private async Task<string[]> PutIndexes(OperationMetadata operationMetadata, CancellationToken token, string requestUri, object obj)

@@ -21,18 +21,18 @@ namespace Raven.Smuggler
 
         protected override async Task PerformImportAsync(SmugglerFilesOptions parameters)
         {
-            await api.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = parameters.BackupPath, To = parameters.Source });            
+            await api.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = parameters.BackupPath, To = parameters.Source }).ConfigureAwait(false);            
         }
 
         protected override async Task PerformExportAsync(SmugglerFilesOptions parameters)
         {
-            await api.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = parameters.Source, ToFile = parameters.BackupPath });
+            await api.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = parameters.Source, ToFile = parameters.BackupPath }).ConfigureAwait(false);
         }
 
         protected override async Task PerformBetweenAsync(SmugglerFilesOptions parameters)
         {
             parameters.Destination.Url = parameters.BackupPath;
-            await api.Between(new SmugglerBetweenOptions<FilesConnectionStringOptions> { From = parameters.Source, To = parameters.Destination });
+            await api.Between(new SmugglerBetweenOptions<FilesConnectionStringOptions> { From = parameters.Source, To = parameters.Destination }).ConfigureAwait(false);
         }
     }
 }

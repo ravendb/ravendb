@@ -260,7 +260,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var array = await ReadJsonArrayAsync();
+			var array = await ReadJsonArrayAsync().ConfigureAwait(false);
 			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
 
@@ -371,7 +371,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var array = await ReadBsonArrayAsync();
+			var array = await ReadBsonArrayAsync().ConfigureAwait(false);
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				var conflictResolvers = AttachmentReplicationConflictResolvers; 

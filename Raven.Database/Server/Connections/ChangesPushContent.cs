@@ -64,25 +64,25 @@ namespace Raven.Database.Server.Connections
 		    {
                 using (var writer = new StreamWriter(stream))
                 {
-                    await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-                    await writer.FlushAsync();
+                    await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
+                    await writer.FlushAsync().ConfigureAwait(false);
 
                     while (Connected)
                     {
                         try
                         {
-                            var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
+                            var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token).ConfigureAwait(false);
                             if (Connected == false)
                                 return;
 
                             if (result == false)
                             {
-                                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-                                await writer.FlushAsync();
+                                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
+                                await writer.FlushAsync().ConfigureAwait(false);
 
                                 if (lastMessageEnqueuedAndNotSent != null)
                                 {
-                                    await SendMessage(lastMessageEnqueuedAndNotSent, writer);
+                                    await SendMessage(lastMessageEnqueuedAndNotSent, writer).ConfigureAwait(false);
                                 }
                                 continue;
                             }
@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Connections
                                     continue;
                                 }
 
-                                await SendMessage(message, writer);
+                                await SendMessage(message, writer).ConfigureAwait(false);
                             }
                         }
                         catch (Exception e)
@@ -129,10 +129,10 @@ namespace Raven.Database.Server.Connections
 		private async Task SendMessage(object message, StreamWriter writer)
 		{
             var o = JsonExtensions.ToJObject(message);        
-            await writer.WriteAsync("data: ");
-            await writer.WriteAsync(o.ToString(Formatting.None));
-            await writer.WriteAsync("\r\n\r\n");
-            await writer.FlushAsync();
+            await writer.WriteAsync("data: ").ConfigureAwait(false);
+            await writer.WriteAsync(o.ToString(Formatting.None)).ConfigureAwait(false);
+            await writer.WriteAsync("\r\n\r\n").ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
 			lastMessageEnqueuedAndNotSent = null;
 			lastMessageSentTick = Environment.TickCount;
 		}

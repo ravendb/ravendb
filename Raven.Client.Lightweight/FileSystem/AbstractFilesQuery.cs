@@ -734,7 +734,7 @@ namespace Raven.Client.FileSystem
 			if (log.IsDebugEnabled)
 				log.Debug("Executing query on file system '{0}' in '{1}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
-            var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize);
+            var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize).ConfigureAwait(false);
 
             return result.Files.ConvertAll<T>(x => x as T);
         }
@@ -763,7 +763,7 @@ namespace Raven.Client.FileSystem
         {
             Take(1);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.FirstOrDefault();
         }
 
@@ -771,7 +771,7 @@ namespace Raven.Client.FileSystem
         {
             Take(1);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.First();
         }
 
@@ -779,7 +779,7 @@ namespace Raven.Client.FileSystem
         {
             Take(2);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.SingleOrDefault();
         }
 
@@ -787,13 +787,13 @@ namespace Raven.Client.FileSystem
         {
             Take(2);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.Single();
         }
 
         public async Task<List<T>> ToListAsync()
         {
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.ToList();
         }
     }

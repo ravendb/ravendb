@@ -288,7 +288,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 		protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
 			OperationMetadata primaryOperationMetadata, bool avoidThrowing)
 		{
- 			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken));
+ 			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken)).ConfigureAwait(false);
 		}
 
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
@@ -360,7 +360,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					throw;
 		    }
 			}
-            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken).ConfigureAwait(false);
 		}
 
 	    public virtual void Dispose()

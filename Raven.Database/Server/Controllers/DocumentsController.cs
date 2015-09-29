@@ -93,7 +93,7 @@ namespace Raven.Database.Server.Controllers
 			RavenJObject json;
 			try
 			{
-				json = await ReadJsonAsync();
+				json = await ReadJsonAsync().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -206,7 +206,7 @@ namespace Raven.Database.Server.Controllers
 			RavenJObject json;
 			try
 			{
-				json = await ReadJsonAsync();
+				json = await ReadJsonAsync().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -237,7 +237,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public async Task<HttpResponseMessage> DocPatch(string docId)
 		{
-			var patchRequestJson = await ReadJsonArrayAsync();
+			var patchRequestJson = await ReadJsonArrayAsync().ConfigureAwait(false);
 			var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 			var patchResult = Database.Patches.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
 			return ProcessPatchResult(docId, patchResult.PatchResult, null, null);
@@ -248,7 +248,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public async Task<HttpResponseMessage> DocEval(string docId)
 		{
-			var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+			var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
 			var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 			bool testOnly;
 			bool.TryParse(GetQueryStringValue("test"), out testOnly);

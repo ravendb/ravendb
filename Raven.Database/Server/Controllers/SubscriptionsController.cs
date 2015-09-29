@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/subscriptions/create")]
 		public async Task<HttpResponseMessage> Create()
 		{
-			var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>();
+			var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>().ConfigureAwait(false);
 
 			if(subscriptionCriteria == null)
 				throw new InvalidOperationException("Criteria cannot be null");
@@ -65,7 +65,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			Database.Subscriptions.GetSubscriptionConfig(id);
 
-			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>().ConfigureAwait(false);
 
 			if (options == null)
 				throw new InvalidOperationException("Options cannot be null");

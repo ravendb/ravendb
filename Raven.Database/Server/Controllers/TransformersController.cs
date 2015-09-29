@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> TransformersPut(string id)
 		{
 			var transformer = id;
-			var data = await ReadJsonObjectAsync<TransformerDefinition>();
+			var data = await ReadJsonObjectAsync<TransformerDefinition>().ConfigureAwait(false);
 			if (data == null || string.IsNullOrEmpty(data.TransformResults))
 				return GetMessageWithString("Expected json document with 'TransformResults' property", HttpStatusCode.BadRequest);
 

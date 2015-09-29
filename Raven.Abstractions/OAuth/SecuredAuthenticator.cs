@@ -195,7 +195,7 @@ namespace Raven.Abstractions.OAuth
 
 		            var requestUri = oauthSource;
 
-		            var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent("")).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound();
+		            var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent("")).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound().ConfigureAwait(false);
 
 		            if (response.IsSuccessStatusCode == false)
 		            {
@@ -220,7 +220,7 @@ namespace Raven.Abstractions.OAuth
 			            continue;
 		            }
 
-		            using (var stream = await response.GetResponseStreamWithHttpDecompression())
+		            using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 		            using (var reader = new StreamReader(stream))
 		            {
                         var currentOauthToken = reader.ReadToEnd();

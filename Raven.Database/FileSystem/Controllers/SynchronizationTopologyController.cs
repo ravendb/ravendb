@@ -32,7 +32,7 @@ namespace Raven.Database.FileSystem.Controllers
 			else
 			{
 				ttl = int.Parse(ttlAsString);
-				from = await ReadJsonArrayAsync();
+				from = await ReadJsonArrayAsync().ConfigureAwait(false);
 			}
 
 			var replicationSchemaDiscoverer = new SynchronizationTopologyDiscoverer(FileSystem, from, ttl, Log);

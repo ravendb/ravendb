@@ -97,7 +97,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				SupportedFeatures = await DetectServerSupportedFeatures(Operations, exportOptions.From);
+				SupportedFeatures = await DetectServerSupportedFeatures(Operations, exportOptions.From).ConfigureAwait(false);
 			}
 			catch (WebException e)
 			{
@@ -124,7 +124,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Indexes))
 					{
-						await ExportIndexes(exportOptions.From, jsonWriter);
+						await ExportIndexes(exportOptions.From, jsonWriter).ConfigureAwait(false);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -137,7 +137,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 						try
 						{
-							result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
+							result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag).ConfigureAwait(false);
 						}
                         catch (SmugglerExportException e)
                         {
@@ -154,7 +154,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 						try
 						{
-							result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
+							result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag).ConfigureAwait(false);
 						}
 						catch (SmugglerExportException e)
 						{
@@ -169,16 +169,16 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Transformers) && lastException == null)
 					{
-						await ExportTransformers(exportOptions.From, jsonWriter);
+						await ExportTransformers(exportOptions.From, jsonWriter).ConfigureAwait(false);
 					}
 					jsonWriter.WriteEndArray();
 
                     if (Options.ExportDeletions)
 					{
-						await ExportDeletions(jsonWriter, result, maxEtags);
+						await ExportDeletions(jsonWriter, result, maxEtags).ConfigureAwait(false);
 					}
 
-					await ExportIdentities(jsonWriter, Options.OperateOnTypes);
+					await ExportIdentities(jsonWriter, Options.OperateOnTypes).ConfigureAwait(false);
 
 					jsonWriter.WriteEndObject();
 					streamWriter.Flush();
@@ -215,7 +215,7 @@ namespace Raven.Abstractions.Smuggler
 				List<KeyValuePair<string, long>> identities;
 				try
 				{
-					identities = await Operations.GetIdentities();
+					identities = await Operations.GetIdentities().ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -347,7 +347,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-					transformers = await Operations.GetTransformers(totalCount);
+					transformers = await Operations.GetTransformers(totalCount).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -414,7 +414,7 @@ namespace Raven.Abstractions.Smuggler
 
 					try
 					{
-						attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+						attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -433,7 +433,7 @@ namespace Raven.Abstractions.Smuggler
 						DatabaseStatistics databaseStatistics;
 						try
 						{
-							databaseStatistics = await Operations.GetStats();
+							databaseStatistics = await Operations.GetStats().ConfigureAwait(false);
 						}
 						catch (Exception e)
 						{
@@ -473,7 +473,7 @@ namespace Raven.Abstractions.Smuggler
 
 						try
 						{
-							var attachmentData = await Operations.GetAttachmentData(attachmentInformation);
+							var attachmentData = await Operations.GetAttachmentData(attachmentInformation).ConfigureAwait(false);
 						if (attachmentData == null)
 							continue;
 
@@ -526,9 +526,9 @@ namespace Raven.Abstractions.Smuggler
 					if (maxRecords > 0 && reachedMaxEtag == false)
 					{
 						var amountToFetchFromServer = Math.Min(Options.BatchSize, maxRecords);
-						using (var documents = await Operations.GetDocuments(lastEtag, amountToFetchFromServer))
+						using (var documents = await Operations.GetDocuments(lastEtag, amountToFetchFromServer).ConfigureAwait(false))
 						{
-							while (await documents.MoveNextAsync())
+							while (await documents.MoveNextAsync().ConfigureAwait(false))
 							{
 								hasDocs = true;
 								var document = documents.Current;
@@ -578,7 +578,7 @@ namespace Raven.Abstractions.Smuggler
 						// The server can filter all the results. In this case, we need to try to go over with the next batch.
 						// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 						// (This code provides support for legacy RavenDB version: 1.0)
-						var databaseStatistics = await Operations.GetStats();
+						var databaseStatistics = await Operations.GetStats().ConfigureAwait(false);
 						var lastEtagComparable = new ComparableByteArray(lastEtag);
 						if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 						{
@@ -630,7 +630,7 @@ namespace Raven.Abstractions.Smuggler
             var stopwatch = Stopwatch.StartNew();
             var justIndexingWait = Stopwatch.StartNew();
                        
-            var stats = await Operations.GetStats();
+            var stats = await Operations.GetStats().ConfigureAwait(false);
             
             int tries = 0;
             Etag cutOffEtag = stats.LastDocEtag;
@@ -646,7 +646,7 @@ namespace Raven.Abstractions.Smuggler
                     Operations.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 
                 Thread.Sleep(1000);
-                stats = await Operations.GetStats();
+                stats = await Operations.GetStats().ConfigureAwait(false);
             }
 
             stopwatch.Stop();
@@ -662,7 +662,7 @@ namespace Raven.Abstractions.Smuggler
             int tries = 0;
             while (true)
             {
-                var stats = await Operations.GetStats();
+                var stats = await Operations.GetStats().ConfigureAwait(false);
                 if (stats.StaleIndexes.Length != 0)
                 {
                     if (tries++ % 10 == 0)
@@ -693,7 +693,7 @@ namespace Raven.Abstractions.Smuggler
 						stream = File.OpenRead(importOptions.FromFile);
 						ownStream = true;
 				    }
-					await ImportData(importOptions, stream);
+					await ImportData(importOptions, stream).ConfigureAwait(false);
 				}
 				finally
 				{
@@ -720,7 +720,7 @@ namespace Raven.Abstractions.Smuggler
                 using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
                 {
                     Operations.ShowProgress("Starting to import file: {0}", files[i]);
-                    await ImportData(importOptions, fileStream);
+                    await ImportData(importOptions, fileStream).ConfigureAwait(false);
                 }
             }
 
@@ -729,7 +729,7 @@ namespace Raven.Abstractions.Smuggler
             using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
             {
                 Operations.ShowProgress("Starting to import file: {0}", files.Last());
-                await ImportData(importOptions, fileStream);
+                await ImportData(importOptions, fileStream).ConfigureAwait(false);
             }
 		}
 
@@ -739,7 +739,7 @@ namespace Raven.Abstractions.Smuggler
 		{
             Operations.Configure(Options);
             Operations.Initialize(Options);
-			SupportedFeatures = await DetectServerSupportedFeatures(Operations, importOptions.To);
+			SupportedFeatures = await DetectServerSupportedFeatures(Operations, importOptions.To).ConfigureAwait(false);
 
 			Stream sizeStream;
 
@@ -888,7 +888,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-				await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value"));
+				await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value")).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -902,7 +902,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await Operations.SeedIdentityFor(null, -1); // force flush
+			await Operations.SeedIdentityFor(null, -1).ConfigureAwait(false); // force flush
 
 			return count;
 		}
@@ -924,7 +924,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-				await Operations.DeleteDocument(deletedDocumentInfo.Key);
+				await Operations.DeleteDocument(deletedDocumentInfo.Key).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -958,7 +958,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-				await Operations.DeleteAttachment(deletedAttachmentInfo.Key);
+				await Operations.DeleteAttachment(deletedAttachmentInfo.Key).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -990,7 +990,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-				await Operations.PutTransformer(transformerName, transformer);
+				await Operations.PutTransformer(transformerName, transformer).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1003,7 +1003,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await Operations.PutTransformer(null, null); // force flush
+			await Operations.PutTransformer(null, null).ConfigureAwait(false); // force flush
 
 				return count;
 		}
@@ -1048,7 +1048,7 @@ namespace Raven.Abstractions.Smuggler
 				if (Options.StripReplicationInformation) 
 					attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
 
-				await Operations.PutAttachment(attachmentExportInfo);
+				await Operations.PutAttachment(attachmentExportInfo).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1061,7 +1061,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await Operations.PutAttachment(null); // force flush
+			await Operations.PutAttachment(null).ConfigureAwait(false); // force flush
 
 				return count;
 		}
@@ -1161,7 +1161,7 @@ namespace Raven.Abstractions.Smuggler
 					continue;
 
                 if (!string.IsNullOrEmpty(Options.TransformScript))
-                    document = await Operations.TransformDocument(document, Options.TransformScript);
+                    document = await Operations.TransformDocument(document, Options.TransformScript).ConfigureAwait(false);
 
                 // If document is null after a transform we skip it. 
                 if (document == null)
@@ -1193,7 +1193,7 @@ namespace Raven.Abstractions.Smuggler
                     }     
                 }
 
-				await Operations.PutDocument(document, (int)size);
+				await Operations.PutDocument(document, (int)size).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1211,12 +1211,12 @@ namespace Raven.Abstractions.Smuggler
                         if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
                             state.LastDocsEtag = tempLastEtag;
 
-                        await WriteLastEtagToDatabase(state, lastEtagsDocument);
+                        await WriteLastEtagToDatabase(state, lastEtagsDocument).ConfigureAwait(false);
                     }
 
                     // Wait for the batch to be indexed before continue.
                     if (Options.WaitForIndexing)
-                        await WaitForIndexingAsOfLastWrite();
+                        await WaitForIndexingAsOfLastWrite().ConfigureAwait(false);
 
                     Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
 				}
@@ -1227,12 +1227,12 @@ namespace Raven.Abstractions.Smuggler
                 if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
                     state.LastDocsEtag = tempLastEtag;
 
-                await WriteLastEtagToDatabase(state, lastEtagsDocument);
+                await WriteLastEtagToDatabase(state, lastEtagsDocument).ConfigureAwait(false);
 
                 Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
             }
 
-            await Operations.PutDocument(null, -1); // force flush    
+            await Operations.PutDocument(null, -1).ConfigureAwait(false); // force flush    
 
 			return count;
 		}
@@ -1243,7 +1243,7 @@ namespace Raven.Abstractions.Smuggler
 
             var stateDocument = lastEtagsDocument.ToJson();
             int stateDocumentSize = (int)DocumentHelpers.GetRoughSize(stateDocument);
-            await Operations.PutDocument(stateDocument, stateDocumentSize);
+            await Operations.PutDocument(stateDocument, stateDocumentSize).ConfigureAwait(false);
         }
 
 		private async Task<int> ImportIndexes(JsonReader jsonReader)
@@ -1273,7 +1273,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-				await Operations.PutIndex(indexName, index);
+				await Operations.PutIndex(indexName, index).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1286,7 +1286,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await Operations.PutIndex(null, null);
+			await Operations.PutIndex(null, null).ConfigureAwait(false);
 
 			return count;
 		}
@@ -1302,7 +1302,7 @@ namespace Raven.Abstractions.Smuggler
 
 				try
 				{
-					indexes = await Operations.GetIndexes(totalCount);
+					indexes = await Operations.GetIndexes(totalCount).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1345,7 +1345,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(ISmugglerDatabaseOperations ops, RavenConnectionStringOptions server)
 		{
-			var serverVersion = await ops.GetVersion(server);
+			var serverVersion = await ops.GetVersion(server).ConfigureAwait(false);
             if (string.IsNullOrEmpty(serverVersion))
 			{
 	            return GetLegacyModeFeatures();

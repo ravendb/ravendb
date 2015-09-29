@@ -374,7 +374,7 @@ namespace Raven.Database.FileSystem.Controllers
 			options.ContentLength = Request.Content.Headers.ContentLength;
 			options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
+			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options).ConfigureAwait(false);
 
 			SynchronizationTask.Context.NotifyAboutWork();
 

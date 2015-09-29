@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Util
 				{
 					try
 					{
-						await task();
+						await task().ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -67,7 +67,7 @@ namespace Raven.Abstractions.Util
 				{
 					try
 					{
-						result = await task();
+						result = await task().ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{

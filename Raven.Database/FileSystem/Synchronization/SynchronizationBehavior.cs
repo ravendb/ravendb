@@ -76,7 +76,7 @@ namespace Raven.Database.FileSystem.Synchronization
 						ExecuteMetadataUpdate();
 						break;
 					case SynchronizationType.ContentUpdate:
-						await ExecuteContentUpdate(localMetadata, report);
+						await ExecuteContentUpdate(localMetadata, report).ConfigureAwait(false);
 						
 						afterSynchronizationTriggerData = new
 						{
@@ -283,7 +283,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				if (Log.IsDebugEnabled)
 					Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
 
-				await MultipartContent.ReadAsMultipartAsync(provider);
+				await MultipartContent.ReadAsMultipartAsync(provider).ConfigureAwait(false);
 
 				if (Log.IsDebugEnabled)
 					Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
