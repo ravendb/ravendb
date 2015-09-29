@@ -211,7 +211,7 @@ namespace Raven.Database
 
 					RaiseIndexingWiringComplete();
 
-                    DeleteRemovedIndexes(reason);
+                    Maintenance.DeleteRemovedIndexes(reason);
 
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
@@ -1460,58 +1460,7 @@ namespace Raven.Database
 			throw new NotImplementedException();
 		}
 
-        public void DeleteRemovedIndexes(Dictionary<int, IndexFailDetails> reason)
-        {
-            TransactionalStorage.Batch(actions =>
-            {
-                foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
-                {
-                    Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
-                }
-
-                List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
-                foreach (int id in indexIds)
-                {
-                    var index = IndexDefinitionStorage.GetIndexDefinition(id);
-                    if (index != null)
-                        continue;
-
-                    // index is not found on disk, better kill for good
-                    // Even though technically we are running into a situation that is considered to be corrupt data
-                    // we can safely recover from it by removing the other parts of the index.
-                    IndexStorage.DeleteIndex(id);
-                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
-
-                    string indexName;
-                    string msg;
-                    string ex;
-
-                    IndexFailDetails failDetails;
-                    if (reason.TryGetValue(id, out failDetails) == false)
-                    {
-                        indexName = "Unknown Name";
-                        msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", id, indexName);
-                        ex = "";
-                    }
-                    else
-                    {
-                        indexName = failDetails.IndexName;
-                        msg = failDetails.Reason;
-                        ex = failDetails.Ex.ToString();
-                    }
-
-                    this.AddAlert(new Alert
-                    {
-                        AlertLevel = AlertLevel.Error,
-                        CreatedAt = SystemTime.UtcNow,
-                        Message = msg,
-                        Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", id, indexName),
-                        Exception = ex,
-                        UniqueKey = msg
-                    });
-                }
-            });
-        }
+        
 
 	}
 }
