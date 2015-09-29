@@ -31,7 +31,7 @@ class replications extends viewModelBase {
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
     globalClientFailoverBehaviour = ko.observable<string>(null);
     globalReplicationConfig = ko.observable<replicationConfig>();
-    collections = ko.observableArray<collection>();    
+    collections = ko.observableArray<collection>();
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -40,7 +40,40 @@ class replications extends viewModelBase {
     isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
-    isReplicateIndexesToAllEnabled: KnockoutComputed<boolean>;
+
+    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
+
+    skipIndexReplicationForAll = ko.observable<boolean>();
+
+    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
+
+    private refereshSkipIndexReplicationForAllDestinations() {
+        if (this.skipIndexReplicationForAllSubscription != null)
+            this.skipIndexReplicationForAllSubscription.dispose();
+
+        var newStatus = this.getIndexReplicationStatusForAllDestinations();
+        this.skipIndexReplicationForAll(newStatus === 'all');
+
+        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
+    }
+
+    private getIndexReplicationStatusForAllDestinations(): string {
+        var countOfSkipIndexReplication: number = 0;
+        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
+            if (dest.skipIndexReplication() === true) {
+                countOfSkipIndexReplication++;
+            }
+        });
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
+
+        // ReSharper disable once ConditionIsAlwaysConst
+        if (countOfSkipIndexReplication === 0)
+            return 'none';
+
+        return 'mixed';
+    }
 
     usingGlobal = ko.observable<boolean>(false);
     hasGlobalValues = ko.observable<boolean>(false);
@@ -81,7 +114,7 @@ class replications extends viewModelBase {
                 this.replicationEnabled(false);
                 deferred.resolve({ can: true });
             }
-            
+
         }
         return deferred;
     }
@@ -95,10 +128,9 @@ class replications extends viewModelBase {
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
 
-        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour,this.usingGlobal];
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.usingGlobal];
 
-        $.each(this.replicationsSetup().destinations(), (i, dest) =>
-        {
+        $.each(this.replicationsSetup().destinations(), (i, dest) => {
             replicationSetupDirtyFlagItems.push(<any>dest.specifiedCollections);
             dest.specifiedCollections.subscribe(array => {
                 dest.ignoredClient(dest.specifiedCollections.length > 0);
@@ -106,10 +138,9 @@ class replications extends viewModelBase {
             this.addScriptHelpPopover();
         });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
-        
+
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
-        this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
         var combinedFlag = ko.computed(() => {
             var rc = this.replicationConfigDirtyFlag().isDirty();
             var rs = this.replicationsSetupDirtyFlag().isDirty();
@@ -158,6 +189,16 @@ class replications extends viewModelBase {
                 if (repSetup.GlobalDocument && repSetup.GlobalDocument.ClientConfiguration) {
                     this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
                 }
+
+                ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
+
+                var status = this.getIndexReplicationStatusForAllDestinations();
+                if (status === 'all')
+                    this.skipIndexReplicationForAll(true);
+                else
+                    this.skipIndexReplicationForAll(false);
+
+                this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
@@ -168,9 +209,9 @@ class replications extends viewModelBase {
             html: true,
             trigger: 'hover',
             content:
-                'Return <code>null</code> in transform script to skip document from replication. <br />' +
-                    'Example: ' +
-                    '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
+            'Return <code>null</code> in transform script to skip document from replication. <br />' +
+            'Example: ' +
+            '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
         });
     }
 
@@ -178,7 +219,7 @@ class replications extends viewModelBase {
         var collections = destination.specifiedCollections();
         var item = collections.first(c => c.collection() === collectionName);
 
-        if (typeof(item.script()) === "undefined") {
+        if (typeof (item.script()) === "undefined") {
             item.script("");
         } else {
             item.script(undefined);
@@ -201,9 +242,14 @@ class replications extends viewModelBase {
         destination.specifiedCollections.notifySubscribers();
     }
 
+    toggleSkipIndexReplicationForAll() {
+        this.skipIndexReplicationForAll.toggle();
+    }
+
     createNewDestination() {
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
+        this.refereshSkipIndexReplicationForAllDestinations();
         this.addScriptHelpPopover();
     }
 
@@ -216,23 +262,23 @@ class replications extends viewModelBase {
             new deleteLocalReplicationsSetupCommand(this.activeDatabase())
                 .execute();
         } else {
-        if (this.isConfigSaveEnabled())
-            this.saveAutomaticConflictResolutionSettings();
-        if (this.isSetupSaveEnabled()) {
-            if (this.replicationsSetup().source()) {
-                this.saveReplicationSetup();
-            } else {
-                var db = this.activeDatabase();
-                if (db) {
-                    new getDatabaseStatsCommand(db)
-                        .execute()
-                        .done(result=> {
-                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                        });
+            if (this.isConfigSaveEnabled())
+                this.saveAutomaticConflictResolutionSettings();
+            if (this.isSetupSaveEnabled()) {
+                if (this.replicationsSetup().source()) {
+                    this.saveReplicationSetup();
+                } else {
+                    var db = this.activeDatabase();
+                    if (db) {
+                        new getDatabaseStatsCommand(db)
+                            .execute()
+                            .done(result=> {
+                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                            });
+                    }
                 }
             }
         }
-    }
     }
 
     private prepareAndSaveReplicationSetup(source: string) {
@@ -253,14 +299,20 @@ class replications extends viewModelBase {
         return new getCollectionsCommand(db, this.collections()).execute();
     }
 
-    sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        
+    toggleIndexReplication(skipReplicationValue: boolean) {
+        this.replicationsSetup().destinations().forEach(dest => {
+            dest.skipIndexReplication(skipReplicationValue);
+        });
+    }
+
+    sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
             new replicateTransformersCommand(db, destination).execute();
         } else {
             alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
-    }
+        }
     }
 
     sendReplicateAllCommand() {
@@ -313,9 +365,9 @@ class replications extends viewModelBase {
         this.usingGlobal(true);
         if (this.globalReplicationConfig()) {
             this.replicationConfig().attachmentConflictResolution(this.globalReplicationConfig().attachmentConflictResolution());
-            this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());    
+            this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());
         }
-        
+
         this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour());
     }
 

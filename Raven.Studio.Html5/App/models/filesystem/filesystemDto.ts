@@ -1,4 +1,4 @@
-enum filesystemSynchronizationType {
+const enum filesystemSynchronizationType {
     Unknown = 0,
     ContentUpdate = 1,
     MetadataUpdate = 2,
@@ -138,13 +138,13 @@ interface synchronizationUpdateNotification {
     Direction: synchronizationDirection;
 }
 
-enum synchronizationAction {
+const enum synchronizationAction {
     Enqueue,
     Start,
     Finish
 }
 
-enum synchronizationDirection {
+const enum synchronizationDirection {
     Outgoing,
     Incoming
 }
@@ -157,7 +157,7 @@ interface synchronizationConflictNotification {
     RemoteFileHeader: any;
 }
 
-enum conflictStatus {
+const enum conflictStatus {
     Detected = 0,
     Resolved = 1
 }
@@ -174,7 +174,7 @@ interface filesystemConfigNotification {
     Action: filesystemConfigurationChangeAction;
 }
 
-enum filesystemConfigurationChangeAction {
+const enum filesystemConfigurationChangeAction {
     Set,
     Delete
 }

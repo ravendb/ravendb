@@ -38,17 +38,17 @@ namespace Raven.Client
 		}
 
 		public DocumentSessionListeners Listeners
-	    {
-	        get { return listeners; }
-	    }
+		{
+			get { return listeners; }
+		}
 
-	    public void SetListeners(DocumentSessionListeners newListeners)
-	    {
-            listeners = newListeners;
-	    }
+		public void SetListeners(DocumentSessionListeners newListeners)
+		{
+			listeners = newListeners;
+		}
 
-	    public abstract void Dispose();
-		
+		public abstract void Dispose();
+
 		/// <summary>
 		/// 
 		/// </summary>
@@ -57,7 +57,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Whatever the instance has been disposed
 		/// </summary>
-        public bool WasDisposed { get; protected set; }
+		public bool WasDisposed { get; protected set; }
 
 		/// <summary>
 		/// Subscribe to change notifications from the server
@@ -92,91 +92,23 @@ namespace Raven.Client
 		public abstract IDatabaseCommands DatabaseCommands { get; }
         
 		/// <summary>
-		/// Executes the index creation.
+		/// Executes index creation.
 		/// </summary>
 		public virtual void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-		public virtual void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
-		{
-			var indexesToAdd = indexCreationTasks
-				.Select(x => new IndexToAdd
-				{
-					Definition = x.CreateIndexDefinition(),
-					Name = x.IndexName,
-					Priority = x.Priority ?? IndexingPriority.Normal
-				})
-				.ToArray();
-
-			DatabaseCommands.PutIndexes(indexesToAdd);
-
-			foreach (var task in indexCreationTasks)
-				task.AfterExecute(DatabaseCommands, Conventions);
-		}
-
-		public virtual void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-		{
-			var indexesToAdd = indexCreationTasks
-				.Select(x => new IndexToAdd
-				{
-					Definition = x.CreateIndexDefinition(),
-					Name = x.IndexName,
-					Priority = x.Priority ?? IndexingPriority.Normal
-				})
-				.ToArray();
-
-			DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
-
-			foreach (var task in indexCreationTasks)
-				task.AfterExecute(DatabaseCommands, Conventions);
-		}
-
-		public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-		{
-			var indexesToAdd = indexCreationTasks
-				.Select(x => new IndexToAdd
-				{
-					Definition = x.CreateIndexDefinition(),
-					Name = x.IndexName,
-					Priority = x.Priority ?? IndexingPriority.Normal
-				})
-				.ToArray();
-
-			await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
-			
-			foreach (var task in indexCreationTasks)
-				task.AfterExecute(DatabaseCommands, Conventions);
-		}
-
 		/// <summary>
-		/// Executes the index creation.
+		/// Executes index creation.
 		/// </summary>
-	    public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
-	    {
-	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
-	    }
-
-		public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
 		{
-			var indexesToAdd = indexCreationTasks
-				.Select(x => new IndexToAdd
-				{
-					Definition = x.CreateIndexDefinition(),
-					Name = x.IndexName,
-					Priority = x.Priority ?? IndexingPriority.Normal
-				})
-				.ToArray();
-
-			await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
-
-			foreach (var task in indexCreationTasks)
-				await task.AfterExecuteAsync(AsyncDatabaseCommands, Conventions).ConfigureAwait(false);
+			return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 		}
 
 		/// <summary>
-		/// Executes the index creation in side-by-side mode.
+		/// Executes index creation in side-by-side mode.
 		/// </summary>
 		public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
@@ -184,7 +116,7 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Executes the index creation in side-by-side mode.
+		/// Executes index creation in side-by-side mode.
 		/// </summary>
 		public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
 		{
@@ -192,17 +124,68 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Executes the transformer creation
+		/// Executes transformer creation
 		/// </summary>
 		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
 		{
 			transformerCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-	    public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
-	    {
-	        return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
-	    }
+		/// <summary>
+		/// Executes transformer creation
+		/// </summary>
+		public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+		{
+			return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+		}
+
+		/// <summary>
+		/// Executes indexes creation.
+		/// </summary>
+		public virtual void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+			DatabaseCommands.PutIndexes(indexesToAdd);
+
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
+
+		/// <summary>
+		/// Executes indexes creation.
+		/// </summary>
+		public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+		{
+			var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+			await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+			foreach (var task in indexCreationTasks)
+				await task.AfterExecuteAsync(AsyncDatabaseCommands, Conventions).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Executes indexes creation in side-by-side mode.
+		/// </summary>
+		public virtual void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+			DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
+
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
+
+		/// <summary>
+		/// Executes indexes creation in side-by-side mode.
+		/// </summary>
+		public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+		{
+			var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+			await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+
+			foreach (var task in indexCreationTasks)
+				task.AfterExecute(DatabaseCommands, Conventions);
+		}
 
 		private DocumentConvention conventions;
 
@@ -253,7 +236,7 @@ namespace Raven.Client
 		/// </summary>
 		public Guid ResourceManagerId { get; set; }
 
-		
+
 		protected bool initialized;
 
 
@@ -290,7 +273,7 @@ namespace Raven.Client
 		/// </summary>
 		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{
-			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] {conversionListener,}).ToArray();
 			return this;
 		}
 
@@ -300,17 +283,17 @@ namespace Raven.Client
 		/// <param name="queryListener">The query listener.</param>
 		public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
 		{
-			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
+			listeners.QueryListeners = listeners.QueryListeners.Concat(new[] {queryListener}).ToArray();
 			return this;
 		}
-		
+
 		/// <summary>
 		/// Registers the store listener.
 		/// </summary>
 		/// <param name="documentStoreListener">The document store listener.</param>
 		public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
 		{
-			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
+			listeners.StoreListeners = listeners.StoreListeners.Concat(new[] {documentStoreListener}).ToArray();
 			return this;
 		}
 
@@ -320,7 +303,7 @@ namespace Raven.Client
 		/// <param name="deleteListener">The delete listener.</param>
 		public DocumentStoreBase RegisterListener(IDocumentDeleteListener deleteListener)
 		{
-			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
+			listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] {deleteListener}).ToArray();
 			return this;
 		}
 
@@ -330,7 +313,7 @@ namespace Raven.Client
 		/// <param name="conflictListener">The conflict listener.</param>
 		public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
 		{
-			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
+			listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] {conflictListener}).ToArray();
 			return this;
 		}
 
@@ -366,17 +349,17 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-        protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-        {
-            var onSessionCreatedInternal = SessionCreatedInternal;
-            if (onSessionCreatedInternal != null)
-                onSessionCreatedInternal(session);
-        }
+		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		{
+			var onSessionCreatedInternal = SessionCreatedInternal;
+			if (onSessionCreatedInternal != null)
+				onSessionCreatedInternal(session);
+		}
 
-        ///<summary>
-        /// Internal notification for integration tools, mainly
-        ///</summary>
-        public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+		///<summary>
+		/// Internal notification for integration tools, mainly
+		///</summary>
+		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
 
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -391,7 +374,7 @@ namespace Raven.Client
 			return profilingContext.TryGet(id);
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>
 		public IDisposable AggressivelyCache()

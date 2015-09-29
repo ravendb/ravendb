@@ -309,7 +309,7 @@ namespace Raven.Database.Indexing
 
             performance.OnCompleted = () => BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
 			if (logIndexing.IsDebugEnabled)
-				logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
+            logIndexing.Debug("Mapped {0} documents for {1}", count, PublicName);
 
             return performance;
         }
@@ -351,8 +351,8 @@ namespace Raven.Database.Indexing
                     if (reduceValue == null)
                     {
 						if (logIndexing.IsDebugEnabled)
-							logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
-											  viewGenerator.GroupByExtraction, currentKey);
+                        logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+                                          viewGenerator.GroupByExtraction, currentKey);
                         continue;
                     }
                     string reduceKey = ReduceKeyToString(reduceValue);
@@ -506,7 +506,7 @@ namespace Raven.Database.Indexing
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
 				if (logIndexing.IsDebugEnabled)
-					logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
                 return new IndexedItemsInfo(null)
                 {
@@ -564,7 +564,7 @@ namespace Raven.Database.Indexing
                 {
                     object reduceKey = viewGenerator.GroupByExtraction(doc);
                     if (reduceKey == null)
-                        throw new InvalidOperationException("Could not find reduce key for " + indexId + " in the result: " + doc);
+                        throw new InvalidOperationException("Could not find reduce key for " + parent.PublicName + " in the result: " + doc);
 
                     return ReduceKeyToString(reduceKey);
                 }
@@ -683,12 +683,12 @@ namespace Raven.Database.Indexing
                     stats.Operation = IndexingWorkStats.Status.Reduce;
 
                     try
-                    {
+                    {                                                
                         if (Level == 2)
                         {
                             RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
                         }
-
+                        
                         foreach (var mappedResults in MappedResultsByBucket)
                         {
                             var input = mappedResults.Select(x =>
@@ -719,7 +719,7 @@ namespace Raven.Database.Indexing
 
                                 stats.ReduceSuccesses++;
                             }
-                        }
+                        }                        
                     }
                     catch (Exception e)
                     {
@@ -728,7 +728,7 @@ namespace Raven.Database.Indexing
                             batchers.ApplyAndIgnoreAllErrors(
                                 ex =>
                                 {
-                                    logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+                                    logIndexing.WarnException("Failed to notify index update trigger batcher about an error in " + parent.PublicName, ex);
                                     Context.AddError(indexId, parent.indexDefinition.Name, null, ex, "AnErrorOccured Trigger");
                                 },
                                 x => x.AnErrorOccured(e));
@@ -742,7 +742,7 @@ namespace Raven.Database.Indexing
                             batchers.ApplyAndIgnoreAllErrors(
                                 e =>
                                 {
-                                    logIndexing.WarnException("Failed to dispose on index update trigger", e);
+                                    logIndexing.WarnException("Failed to dispose on index update trigger in " + parent.PublicName, e);
                                     Context.AddError(indexId, parent.indexDefinition.Name, null, e, "Dispose Trigger");
                                 },
                                 x => x.Dispose());
@@ -768,7 +768,7 @@ namespace Raven.Database.Indexing
 
                 parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
 				if (logIndexing.IsDebugEnabled)
-					logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
+                logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys at level {3}: {2}", count, parent.PublicName, string.Join(", ", ReduceKeys), Level));
 
                 return performance;
             }
@@ -812,7 +812,7 @@ namespace Raven.Database.Indexing
                     {
                         logIndexing.WarnException(
                             string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-                                          indexId, reduceKeyAsString),
+                                          parent.PublicName, reduceKeyAsString),
                             exception);
                         Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception, "OnIndexEntryCreated Trigger");
                     },

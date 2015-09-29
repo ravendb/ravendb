@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Smuggler.Helpers;
@@ -43,7 +44,7 @@ namespace Raven.Backup
 	        };
 
             dispatcher = new BackupOperationDispatcher();
-
+            
 			optionSet = new OptionSet();
 			optionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			optionSet.Add("url=", OptionCategory.None, "RavenDB server {0:url}", url => op.ServerUrl = url);
@@ -79,6 +80,9 @@ namespace Raven.Backup
                 Console.WriteLine("Could not understand arguments");
                 Console.WriteLine(e.Message);
                 PrintUsage();
+
+                Console.WriteLine();
+                Console.WriteLine(e);
 
                 Environment.Exit((int)ExitCodes.InvalidArguments);
             }

@@ -125,7 +125,8 @@ namespace Raven.Database.Indexing.IndexMerging
 					continue;
 				}
 
-				indexData.OriginalMap = IndexPrettyPrinter.Format(indexData.OriginalMap);
+                indexData.OriginalMap = IndexPrettyPrinter.TryFormat(indexData.OriginalMap);
+               
 				Expression map = parser.ParseExpression(indexData.OriginalMap);
 				var visitor = new IndexVisitor(indexData);
 				map.AcceptVisitor(visitor);

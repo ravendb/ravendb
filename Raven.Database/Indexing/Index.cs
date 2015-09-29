@@ -116,7 +116,7 @@ namespace Raven.Database.Indexing
 			this.viewGenerator = viewGenerator;
 			this.context = context;
 			if (logIndexing.IsDebugEnabled)
-			logIndexing.Debug("Creating index for {0}", indexId);
+				logIndexing.Debug("Creating index for {0}", PublicName);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
@@ -240,7 +240,7 @@ namespace Raven.Database.Indexing
 					var localReason = waitReason;
 					if (localReason != null)
 						logIndexing.Warn("Waiting for {0} to complete before disposing of index {1}, that might take a while if the server is very busy",
-						 localReason, indexId);
+						 localReason, PublicName);
 
 					Monitor.Enter(writeLock);
 				}
@@ -373,7 +373,7 @@ namespace Raven.Database.Indexing
 				waitReason = "Merge / Optimize";
 				try
 				{
-					logIndexing.Info("Starting merge of {0}", indexId);
+					logIndexing.Info("Starting merge of {0}", PublicName);
 					var sp = Stopwatch.StartNew();
 					
 					EnsureIndexWriter();
@@ -477,7 +477,7 @@ namespace Raven.Database.Indexing
 							logIndexing.WarnException(
 								string.Format(
 									"Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-									indexId, key),
+									PublicName, key),
 								exception);
 							context.AddError(indexId, PublicName, key, exception, "OnIndexEntryDeleted Trigger");
 						},
@@ -983,7 +983,7 @@ namespace Raven.Database.Indexing
 																(currentAnalyzer, generator) =>
 																{
 																	Analyzer generateAnalyzer =
-																		generator.Value.GenerateAnalyzerForIndexing(indexId.ToString(), luceneDoc,
+																		generator.Value.GenerateAnalyzerForIndexing(PublicName, luceneDoc,
 																											currentAnalyzer);
 																	if (generateAnalyzer != currentAnalyzer &&
 																		currentAnalyzer != analyzer)
@@ -1125,7 +1125,7 @@ namespace Raven.Database.Indexing
 			}
 
 			if (logIndexing.IsDebugEnabled)
-			logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, indexId,
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, PublicName,
 				sb.ToString());
 		}
 
@@ -1620,7 +1620,7 @@ namespace Raven.Database.Indexing
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
-							var newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.indexId.ToString(), indexQuery.Query, currentAnalyzer);
+							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.PublicName, indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
@@ -1833,7 +1833,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						var failureMessage = "Failed to release snapshotter while backing-up index " + indexId;
+						var failureMessage = "Failed to release snapshotter while backing-up index " + PublicName;
 						LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
 						if (throwOnFinallyException) throw;
 					}

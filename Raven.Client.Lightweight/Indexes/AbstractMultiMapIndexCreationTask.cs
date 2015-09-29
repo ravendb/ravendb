@@ -87,14 +87,8 @@ namespace Raven.Client.Indexes
 				string formattedMap = map;
 			    if (Conventions.PrettifyGeneratedLinqExpressions)
 			    {
-			        try
-			        {
-			            formattedMap = IndexPrettyPrinter.Format(formattedMap);
-			        }
-			        catch (Exception)
-			        {
-			            formattedMap = map;
-			        }
+			            formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
+			       
                 }
 				indexDefinition.Maps.Add(formattedMap);
 			}

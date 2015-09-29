@@ -212,8 +212,7 @@
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+	<Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
   <Target Name="MvcBuildViews" AfterTargets="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
     <AspNetCompiler VirtualPath="temp" PhysicalPath="$(WebProjectOutputDir)" />
   </Target>

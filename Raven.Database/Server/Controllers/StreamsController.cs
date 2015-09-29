@@ -31,6 +31,14 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StreamsController : ClusterAwareRavenDbApiController
     {
+        [HttpHead]
+        [RavenRoute("streams/docs")]
+        [RavenRoute("databases/{databaseName}/streams/docs")]
+        public HttpResponseMessage StreamDocsHead()
+        {
+            return GetEmptyMessage();
+        }
+
         [HttpGet]
         [RavenRoute("streams/docs")]
         [RavenRoute("databases/{databaseName}/streams/docs")]
@@ -107,6 +115,14 @@ namespace Raven.Database.Server.Controllers
                 writer.Flush();
                 bufferStream.Flush();
             }
+        }
+
+        [HttpHead]
+        [RavenRoute("streams/query/{*id}")]
+        [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
+        public HttpResponseMessage SteamQueryHead(string id)
+        {
+            return GetEmptyMessage();
         }
 
         [HttpGet]
