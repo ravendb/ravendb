@@ -26,7 +26,7 @@ namespace Voron.Tests.Bugs
         }
 
         //Voron must support this in order to support MultiAdd() with values > 2000 characters
-        [PrefixesFact]
+        [Fact]
         public void TreeAdds_WithVeryLargeKey()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -54,7 +54,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
         {
             var ids = ReadIds("data.txt");
@@ -89,7 +89,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void PageSplitter_SmallRun()
         {
             var ids = ReadIds("data.txt", 35);
@@ -125,7 +125,7 @@ namespace Voron.Tests.Bugs
             ValidateRecords(env, trees, ids);
         }
 
-        [PrefixesFact]
+        [Fact]
         public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
         {
             var ids = ReadIds("data2.txt");
@@ -211,7 +211,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-		[PrefixesFact]
+		[Fact]
 	    public void ShouldNotThrowPageFullExceptionDuringPageSplit()
 	    {
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -272,7 +272,7 @@ namespace Voron.Tests.Bugs
 			}
 	    }
 
-	    [PrefixesFact]
+	    [Fact]
 	    public void ShouldNotThrowPageFullExceptionDuringPageSplit2()
 	    {
 		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

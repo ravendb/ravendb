@@ -18,12 +18,6 @@ namespace Voron.Impl
 
 		public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
 
-		public static readonly int PrefixNodeHeaderSize = sizeof(PrefixTreeNodeHeader);
-
-		public static readonly int PrefixedSliceHeaderSize = sizeof (PrefixedSliceHeader);
-
-		public static readonly int PrefixInfoSectionSize = sizeof (PrefixTreeInfoSection);
-
 		public static int PageNumberSize = sizeof(long);
 
 		public static int NodeOffsetSize = sizeof(ushort);

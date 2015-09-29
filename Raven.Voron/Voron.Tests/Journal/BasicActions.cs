@@ -22,7 +22,7 @@ namespace Voron.Tests.Journal
 	        options.ManualFlushing = true;
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanUseMultipleLogFiles()
         {
             var bytes = new byte[1024];
@@ -48,7 +48,7 @@ namespace Voron.Tests.Journal
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ShouldNotReadUncommittedTransaction()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -63,7 +63,7 @@ namespace Voron.Tests.Journal
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanFlushDataFromLogToDataFile()
         {
             for (var i = 0; i < 100; i++)

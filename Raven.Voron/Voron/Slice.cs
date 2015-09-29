@@ -222,52 +222,9 @@ namespace Voron
 			if (otherSlice != null)
                 return CompareDataInline(otherSlice, size);
 
-			var prefixedSlice = other as PrefixedSlice;
-			if (prefixedSlice != null)
-				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, PrefixedSlice.MemoryComparerInstance, size);
-
 			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
 		}      
 
-		protected override int CompareData(MemorySlice other, PrefixedSliceComparer cmp, ushort size)
-		{
-			var otherSlice = other as Slice;
-
-			if (otherSlice != null)
-			{
-				if (Array != null)
-				{
-					fixed (byte* a = Array)
-					{
-						if (otherSlice.Array != null)
-						{
-							fixed (byte* b = otherSlice.Array)
-							{
-								return cmp(a, b, size);
-							}
-						}
-						return cmp(a, otherSlice.Pointer, size);
-					}
-				}
-
-				if (otherSlice.Array != null)
-				{
-					fixed (byte* b = otherSlice.Array)
-					{
-						return cmp(Pointer, b, size);
-					}
-				}
-
-				return cmp(Pointer, otherSlice.Pointer, size);
-			}
-
-			var prefixedSlice = other as PrefixedSlice;
-
-			if (prefixedSlice != null)
-				return PrefixedSliceComparisonMethods.Compare(this, prefixedSlice, cmp, size);
-
-			throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
-		}
 
 		public static implicit operator Slice(string s)
 		{
@@ -378,25 +335,7 @@ namespace Voron
 
 		public override void PrepareForSearching()
 		{
-			PrefixComparisonCache = new PrefixComparisonCache();
-		}
 
-		public PrefixComparisonCache PrefixComparisonCache;
-
-		public new ushort FindPrefixSize(MemorySlice other)
-		{
-			if (PrefixComparisonCache == null)
-				return base.FindPrefixSize(other);
-
-			PrefixComparisonCache.Disabled = true;
-			try
-			{
-				return base.FindPrefixSize(other);
-			}
-			finally
-			{
-				PrefixComparisonCache.Disabled = false;
-			}
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

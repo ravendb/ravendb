@@ -99,9 +99,6 @@
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
     <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32Helper.cs" />
-    <Compile Include="PrefixComparisonCache.cs" />
-    <Compile Include="PrefixedSlice.cs" />
-    <Compile Include="PrefixedSliceComparisonMethods.cs" />
     <Compile Include="SliceComparer.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
@@ -109,8 +106,6 @@
     <Compile Include="StructureReader.cs" />
     <Compile Include="StructureSchema.cs" />
     <Compile Include="Trees\BTrees\TreePageIterator.cs" />
-    <Compile Include="Trees\BTrees\PrefixTreeInfoSection.cs" />
-    <Compile Include="Trees\BTrees\PrefixTreeNodeHeader.cs" />
     <Compile Include="Trees\BTrees\Tree.MultiTree.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
     <Compile Include="Util\GenericUtil.cs" />

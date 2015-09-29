@@ -93,6 +93,13 @@ namespace Raven.Database
 
 		private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
 
+        public class IndexFailDetails
+        {
+            public string IndexName;
+            public string Reason;
+            public Exception Ex;
+        }
+
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
 		{
 			TimerManager = new ResourceTimerManager();
@@ -164,9 +171,10 @@ namespace Raven.Database
 
 				try
 				{
-					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-                    initializer.InitializeIndexDefinitionStorage();
-					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);               
+                    TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+                    var reason = initializer.InitializeIndexDefinitionStorage();
+					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
+                 
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
 					Subscriptions = new SubscriptionActions(this, Log);
@@ -198,6 +206,7 @@ namespace Raven.Database
 
 					RaiseIndexingWiringComplete();
 
+                    Maintenance.DeleteRemovedIndexes(reason);
 
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
@@ -1270,10 +1279,11 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
-		    public void InitializeIndexDefinitionStorage()
+		    public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()
 			{
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
-		    }
+		        return database.IndexDefinitionStorage.Initialize();
+			}
 
 			public void InitializeIndexStorage()
 			{
@@ -1342,5 +1352,8 @@ namespace Raven.Database
 		{
 			throw new NotImplementedException();
 		}
+
+        
+
 	}
 }

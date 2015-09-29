@@ -10,7 +10,7 @@ namespace Voron.Tests.Bugs
 {
     public class StartsWithSearch
     {
-        [PrefixesFact]
+        [Fact]
         public void ShouldWork()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

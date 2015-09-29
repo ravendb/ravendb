@@ -68,7 +68,7 @@ namespace Raven.Client.FileSystem
             IncrementRequestCount();            
 
             // Check if the file exists on the server.
-            var metadata = await Commands.GetMetadataForAsync(filename);
+            var metadata = await Commands.GetMetadataForAsync(filename).ConfigureAwait(false);
             if (metadata == null)
                 return null;
 
@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
             {
                 IncrementRequestCount();
 
-                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());                                
+                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray()).ConfigureAwait(false);                                
                 foreach( var header in fileHeaders )
                     AddToCache(header.FullPath, header);                
             }
@@ -139,7 +139,7 @@ namespace Raven.Client.FileSystem
 
             // TODO: Check this.
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
-            var searchResults = await Commands.SearchOnDirectoryAsync(directory);
+            var searchResults = await Commands.SearchOnDirectoryAsync(directory).ConfigureAwait(false);
             return searchResults.Files.ToArray();
         }
 

@@ -781,7 +781,7 @@ namespace Raven.Client.Document
 		/// <value>The query result.</value>
 		public async Task<QueryResult> QueryResultAsync(CancellationToken token = default (CancellationToken))
 		{
-			var result = await InitAsync().WithCancellation(token);
+			var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
 			return result.CurrentQueryResults.CreateSnapshot();
 		}
 
@@ -793,7 +793,7 @@ namespace Raven.Client.Document
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation();
-			return await ExecuteActualQueryAsync();
+			return await ExecuteActualQueryAsync().ConfigureAwait(false);
 		}
 
 		protected void ExecuteBeforeQueryListeners()
@@ -1845,11 +1845,11 @@ If you really want to do in memory filtering on the data returned from the query
 				using (queryOperation.EnterQueryContext())
 				{
 					queryOperation.LogQuery();
-					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
 
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						await Task.Delay(100);
+						await Task.Delay(100).ConfigureAwait(false);
 						continue;
 					}
 					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
@@ -2301,8 +2301,8 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public async Task<IList<T>> ToListAsync(CancellationToken token = default (CancellationToken))
 		{
-			var currentQueryOperation = await InitAsync().WithCancellation(token);
-			var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token);
+			var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+			var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
 			return tuple.Item2;
 		}
 
@@ -2312,7 +2312,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public async Task<int> CountAsync(CancellationToken token = default (CancellationToken))
 		{
 			Take(0);
-			var result = await QueryResultAsync(token);
+			var result = await QueryResultAsync(token).ConfigureAwait(false);
 			return result.TotalResults;
 		}
 

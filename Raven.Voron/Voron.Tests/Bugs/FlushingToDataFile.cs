@@ -24,7 +24,7 @@ namespace Voron.Tests.Bugs
             options.MaxLogFileSize = 2 * AbstractPager.PageSize;
         }
 
-        [PrefixesFact]
+        [Fact]
         public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
         {
             var value1 = new byte[4000];
@@ -74,7 +74,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
         {
             var value1 = new byte[4000];
@@ -135,7 +135,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void OldestActiveTransactionShouldBeCalculatedProperly()
         {
 	        using (var options = StorageEnvironmentOptions.CreateMemoryOnly())

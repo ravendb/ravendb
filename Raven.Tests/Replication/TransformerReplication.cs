@@ -5,8 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using FluentAssertions;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -273,17 +271,19 @@ namespace Raven.Tests.Replication
 				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
-						{ userTransformer.TransformerName, 
-							anotherTransformer.TransformerName, 
-							yetAnotherTransformer.TransformerName };
+				{ 
+                    anotherTransformer.TransformerName, 
+                    userTransformer.TransformerName, 							
+					yetAnotherTransformer.TransformerName 
+                };
 
 				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 
@@ -375,9 +375,11 @@ namespace Raven.Tests.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
-						{ userTransformer.TransformerName, 
-							anotherTransformer.TransformerName, 
-							yetAnotherTransformer.TransformerName };
+				{ 
+                    anotherTransformer.TransformerName, 
+                    userTransformer.TransformerName, 							
+					yetAnotherTransformer.TransformerName 
+                };
 				
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
@@ -393,9 +395,9 @@ namespace Raven.Tests.Replication
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 	
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination1.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination2.Select(x => x.Name));
-				expectedTransformerNames.Should().BeEquivalentTo(transformerNamesAtDestination3.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
 			}
 		}
 

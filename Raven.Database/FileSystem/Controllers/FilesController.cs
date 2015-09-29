@@ -294,7 +294,7 @@ namespace Raven.Database.FileSystem.Controllers
             rename = FileHeader.Canonize(rename);
 		    var etag = GetEtag();
 
-            if (rename.Length > AbstractPager.GetMaxKeySize(false))
+            if (rename.Length > AbstractPager.GetMaxKeySize())
 		    {
 				if (Log.IsDebugEnabled)
 					Log.Debug("File '{0}' was not renamed to '{1}' due to illegal name length", name, rename);
@@ -353,7 +353,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			var etag = GetEtag();
 
-            if (name.Length > AbstractPager.GetMaxKeySize(false))
+            if (name.Length > AbstractPager.GetMaxKeySize())
 			{
 				if (Log.IsDebugEnabled)
 					Log.Debug("File '{0}' was not created due to illegal name length", name);
@@ -375,7 +375,7 @@ namespace Raven.Database.FileSystem.Controllers
 			options.ContentLength = Request.Content.Headers.ContentLength;
 			options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
+			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options).ConfigureAwait(false);
 
 			SynchronizationTask.Context.NotifyAboutWork();
 

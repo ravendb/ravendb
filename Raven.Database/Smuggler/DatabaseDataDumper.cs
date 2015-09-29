@@ -30,7 +30,7 @@ namespace Raven.Database.Smuggler
 		{
 			jsonWriter.WritePropertyName("DocsDeletions");
 			jsonWriter.WriteStartArray();
-			result.LastDocDeleteEtag = await Operations.ExportDocumentsDeletion(jsonWriter, result.LastDocDeleteEtag, maxEtagsToFetch.LastDocDeleteEtag.IncrementBy(1));
+			result.LastDocDeleteEtag = await Operations.ExportDocumentsDeletion(jsonWriter, result.LastDocDeleteEtag, maxEtagsToFetch.LastDocDeleteEtag.IncrementBy(1)).ConfigureAwait(false);
 			jsonWriter.WriteEndArray();
 		}
 
@@ -49,7 +49,7 @@ namespace Raven.Database.Smuggler
 				var importStoreFeatures = new Reference<ServerSupportedFeatures>();
 				var importOperations = new SmugglerRemoteDatabaseOperations(() => importStore, () => importBulkOperation, () => importStoreFeatures.Value.IsDocsStreamingSupported, () => importStoreFeatures.Value.IsTransformersSupported, () => importStoreFeatures.Value.IsIdentitiesSmugglingSupported);
 
-				importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To);
+				importStoreFeatures.Value = await DetectServerSupportedFeatures(importOperations, betweenOptions.To).ConfigureAwait(false);
 
 				await new SmugglerDatabaseBetweenOperation
 				{
@@ -60,7 +60,8 @@ namespace Raven.Database.Smuggler
 					From = Operations,
 					To = importOperations,
 					IncrementalKey = betweenOptions.IncrementalKey
-				}, Options);
+				}, Options)
+				.ConfigureAwait(false);
 			}
 		}
 

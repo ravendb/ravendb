@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 using System.Net;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;

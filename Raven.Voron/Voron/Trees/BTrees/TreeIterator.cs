@@ -13,7 +13,7 @@ namespace Voron.Trees
 		private TreeCursor _cursor;
 		private TreePage _currentPage;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
-		private MemorySlice _currentInternalKey;
+		private Slice _currentInternalKey;
 	    private bool _disposed;
 
         public event Action<IIterator> OnDispoal;
@@ -23,10 +23,7 @@ namespace Voron.Trees
 			_tree = tree;
 			_tx = tx;
 
-			if (tree.KeysPrefixing)
-				_currentInternalKey = new PrefixedSlice(SliceOptions.Key);
-			else
-				_currentInternalKey = new Slice(SliceOptions.Key); 
+            _currentInternalKey = new Slice(SliceOptions.Key); 				
 		}
 
 		public int GetCurrentDataSize()

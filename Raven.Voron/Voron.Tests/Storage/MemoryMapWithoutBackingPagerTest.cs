@@ -24,7 +24,7 @@ namespace Voron.Tests.Storage
 			dummyData = GenerateLoremIpsum(1024);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Should_be_able_to_read_and_write_lots_of_data()
 		{
 			CreatTestSchema();
@@ -66,7 +66,7 @@ namespace Voron.Tests.Storage
 				yield return new KeyValuePair<string, string>("Key " + i, "Data:" + dummyData);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Should_be_able_to_read_and_write_small_values()
 		{
 			CreatTestSchema();
@@ -81,7 +81,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(15)]
@@ -94,7 +94,7 @@ namespace Voron.Tests.Storage
 			Assert.Equal(numberOfPagesBeforeAllocation * growthMultiplier, Env.Options.DataPager.NumberOfAllocatedPages);
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(15)]
@@ -127,7 +127,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Should_be_able_to_allocate_new_pages_multiple_times()
 		{
 			var pagerSize = PagerInitialSize;
@@ -168,7 +168,7 @@ namespace Voron.Tests.Storage
 			Win32NativeMethods.VirtualFree (adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Should_be_able_to_allocate_new_pages_with_remapping()
 		{
 			var pagerSize = PagerInitialSize;

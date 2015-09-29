@@ -51,7 +51,7 @@ namespace Raven.Database.TimeSeries.Controllers
 				return GetMessageWithString(string.Format("Time series {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
-            var dbDoc = await ReadJsonObjectAsync<TimeSeriesDocument>();
+            var dbDoc = await ReadJsonObjectAsync<TimeSeriesDocument>().ConfigureAwait(false);
             TimeSeriesLandlord.Protect(dbDoc);
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");

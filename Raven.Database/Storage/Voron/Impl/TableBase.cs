@@ -150,8 +150,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		protected void AssertKey(Slice key)
 		{
-			if (AbstractPager.IsKeySizeValid(key.Size, false) == false)
-				throw new ArgumentException(string.Format("The key must be a maximum of {0} bytes in UTF8, key is: '{1}'", AbstractPager.GetMaxKeySize(false), key), "key");
+			if (AbstractPager.IsKeySizeValid(key.Size) == false)
+				throw new ArgumentException(string.Format("The key must be a maximum of {0} bytes in UTF8, key is: '{1}'", AbstractPager.GetMaxKeySize(), key), "key");
 		}
 
 		//for debugging purposes

@@ -24,7 +24,7 @@ namespace Voron.Tests.Backups
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldExplicitlyErrorThatTurningOnIncrementalBackupAfterInitializingTheStorageIsntAllowed()
 		{
 			RequireFileBasedPager();

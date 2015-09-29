@@ -10,7 +10,7 @@ namespace Voron.Tests.Bugs
 
 	public class TreeRebalancer : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()
 		{
 			var addedIds = new Dictionary<string, string>();
@@ -114,7 +114,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldNotThrowThatPageIsFullDuringTreeRebalancing()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -167,7 +167,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void RavenDB_2543_CouldNotEnsureThatWeHaveEnoughSpace_When_MovingLeafNode()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

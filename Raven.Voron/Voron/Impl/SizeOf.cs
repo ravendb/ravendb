@@ -15,12 +15,13 @@ namespace Voron.Impl
 		/// rounded up to an even number of bytes, to guarantee 2-byte alignment
 		/// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int LeafEntry(int pageMaxSpace, MemorySlice key, int len)
+		public static int LeafEntry(int pageMaxSpace, Slice key, int len)
 		{
 			var nodeSize = Constants.NodeHeaderSize;
 
 			if (key.Options == SliceOptions.Key)
 				nodeSize += key.Size;
+
 			if (len != 0)
 			{
 				nodeSize += len;
@@ -37,7 +38,7 @@ namespace Voron.Impl
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int BranchEntry(MemorySlice key)
+		public static int BranchEntry(Slice key)
 		{
 			var sz = Constants.NodeHeaderSize + key.Size;
 			sz += sz & 1;
@@ -45,7 +46,7 @@ namespace Voron.Impl
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static int NodeEntry(int pageMaxSpace, MemorySlice key, int len)
+		public static int NodeEntry(int pageMaxSpace, Slice key, int len)
 		{
 			if (len < 0)
 				return BranchEntry(key);
@@ -66,7 +67,7 @@ namespace Voron.Impl
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NodeEntryWithAnotherKey(TreeNodeHeader* other, MemorySlice key)
+        public static int NodeEntryWithAnotherKey(TreeNodeHeader* other, Slice key)
         {
             var keySize = key == null ? other->KeySize : key.Size;
             var sz = keySize + Constants.NodeHeaderSize;
@@ -76,31 +77,6 @@ namespace Voron.Impl
             sz += sz & 1;
 
             return sz;
-        }
-
-
-        public static int NewPrefix(MemorySlice key)
-		{
-			var prefixedKey = key as PrefixedSlice;
-            if (prefixedKey != null && prefixedKey.NewPrefix != null) // also need to take into account the size of a new prefix that will be written to the page
-                return NewPrefix(prefixedKey);
-
-            return 0;
-		}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NewPrefix(Slice key)
-        {
-            return 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NewPrefix(PrefixedSlice key)
-        {
-            var size = Constants.PrefixNodeHeaderSize + key.NewPrefix.Size;
-            size += size & 1;
-
-            return size;
         }
 	}
 }

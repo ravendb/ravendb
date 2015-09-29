@@ -7,7 +7,7 @@ namespace Voron.Tests.Trees
 
 	public class MultipleTrees : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void CanCreateNewTree()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -28,7 +28,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanUpdateValuesInSubTree()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -57,7 +57,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CreatingTreeWithoutCommitingTransactionShouldYieldNoResults()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
         public async Task<HttpResponseMessage> SteamQueryPost(string id)
         {
-            var postedQuery = await ReadStringAsync();
+            var postedQuery = await ReadStringAsync().ConfigureAwait(false);
 
             SetPostRequestQuery(postedQuery);
 

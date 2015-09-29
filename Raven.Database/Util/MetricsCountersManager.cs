@@ -142,7 +142,7 @@ namespace Raven.Database.Util
 			{
 				while (true)
 				{
-					await Task.Delay(TimeSpan.FromSeconds(15));
+					await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
 					CleanupQueue();
 				}
 			});

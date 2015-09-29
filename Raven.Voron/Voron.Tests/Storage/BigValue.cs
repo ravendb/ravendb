@@ -16,7 +16,7 @@ namespace Voron.Tests.Storage
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0)]
 		[InlineData(1)]
 		[InlineData(2)]
@@ -131,7 +131,7 @@ namespace Voron.Tests.Storage
                 Assert.Equal(0, Memory.Compare(b, c, buffer.Length));
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanStoreInOneTransactionReallyBigValue()
 		{
 			var random = new Random(43321);
@@ -155,7 +155,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanStoreInOneTransactionManySmallValues()
 		{
 			var buffers = new List<byte[]>();

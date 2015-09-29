@@ -12,7 +12,7 @@ namespace Voron.Tests.Optimizations
 {
 	public class Writes : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
 		{
 		    var keySize = 1024;

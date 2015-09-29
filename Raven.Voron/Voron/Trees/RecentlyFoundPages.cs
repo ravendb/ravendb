@@ -13,11 +13,11 @@ namespace Voron.Trees
         {
             public readonly long Number;
 			public TreePage Page;
-			public readonly MemorySlice FirstKey;
-			public readonly MemorySlice LastKey;
+			public readonly Slice FirstKey;
+			public readonly Slice LastKey;
             public readonly long[] CursorPath;
 
-            public FoundPage(long number, TreePage page, MemorySlice firstKey, MemorySlice lastKey, long[] cursorPath)
+            public FoundPage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath)
             {
                 Number = number;
                 Page = page;
@@ -61,7 +61,7 @@ namespace Voron.Trees
             _cache[current] = page;
         }
 
-        public FoundPage Find(MemorySlice key)
+        public FoundPage Find(Slice key)
         {
             int position = current;
 

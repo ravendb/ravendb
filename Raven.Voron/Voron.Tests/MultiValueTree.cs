@@ -9,7 +9,7 @@ namespace Voron.Tests
 {
 	public class MultiValueTree : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void Single_MultiAdd_And_Read_DataStored()
 		{
 			var random = new Random();
@@ -40,7 +40,7 @@ namespace Voron.Tests
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
 		{
 		    const int INPUT_COUNT = 3;
@@ -75,7 +75,7 @@ namespace Voron.Tests
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Constants.RootTreeName);
 		}
 
-	    [PrefixesFact]
+	    [Fact]
 		public void MultiDelete_Remains_No_Entries_ChildTreeKey_Doesnt_Exist()
 		{
 			const int INPUT_COUNT = 3;
@@ -114,7 +114,7 @@ namespace Voron.Tests
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Single_MultiAdd_And_Single_MultiDelete_DataDeleted()
 		{
 			var random = new Random();
@@ -145,7 +145,7 @@ namespace Voron.Tests
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
 		{
 		    const int INPUT_COUNT = 25;
@@ -174,7 +174,7 @@ namespace Voron.Tests
 		    ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Constants.RootTreeName);
 		}
 
-	    [PrefixesFact]
+	    [Fact]
 		public void NamedTree_Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
 		{
 			const int INPUT_COUNT = 25;
@@ -210,7 +210,7 @@ namespace Voron.Tests
 			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void NamedTree_Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
 		{
 			const int INPUT_COUNT = 25;
@@ -251,7 +251,7 @@ namespace Voron.Tests
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void MultiAdd_Twice_TheSame_KeyValue_MultiDelete_NotThrowsException_MultiTree_Deleted()
 		{
 			const string CHILDTREE_KEY = "ChildTree";
@@ -275,7 +275,7 @@ namespace Voron.Tests
 			}
 		}
 		
-		[PrefixesFact]
+		[Fact]
 		public void Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
 		{
 			const int INPUT_COUNT = 25;
@@ -312,7 +312,7 @@ namespace Voron.Tests
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Constants.RootTreeName);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void Multiple_MultiAdd_And_Read_DataStored()
 		{
 			const int INPUT_COUNT = 3;

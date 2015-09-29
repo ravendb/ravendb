@@ -15,7 +15,7 @@ namespace Voron.Tests.Storage
 
     public class Batches : StorageTest
     {
-        [PrefixesFact]
+        [Fact]
         public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -42,7 +42,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot_WithoutVersionNumber()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -69,7 +69,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void Read_Items_From_Both_WriteBatch_And_Snapshot()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -98,7 +98,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void Read_Items_From_Both_WriteBatch_And_Snapshot_Deleted_Key_Returns_Null()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -124,7 +124,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void WhenLastBatchOperationVersionIsNullThenVersionComesFromStorage()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -157,7 +157,7 @@ namespace Voron.Tests.Storage
         }
 
         //if item with the same key is in both tree and writebatch, it can be assumed that the item in write batch has priority, and it will be returned
-        [PrefixesFact]
+        [Fact]
         public void Read_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -184,7 +184,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ReadVersion_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -216,7 +216,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void SingleItemBatchTest()
         {
             var batch = new WriteBatch();
@@ -231,7 +231,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void MultipleItemBatchTest()
         {
             int numberOfItems = 10000;
@@ -256,7 +256,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public async Task MultipleBatchesTest()
         {
             int numberOfItems = 10000;
@@ -285,7 +285,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public async Task MultipleTreesTest()
         {
             int numberOfItems = 10000;
@@ -321,7 +321,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void MultipleTreesInSingleBatch()
         {
             var batch = new WriteBatch();
@@ -348,7 +348,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public async Task BatchErrorHandling()
         {
             var batch1 = new WriteBatch();
@@ -388,7 +388,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public async Task MergedBatchErrorHandling()
         {
             var batch1 = new WriteBatch();

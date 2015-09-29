@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Xunit;
@@ -26,7 +25,8 @@ namespace Raven.Tests.Counters
 
 				var replicationDocument = await storeA.GetReplicationsAsync();
 
-				replicationDocument.Destinations.Should().OnlyContain(dest => dest.ServerUrl == storeB.Url);
+                Assert.Equal(1, replicationDocument.Destinations.Count);
+                Assert.Equal(storeB.Url, replicationDocument.Destinations[0].ServerUrl);
 			}
 		}
 

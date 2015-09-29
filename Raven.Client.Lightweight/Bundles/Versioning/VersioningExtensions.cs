@@ -37,7 +37,7 @@ namespace Raven.Client.Bundles.Versioning
 		public static async Task<T[]> GetRevisionsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
 		{
 			var inMemoryDocumentSessionOperations = (InMemoryDocumentSessionOperations)session;
-			var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize);
+			var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize).ConfigureAwait(false);
 			return jsonDocuments
 				.Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
 				.ToArray();
@@ -48,7 +48,7 @@ namespace Raven.Client.Bundles.Versioning
 		/// </summary>
 		public static async Task<string[]> GetRevisionIdsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
 		{
-			var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize, metadataOnly: true);
+			var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize, metadataOnly: true).ConfigureAwait(false);
 			return jsonDocuments
 				.Select(document => document.Key)
 				.ToArray();

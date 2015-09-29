@@ -30,7 +30,7 @@ namespace Voron.Tests.Storage
 			return 64 * 1024;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void WhenInitialFileSizeIsNotSetTheFileSizeForDataFileAndScratchFileShouldBeSetToSystemAllocationGranularity()
 		{
 
@@ -48,7 +48,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
 		{
 			var options = StorageEnvironmentOptions.ForPath(path);
@@ -64,7 +64,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
 		{
 			var options = StorageEnvironmentOptions.ForPath(path);

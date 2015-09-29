@@ -117,7 +117,7 @@ namespace Raven.Abstractions.Smuggler
 
             try
             {
-                await DetectServerSupportedFeatures(exportOptions.From);
+                await DetectServerSupportedFeatures(exportOptions.From).ConfigureAwait(false);
             }
             catch (WebException e)
             {
@@ -141,8 +141,8 @@ namespace Raven.Abstractions.Smuggler
 					using (var archive = new ZipArchive(positionStream, ZipArchiveMode.Create, leaveOpen: true))
 					{
 
-						await ExportFiles(archive, result.LastFileEtag, maxEtags.LastFileEtag);
-						await ExportConfigurations(archive);
+						await ExportFiles(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
+						await ExportConfigurations(archive).ConfigureAwait(false);
 					}
                 }
                 catch (SmugglerExportException ex)
@@ -185,9 +185,9 @@ namespace Raven.Abstractions.Smuggler
 			    while (true)
 			    {
 				    bool hasDocs = false;
-				    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
+				    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize).ConfigureAwait(false))
 				    {
-					    while (await files.MoveNextAsync())
+					    while (await files.MoveNextAsync().ConfigureAwait(false))
 					    {
 						    hasDocs = true;
 						    var file = files.Current;
@@ -210,7 +210,7 @@ namespace Raven.Abstractions.Smuggler
 
 						    ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
 
-						    using (var fileStream = await Operations.DownloadFile(file))
+						    using (var fileStream = await Operations.DownloadFile(file).ConfigureAwait(false))
 						    using (var zipStream = fileToStore.Open())
 						    {
 							    await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
@@ -277,7 +277,7 @@ namespace Raven.Abstractions.Smuggler
 				{
 					bool hasConfigs = false;
 
-					foreach (var config in await Operations.GetConfigurations(totalCount, Options.BatchSize))
+					foreach (var config in await Operations.GetConfigurations(totalCount, Options.BatchSize).ConfigureAwait(false))
 					{
 						if (internalConfigs.IsMatch(config.Key))
 							continue;
@@ -327,7 +327,7 @@ namespace Raven.Abstractions.Smuggler
 
 	    private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
         {
-            var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions);
+            var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions).ConfigureAwait(false);
             if (string.IsNullOrEmpty(serverVersion))
                 throw new SmugglerExportException("Server version is not available.");
 
@@ -394,7 +394,7 @@ namespace Raven.Abstractions.Smuggler
 						stream = File.OpenRead(importOptions.FromFile);
 						ownStream = true;
 				    }
-					await ImportData(importOptions, stream);
+					await ImportData(importOptions, stream).ConfigureAwait(false);
 				}
 				finally
 				{
@@ -420,7 +420,7 @@ namespace Raven.Abstractions.Smuggler
 	        {
 		        using (var fileStream = File.OpenRead(filename))
 		        {
-			        await ImportData(importOptions, fileStream);
+			        await ImportData(importOptions, fileStream).ConfigureAwait(false);
 		        }
 	        }
         }
@@ -430,7 +430,7 @@ namespace Raven.Abstractions.Smuggler
 			Operations.Configure(Options);
 			Operations.Initialize(Options);
 
-			await DetectServerSupportedFeatures(importOptions.To);
+			await DetectServerSupportedFeatures(importOptions.To).ConfigureAwait(false);
 
 			var sw = Stopwatch.StartNew();
 
@@ -458,7 +458,7 @@ namespace Raven.Abstractions.Smuggler
 									continue;
 							}
 
-				            await Operations.PutConfig(config.Name, config.Value);
+				            await Operations.PutConfig(config.Name, config.Value).ConfigureAwait(false);
 
 				            configurationsCount++;
 
@@ -493,7 +493,7 @@ namespace Raven.Abstractions.Smuggler
 							if(Options.ShouldDisableVersioningBundle)
 								container.Metadata = Operations.DisableVersioning(container.Metadata);
                                                         
-                            await Operations.PutFile(header, dataStream, entry.Length);
+                            await Operations.PutFile(header, dataStream, entry.Length).ConfigureAwait(false);
                         }
 
                         Options.CancelToken.Token.ThrowIfCancellationRequested();
@@ -519,8 +519,8 @@ namespace Raven.Abstractions.Smuggler
 
             try
             {
-                await DetectServerSupportedFeatures(betweenOptions.From);
-                await DetectServerSupportedFeatures(betweenOptions.To);
+                await DetectServerSupportedFeatures(betweenOptions.From).ConfigureAwait(false);
+                await DetectServerSupportedFeatures(betweenOptions.To).ConfigureAwait(false);
             }
             catch (WebException e)
             {
@@ -538,7 +538,7 @@ namespace Raven.Abstractions.Smuggler
             var incremental = new ExportFilesDestinationKey();
             if (this.Options.Incremental)
             {
-                var smugglerExportIncremental = await Operations.GetIncrementalExportKey(); // importStore.AsyncFilesCommands.Configuration.GetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey);
+                var smugglerExportIncremental = await Operations.GetIncrementalExportKey().ConfigureAwait(false); // importStore.AsyncFilesCommands.Configuration.GetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey);
 
                 ExportFilesDestinationKey value;
                 if (smugglerExportIncremental.Destinations.TryGetValue(betweenOptions.IncrementalKey, out value))
@@ -557,14 +557,14 @@ namespace Raven.Abstractions.Smuggler
             // used to synchronize max returned values for put/delete operations
             var maxEtags = Operations.FetchCurrentMaxEtags();
 
-            incremental.LastEtag = await CopyBetweenStores(result.LastFileEtag, maxEtags.LastFileEtag);
+            incremental.LastEtag = await CopyBetweenStores(result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
 
             if (this.Options.Incremental)
             {
-                var smugglerExportIncremental = await Operations.GetIncrementalExportKey();
+                var smugglerExportIncremental = await Operations.GetIncrementalExportKey().ConfigureAwait(false);
                 smugglerExportIncremental.Destinations[betweenOptions.IncrementalKey] = incremental;
 
-                await Operations.PutIncrementalExportKey(smugglerExportIncremental); // importStore.AsyncFilesCommands.Configuration.SetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey, smugglerExportIncremental);
+                await Operations.PutIncrementalExportKey(smugglerExportIncremental).ConfigureAwait(false); // importStore.AsyncFilesCommands.Configuration.SetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey, smugglerExportIncremental);
             }   
         }
 
@@ -583,14 +583,14 @@ namespace Raven.Abstractions.Smuggler
 				{
 					bool hasConfigs = false;
 
-					foreach (var config in await Operations.GetConfigurations(totalConfigurations, Options.BatchSize))
+					foreach (var config in await Operations.GetConfigurations(totalConfigurations, Options.BatchSize).ConfigureAwait(false))
 					{
 						if (internalConfigs.IsMatch(config.Key))
 							continue;
 
 						hasConfigs = true;
 
-						await Operations.PutConfig(config.Key, EnsureValidExportConfig(config));
+						await Operations.PutConfig(config.Key, EnsureValidExportConfig(config)).ConfigureAwait(false);
 
 						totalConfigurations++;
 
@@ -607,9 +607,9 @@ namespace Raven.Abstractions.Smuggler
 
 				Operations.ShowProgress("Done with reading configurations, total: {0}", totalConfigurations);
 
-                using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
+                using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize).ConfigureAwait(false))
                 {
-                    while (await files.MoveNextAsync())
+                    while (await files.MoveNextAsync().ConfigureAwait(false))
                     {
                         var file = files.Current;
                         if (file.IsTombstone)
@@ -625,8 +625,8 @@ namespace Raven.Abstractions.Smuggler
 						if (Options.ShouldDisableVersioningBundle)
 							file.Metadata = Operations.DisableVersioning(file.Metadata);
 
-                        var downloadedFile = await Operations.DownloadFile(file);
-                        await Operations.PutFile( file, downloadedFile, file.TotalSize.Value );
+                        var downloadedFile = await Operations.DownloadFile(file).ConfigureAwait(false);
+                        await Operations.PutFile( file, downloadedFile, file.TotalSize.Value ).ConfigureAwait(false);
 
                         lastEtag = tempLastEtag;
 

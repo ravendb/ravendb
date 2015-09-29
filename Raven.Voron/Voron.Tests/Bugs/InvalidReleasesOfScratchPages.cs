@@ -11,7 +11,7 @@ namespace Voron.Tests.Bugs
 
 	public class InvalidReleasesOfScratchPages : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void ReadTransactionCanReadJustCommittedValue()
 		{
 			var options = StorageEnvironmentOptions.CreateMemoryOnly();
@@ -38,7 +38,7 @@ namespace Voron.Tests.Bugs
 			options.MaxScratchBufferSize *= 2;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
 		{
 			const int numberOfWriteThreads = 10;
@@ -135,7 +135,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void AllScratchPagesShouldBeReleased()
 		{
 			var options = StorageEnvironmentOptions.CreateMemoryOnly();

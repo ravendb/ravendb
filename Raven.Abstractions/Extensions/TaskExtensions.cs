@@ -75,10 +75,10 @@ namespace Raven.Abstractions.Extensions
 		{
 			if (timeout == null)
 			{
-				await task;
+				await task.ConfigureAwait(false);
 				return true;
 			}
-			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)))
+			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
 				return true;
 			return false;
 		}

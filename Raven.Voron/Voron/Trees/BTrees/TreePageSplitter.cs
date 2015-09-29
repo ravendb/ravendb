@@ -12,7 +12,7 @@ namespace Voron.Trees
     {
         private readonly TreeCursor _cursor;
         private readonly int _len;
-        private readonly MemorySlice _newKey;
+        private readonly Slice _newKey;
         private readonly TreeNodeFlags _nodeType;
         private readonly ushort _nodeVersion;
         private readonly TreePage _page;
@@ -23,7 +23,7 @@ namespace Voron.Trees
 
         public TreePageSplitter(Transaction tx,
             Tree tree,
-            MemorySlice newKey,
+            Slice newKey,
             int len,
             long pageNumber,
             TreeNodeFlags nodeType,
@@ -49,13 +49,13 @@ namespace Voron.Trees
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-				TreePage newRootPage = _tree.NewPage(_tree.KeysPrefixing ? TreePageFlags.Branch | TreePageFlags.KeysPrefixed : TreePageFlags.Branch, 1);
+				TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
                 _tree.State.RootPageNumber = newRootPage.PageNumber;
                 _tree.State.Depth++;
 
                 // now add implicit left page
-                newRootPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, _page.PageNumber);
+                newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
                 _parentPage = newRootPage;
                 _parentPage.LastSearchPosition++;
             }
@@ -110,7 +110,7 @@ namespace Voron.Trees
 
 						TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
 						Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
-						rightPage.AddPageRefNode(0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys, node->PageNumber);
+						rightPage.AddPageRefNode(0, Slice.BeforeAllKeys, node->PageNumber);
 						pos = AddNodeToPage(rightPage, 1);
 
 						var separatorKey = _page.GetNodeKey(node);
@@ -137,9 +137,9 @@ namespace Voron.Trees
             return SplitPageInHalf(rightPage);
         }
 
-        private byte* AddNodeToPage(TreePage page, int index, MemorySlice alreadyPreparedNewKey = null)
+        private byte* AddNodeToPage(TreePage page, int index, Slice alreadyPreparedNewKey = null)
         {
-	        var newKeyToInsert = alreadyPreparedNewKey ?? page.PrepareKeyToInsert(_newKey, index);
+	        var newKeyToInsert = alreadyPreparedNewKey ?? _newKey;
 
             switch (_nodeType)
             {
@@ -180,20 +180,13 @@ namespace Voron.Trees
 				}
 			}
 
-			PrefixNode[] prefixes = null;
-
-			if (_tree.KeysPrefixing && _page.HasPrefixes)
+			if (_page.IsLeaf)
 			{
-				prefixes = _page.GetPrefixes();
-			}
-
-			if (_page.IsLeaf || prefixes != null)
-			{
-				splitIndex = AdjustSplitPosition(currentIndex, splitIndex, prefixes, ref toRight);
+				splitIndex = AdjustSplitPosition(currentIndex, splitIndex, ref toRight);
 			}
 
 			var currentKey = _page.GetNodeKey(splitIndex);
-			MemorySlice seperatorKey;
+			Slice seperatorKey;
 
 			if (toRight && splitIndex == currentIndex)
 			{
@@ -206,24 +199,14 @@ namespace Voron.Trees
 
             AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
 
-	        MemorySlice instance = _page.CreateNewEmptyKey();
-
-	        if (prefixes != null)
-	        {
-				for (int i = 0; i < prefixes.Length; i++)
-				{
-					var prefix = prefixes[i];
-
-					rightPage.WritePrefix(new Slice(prefix.ValuePtr, prefix.PrefixLength), i);
-				}
-	        }
+	        Slice instance = _page.CreateNewEmptyKey();
 
 	        bool addedAsImplicitRef = false;
 
 			if (_page.IsBranch && toRight && seperatorKey == _newKey)
 			{
 				// _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
-				AddNodeToPage(rightPage, 0, _tree.KeysPrefixing ? (MemorySlice)PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
+				AddNodeToPage(rightPage, 0, Slice.BeforeAllKeys);
 				addedAsImplicitRef = true;
 			}
 
@@ -234,14 +217,12 @@ namespace Voron.Trees
                 TreeNodeHeader* node = _page.GetNode(i);
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                 {
-                    rightPage.CopyNodeDataToEndOfPage(node, _tree.KeysPrefixing ? (MemorySlice) PrefixedSlice.BeforeAllKeys : Slice.BeforeAllKeys);
+                    rightPage.CopyNodeDataToEndOfPage(node, Slice.BeforeAllKeys);
                 }
                 else
                 {
 	                _page.SetNodeKey(node, ref instance);
-	                var key = rightPage.PrepareKeyToInsert(instance, rightPage.NumberOfEntries);
-
-					rightPage.CopyNodeDataToEndOfPage(node, key);
+                    rightPage.CopyNodeDataToEndOfPage(node, instance);
                 }
             }
 
@@ -318,7 +299,7 @@ namespace Voron.Trees
         {
             int pos = p.NodePositionFor(_newKey);
 
-			var newKeyToInsert = p.PrepareKeyToInsert(_newKey, pos);
+			var newKeyToInsert = _newKey;
 
 			if (p.HasSpaceFor(_tx, p.GetRequiredSpace(newKeyToInsert, _len)) == false)
 			{
@@ -334,49 +315,25 @@ namespace Voron.Trees
             return dataPos;
         }
 
-		private byte* AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
+		private byte* AddSeparatorToParentPage(long pageNumber, Slice separatorKey)
 		{
-			var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
+			var pos = _parentPage.NodePositionFor(separatorKey); // select the appropriate place for this
 
-			var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
-
-			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
+            if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
 			{
-				var pageSplitter = new TreePageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
+				var pageSplitter = new TreePageSplitter(_tx, _tree, separatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
 					0, _cursor);
 				return pageSplitter.Execute();
 			}
 
-			return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
+            return _parentPage.AddPageRefNode(pos, separatorKey, pageNumber);
 		}
 
-        private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool toRight)
+        private int AdjustSplitPosition(int currentIndex, int splitIndex, ref bool toRight)
         {
-	        MemorySlice keyToInsert;
+            Slice keyToInsert = _newKey;
 
-	        int pageSize = 0;
-
-	        if (_tree.KeysPrefixing)
-			{
-				keyToInsert = new PrefixedSlice(_newKey); // let's assume that _newkey won't match any of the existing prefixes
-
-				pageSize += Constants.PrefixInfoSectionSize;
-				pageSize += Constants.PrefixNodeHeaderSize + 1; // possible new prefix,  + 1 because of possible 2-byte alignment
-			}
-	        else
-		        keyToInsert = _newKey;
-
-	        pageSize += SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert , _len) + Constants.NodeOffsetSize;
-
-			if (prefixes != null)
-			{
-				// we are going to copy all existing prefixes so we need to take into account their sizes
-				for (var i = 0; i < prefixes.Length; i++)
-				{
-					var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixes[i].Header.PrefixLength;
-					pageSize += prefixNodeSize + (prefixNodeSize & 1); // & 1 because we need 2-byte alignment
-				}
-			}
+	        int pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
 
 			if (toRight == false)
 			{
@@ -419,7 +376,7 @@ namespace Voron.Trees
             return splitIndex;
         }
 
-		private string GatherDetailedDebugInfo(TreePage rightPage, MemorySlice currentKey, MemorySlice seperatorKey, int currentIndex, int splitIndex, bool toRight)
+		private string GatherDetailedDebugInfo(TreePage rightPage, Slice currentKey, Slice seperatorKey, int currentIndex, int splitIndex, bool toRight)
 		{
 			var debugInfo = new StringBuilder();
 

@@ -29,7 +29,7 @@ namespace Voron.Tests.Bugs
             return builder.ToString();
         }
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0500)]
 		[InlineData(1000)]
 		[InlineData(2000)]
@@ -76,7 +76,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void SplitterIssue()
 		{
 			const int DocumentCount = 10;
@@ -98,7 +98,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void SplitterIssue2()
 		{
 			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
@@ -169,7 +169,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddMultiValuesUnderTheSameKeyToBatch()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -203,7 +203,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void PageNotSorted_ValidateDebugOption()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

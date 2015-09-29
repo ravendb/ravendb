@@ -6,7 +6,7 @@ namespace Voron.Tests.Trees
 {
 	public class Updates : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void CanUpdateVeryLargeValueAndThenDeleteIt()
 		{
 			var random = new Random();
@@ -46,7 +46,7 @@ namespace Voron.Tests.Trees
 		}
 
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddAndUpdate()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -60,7 +60,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddAndUpdate2()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -80,7 +80,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddAndUpdate1()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -101,7 +101,7 @@ namespace Voron.Tests.Trees
 		}
 
 
-		[PrefixesFact]
+		[Fact]
 		public void CanDelete()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -114,7 +114,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanDelete2()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -129,7 +129,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanDelete1()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -171,7 +171,7 @@ for(var customFunction in customFunctions) {{
 								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
 						}
 
-						await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream });
+						await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
 					}
 				}
 				catch (Exception e)
@@ -287,7 +287,7 @@ for(var customFunction in customFunctions) {{
 			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
                 var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
-                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
+                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
 			}
 
 			return GetEmptyMessage();
@@ -457,7 +457,7 @@ for(var customFunction in customFunctions) {{
             try
             {
                 //Request is of type HttpRequestMessage
-                string keyObjectString = await Request.Content.ReadAsStringAsync();
+                string keyObjectString = await Request.Content.ReadAsStringAsync().ConfigureAwait(false);
                 NameValueCollection nvc = HttpUtility.ParseQueryString(keyObjectString);
                 var key = nvc["key"];
 
@@ -511,13 +511,13 @@ for(var customFunction in customFunctions) {{
                 throw new Exception(); // divided by zero
 
             var provider = new MultipartMemoryStreamProvider();
-            await Request.Content.ReadAsMultipartAsync(provider);
+            await Request.Content.ReadAsMultipartAsync(provider).ConfigureAwait(false);
 
             foreach (var file in provider.Contents)
             {
                 var filename = file.Headers.ContentDisposition.FileName.Trim('\"');
 
-                var stream = await file.ReadAsStreamAsync();
+                var stream = await file.ReadAsStreamAsync().ConfigureAwait(false);
 
                 using (var csvReader = new TextFieldParser(stream))
                 {
@@ -576,14 +576,14 @@ for(var customFunction in customFunctions) {{
 
                         if (batch.Count >= CsvImportBatchSize)
                         {
-                            await FlushBatch(batch);
+                            await FlushBatch(batch).ConfigureAwait(false);
                             batch.Clear();
                         }
                     }
 
                     if (batch.Count > 0)
                     {
-                        await FlushBatch(batch);
+                        await FlushBatch(batch).ConfigureAwait(false);
                     }
                 }
 

@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 
 			//using (var reader = new StreamReader(context.Request.InputStream))
 			//	requestContents = reader.ReadToEnd();
-			var requestContents = await ReadStringAsync();
+			var requestContents = await ReadStringAsync().ConfigureAwait(false);
 
 			var requestContentsDictionary = OAuthHelper.ParseDictionary(requestContents);
 			var rsaExponent = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);

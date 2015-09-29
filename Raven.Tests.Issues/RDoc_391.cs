@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using FluentAssertions;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client;

@@ -739,7 +739,7 @@ more responsive application.
 
 			if (id == null)
 			{
-				id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token);
+				id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
 			}
 
 			StoreInternal(entity, etag, id, forceConcurrencyCheck);
@@ -760,14 +760,14 @@ more responsive application.
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
 					return id;
 
-				var key = await GenerateKeyAsync(entity);
+				var key = await GenerateKeyAsync(entity).ConfigureAwait(false);
 				// If we generated a new id, store it back into the Id field so the client has access to to it                    
 				if (key != null)
 					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
 				return key;
 			}
 
-			var result = await GetOrGenerateDocumentKeyAsync(entity);
+			var result = await GetOrGenerateDocumentKeyAsync(entity).ConfigureAwait(false);
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
 			return result;
 		}
@@ -813,7 +813,7 @@ more responsive application.
 				? CompletedTask.With(id)
 				: GenerateKeyAsync(entity);
 
-			var result = await generator;
+			var result = await generator.ConfigureAwait(false);
 			if (result != null && result.StartsWith("/"))
 				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 

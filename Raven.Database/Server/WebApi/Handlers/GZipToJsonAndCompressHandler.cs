@@ -24,7 +24,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 			if (contentEncoding == null ||
 				contentEncoding.Contains("gzip") == false)
 			{
-				response = await base.SendAsync(request, cancellationToken);
+				response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 				return Compress(response);
 			}
 
@@ -41,7 +41,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 				gzipStream.Dispose();
 
 				outputStream.Seek(0, SeekOrigin.Begin);
-			}, cancellationToken);
+			}, cancellationToken).ConfigureAwait(false);
 
 			// This next section is the key...
 
@@ -60,7 +60,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 				}
 			}
 
-			response = await base.SendAsync(request, cancellationToken);
+			response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 			return Compress(response);
 		}
 

@@ -30,8 +30,8 @@ namespace Raven.Abstractions.Connection
 
 			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
 			{
-				await streamWriter.WriteAsync(data);
-				await streamWriter.FlushAsync();
+				await streamWriter.WriteAsync(data).ConfigureAwait(false);
+				await streamWriter.FlushAsync().ConfigureAwait(false);
 			}
 
 			if (disableRequestCompression == false)

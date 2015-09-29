@@ -229,14 +229,15 @@ namespace Raven.Client.UniqueConstraints
 			var constraintDoc = await session
 				.Include<ConstraintDocument>(x => x.RelatedId)
 				.Include(x => x.Constraints.Values.Select(c => c.RelatedId))
-				.LoadAsync(uniqueId);
+				.LoadAsync(uniqueId)
+				.ConfigureAwait(false);
 
 			if (constraintDoc == null)
 				return default(T);
 
 			session.Advanced.Evict(constraintDoc);
 
-			return await session.LoadAsync<T>(constraintDoc.GetRelatedIdFor(escapedValue));
+			return await session.LoadAsync<T>(constraintDoc.GetRelatedIdFor(escapedValue)).ConfigureAwait(false);
 		}
 
 		public static async Task<UniqueConstraintCheckResult<T>> CheckForUniqueConstraintsAsync<T>(this IAsyncDocumentSession session, T entity)
@@ -258,7 +259,8 @@ namespace Raven.Client.UniqueConstraints
 			var constraintDocs = await session
 				.Include<ConstraintDocument>(x => x.RelatedId)
 				.Include(x => x.Constraints.Values.Select(c => c.RelatedId))
-				.LoadAsync(constraintsIds.Select(x => x.Id).ToArray());
+				.LoadAsync(constraintsIds.Select(x => x.Id).ToArray())
+				.ConfigureAwait(false);
 
 			var existingDocsIds = new List<string>();
 			for (var i = 0; i < constraintDocs.Length; i++)
@@ -276,7 +278,7 @@ namespace Raven.Client.UniqueConstraints
 
 			if (existingDocsIds.Any())
 			{
-				loadedDocs = await session.LoadAsync<T>(existingDocsIds);
+				loadedDocs = await session.LoadAsync<T>(existingDocsIds).ConfigureAwait(false);
 			}
 
 			return new UniqueConstraintCheckResult<T>(entity, properties, loadedDocs);

@@ -12,7 +12,7 @@ namespace Voron.Tests.Bugs
 
 	public class Recovery : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
 		{
 			var path = "test2.data";
@@ -30,7 +30,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereSingleTransactionToRecoverFromLog()
 		{
 			var path = "test2.data";
@@ -75,7 +75,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions()
 		{
 			var path = "test2.data";
@@ -107,7 +107,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
 		{
 			var path = "test2.data";
@@ -140,7 +140,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions()
 		{
 			var path = "test2.data";
@@ -204,7 +204,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions2()
 		{
 			var path = "test2.data";
@@ -268,7 +268,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void StorageRecoveryShouldWorkForSplitTransactions()
 		{
 			var random = new Random(1234);

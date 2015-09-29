@@ -60,7 +60,7 @@ namespace Raven.Database.Server.Controllers
             if (facets == null || !facets.Any())
                 return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
 
-            return await ExecuteFacetsQuery(id, facets, etag);
+            return await ExecuteFacetsQuery(id, facets, etag).ConfigureAwait(false);
         }
 
         [HttpPost]
@@ -69,7 +69,7 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
             List<Facet> facets;
-            var facetsJson = await ReadStringAsync();
+            var facetsJson = await ReadStringAsync().ConfigureAwait(false);
             var msg = TryGetFacetsFromString(facetsJson, out facets);
             if (msg != null)
                 return msg;
@@ -80,7 +80,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
-            return await ExecuteFacetsQuery(id, facets, etag);
+            return await ExecuteFacetsQuery(id, facets, etag).ConfigureAwait(false);
         }
 
         [HttpPost]
@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/facets/multisearch")]
         public async Task<HttpResponseMessage> MultiSearch()
         {
-            var str = await ReadStringAsync();
+            var str = await ReadStringAsync().ConfigureAwait(false);
             
             var facetedQueries = JsonConvert.DeserializeObject<FacetQuery[]>(str);
             
