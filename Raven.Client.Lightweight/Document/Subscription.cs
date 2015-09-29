@@ -171,7 +171,7 @@ namespace Raven.Client.Document
 											}
 											catch (Exception ex)
 											{
-												logger.WarnException("Subscriber threw an exception", ex);
+												logger.WarnException(string.Format("Subscription #{0}. Subscriber threw an exception", id), ex);
 
 												if (options.IgnoreSubscribersErrors == false)
 												{
@@ -307,8 +307,13 @@ namespace Raven.Client.Document
 				if (cts.Token.IsCancellationRequested)
 					return;
 
+				logger.WarnException(string.Format("Subscription #{0}. Pulling task threw the following exception", id), ex);
+
 				if (TryHandleRejectedConnection(ex))
+				{
+					logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
 					return;
+				}
 
 				RestartPullingTask().ConfigureAwait(false);
 			}
@@ -322,7 +327,7 @@ namespace Raven.Client.Document
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Exception happened during an attempt to close subscription after it had become faulted", e);
+					logger.WarnException(string.Format("Subscription #{0}. Exception happened during an attempt to close subscription after it had become faulted", id), e);
 				}
 			}
 		}
