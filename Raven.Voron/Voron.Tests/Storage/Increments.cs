@@ -11,7 +11,7 @@ namespace Voron.Tests.Storage
 {
 	public class Increments : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void SimpleIncrementShouldWork()
 		{
 			CreateTrees(Env, 1, "tree");
@@ -47,7 +47,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void SimpleIncrementShouldWorkUsingWriteBatch()
 		{
 			CreateTrees(Env, 1, "tree");
@@ -77,7 +77,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-        [PrefixesFact]
+        [Fact]
         public void SimpleIncrementEntriesCountShouldStayCorrectAfterCommit()
         {
             CreateTrees(Env, 1, "tree");

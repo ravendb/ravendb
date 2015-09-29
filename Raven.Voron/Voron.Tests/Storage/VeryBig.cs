@@ -6,7 +6,7 @@ namespace Voron.Tests.Storage
 {
 	public class VeryBig : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void CanGrowBeyondInitialSize()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -32,7 +32,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanGrowBeyondInitialSize_Root()
 		{
 			var buffer = new byte[1024 * 512];
@@ -50,7 +50,7 @@ namespace Voron.Tests.Storage
 				}
 			}
 		}
-		[PrefixesFact]
+		[Fact]
 		public void CanGrowBeyondInitialSize_WithAnotherTree()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

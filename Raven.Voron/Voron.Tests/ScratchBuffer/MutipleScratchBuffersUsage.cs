@@ -19,7 +19,7 @@ namespace Voron.Tests.ScratchBuffer
 		    options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddContinuallyGrowingValue()
 		{
 			// this test does not have any assertion - we just check here that we don't get ScratchBufferSizeLimitException
@@ -57,7 +57,7 @@ namespace Voron.Tests.ScratchBuffer
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanAddContinuallyGrowingValue_ButNotCommitting()
 		{
 			// this test does not have any assertion - we just check here that we don't get ScratchBufferSizeLimitException

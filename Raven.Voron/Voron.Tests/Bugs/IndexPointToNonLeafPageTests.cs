@@ -18,7 +18,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldProperlyMovePositionForNextPageAllocationInScratchBufferPool()
 		{
 			var sequentialLargeIds = ReadData("non-leaf-page-seq-id-large-values.txt");

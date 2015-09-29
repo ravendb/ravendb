@@ -24,7 +24,7 @@ namespace Voron.Tests.Storage
             DeleteDirectory(temp);
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ByDefaultAllFilesShouldBeStoredInOneDirectory()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path);
@@ -33,7 +33,7 @@ namespace Voron.Tests.Storage
             Assert.Equal(options.BasePath, options.TempPath);
         }
 
-        [PrefixesFact]
+        [Fact]
         public void TemporaryPathTest()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);
@@ -42,7 +42,7 @@ namespace Voron.Tests.Storage
             Assert.Equal(temp, options.TempPath);
         }
 
-        [PrefixesFact]
+        [Fact]
         public void DefaultScratchLocation()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path);
@@ -53,7 +53,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ScratchLocationWithTemporaryPathSpecified()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);

@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 {
 	public class LongKeys : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void ShouldHaveEnoughSpaceDuringTruncate()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -71,7 +71,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(1)]
 		[InlineData(3)]
 		public void ShouldHaveEnoughSpaceWhenSplittingPageInHalf(int seed)
@@ -130,7 +130,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0)]
 		[InlineData(2)]
 		[InlineData(4)]

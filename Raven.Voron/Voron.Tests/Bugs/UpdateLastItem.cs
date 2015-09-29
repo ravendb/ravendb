@@ -7,7 +7,7 @@ namespace Voron.Tests.Bugs
 {
 	public unsafe class UpdateLastItem : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void ShouldWork()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -22,7 +22,7 @@ namespace Voron.Tests.Compaction
 			Clean();
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CompactionMustNotLooseAnyData()
 		{
 			var treeNames = new List<string>();
@@ -141,7 +141,7 @@ namespace Voron.Tests.Compaction
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldOccupyLessSpace()
 		{
 			var r = new Random();
@@ -184,7 +184,7 @@ namespace Voron.Tests.Compaction
 			Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CannotCompactStorageIfIncrementalBackupEnabled()
 		{
 			var envOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
@@ -210,7 +210,7 @@ namespace Voron.Tests.Compaction
 			Assert.Equal(StorageCompaction.CannotCompactBecauseOfIncrementalBackup, invalidOperationException.Message);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
@@ -247,7 +247,7 @@ namespace Voron.Tests.Compaction
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldReportProgress()
 		{
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))

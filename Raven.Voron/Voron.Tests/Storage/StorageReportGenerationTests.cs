@@ -29,7 +29,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0)]
 		[InlineData(1)]
 		[InlineData(13)]
@@ -76,7 +76,7 @@ namespace Voron.Tests.Storage
 			}
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0)]
 		[InlineData(7)]
 		[InlineData(14)]
@@ -146,7 +146,7 @@ namespace Voron.Tests.Storage
 			Assert.Equal(expectedDensity, StorageReportGenerator.CalculateTreeDensity(pageDensities.ToList()));
 		}
 
-		[PrefixesTheory]
+		[Theory]
 		[InlineData(0)]
 		[InlineData(7)]
 		[InlineData(14)]

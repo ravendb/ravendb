@@ -25,7 +25,7 @@ namespace Voron.Tests.Bugs
 				Directory.Delete(_dataPath, true);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldNotThrowChecksumMismatch()
 		{
 			var random = new Random(1);

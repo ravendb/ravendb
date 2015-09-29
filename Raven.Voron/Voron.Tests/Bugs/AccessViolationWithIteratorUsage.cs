@@ -15,7 +15,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldNotThrow()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

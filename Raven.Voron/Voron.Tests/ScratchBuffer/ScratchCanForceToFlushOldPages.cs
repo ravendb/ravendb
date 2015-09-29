@@ -17,7 +17,7 @@ namespace Voron.Tests.ScratchBuffer
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch()
 		{
 			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))

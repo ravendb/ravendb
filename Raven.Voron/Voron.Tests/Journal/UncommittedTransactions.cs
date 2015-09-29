@@ -22,7 +22,7 @@ namespace Voron.Tests.Journal
 		}
 
 
-		[PrefixesFact]
+		[Fact]
 		public void UncommittedTransactionMustNotModifyPageTranslationTableOfLogFile()
 		{
 			long pageAllocatedInUncommittedTransaction;

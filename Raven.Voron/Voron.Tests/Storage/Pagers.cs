@@ -9,26 +9,26 @@ namespace Voron.Tests.Storage
     public class Pagers
 	{
 #if DEBUG_PAGER_STATE
-//        [PrefixesFact]
+//        [Fact]
 //        public void PureMemoryPagerReleasesPagerState()
 //        {
 //            PagerReleasesPagerState(() => new Win32PureMemoryPager());
 //        }
 
-        [PrefixesFact]
+        [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new Win32MemoryMapPager("db.voron"));
             File.Delete("db.voron");
         }
 
-		[PrefixesFact]	
+		[Fact]	
 	    public void MemoryMapWithoutBackingReleasePagerState()
 	    {
 		    PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));
 	    }
 
-        [PrefixesFact]
+        [Fact]
         public void FilePagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new FilePager("db.voron"));

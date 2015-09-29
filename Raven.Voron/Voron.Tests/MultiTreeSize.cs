@@ -11,7 +11,7 @@ namespace Voron.Tests
 {
 	public class MultiTreeSize : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void Single_AddMulti_WillUseOnePage()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -25,7 +25,7 @@ namespace Voron.Tests
 			);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void TwoSmall_AddMulti_WillUseOnePage()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

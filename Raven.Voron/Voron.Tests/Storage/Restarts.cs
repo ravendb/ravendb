@@ -10,7 +10,7 @@ namespace Voron.Tests.Storage
 {
     public class Restarts
     {
-        [PrefixesFact]
+        [Fact]
         public void DataIsKeptAfterRestart_OnDisk()
         {
             if (Directory.Exists("test.data"))
@@ -44,7 +44,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void DataIsKeptAfterRestart()
         {
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
@@ -76,7 +76,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void DataIsKeptAfterRestartForSubTrees()
         {
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())

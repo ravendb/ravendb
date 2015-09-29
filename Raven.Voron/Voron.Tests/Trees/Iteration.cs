@@ -10,7 +10,7 @@ namespace Voron.Tests.Trees
 {
 	public unsafe class Iteration : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void EmptyIterator()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
@@ -26,7 +26,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanIterateInOrder()
 		{
 			var random = new Random();

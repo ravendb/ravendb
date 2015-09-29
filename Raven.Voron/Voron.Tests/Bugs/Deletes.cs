@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 
 	public class Deletes : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void RebalancerIssue()
 		{
 			const int DocumentCount = 750;

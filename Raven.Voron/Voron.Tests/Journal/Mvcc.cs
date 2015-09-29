@@ -20,7 +20,7 @@ namespace Voron.Tests.Journal
 			options.MaxLogFileSize = 3 * AbstractPager.PageSize;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldNotFlushUntilThereAreActiveOlderTransactions()
 		{
 			var ones = new byte[3000];

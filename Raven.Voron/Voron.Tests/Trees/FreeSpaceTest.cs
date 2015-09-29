@@ -9,7 +9,7 @@ namespace Voron.Tests.Trees
 {
 	public class FreeSpaceTest : StorageTest
 	{
-		[PrefixesFact]
+		[Fact]
 		public void WillBeReused()
 		{
 			var random = new Random();
@@ -55,7 +55,7 @@ namespace Voron.Tests.Trees
 			Assert.True(Env.NextPageNumber - old < 2, "This test will not pass until we finish merging the free space branch");
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldReturnProperPageFromSecondSection()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -71,7 +71,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace()
 		{
 			const int maxPageNumber = 4000000;
@@ -122,7 +122,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated()
 		{
 			const int maxPageNumber = 400000;
@@ -176,7 +176,7 @@ namespace Voron.Tests.Trees
 			} while (true);
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void CanGetListOfAllFreedPages()
 		{
 			const int maxPageNumber = 10000;

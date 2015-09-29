@@ -15,7 +15,7 @@ namespace Voron.Tests.Bugs
 			options.ManualFlushing = true;
 		}
 
-		[PrefixesFact]
+		[Fact]
 		public void ShouldCorrectlyFindSmallValueMergingByTwoSectionsInFreeSpaceHandling()
 		{
 			var dataSize = 905048; // never change this
