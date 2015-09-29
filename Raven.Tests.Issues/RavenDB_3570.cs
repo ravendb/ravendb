@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 using System.Net;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;
@@ -49,21 +48,19 @@ namespace Raven.Tests.Issues
 			try
 			{
 				AddWindowsUser(username, password);
-				
-				this.Invoking(x =>
-				{
-					using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
-					{
-					}
-				}).ShouldThrowExactly<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
 
-				this.Invoking(x =>
-				{
-					using (NewStore(enableAuthentication: true))
-					{
-					}
-				}).ShouldNotThrow<Exception>();
-			}
+			    var e = Assert.Throws< ErrorResponseException>(() =>
+			    {
+			        using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
+			        {
+			        }
+			    });
+			    Assert.Equal(e.StatusCode ,HttpStatusCode.Forbidden);
+
+                using (NewStore(enableAuthentication: true))
+                {
+                }
+            }
 			finally
 			{
 				DeleteUser(username);

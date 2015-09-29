@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using FluentAssertions;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client;
@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
 
 				var statsAfter = store.DatabaseCommands.GetStatistics();
 				indexStats = statsAfter.Indexes.First(x => x.Name == index.IndexName);
-				indexStats.LastIndexedEtag.Should().Be(lastIndexedEtag);
+				Assert.Equal(lastIndexedEtag, indexStats.LastIndexedEtag);
 			}
 		}
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Counters;
 using Raven.Client.Extensions;
 using Xunit;
@@ -19,8 +18,8 @@ namespace Raven.Tests.Counters
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName);
 
 				var counterStorageNames = await store.Admin.GetCounterStoragesNamesAsync();
-				counterStorageNames.Should().HaveCount(1)
-									.And.Contain(CounterStorageName);
+                Assert.Equal(1, counterStorageNames.Length);
+                Assert.Contains(CounterStorageName, counterStorageNames);
 			}
 		}
 
@@ -36,7 +35,7 @@ namespace Raven.Tests.Counters
 				await store.Admin.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[2]);
 
 				var counterStorageNames = await store.Admin.GetCounterStoragesNamesAsync();
-				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);
+				Assert.Equal(counterStorageNames, expectedClientNames);
 			}
 		}
 
@@ -53,8 +52,8 @@ namespace Raven.Tests.Counters
 				await store.Admin.DeleteCounterStorageAsync("CounterThatWillBeDeleted", true);
 
 				var counterStorageNames = await store.Admin.GetCounterStoragesNamesAsync();
-				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);
-			}
+                Assert.Equal(counterStorageNames, expectedClientNames);
+            }
 		}
 
 		[Fact]
@@ -71,8 +70,8 @@ namespace Raven.Tests.Counters
 				await Task.WhenAll(t1, t2, t3);
 
 				var counterStorageNames = await store.Admin.GetCounterStoragesNamesAsync();
-				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);
-			}
+                Assert.Equal(counterStorageNames, expectedClientNames);
+            }
 		}
 
 
@@ -84,8 +83,8 @@ namespace Raven.Tests.Counters
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName);
 
 				//invoking create counter with the same name twice should fail
-				store.Invoking(c => c.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName).Wait())
-					 .ShouldThrow<InvalidOperationException>();
+			    Assert.Throws<InvalidOperationException>(() => 
+                    store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName).Wait());
 			}
 		}
 	}

@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using FluentAssertions;
-using Raven.Abstractions.Indexing;
+﻿using System.Linq;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
@@ -44,33 +37,33 @@ namespace Raven.Tests.Bugs.Queries
 										.Where(x => x.Name.StartsWith("King S"))
 										.ToArray();
 
-					result5.Length.Should().Be(1);
+                    Assert.Equal(1, result5.Length);
 
-					var result1 = session.Query<User, User_Entity>()
+                    var result1 = session.Query<User, User_Entity>()
 						.Customize(x=>x.WaitForNonStaleResults())
 						.Where(x => x.Name.StartsWith("Mrs"))
 						.ToArray();
-					result1.Length.Should().Be(1);
+                    Assert.Equal(1, result1.Length);
 
-					var result2 = session.Query<User, User_Entity>()
+                    var result2 = session.Query<User, User_Entity>()
 						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs."))
 								.ToArray();
-					result2.Length.Should().Be(1);
+                    Assert.Equal(1, result2.Length);
 
-					var result3 = session.Query<User, User_Entity>()
+                    var result3 = session.Query<User, User_Entity>()
 						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs. S"))
 								.ToArray();
-					result3.Length.Should().Be(1);
+                    Assert.Equal(1, result3.Length);
 
-					var result4 = session.Query<User, User_Entity>()
+                    var result4 = session.Query<User, User_Entity>()
 						.Customize(x => x.WaitForNonStaleResults())
 								.Where(x => x.Name.StartsWith("Mrs. Shaba"))
 								.ToArray();
-					result4.Length.Should().Be(1);
+                    Assert.Equal(1, result4.Length);
 
-				}
+                }
 			}
 		}
 	}

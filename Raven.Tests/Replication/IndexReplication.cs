@@ -3,22 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
-using FluentAssertions;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Replication
@@ -163,13 +158,13 @@ namespace Raven.Tests.Replication
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
+				Assert.Equal(expectedIndexNames,indexStatsAfterReplication1);
 
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
-
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
+                
 				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication2);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication2);
 			}
 		}
 
@@ -305,16 +300,18 @@ namespace Raven.Tests.Replication
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
+                
 
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
-				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication2);
+                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication2);
 
-			}
-		}
+
+            }
+        }
 
 		[Fact]
 		public void Should_replicate_all_indexes_only_to_specific_destination_if_relevant_endpoint_hit()
@@ -419,17 +416,19 @@ namespace Raven.Tests.Replication
 
 				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
 				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication1);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
 
 
-				WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName);
+
+                WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName);
 				WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName);
 				WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName);
 				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-				expectedIndexNames.Should().BeEquivalentTo(indexStatsAfterReplication3);
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
-				//since destination2 has disabled flag - indexes should not replicate to here
-				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+
+                //since destination2 has disabled flag - indexes should not replicate to here
+                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
 				Assert.Empty(indexStatsAfterReplication2);
 			}
 		}
