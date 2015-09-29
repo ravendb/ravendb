@@ -39,7 +39,7 @@ namespace Raven.Tests.Web
 
 				IOExtensions.CopyDirectory(from, path);
 
-				iisExpressDriver = new IISExpressDriver(true);
+				iisExpressDriver = new IISExpressDriver();
 				iisExpressDriver.Start(path, Port);
 			}
 			catch (Exception)
