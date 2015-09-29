@@ -454,6 +454,8 @@ namespace Raven.Database.Smuggler
 
 					var counterDelta = RavenJToken.ReadFrom(jsonReader).ToObject<CounterState>();
 					ShowProgress(String.Format("Importing counter {0} - {1}", counterDelta.GroupName, counterDelta.CounterName));
+					if (counterDelta.Sign == ValueSign.Negative)
+						counterDelta.Value = -counterDelta.Value;
 					store.Batch.ScheduleChange(counterDelta.GroupName, counterDelta.CounterName, counterDelta.Value);
 				}
 

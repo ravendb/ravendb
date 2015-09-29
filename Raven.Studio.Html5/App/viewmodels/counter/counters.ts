@@ -184,7 +184,7 @@ class counters extends viewModelBase {
             var counterData = grid.getSelectedItems(1).first();
             var dto = {
                 CurrentValue: counterData.Total,
-                Group: counterData.Group,
+                Group: counterData.GroupName,
                 CounterName: counterData.Name,
                 Delta: 0
             };
@@ -193,7 +193,7 @@ class counters extends viewModelBase {
             counterChangeVm.updateTask.done((change: counterChange, isNew: boolean) => {
                 var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), isNew);
 	            var execute = counterCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.Group));
+				execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });
             app.showDialog(counterChangeVm);
         }
@@ -205,9 +205,9 @@ class counters extends viewModelBase {
             var counterData = grid.getSelectedItems(1).first();
             var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
             confirmation.done(() => {
-                var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData.Group, counterData.Name);
+                var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData.GroupName, counterData.Name);
                 var execute = resetCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.Group));
+				execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });
         }
     }
