@@ -6,7 +6,6 @@
 using System;
 using System.IO;
 using System.IO.IsolatedStorage;
-using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Document.DTC;
@@ -30,7 +29,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenClientEnlistment"/> class.
 		/// </summary>
-		public RavenClientEnlistment(DocumentStoreBase documentStore,ITransactionalDocumentSession session, Action onTxComplete)
+		public RavenClientEnlistment(DocumentStoreBase documentStore, ITransactionalDocumentSession session, Action onTxComplete)
 		{
 			transaction = Transaction.Current.TransactionInformation;
 			this.documentStore = documentStore;
@@ -63,13 +62,13 @@ namespace Raven.Client.Document
 
 			    if (recoveryInformation == null)
 			    {
-			        session.PrepareTransaction(transaction.LocalIdentifier);
+					AsyncPump.Run(() => session.PrepareTransaction(transaction.LocalIdentifier));
 			    }
 			    else
 			    {
-                    session.PrepareTransaction(transaction.LocalIdentifier,
+					AsyncPump.Run(() => session.PrepareTransaction(transaction.LocalIdentifier,
                         session.ResourceManagerId,
-                        recoveryInformation);    
+                        recoveryInformation));    
 			    }
 			}
 			catch (Exception e)
@@ -77,7 +76,7 @@ namespace Raven.Client.Document
 				logger.ErrorException("Could not prepare distributed transaction", e);
 			    try
 			    {
-                    session.Rollback(transaction.LocalIdentifier);
+					AsyncPump.Run(() => session.Rollback(transaction.LocalIdentifier));
                     DeleteFile();
 			    }
 			    catch (Exception e2)
@@ -102,7 +101,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-                session.Commit(transaction.LocalIdentifier);
+				AsyncPump.Run(() => session.Commit(transaction.LocalIdentifier));
 
 				DeleteFile();
 			}
@@ -124,7 +123,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-                session.Rollback(transaction.LocalIdentifier);
+				AsyncPump.Run(() => session.Rollback(transaction.LocalIdentifier));
 
 				DeleteFile();
 			}
@@ -150,7 +149,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-                session.Rollback(transaction.LocalIdentifier);
+				AsyncPump.Run(() => session.Rollback(transaction.LocalIdentifier));
 
 				DeleteFile();
 			}
@@ -178,7 +177,7 @@ namespace Raven.Client.Document
 			onTxComplete();
 			try
 			{
-                session.Rollback(transaction.LocalIdentifier);
+				AsyncPump.Run(() => session.Rollback(transaction.LocalIdentifier));
 
 				DeleteFile();
 			}
