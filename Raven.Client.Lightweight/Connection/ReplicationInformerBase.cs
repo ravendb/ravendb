@@ -248,7 +248,7 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, null, token))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
                     {
                         operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -257,7 +257,7 @@ namespace Raven.Client.Connection
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation, primaryOperation, currentRequest, method, true, null, token))
+            if (ShouldExecuteUsing(primaryOperation, primaryOperation, method, true, null, token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
@@ -281,7 +281,7 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error, token) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error, token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;

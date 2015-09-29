@@ -27,12 +27,12 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly FileSystemInfo fileSystemInfo;
-        private readonly RavenJObject sourceMetadata;
+		private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 
 		public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
-                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
+											   RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.synchronizationServerClient = synchronizationServerClient;
 			this.fileSystemInfo = fileSystemInfo;
@@ -56,7 +56,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			var credentials = synchronizationServerClient.Credentials;
 			var conventions = synchronizationServerClient.Conventions;
 
-			var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", "POST", credentials, conventions, timeout: TimeSpan.FromHours(12))
+			var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
 			{
 				DisableRequestCompression = true
 			};

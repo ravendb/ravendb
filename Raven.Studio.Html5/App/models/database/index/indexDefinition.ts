@@ -156,7 +156,7 @@ class indexDefinition {
             this.indexes,
             this.sortOptions,
             this.stores,
-            this.suggestions,
+            this.suggestionsOptions,
             this.termVectors
         ];
 

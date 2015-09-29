@@ -273,7 +273,8 @@ namespace Raven.Database.Indexing
                                 }
 								else
                                 {
-                                    Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
+									if (Log.IsDebugEnabled)
+										Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
                                 }									
 							}
 

@@ -115,7 +115,8 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 			this.context = context;
-			logIndexing.Debug("Creating index for {0}", PublicName);
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Creating index for {0}", PublicName);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
 			_indexCreationTime = SystemTime.UtcNow;
@@ -1123,7 +1124,8 @@ namespace Raven.Database.Indexing
 					.AppendLine();
 			}
 
-			logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, PublicName,
+			if (logIndexing.IsDebugEnabled)
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, PublicName,
 				sb.ToString());
 		}
 

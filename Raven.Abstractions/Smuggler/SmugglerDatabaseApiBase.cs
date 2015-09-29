@@ -1136,7 +1136,7 @@ namespace Raven.Abstractions.Smuggler
 		        {
 		            var buildSkipDocument = BuildSkipDocument();
                     var heartbeatDocSize = (int)DocumentHelpers.GetRoughSize(buildSkipDocument);
-                    await Operations.PutDocument(buildSkipDocument, heartbeatDocSize);
+                    await Operations.PutDocument(buildSkipDocument, heartbeatDocSize).ConfigureAwait(false);
                     timeSinceLastWrite.Restart();
 		        }
 
@@ -1204,7 +1204,7 @@ namespace Raven.Abstractions.Smuggler
 					}
 
                     timeSinceLastWrite.Restart();
-					await Operations.PutDocument(document, (int)size);
+					await Operations.PutDocument(document, (int)size).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -1245,9 +1245,9 @@ namespace Raven.Abstractions.Smuggler
 
 		    //precaution:
 		    //delete the heartbeat document in case the server is older version and doesn't recognize it
-		    await Operations.DeleteDocument(Constants.BulkImportHeartbeatDocKey);
+		    await Operations.DeleteDocument(Constants.BulkImportHeartbeatDocKey).ConfigureAwait(false);
 
-			await Operations.PutDocument(null, -1); // force flush    
+			await Operations.PutDocument(null, -1).ConfigureAwait(false); // force flush    
 
 			return count;
 		}

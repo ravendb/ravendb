@@ -312,7 +312,8 @@ namespace Raven.Client.Document
 
 				if (TryHandleRejectedConnection(ex))
 				{
-					logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
+					if (logger.IsDebugEnabled)
+						logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
 					return;
 				}
 
@@ -477,7 +478,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreatePullingRequest()
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET", timeout: options.PullingRequestTimeout);
+			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get, timeout: options.PullingRequestTimeout);
 		}
 
 		private HttpJsonRequest CreateClientAliveRequest()
