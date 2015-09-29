@@ -212,7 +212,7 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 using (var stream = filesCommands.DownloadAsync(string.Format("file{0}.bin", i)).Result)
                 {
-                    return stream.GetMD5Hash();
+                    return stream.GetHashAsHex();
                 }
             }).ToArray();
         }

@@ -134,7 +134,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			result.Destination.ServerInstanceId = destinationId;
 			result.Destination.LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
-			var document = Database.Documents.Get(docId, null);
+			var document = Database.Documents.Get(docId);
 			if (document == null)
 			{
 				result.Message = string.Format("Document with given key ('{0}') does not exist.", docId);
@@ -296,7 +296,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (!string.IsNullOrEmpty(collections))
 				replicationDocKey += ("/" + collections);
 
-			var replicationDocument = Database.Documents.Get(replicationDocKey, null);			
+			var replicationDocument = Database.Documents.Get(replicationDocKey);			
 
 			Database
 				.Documents
@@ -369,11 +369,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					if (!String.IsNullOrEmpty(collections))
 						docKey += ("/" + collections);
 
-					document = Database.Documents.Get(docKey, null);
+					document = Database.Documents.Get(docKey);
 					if (document == null)
 					{
 						// migrate
-						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src);
 						if (document != null)
 						{
 							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
@@ -461,7 +461,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				if (!String.IsNullOrEmpty(collections))
 					key += ("/" + collections);
 
-				var document = Database.Documents.Get(key, null);
+				var document = Database.Documents.Get(key);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -740,7 +740,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		private ReplicationConfig GetReplicationConfig()
 		{
-			var configDoc = Database.Documents.Get(Constants.RavenReplicationConfig, null);
+			var configDoc = Database.Documents.Get(Constants.RavenReplicationConfig);
 
 			if (configDoc == null)
 				return null;

@@ -975,36 +975,14 @@ namespace Raven.Client.Document
 		public virtual IEnumerator<T> GetEnumerator()
 		{
 			InitSync();
-			while (true)
-			{
-				try
-				{
-					return queryOperation.Complete<T>().GetEnumerator();
-				}
-				catch (Exception e)
-				{
-					if (queryOperation.ShouldQueryAgain(e) == false)
-						throw;
-					ExecuteActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
-				}
-			}
+
+            return queryOperation.Complete<T>().GetEnumerator();
 		}
 
 		private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
 		{
-			try
-			{
-				var list = currentQueryOperation.Complete<T>();
-				return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
-			}
-			catch (Exception e)
-			{
-				if (queryOperation.ShouldQueryAgain(e) == false)
-					throw;
-			}
-
-			var result = await ExecuteActualQueryAsync();
-			return await ProcessEnumerator(result);
+			var list = currentQueryOperation.Complete<T>();
+			return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
 		}
 
 		/// <summary>

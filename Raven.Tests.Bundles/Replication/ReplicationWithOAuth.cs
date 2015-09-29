@@ -47,7 +47,7 @@ namespace Raven.Tests.Bundles.Replication
 						Enabled = true,
 						Name = "Ayende",
 						Secret = "abc"
-					}), new RavenJObject(), null);
+					}), new RavenJObject());
 			}
 
 			TellFirstInstanceToReplicateToSecondInstance();

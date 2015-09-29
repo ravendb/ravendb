@@ -50,9 +50,9 @@ namespace Raven.Database.Config.Retriever
 		{
 			JsonDocument global = null;
 			if (ConfigurationRetriever.IsGlobalConfigurationEnabled)
-				global = systemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase), null);
+				global = systemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase));
 
-			var local = localDatabase.Documents.Get(key, null);
+			var local = localDatabase.Documents.Get(key);
 
 			if (global == null && local == null)
 				return null;

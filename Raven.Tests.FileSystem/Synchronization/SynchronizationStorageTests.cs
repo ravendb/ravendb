@@ -72,7 +72,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			}
 
 			sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync(filename).Result["Content-MD5"]);
+            Assert.Equal(sourceContent.GetHashAsHex(), destination.GetMetadataForAsync(filename).Result["Content-MD5"]);
 		}
 
 		[Fact]
@@ -113,7 +113,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			Assert.Equal(2, fileAndPages.Pages[1].Id); // reused page -> id still == 2
 
 			sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync(filename).Result["Content-MD5"]);
+            Assert.Equal(sourceContent.GetHashAsHex(), destination.GetMetadataForAsync(filename).Result["Content-MD5"]);
 		}
 
 		[Fact]
@@ -156,7 +156,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 			sourceContent.Position = 0;
 
             var metadata = await destination.GetMetadataForAsync(filename);
-            Assert.Equal(sourceContent.GetMD5Hash(), metadata.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetHashAsHex(), metadata.Value<string>("Content-MD5"));
 		}
 	}
 }

@@ -26,7 +26,6 @@ using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
 using Raven.Client.Util;
 
-using Raven.Client.Document.DTC;
 
 namespace Raven.Client.Document
 {
@@ -44,8 +43,6 @@ namespace Raven.Client.Document
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
 		private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
-
-		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>
 		/// The current session id - only used during construction
@@ -212,7 +209,6 @@ namespace Raven.Client.Document
 			if (options.FailoverServers != null)
 				FailoverServers = options.FailoverServers;
 
-			EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
 		}
 
 		/// <summary>
@@ -401,10 +397,6 @@ namespace Raven.Client.Document
 
 				initialized = true;
 
-#if !MONO
-				RecoverPendingTransactions();
-#endif
-
 				if (ensureDatabaseExists &&
 					string.IsNullOrEmpty(DefaultDatabase) == false &&
 					DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
@@ -444,19 +436,6 @@ namespace Raven.Client.Document
 			};
 		}
 
-		public override bool CanEnlistInDistributedTransactions(string dbName)
-		{
-			return _dtcSupport.GetOrAdd(dbName, db => DatabaseCommands.ForDatabase(db).GetStatistics().SupportsDtc);
-		}
-
-		private void RecoverPendingTransactions()
-		{
-			if (EnlistInDistributedTransactions == false)
-				return;
-
-			var pendingTransactionRecovery = new PendingTransactionRecovery(this);
-			pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
-		}
 
 		/// <summary>
 		/// validate the configuration for the document store

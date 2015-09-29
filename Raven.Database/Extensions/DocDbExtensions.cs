@@ -23,7 +23,7 @@ namespace Raven.Database.Extensions
                         continue;
 
                     AlertsDocument alertsDocument;
-                    var alertsDoc = self.Documents.Get(Constants.RavenAlerts, null);
+                    var alertsDoc = self.Documents.Get(Constants.RavenAlerts);
                     RavenJObject metadata;
                     Etag etag;
                     if (alertsDoc == null)

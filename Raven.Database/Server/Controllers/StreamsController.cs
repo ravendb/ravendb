@@ -26,6 +26,7 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util.Encryptors;
+using Sparrow;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -172,8 +173,9 @@ namespace Raven.Database.Server.Controllers
 			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
 				pageSize = 100000;
 
-			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(linq));
-			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+
+            var hash = Hashing.XXHash64.CalculateRaw(linq);
+            var sourceHashed = hash.ToString("X");
 			var transformerName = Constants.TemporaryTransformerPrefix + sourceHashed;
 
 			var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);

@@ -24,7 +24,6 @@ namespace Raven.Database.Plugins
 		/// <param name="key">The key of the read document - can be null if reading a projection</param>
 		/// <param name="metadata">The document metadata</param>
 		/// <param name="operation">Whatever the operation is a load or a query</param>
-		/// <param name="transactionInformation">The transaction information, if any</param>
 		/// <returns>
 		///  * If the result is Allow, the operation continues as usual. 
 		///  * If the result is Deny, the operation will return an error to the user 
@@ -34,7 +33,7 @@ namespace Raven.Database.Plugins
 		///    asking for a particular document, or skip including the result entirely 
 		///    in the query results.
 		///  </returns>
-		public virtual ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation)
 		{
 			return ReadVetoResult.Allowed;
 		}
@@ -49,8 +48,7 @@ namespace Raven.Database.Plugins
 		/// <param name="document">The document being read</param>
 		/// <param name="metadata">The document metadata</param>
 		/// <param name="operation">Whatever the operation is a load or a query</param>
-		/// <param name="transactionInformation">The transaction information, if any</param>
-		public virtual void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+		public virtual void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation)
 		{
 		}
 

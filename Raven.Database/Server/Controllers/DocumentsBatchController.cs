@@ -60,13 +60,11 @@ namespace Raven.Database.Server.Controllers
 
 	            cts.Token.ThrowIfCancellationRequested();
 
-                var transactionInformation = GetRequestTransaction();
-                var commands =
-                    (from RavenJObject jsonCommand in jsonCommandArray select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToArray();
+                var commands = jsonCommandArray.Select( x => CommandDataFactory.CreateCommand((RavenJObject)x)).ToArray();
 
 				if (Log.IsDebugEnabled)
-					Log.Debug(
-                    () =>
+                {
+                    Log.Debug(() =>
                     {
                         if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
                         {
@@ -82,6 +80,9 @@ namespace Raven.Database.Server.Controllers
                         }
                         return sb.ToString();
                     });
+
+
+                }
 
                 var batchResult = Database.Batch(commands, cts.Token);
                 return GetMessageWithObject(batchResult);
@@ -104,7 +105,7 @@ namespace Raven.Database.Server.Controllers
 			var cts = new CancellationTokenSource();
 			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
             return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, timeout);
         }
 
@@ -142,7 +143,7 @@ namespace Raven.Database.Server.Controllers
 			var cts = new CancellationTokenSource();
 			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+			var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
 
             var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options), id, timeout);
@@ -183,7 +184,7 @@ namespace Raven.Database.Server.Controllers
 			var cts = new CancellationTokenSource();
 			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+			var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
 
 	        var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options), id, timeout);

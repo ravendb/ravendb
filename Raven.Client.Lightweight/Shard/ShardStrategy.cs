@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Document;
+using Sparrow;
 
 namespace Raven.Client.Shard
 {
@@ -57,7 +58,9 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-		    indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(buffer));
+
+		    indexEtag = Etag.FromHash( Hashing.Metro128.Calculate(buffer) );
+
 			var results = queryResults.SelectMany(x => x.Results);
 
 			// apply sorting

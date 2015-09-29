@@ -41,13 +41,12 @@ namespace Raven.Tests.Bugs
 		{
 			public override void OnPut(string key,
 			                           RavenJObject jsonReplicationDocument,
-			                           RavenJObject metadata,
-			                           TransactionInformation transactionInformation)
+			                           RavenJObject metadata)
 			{
 				using (Database.DisableAllTriggersForCurrentThread())
 				{
 					var revisionCopy = new RavenJObject(jsonReplicationDocument);
-					Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
+					Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata));
 				}
 			}
 		}

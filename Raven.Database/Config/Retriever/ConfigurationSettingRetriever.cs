@@ -43,7 +43,7 @@ namespace Raven.Database.Config.Retriever
 
         private void LoadGlobalSettings()
         {
-            var json = systemDatabase.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
+            var json = systemDatabase.Documents.Get(Constants.Global.GlobalSettingsDocumentKey);
             globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
             GlobalSettingsDocumentProtector.Unprotect(globalSettings);
         }

@@ -21,7 +21,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
-using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -76,14 +75,6 @@ namespace Raven.Client.Document
 			get { return externalState ?? (externalState = new Dictionary<string, object>()); }
 		}
 
-		private bool hasEnlisted;
-		[ThreadStatic]
-		private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
-
-		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
-		{
-			get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
-		}
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
@@ -155,18 +146,10 @@ namespace Raven.Client.Document
 			this.theListeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
 			UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
-			AllowNonAuthoritativeInformation = true;
-			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
 			GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
 			EntityToJson = new EntityToJson(documentStore, listeners);
 		}
-
-		/// <summary>
-		/// Gets or sets the timeout to wait for authoritative information if encountered non authoritative document.
-		/// </summary>
-		/// <value></value>
-		public TimeSpan NonAuthoritativeInformationTimeout { get; set; }
 
 		/// <summary>
 		/// Gets the store identifier for this session.
@@ -403,13 +386,6 @@ more responsive application.
 		/// <returns></returns>
 		public object TrackEntity(Type entityType, JsonDocument documentFound)
 		{
-			if (documentFound.NonAuthoritativeInformation.HasValue
-				&& documentFound.NonAuthoritativeInformation.Value
-				&& AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
-				" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
 			if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
 			{
 				return GetDefaultValue(entityType); // document is not really there.
@@ -454,12 +430,6 @@ more responsive application.
 				return entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			if (metadata.Value<bool>("Non-Authoritative-Information") &&
-				AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + key +
-					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
 
 			if (noTracking == false)
 			{
@@ -588,19 +558,6 @@ more responsive application.
 		{
 			return type.IsValueType ? Activator.CreateInstance(type) : null;
 		}
-
-		/// <summary>
-		/// Gets or sets a value indicating whether non authoritative information is allowed.
-		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
-		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
-		/// will fail, because it is already modified.
-		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout"/> for the transaction to commit to get an
-		/// authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout"/>, <see cref="NonAuthoritativeInformationException"/> is thrown.
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
-		/// </value>
-		public bool AllowNonAuthoritativeInformation { get; set; }
 
 		/// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
@@ -956,9 +913,6 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-			if (documentStore.EnlistInDistributedTransactions)
-				TryEnlistInAmbientTransaction();
-
 			PrepareForEntitiesDeletion(result, null);
 			PrepareForEntitiesPuts(result);
 
@@ -1045,8 +999,6 @@ more responsive application.
 				}
 				else
 				{
-
-
 					Etag etag = null;
 					object existingEntity;
 					DocumentMetadata metadata = null;
@@ -1076,43 +1028,6 @@ more responsive application.
 			}
 			if (changes == null)
 				deletedEntities.Clear();
-		}
-
-		protected virtual void TryEnlistInAmbientTransaction()
-		{
-
-			if (hasEnlisted || Transaction.Current == null)
-				return;
-
-			var dbName = DatabaseName ?? Constants.SystemDatabase;
-			if (documentStore.CanEnlistInDistributedTransactions(dbName) == false)
-			{
-				throw new InvalidOperationException("The database " + dbName + " cannot be used with distributed transactions");
-			}
-
-			HashSet<string> registered;
-			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
-			if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
-			{
-				RegisteredStoresInTransaction[localIdentifier] =
-					registered = new HashSet<string>();
-			}
-
-			if (registered.Add(StoreIdentifier))
-			{
-				var transactionalSession = (ITransactionalDocumentSession)this;
-				var ravenClientEnlistment = new RavenClientEnlistment(documentStore, transactionalSession, () =>
-					{
-						RegisteredStoresInTransaction.Remove(localIdentifier);
-						if (documentStore.WasDisposed)
-							throw new ObjectDisposedException("RavenDB Session");
-					});
-				if (documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
-					Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
-				else
-					Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
-			}
-			hasEnlisted = true;
 		}
 
 		/// <summary>
@@ -1236,25 +1151,6 @@ more responsive application.
 		/// </summary>
 		public virtual void Dispose()
 		{
-		}
-
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public abstract void Commit(string txId);
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public abstract void Rollback(string txId);
-
-		/// <summary>
-		/// Clears the enlistment.
-		/// </summary>
-		protected void ClearEnlistment()
-		{
-			hasEnlisted = false;
 		}
 
 		/// <summary>

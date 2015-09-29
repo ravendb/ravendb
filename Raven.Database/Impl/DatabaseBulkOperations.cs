@@ -23,46 +23,44 @@ namespace Raven.Database.Impl
 	public class DatabaseBulkOperations
 	{
 		private readonly DocumentDatabase database;
-		private readonly TransactionInformation transactionInformation;
 		private readonly CancellationTokenSource tokenSource;
 		private readonly CancellationTimeout timeout;
 
-		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationTokenSource tokenSource, CancellationTimeout timeout)
+		public DatabaseBulkOperations(DocumentDatabase database, CancellationTokenSource tokenSource, CancellationTimeout timeout)
 		{
 			this.database = database;
-			this.transactionInformation = transactionInformation;
 			this.tokenSource = tokenSource;
 			this.timeout = timeout;
 		}
 
         public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
         {
-            return PerformBulkOperation(indexName, queryToDelete, options, (docId, tx) =>
+            return PerformBulkOperation(indexName, queryToDelete, options, (docId) =>
 			{
-				database.Documents.Delete(docId, null, tx);
+				database.Documents.Delete(docId, null);
 				return new { Document = docId, Deleted = true };
 			});
 		}
 
         public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null)
 		{
-            return PerformBulkOperation(indexName, queryToUpdate, options, (docId, tx) =>
+            return PerformBulkOperation(indexName, queryToUpdate, options, (docId) =>
 			{
-				var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests);
 				return new { Document = docId, Result = patchResult };
 			});
 		}
 
         public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null)
 		{
-            return PerformBulkOperation(indexName, queryToUpdate, options, (docId, tx) =>
+            return PerformBulkOperation(indexName, queryToUpdate, options, (docId) =>
 			{
-				var patchResult = database.Patches.ApplyPatch(docId, null, patch, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patch);
 				return new { Document = docId, Result = patchResult.Item1, Debug = patchResult.Item2 };
 			});
 		}
 
-        private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, BulkOperationOptions options, Func<string, TransactionInformation, object> batchOperation)
+        private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, BulkOperationOptions options, Func<string, object> batchOperation)
         {
 	        options = options ?? new BulkOperationOptions();
 			var array = new RavenJArray();
@@ -102,9 +100,9 @@ namespace Raven.Database.Impl
 			    if (stale)
 			    {
 				    if (options.StaleTimeout != null)
-					    throw new InvalidOperationException("Bulk operation cancelled because the index is stale and StaleTimout  of " + options.StaleTimeout + "passed");
+					    throw new InvalidOperationException("Bulk operation canceled because the index is stale and StaleTimout  of " + options.StaleTimeout + "passed");
 			        
-					throw new InvalidOperationException("Bulk operation cancelled because the index is stale and allowStale is false");
+					throw new InvalidOperationException("Bulk operation canceled because the index is stale and allowStale is false");
 			    }
 			}
 
@@ -131,7 +129,7 @@ namespace Raven.Database.Impl
 							{
 								batchCount++;
 							    operations++;
-								var result = batchOperation(enumerator.Current, transactionInformation);
+								var result = batchOperation(enumerator.Current);
 
 								if(options.RetrieveDetails)
 									array.Add(RavenJObject.FromObject(result));

@@ -165,7 +165,7 @@ namespace Raven.Database.Server.Tenancy
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
             {
-                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId);
             }
 
             if (jsonDocument == null || jsonDocument.Metadata == null ||

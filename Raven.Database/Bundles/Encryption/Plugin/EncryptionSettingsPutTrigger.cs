@@ -16,14 +16,14 @@ namespace Raven.Bundles.Encryption.Plugin
 	[ExportMetadata("Bundle", "Encryption")]
 	public class EncryptionSettingsPutTrigger : AbstractPutTrigger
 	{
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
 			if (key == Constants.InResourceKeyVerificationDocumentName)
 			{
 				if (Database == null) // we haven't been initialized yet
 					return VetoResult.Allowed;
 
-				if (Database.Documents.Get(key, null) != null)
+				if (Database.Documents.Get(key) != null)
 					return VetoResult.Deny("The encryption verification document already exists and cannot be overwritten.");
 			}
 

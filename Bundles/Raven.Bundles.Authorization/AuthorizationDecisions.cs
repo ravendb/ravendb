@@ -184,7 +184,7 @@ namespace Raven.Bundles.Authorization
 
 		private T GetDocumentAsEntity<T>(string documentId) where T : class
 		{
-			var document = database.Documents.Get(documentId, null);
+			var document = database.Documents.Get(documentId);
 			if (document == null)
 				return null;
 			var entity = document.DataAsJson.JsonDeserialization<T>();

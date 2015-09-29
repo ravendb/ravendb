@@ -7,7 +7,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Plugins.Builtins
@@ -37,6 +39,29 @@ namespace Raven.Database.Plugins.Builtins
 					// we can safely recover from it by removing the other parts of the index.
                     database.IndexStorage.DeleteIndex(id);
                     actions.Indexing.DeleteIndex(id, database.WorkContext.CancellationToken);
+
+                    string msg;
+                    string ex;
+                    var failDetails = database.IndexDefinitionStorage.GetFailReason(id);
+                    if (failDetails == null)
+                    {
+                        msg = string.Format("Could Not Process Index ID='{0}'", id);
+                        ex = "";
+                    }
+                    else
+                    {
+                        msg = failDetails.Value.Reason;
+                        ex = failDetails.Value.Ex.ToString();
+                    }
+                    database.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = SystemTime.UtcNow,
+                        Message = msg,
+                        Title = string.Format("Index Processing Failure for ID={0}", id),
+                        Exception = ex,
+                        UniqueKey = msg
+                    });
 				}
 			});
 		}

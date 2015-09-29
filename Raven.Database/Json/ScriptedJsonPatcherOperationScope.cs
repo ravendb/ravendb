@@ -115,7 +115,7 @@ namespace Raven.Database.Json
 
 			JsonDocument document;
 			if (documentKeyContext.TryGetValue(documentKey, out document) == false)
-				document = Database.Documents.Get(documentKey, null);
+				document = Database.Documents.Get(documentKey);
 			
 			if (document != null)
 			{

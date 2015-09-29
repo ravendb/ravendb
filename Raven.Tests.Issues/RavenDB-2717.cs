@@ -110,9 +110,8 @@ namespace Raven.Tests.Issues
                 bool exceptionThrown = false;
                 try
                 {
-                    var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
-                        new IndexQuery {Query = "Name:Users*"}
-                        , new BulkOperationOptions {AllowStale = false, MaxOpsPerSec = null, StaleTimeout = TimeSpan.FromMilliseconds(1)});
+                    var op = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery {Query = "Name:Users*"}, 
+                                        new BulkOperationOptions {AllowStale = false, MaxOpsPerSec = null, StaleTimeout = TimeSpan.FromMilliseconds(1)});
 
                     store.DatabaseCommands.Admin.StartIndexing();
 
@@ -120,7 +119,7 @@ namespace Raven.Tests.Issues
                 }
                 catch (InvalidOperationException e)
                 {
-					Assert.Contains("Operation failed: Bulk operation cancelled because the index is stale", e.Message);
+					Assert.True(e.Message.StartsWith("Operation failed: Bulk operation"));
                     exceptionThrown = true;
                 }
                 Assert.True(exceptionThrown);

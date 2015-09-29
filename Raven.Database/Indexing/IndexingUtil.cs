@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
+using Sparrow;
 
 namespace Raven.Database.Indexing
 {
@@ -16,7 +17,7 @@ namespace Raven.Database.Indexing
 	{
 		public static string FixupIndexName(string indexName, string path)
 		{
-			if (indexName.EndsWith("=")) //allready encoded
+			if (indexName.EndsWith("=")) //already encoded
 				return indexName;
 
 			indexName = indexName.Trim();
@@ -28,10 +29,8 @@ namespace Raven.Database.Indexing
 			if (indexName.StartsWith("Temp/") || indexName.StartsWith("Auto/"))
 				prefix = indexName.Substring(0, 5);
 
-			var bytes = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(indexName));
-			var result = prefix + Convert
-									  .ToBase64String(bytes)
-									  .Replace("+", "-"); // replacing + because it will cause IIS errors (double encoding)
+			var hash = Hashing.XXHash32.CalculateRaw(indexName);
+            var result = prefix + hash.ToString("X");
 
 			if (path.Length + result.Length > 230)
 				throw new InvalidDataException("index name with the given path is too long even after encoding: " + indexName);

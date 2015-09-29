@@ -20,7 +20,6 @@ namespace Raven.Client.Document.SessionOperations
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 
-		private Stopwatch sp;
 
 		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, KeyValuePair<string, Type>[] includes)
 		{
@@ -42,7 +41,6 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
 				return disableAllCaching();
-			sp = Stopwatch.StartNew();
 
 			return null;
 		}
@@ -53,10 +51,7 @@ namespace Raven.Client.Document.SessionOperations
 			includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 			results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 
-			return sessionOperations.AllowNonAuthoritativeInformation == false &&
-					results.Where(x => x != null).Any(x => x.NonAuthoritativeInformation ?? false) &&
-					sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
-				;
+			return false;
 		}
 
 		public T[] Complete<T>()

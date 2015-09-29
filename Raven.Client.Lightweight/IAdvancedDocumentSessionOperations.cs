@@ -21,22 +21,6 @@ namespace Raven.Client
 	public interface IAdvancedDocumentSessionOperations
 	{
 		/// <summary>
-		///     Gets or sets a value indicating whether non authoritative information is allowed.
-		///     Non authoritative information is document that has been modified by a transaction that hasn't been committed.
-		///     The server provides the latest committed version, but it is known that attempting to write to a non authoritative
-		///     document
-		///     will fail, because it is already modified.
-		///     If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout" /> for the transaction
-		///     to commit to get an
-		///     authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout" />,
-		///     <see cref="NonAuthoritativeInformationException" /> is thrown.
-		/// </summary>
-		/// <value>
-		///     <c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
-		/// </value>
-		bool AllowNonAuthoritativeInformation { get; set; }
-
-		/// <summary>
 		///     The document store associated with this session
 		/// </summary>
 		IDocumentStore DocumentStore { get; }
@@ -58,11 +42,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		int MaxNumberOfRequestsPerSession { get; set; }
-
-		/// <summary>
-		///     Gets or sets the timeout to wait for authoritative information if encountered non authoritative document.
-		/// </summary>
-		TimeSpan NonAuthoritativeInformationTimeout { get; set; }
 
 		/// <summary>
 		///     Gets the number of requests for this session

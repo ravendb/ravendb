@@ -84,11 +84,11 @@ namespace Raven.Tests.FileSystem.Synchronization
                 var metadata = await sourceClient.GetMetadataForAsync("test.txt");
 				Assert.Equal("shouldnt-be-overwritten", metadata.Value<string>("SomeTest-Metadata"));
 				
-				resultMd5 = resultFileContent.GetMD5Hash();
+				resultMd5 = resultFileContent.GetHashAsHex();
 			}
 
 			destinationContent.Position = 0;
-			var destinationMd5 = destinationContent.GetMD5Hash();
+			var destinationMd5 = destinationContent.GetHashAsHex();
 			sourceContent.Position = 0;
 
 			Assert.True(resultMd5 == destinationMd5);

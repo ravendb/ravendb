@@ -37,11 +37,6 @@ namespace Raven.Abstractions.Commands
 		public virtual RavenJObject Document { get; set; }
 
 		/// <summary>
-		/// Information used to identify a transaction. Contains transaction Id and timeout.
-		/// </summary>
-		public TransactionInformation TransactionInformation { get; set; }
-
-		/// <summary>
 		/// RavenJObject representing document's metadata.
 		/// </summary>
 		public virtual RavenJObject Metadata { get; set; }

@@ -15,8 +15,7 @@ namespace Raven.Bundles.Replication.Triggers
 	[InheritedExport(typeof(AbstractReadTrigger))]
 	public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
 	{
-		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
-												 TransactionInformation transactionInformation)
+		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation)
 		{
 			if(metadata == null)
 				return ReadVetoResult.Allowed; // this is a projection, it is allowed

@@ -4,7 +4,7 @@ namespace Raven.Database.Plugins.Builtins
 {
 	public class InvalidDocumentNames : AbstractPutTrigger
 	{
-		public override VetoResult AllowPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata)
 		{
 			if(key.Contains(@"\"))
 				return VetoResult.Deny(@"Document name cannot contain '\' but attempted to save with: " + key);

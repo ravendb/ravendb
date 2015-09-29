@@ -536,6 +536,11 @@ namespace Voron.Impl
 			}
 		}
 
+		public bool IsDisposed
+		{
+			get { return _disposed; }
+		}
+
 		public void Dispose()
 		{
 		    if (_disposed)

@@ -382,14 +382,14 @@ namespace Raven.Tests.Issues
 
 				sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
 				Assert.Null(sideBySideIndex);
-				Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + testIndex.IndexName, null));
+				Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + testIndex.IndexName));
 			}
 		}
 
 		private static void VerifyReplacementDocumentIsThere(string replacementIndexName, DocumentDatabase destinationDatabase,bool shouldVerifyEtag = false)
 		{
 			var id = Constants.IndexReplacePrefix + replacementIndexName;
-			var documentInfo = destinationDatabase.Documents.Get(id, null);
+			var documentInfo = destinationDatabase.Documents.Get(id);
 			Assert.NotNull(documentInfo);
 
 			if (shouldVerifyEtag)

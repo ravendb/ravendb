@@ -427,11 +427,6 @@ namespace Raven.Database.Client
             get { return server.DocumentStore.ResourceManagerId; }
             set { server.DocumentStore.ResourceManagerId = value; }
         }
-        public bool EnlistInDistributedTransactions
-        {
-            get { return server.DocumentStore.EnlistInDistributedTransactions; }
-            set { server.DocumentStore.EnlistInDistributedTransactions = value; }
-        }
 
         /// <summary>
         ///     Registers the store listener.

@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 				return value;
 
 			LoadDocumentDuration.Start();
-			var doc = database.Documents.Get(key, null);
+			var doc = database.Documents.Get(key);
 			LoadDocumentDuration.Stop();
 			LoadDocumentCount++;
 

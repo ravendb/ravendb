@@ -67,8 +67,6 @@ namespace Raven.Client.Document
 
 		private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
 		{
-			using (new TransactionScope(TransactionScopeOption.Suppress))
-			using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
 			using (databaseCommands.ForceReadFromMaster())
 			{
 				ModifyCapacityIfRequired();

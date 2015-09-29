@@ -68,6 +68,13 @@ namespace Raven.Database.Storage
 
 	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
+        internal struct IndexFailDetails
+        {
+            public string Reason;
+            public Exception Ex;
+        }
+        internal Dictionary<int, IndexFailDetails> IndexFailReason = new Dictionary<int, IndexFailDetails>();
+
 
 		[CLSCompliant(false)]
 		public IndexDefinitionStorage(
@@ -113,7 +120,17 @@ namespace Raven.Database.Storage
                 }
                 catch (Exception e)
                 {
-					logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
+                    var reason = new IndexFailDetails
+                    {
+                        Reason = string.Format("Could Not Compile Index '{0} ({1})'", indexDefinition.IndexId, indexDefinition.Name),
+                        Ex = e
+                    };
+                    IndexFailReason.Add(indexDefinition.IndexId, reason);
+
+                    using (LogContext.WithDatabase(configuration.DatabaseName))
+                    {
+                        logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
+                    }
                 }
             }
 
@@ -611,6 +628,14 @@ namespace Raven.Database.Storage
 			}, (s, transformerDefinition) => definition);
 			WriteTransformerDefinition(definition);
 		}
+
+        internal IndexFailDetails? GetFailReason(int id)
+        {
+            IndexFailDetails reason;
+            if (IndexFailReason.TryGetValue(id, out reason))
+                return reason;
+            return null;
+        }
     }
 
 }

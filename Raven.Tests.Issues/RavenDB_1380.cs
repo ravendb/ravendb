@@ -28,13 +28,13 @@ namespace Raven.Tests.Issues
 				store.DatabaseCommands.Put(
 					"docs/2", null, new RavenJObject(), new RavenJObject());
 
-				var result = store.SystemDatabase.Patches.ApplyPatch("docs/1", null, new ScriptedPatchRequest { Script = "" }, null);
+				var result = store.SystemDatabase.Patches.ApplyPatch("docs/1", null, new ScriptedPatchRequest { Script = "" });
 				Assert.Equal(PatchResult.DocumentDoesNotExists, result.Item1.PatchResult);
 
-				result = store.SystemDatabase.Patches.ApplyPatch("docs/2", null, new ScriptedPatchRequest { Script = @"this[""Test""] = 999;" }, null);
+				result = store.SystemDatabase.Patches.ApplyPatch("docs/2", null, new ScriptedPatchRequest { Script = @"this[""Test""] = 999;" });
 				Assert.Equal(PatchResult.Patched, result.Item1.PatchResult);
 
-				Assert.Equal(999, store.SystemDatabase.Documents.Get("docs/2", null).DataAsJson.Value<int>("Test"));
+				Assert.Equal(999, store.SystemDatabase.Documents.Get("docs/2").DataAsJson.Value<int>("Test"));
 			}
 		}
 

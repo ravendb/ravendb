@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Collections.Specialized;
-using System.Collections.ObjectModel;
-using System.Configuration;
-using System.Linq;
-
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document.DTC;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Client.Document;
-
-using Raven.Client.Connection.Async;
 using Raven.Client.Util;
-using Raven.Abstractions.Util.Encryptors;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Configuration;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -32,7 +29,6 @@ namespace Raven.Client
 			InitializeEncryptor();
 
 			LastEtagHolder = new GlobalLastEtagHolder();
-			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 			AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
 			Subscriptions = new DocumentSubscriptions(this);
 		}
@@ -238,14 +234,6 @@ namespace Raven.Client
 		/// </summary>
 		public bool UseFipsEncryptionAlgorithms { get; set; }
 
-		///<summary>
-		/// Whatever or not we will automatically enlist in distributed transactions
-		///</summary>
-		public bool EnlistInDistributedTransactions
-		{
-			get { return Conventions.EnlistInDistributedTransactions; }
-			set { Conventions.EnlistInDistributedTransactions = value; }
-		}
 		/// <summary>
 		/// The resource manager id for the document store.
 		/// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
@@ -381,7 +369,6 @@ namespace Raven.Client
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
 		public ILastEtagHolder LastEtagHolder { get; set; }
-		public ITransactionRecoveryStorage TransactionRecoveryStorage { get; set; }
 
 		/// <summary>
 		///  Get the profiling information for the given id
@@ -412,7 +399,5 @@ namespace Raven.Client
 
 		public abstract void InitializeProfiling();
 
-
-		public abstract bool CanEnlistInDistributedTransactions(string dbName);
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using Xunit;
 using Xunit.Extensions;
@@ -9,23 +10,31 @@ namespace Sparrow.Tests
     public class HashingTests
     {
         [Fact]
-        public void HashRawUseActualValues()
+        public void XXHash64_UseActualValues()
         {
             var r1 = Hashing.XXHash64.CalculateRaw("Public");
             var r2 = Hashing.XXHash64.CalculateRaw(new string("Public".ToCharArray()));
 
             Assert.Equal(r1, r2);
-
         }
 
         [Fact]
-        public void HashRaw32UseActualValues()
+        public void XXHash32_UseActualValues()
         {
             var r1 = Hashing.XXHash32.CalculateRaw("Public");
             var r2 = Hashing.XXHash32.CalculateRaw(new string("Public".ToCharArray()));
 
             Assert.Equal(r1, r2);
+        }
 
+
+        [Fact]
+        public void Metro128_UseActualValues()
+        {
+            var r1 = Hashing.Metro128.CalculateRaw("Public");
+            var r2 = Hashing.Metro128.CalculateRaw(new string("Public".ToCharArray()));
+
+            Assert.Equal(r1, r2);
         }
 
         [Fact]
@@ -58,8 +67,19 @@ namespace Sparrow.Tests
             Assert.Equal(expected, result);
         }
 
+
         [Fact]
-        public void EquivalenceInDifferentMemoryLocations()
+        public void Metro128()
+        {
+            var r1 = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes("012345678901234567890123456789012345678901234567890123456789012"), seed: 0);
+                        
+            Assert.Equal(r1.H1, 0x9B9FEDA4BFE27CC7UL);
+            Assert.Equal(r1.H2, 0x97A27450ACB24805UL);
+        }
+
+
+        [Fact]
+        public void XXHash32_EquivalenceInDifferentMemoryLocations()
         {
             string value = "abcd";
             uint result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
@@ -77,9 +97,47 @@ namespace Sparrow.Tests
             Assert.Equal(expected, result);
         }
 
+        [Fact]
+        public void XXHash64_EquivalenceInDifferentMemoryLocationsXXHash64()
+        {
+            string value = "abcd";
+            ulong result = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            ulong expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "abc";
+            result = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "κόσμε";
+            result = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+        }
 
         [Fact]
-        public void NotEquivalenceOfBytesWithString()
+        public void Metro128_EquivalenceInDifferentMemoryLocations()
+        {
+            string value = "abcd";
+            var result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            var expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "abc";
+            result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+
+            value = "κόσμε";
+            result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.Equal(expected, result);
+        }
+
+
+        [Fact]
+        public void XXHash32_NotEquivalenceOfBytesWithString()
         {
             string value = "abcd";
             uint result = Hashing.XXHash32.CalculateRaw(value, seed: 10);
@@ -97,6 +155,46 @@ namespace Sparrow.Tests
             Assert.NotEqual(expected, result);
         }
 
+
+        [Fact]
+        public void XXHash64_NotEquivalenceOfBytesWithString()
+        {
+            string value = "abcd";
+            ulong result = Hashing.XXHash64.CalculateRaw(value, seed: 10);
+            ulong expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+
+            value = "abc";
+            result = Hashing.XXHash64.CalculateRaw(value, seed: 10);
+            expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+
+            value = "κόσμε";
+            result = Hashing.XXHash64.CalculateRaw(value, seed: 10);
+            expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+        }
+
+        [Fact]
+        public void Metro128_NotEquivalenceOfBytesWithString()
+        {
+            string value = "abcd";
+            var result = Hashing.Metro128.CalculateRaw(value, seed: 10);
+            var expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+
+            value = "abc";
+            result = Hashing.Metro128.CalculateRaw(value, seed: 10);
+            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+
+            value = "κόσμε";
+            result = Hashing.Metro128.CalculateRaw(value, seed: 10);
+            expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
+            Assert.NotEqual(expected, result);
+        }
+
+
         public static IEnumerable<object[]> BufferSize
         {
             get
@@ -110,13 +208,14 @@ namespace Sparrow.Tests
                     new object[] {90},
                     new object[] {128},
                     new object[] {129},
+                    new object[] {1000},
 				};
             }
         }
 
         [Theory]
         [PropertyData("BufferSize")]
-        public void IterativeHashingEquivalence(int bufferSize)
+        public void XXHash32_IterativeHashingEquivalence(int bufferSize)
         {
             var rnd = new Random(1000);
 
@@ -136,7 +235,7 @@ namespace Sparrow.Tests
 
         [Theory]
         [PropertyData("BufferSize")]
-        public void IterativeHashingPrefixing(int bufferSize)
+        public void XXHash32_IterativeHashingPrefixing(int bufferSize)
         {
             var rnd = new Random(1000);
 
@@ -166,5 +265,128 @@ namespace Sparrow.Tests
            Assert.NotEqual(h1, h2);
         }
 
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void XXHash32_StreamedHashingEquivalence(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.XXHash32.Alignment * iteration;
+
+                var context = Hashing.Streamed.XXHash32.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.XXHash32.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.XXHash32.EndProcess(context);
+                var expected = Hashing.XXHash32.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
+        }
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void XXHash64_StreamedHashingEquivalence(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.XXHash64.Alignment * iteration;
+
+                var context = Hashing.Streamed.XXHash64.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.XXHash64.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.XXHash64.EndProcess(context);
+                var expected = Hashing.XXHash64.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
+        }
+
+        [Theory]
+        [PropertyData("BufferSize")]
+        public unsafe void Metro128_StreamedHashingEquivalence(int bufferSize)
+        {
+            var rnd = new Random(1000);
+
+            byte[] values = new byte[bufferSize];
+            rnd.NextBytes(values);
+
+            uint seed = 233;
+
+            int blockSize;
+            int iteration = 1;
+            do
+            {
+                blockSize = Hashing.Streamed.Metro128.Alignment * iteration;
+
+                var context = Hashing.Streamed.Metro128.BeginProcess(seed);
+                fixed (byte* buffer = values)
+                {
+                    byte* current = buffer;
+                    byte* bEnd = buffer + bufferSize;
+                    do
+                    {
+                        int block = Math.Min(blockSize, (int)(bEnd - current));
+                        context = Hashing.Streamed.Metro128.Process(context, current, block);
+                        current += block;
+                    }
+                    while (current < bEnd);
+                }
+
+                iteration++;
+
+                var result = Hashing.Streamed.Metro128.EndProcess(context);
+                var expected = Hashing.Metro128.Calculate(values, -1, seed);
+
+                Assert.Equal(expected, result);
+            }
+            while (blockSize <= bufferSize);
+        }
     }
 }

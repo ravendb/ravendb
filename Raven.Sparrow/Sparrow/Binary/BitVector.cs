@@ -632,9 +632,6 @@ namespace Sparrow.Binary
                     return thisWord > otherWord ? 1 : -1;
                 }
             }
-
-            equalBits = length;
-            return srcKey - otherKey;
         }
 
         public int LongestCommonPrefixLength(BitVector other)

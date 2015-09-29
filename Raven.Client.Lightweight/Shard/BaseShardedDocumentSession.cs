@@ -12,7 +12,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
 {
-	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
+	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator
 		where TDatabaseCommands : class
 	{
 		protected new readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
@@ -187,42 +187,6 @@ namespace Raven.Client.Shard
 				GenerateEntityIdOnTheClient.TrySetIdentity(entity, modifyDocumentId);
 
 			return modifyDocumentId;
-		}
-
-		#endregion
-
-		#region Transaction methods (not supported)
-
-		public override void Commit(string txId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		public override void Rollback(string txId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		protected override void TryEnlistInAmbientTransaction()
-		{
-			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
-			// turns out to be pretty much the same thing
 		}
 
 		#endregion

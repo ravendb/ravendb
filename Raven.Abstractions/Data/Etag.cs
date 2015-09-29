@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Util.Encryptors;
+using Sparrow;
 
 namespace Raven.Abstractions.Data
 {
@@ -41,6 +42,12 @@ namespace Raven.Abstractions.Data
             var etag = Parse(str);
             restarts = etag.restarts;
             changes = etag.changes;
+        }
+
+        public Etag( long restarts, long changes )
+        {
+            this.restarts = restarts;
+            this.changes = changes;
         }
 
         public Etag(UuidType type, long restarts, long changes)
@@ -332,14 +339,37 @@ namespace Raven.Abstractions.Data
 
         public Etag HashWith(Etag other)
         {
-            return HashWith(other.ToBytes());
+            unsafe
+            {
+                long* buffer = stackalloc long[4];
+                buffer[0] = this.restarts;
+                buffer[1] = this.changes;
+                buffer[2] = other.restarts;
+                buffer[3] = other.changes;
+
+                var hash = Hashing.Metro128.CalculateInline((byte*)buffer, 4 * sizeof(long));
+
+                return new Etag((long)hash.H1, (long)hash.H2);
+            }
         }
 
-        public Etag HashWith(IEnumerable<byte> bytes)
+        public Etag CombineHashWith(byte[] bytes)
         {
-            var etagBytes = ToBytes().Concat(bytes).ToArray();
+            unsafe
+            {
+                long* buffer = stackalloc long[2];
+                buffer[0] = this.restarts;
+                buffer[1] = this.changes;
 
-            return Parse(Encryptor.Current.Hash.Compute16(etagBytes));
+                // This can be done more efficiently but requires to change the implementation of the streamed version of the hash algorithm 
+                // to handle partial buffers. Unless this somehow becomes a bottleneck (which I doubt at the moment) there is no reason
+                // why we must pay the complexity of handling partial buffers or allocations at the call site. 
+                var hashEtag = Hashing.Metro128.CalculateInline((byte*)buffer, 2 * sizeof(long));
+                var hashArray = Hashing.Metro128.Calculate(bytes);
+
+                return new Etag((long)Hashing.CombineInline(hashEtag.H1, hashArray.H1), 
+                                (long)Hashing.CombineInline(hashEtag.H2, hashArray.H2));
+            }
         }
 
         public static Etag Max(Etag first, Etag second)
@@ -387,5 +417,10 @@ namespace Raven.Abstractions.Data
 				ByteToHexStringAsInt32Lookup[i] = hex;
 			}
 		}
+
+        public static Etag FromHash(Metro128Hash hash)
+        {
+            return new Etag((long)hash.H1, (long)hash.H2);
+        }
     }
 }

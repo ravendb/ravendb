@@ -33,7 +33,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			Index indexInstance = Database.IndexStorage.GetIndexInstance(indexId);
 			if (indexInstance == null)
 				return null;
-			var jsonSetupDoc = Database.Documents.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName, null);
+			var jsonSetupDoc = Database.Documents.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName);
 			if (jsonSetupDoc == null)
 				return null;
 			var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();

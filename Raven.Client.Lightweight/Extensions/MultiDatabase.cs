@@ -62,7 +62,7 @@ namespace Raven.Client.Extensions
 
 			return new CounterStorageDocument
 			{
-				StoreName = Constants.Counter.Prefix + name,
+				Id = Constants.Counter.Prefix + name,
 				Settings =
 				{
 					{Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},

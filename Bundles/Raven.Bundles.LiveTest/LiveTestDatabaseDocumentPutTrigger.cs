@@ -21,7 +21,7 @@ namespace Raven.Bundles.LiveTest
 
 		private const int QuotasSoftMarginInKb = (int)(0.75 * QuotasHardLimitInKb);
 
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
 		{
 			if (string.IsNullOrEmpty(Database.Name) == false && Database.Name != Constants.SystemDatabase)
 				return;

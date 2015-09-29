@@ -105,14 +105,14 @@ namespace Raven.Tests.Counters
 		{
 			using (var serverA = GetNewServer(8077, runInMemory: false))
 			using (var serverB = GetNewServer(8078, runInMemory: false))
-			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory:false))
-			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory:false)) 
+			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA, runInMemory: false))
+			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB, runInMemory: false))
 			using (var storeA = NewRemoteCountersStore("A", ravenStore: ravenStoreA))
 			using (var storeB = NewRemoteCountersStore("B", ravenStore: ravenStoreB))
 			{
 				await SetupReplicationAsync(storeA, storeB);
 				await storeA.ChangeAsync("group", "counter", 3);
-				
+
 				await WaitForReplicationBetween(storeA, storeB, "group", "counter");
 				SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 
@@ -134,6 +134,7 @@ namespace Raven.Tests.Counters
 		[Fact]
 		public async Task Multiple_node_failover_should_work()
 		{
+
 			using (var serverA = GetNewServer(8070, runInMemory: false))
 			using (var serverB = GetNewServer(8071, runInMemory: false))
 			using (var serverC = GetNewServer(8072, runInMemory: false))

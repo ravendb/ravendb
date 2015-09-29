@@ -15,14 +15,7 @@ namespace Raven.Tests.Bugs
 		 {
 			 using(var store = NewDocumentStore())
 			 {
-				 var tx = new TransactionInformation
-				 {
-                     Id = Guid.NewGuid().ToString(),
-					 Timeout = TimeSpan.FromMinutes(1)
-				 };
-
-				 Assert.Throws<OperationVetoedException>(
-					 () => store.SystemDatabase.Documents.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject(), tx));
+				 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject()));
 			 }
 		 }
 	}

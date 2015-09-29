@@ -20,7 +20,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
@@ -29,7 +29,7 @@ namespace Raven.Bundles.Authorization.Triggers
 				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 					return VetoResult.Allowed;
 
-				var previousDocument = Database.Documents.Get(key, transactionInformation);
+				var previousDocument = Database.Documents.Get(key);
 				var metadataForAuthorization = previousDocument != null ? previousDocument.Metadata : metadata;
 
 				var sw = new StringWriter();

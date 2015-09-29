@@ -637,6 +637,9 @@
       <DependentUpon>compilerconfig.json</DependentUpon>
     </Content>
     <Content Include="fonts\fontawesome-webfont.woff2" />
+    <Content Include="Content\variables.css.map">
+      <DependentUpon>variables.css</DependentUpon>
+    </Content>
     <None Include="Scripts\jquery-2.1.3.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.3.js" />
     <Content Include="Scripts\jquery-2.1.3.min.js" />

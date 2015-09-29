@@ -34,7 +34,6 @@ namespace Raven.Tests.Issues
                     return;
 
 				session.Advanced.UseOptimisticConcurrency = true;
-				session.Advanced.AllowNonAuthoritativeInformation = false;
 
 				using (var transaction = new TransactionScope())
 				{
@@ -64,7 +63,6 @@ namespace Raven.Tests.Issues
                     return;
 
 				session.Advanced.UseOptimisticConcurrency = true;
-				session.Advanced.AllowNonAuthoritativeInformation = false;
 
 				Assert.DoesNotThrow(() =>
 				{
@@ -96,7 +94,6 @@ namespace Raven.Tests.Issues
                     return;
 
 				session.Advanced.UseOptimisticConcurrency = true;
-				session.Advanced.AllowNonAuthoritativeInformation = false;
 
 				using (var transaction = new TransactionScope())
 				{

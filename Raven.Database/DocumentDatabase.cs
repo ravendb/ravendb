@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -35,7 +36,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.BackgroundTaskExecuter;
-using Raven.Database.Impl.DTC;
+
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
@@ -65,7 +66,6 @@ namespace Raven.Database
 
 		private readonly object idleLocker = new object();
 
-		private readonly InFlightTransactionalState inFlightTransactionalState;
 
 		private readonly IndexingExecuter indexingExecuter;
 
@@ -177,11 +177,7 @@ namespace Raven.Database
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
-
-					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
-						(key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
-						(key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
-
+				
 					InitializeTriggersExceptIndexCodecs();
 					// Second stage initializing before index storage for determining the hash algotihm for encrypted databases that were upgraded from 2.5
 					SecondStageInitialization();
@@ -328,11 +324,6 @@ namespace Raven.Database
 			}
 		}
 
-		[CLSCompliant(false)]
-		public InFlightTransactionalState InFlightTransactionalState
-		{
-			get { return inFlightTransactionalState; }
-		}
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
@@ -531,7 +522,7 @@ namespace Raven.Database
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
-					SupportsDtc = TransactionalStorage.SupportsDtc,
+					SupportsDtc = false,
                     Is64Bit = Environment.Is64BitProcess
 				};
 
@@ -648,61 +639,7 @@ namespace Raven.Database
 				return results;
 			}
 		}
-
-		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
-		{
-			using (DocumentLock.Lock())
-			{
-				try
-				{
-					inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
-					if (Log.IsDebugEnabled)
-						Log.Debug("Prepare of tx {0} completed", txId);
-				}
-				catch (Exception e)
-				{
-					if (TransactionalStorage.HandleException(e))
-						return;
-					throw;
-				}
-			}
-		}
-
-		public void Commit(string txId)
-		{
-			if (TransactionalStorage.SupportsDtc == false)
-				throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
-
-			try
-			{
-				using (DocumentLock.Lock())
-				{
-					try
-					{
-						inFlightTransactionalState.Commit(txId);
-						if (Log.IsDebugEnabled)
-							Log.Debug("Commit of tx {0} completed", txId);
-						workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-					}
-					finally
-					{
-						inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
-					}
-				}
-			}
-			catch (Exception e)
-			{
-				if (TransactionalStorage.HandleException(e))
-					return;
-
-				throw;
-			}
-			finally
-			{
-				workContext.HandleWorkNotifications();
-			}
-		}
-
+		
 		public DatabaseMetrics CreateMetrics()
 		{
 			MetricsCountersManager metrics = WorkContext.MetricsCounters;
@@ -952,16 +889,6 @@ namespace Raven.Database
 		public DatabaseSizeInformation GetTransactionalStorageSizeOnDisk()
 		{
 			return Configuration.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
-		}
-
-		public bool HasTransaction(string txId)
-		{
-			return inFlightTransactionalState.HasTransaction(txId);
-		}
-
-		public void Rollback(string txId)
-		{
-			inFlightTransactionalState.Rollback(txId);
 		}
 
 		public void RunIdleOperations()
@@ -1309,9 +1236,20 @@ namespace Raven.Database
 
 			public void ExecuteAlterConfiguration()
 			{
-				foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+				try
 				{
-					alterConfiguration.AlterConfiguration(configuration);
+					foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+					{
+						alterConfiguration.AlterConfiguration(configuration);
+					}
+				}
+				catch (ReflectionTypeLoadException e)
+				{
+					//throw more informative exception
+					if (e.LoaderExceptions != null && e.LoaderExceptions.Length > 0)
+						throw e.LoaderExceptions.First();
+
+					throw;
 				}
 			}
 

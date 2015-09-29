@@ -18,7 +18,7 @@ namespace Raven.Database.Backup
 	{
 		public void Execute(DocumentDatabase database)
 		{
-			var oldBackup = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey,null);
+			var oldBackup = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
 			if (oldBackup == null)
 				return;
 

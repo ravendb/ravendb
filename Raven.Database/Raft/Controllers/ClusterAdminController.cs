@@ -62,7 +62,7 @@ namespace Raven.Database.Raft.Controllers
 			if (string.IsNullOrEmpty(id))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var documentJson = SystemDatabase.Documents.Get(DatabaseHelper.GetDatabaseKey(id), null);
+			var documentJson = SystemDatabase.Documents.Get(DatabaseHelper.GetDatabaseKey(id));
 			if (documentJson == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 

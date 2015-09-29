@@ -21,12 +21,12 @@ namespace Raven.Tests.FileSystem.Bugs
 
 			Task.WaitAll(tasks.ToArray());
 
-			var hash = new MemoryStream(new byte[] {1, 2, 3, 4, 5}).GetMD5Hash();
+			var hash = new MemoryStream(new byte[] {1, 2, 3, 4, 5}).GetHashAsHex();
 
 			for (var i = 0; i < 10; i++)
 			{
                  var uploadedContent = await client.DownloadAsync("test" + i);
-				Assert.Equal(hash, uploadedContent.GetMD5Hash());
+				Assert.Equal(hash, uploadedContent.GetHashAsHex());
 			}
 		}
 	}

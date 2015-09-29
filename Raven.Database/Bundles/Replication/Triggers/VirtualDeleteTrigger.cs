@@ -29,18 +29,18 @@ namespace Raven.Bundles.Replication.Triggers
 	{
 		readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
 
-		public override void OnDelete(string key, TransactionInformation transactionInformation)
+		public override void OnDelete(string key)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Documents.Get(key, transactionInformation);
+				var document = Database.Documents.Get(key);
 
 				if (document == null)
 					return;
 
 				if (document.IsConflictDocument() == false && HasConflict(document))
 				{
-					HandleConflictedDocument(document, transactionInformation);
+					HandleConflictedDocument(document);
 					return;
 				}
 
@@ -48,7 +48,7 @@ namespace Raven.Bundles.Replication.Triggers
 			}
 		}
 
-		public override void AfterDelete(string key, TransactionInformation transactionInformation)
+		public override void AfterDelete(string key)
 		{
 			var metadata = new RavenJObject
 			{
@@ -63,14 +63,14 @@ namespace Raven.Bundles.Replication.Triggers
 				accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, key, metadata, UuidType.Documents));
 		}
 
-		private void HandleConflictedDocument(JsonDocument document, TransactionInformation transactionInformation)
+		private void HandleConflictedDocument(JsonDocument document)
 		{
 			var conflicts = document.DataAsJson.Value<RavenJArray>("Conflicts");
 			var currentSource = Database.TransactionalStorage.Id.ToString();
 
 			foreach (var c in conflicts)
 			{
-				var conflict = Database.Documents.Get(c.Value<string>(), transactionInformation);
+				var conflict = Database.Documents.Get(c.Value<string>());
 				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)

@@ -25,7 +25,7 @@ namespace Raven.Client.Document
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
+    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
 	    /// <summary>
@@ -783,32 +783,6 @@ namespace Raven.Client.Document
 			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
 		}
 
-		/// <summary>
-        /// Commits the specified tx id.
-        /// </summary>
-        /// <param name="txId">The tx id.</param>
-        public override void Commit(string txId)
-        {
-            DatabaseCommands.Commit(txId);
-            ClearEnlistment();
-        }
-
-        /// <summary>
-        /// Rollbacks the specified tx id.
-        /// </summary>
-        /// <param name="txId">The tx id.</param>
-        public override void Rollback(string txId)
-        {
-            DatabaseCommands.Rollback(txId);
-            ClearEnlistment();
-        }
-
-        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
-        {
-            DatabaseCommands.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
-            ClearEnlistment();
-        }
-
         /// <summary>
         /// Query RavenDB dynamically using LINQ
         /// </summary>
@@ -833,10 +807,10 @@ namespace Raven.Client.Document
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
 		public IDocumentQuery<T> DocumentQuery<T>()
-            {
+        {
 			var indexName = CreateDynamicIndexName<T>();
 			return Advanced.DocumentQuery<T>(indexName);
-            }
+        }
 
 
 

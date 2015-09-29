@@ -104,7 +104,7 @@ namespace Raven.Database.Server.Tenancy
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Documents.Get(Constants.Database.Prefix + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.Database.Prefix + tenantId);
             if (jsonDocument == null ||
                 jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -282,7 +282,7 @@ namespace Raven.Database.Server.Tenancy
         private void OnDatabaseBackupCompleted(DocumentDatabase db)
         {
             var dbStatusKey = "Raven/BackupStatus/" + db.Name;
-            var statusDocument = db.Documents.Get(dbStatusKey, null);
+            var statusDocument = db.Documents.Get(dbStatusKey);
             DatabaseOperationsStatus status;
             if (statusDocument == null)
             {

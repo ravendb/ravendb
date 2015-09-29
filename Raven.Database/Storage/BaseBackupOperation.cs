@@ -201,7 +201,7 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info("Backup completed");
-                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
                 if (jsonDocument == null)
                     return;
 
@@ -232,7 +232,7 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info(newMsg);
-                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
                 if (jsonDocument == null)
                     return;
                 var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();

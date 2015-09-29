@@ -23,7 +23,7 @@ namespace Raven.Database.Raft.Storage.Handlers
 		{
 			var key = DatabaseHelper.GetDatabaseKey(command.Name);
 
-			var documentJson = Database.Documents.Get(key, null);
+			var documentJson = Database.Documents.Get(key);
 			if (documentJson == null)
 				return;
 

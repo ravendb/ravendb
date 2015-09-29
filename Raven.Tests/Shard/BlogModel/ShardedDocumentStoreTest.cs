@@ -27,7 +27,9 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.DisableAggressiveCaching());
 				Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
+
 				shardedDocumentStore.Initialize();
+
 				Assert.DoesNotThrow(() => shardedDocumentStore.DisableAggressiveCaching());
 				Assert.DoesNotThrow(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
 			}
@@ -51,18 +53,6 @@ namespace Raven.Tests.Shard.BlogModel
 					FailoverBehavior = FailoverBehavior.FailImmediately
 				}
 			};
-		}
-
-		[Fact]
-		public void DtcIsNotSupported()
-		{
-			using (var shardedDocumentStore = GetDocumentStore().Initialize())
-			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
-			{
-				var txId = Guid.NewGuid().ToString();
-				Assert.Throws<NotSupportedException>(() => session.Commit(txId));
-				Assert.Throws<NotSupportedException>(() => session.Rollback(txId));
-			}
 		}
 	}
 }

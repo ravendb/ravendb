@@ -19,7 +19,7 @@ namespace Raven.Bundles.Authorization.Triggers
 			AuthorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
-		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+		public override VetoResult AllowDelete(string key)
 		{
 			using(Database.DisableAllTriggersForCurrentThread())
 			{
@@ -28,7 +28,7 @@ namespace Raven.Bundles.Authorization.Triggers
 				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 					return VetoResult.Allowed;
 
-				var previousDocument = Database.Documents.Get(key, transactionInformation);
+				var previousDocument = Database.Documents.Get(key);
 				if (previousDocument == null)
 					return VetoResult.Allowed;
 

@@ -377,7 +377,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
 		{
-			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url), null);
+			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url));
 			if (jsonDocument == null)
 				return true;
 			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -685,7 +685,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (string.IsNullOrWhiteSpace(lastError) == false)
 				stats.LastError = lastError;
 
-			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null);
+			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url));
 			var failureInformation = new DestinationFailureInformation { Destination = url };
 			if (jsonDocument != null)
 			{

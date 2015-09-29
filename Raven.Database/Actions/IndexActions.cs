@@ -29,6 +29,7 @@ using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow;
 
 namespace Raven.Database.Actions
 {
@@ -105,7 +106,7 @@ namespace Raven.Database.Actions
 	        }
             list.AddRange(BitConverter.GetBytes(UuidGenerator.LastDocumentTransactionEtag));
 
-            var indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(list.ToArray()));
+            var indexEtag = Etag.FromHash(Hashing.Metro128.Calculate(list.ToArray()));
 
             if (previousEtag != null && previousEtag != indexEtag)
             {

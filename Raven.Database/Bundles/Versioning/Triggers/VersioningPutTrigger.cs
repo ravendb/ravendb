@@ -19,9 +19,9 @@ namespace Raven.Bundles.Versioning.Triggers
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningPutTrigger : AbstractPutTrigger
 	{
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
-			var jsonDocument = Database.Documents.Get(key, transactionInformation);
+			var jsonDocument = Database.Documents.Get(key);
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
@@ -35,7 +35,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
 		{
 			VersioningConfiguration versioningConfiguration;
 
@@ -59,7 +59,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
+				RemoveOldRevisions(key, revision, versioningConfiguration);
 			}
 			metadata.__ExternalState["Next-Revision"] = revision;
 
@@ -69,7 +69,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
 		}
 
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag)
 		{
 			VersioningConfiguration versioningConfiguration;
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
@@ -90,8 +90,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 				object value;
 				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
-				Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
-							 transactionInformation);
+				Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata);
 			}
 		}
 
@@ -105,7 +104,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 				if (revision == 1)
 				{
-					var existingDoc = Database.Documents.Get(key, null);
+					var existingDoc = Database.Documents.Get(key);
 					if (existingDoc != null)
 					{
 						RavenJToken existingRevisionToken;
@@ -180,13 +179,13 @@ namespace Raven.Bundles.Versioning.Triggers
 			return true;
 		}
 
-		private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
+		private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration)
 		{
 			long latestValidRevision = revision - versioningConfiguration.MaxRevisions;
 			if (latestValidRevision <= 0)
 				return;
 
-			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null);
 		}
 
 		public override IEnumerable<string> GeneratedMetadataNames

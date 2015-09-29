@@ -27,9 +27,9 @@ namespace Raven.Bundles.Versioning.Triggers
 	    readonly Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
 			= new Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
 
-		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+		public override VetoResult AllowDelete(string key)
 		{
-			var document = Database.Documents.Get(key, transactionInformation);
+			var document = Database.Documents.Get(key);
 			if (document == null)
 				return VetoResult.Allowed;
 
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				if (revisionPos != -1)
 				{
 					var parentKey = key.Remove(revisionPos);
-					var parentDoc = Database.Documents.Get(parentKey, transactionInformation);
+					var parentDoc = Database.Documents.Get(parentKey);
 					if (parentDoc == null)
 						return VetoResult.Allowed;
 				}
@@ -55,7 +55,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			return VetoResult.Allowed;
 		}
 
-		public override void AfterDelete(string key, TransactionInformation transactionInformation)
+		public override void AfterDelete(string key)
 		{
 			var versioningConfig = Database.GetDocumentVersioningConfiguration(versionInformer.Value[key]);
 	
@@ -70,7 +70,7 @@ namespace Raven.Bundles.Versioning.Triggers
                             continue;
                         if (versioningConfig != null && versioningConfig.PurgeOnDelete)
                         {
-                            Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
+                            Database.Documents.Delete(jsonDocument.Key, null);
                         }
                         else
                         {

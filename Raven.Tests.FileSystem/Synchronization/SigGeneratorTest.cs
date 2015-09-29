@@ -49,11 +49,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 				Assert.Equal(2, result.Count);
 				using (var content = signatureRepository.GetContentForReading(result[0].Name))
 				{
-					Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetMD5Hash());
+					Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetHashAsHex());
 				}
 				using (var content = signatureRepository.GetContentForReading(result[1].Name))
 				{
-					Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetMD5Hash());
+					Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetHashAsHex());
 				}
 			}
 		}
@@ -78,7 +78,7 @@ namespace Raven.Tests.FileSystem.Synchronization
                 {
                     using (var content = signatureRepository.GetContentForReading(signatureInfo.Name))
                     {
-                        firstSigContentHashes.Add(content.GetMD5Hash());
+                        firstSigContentHashes.Add(content.GetHashAsHex());
                     }
                 }
             }
@@ -96,7 +96,7 @@ namespace Raven.Tests.FileSystem.Synchronization
                 {
                     using (var content = signatureRepository.GetContentForReading(signatureInfo.Name))
                     {
-                        secondSigContentHashes.Add(content.GetMD5Hash());
+                        secondSigContentHashes.Add(content.GetHashAsHex());
                     }
                 }
             }

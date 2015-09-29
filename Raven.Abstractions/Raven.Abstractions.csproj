@@ -258,7 +258,6 @@
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />
-    <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />
     <Compile Include="Data\UserPermission.cs" />

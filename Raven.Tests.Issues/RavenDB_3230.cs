@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
         }
         public class AdminOnlyPutTrigger : AbstractPutTrigger
         {
-            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
             {
                 var principal = CurrentOperationContext.User.Value;
                 var isAdmin = principal.IsAdministrator(Database.Configuration.AnonymousUserAccessMode) || principal.IsAdministrator(Database);

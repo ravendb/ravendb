@@ -50,12 +50,14 @@ namespace Raven.Tests.Issues
 			{
 				AddWindowsUser(username, password);
 
-                Assert.Throws<ErrorResponseException>(() =>
+                var ex = Assert.Throws<ErrorResponseException>(() =>
                 {
                     using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
                     {
                     }
                 });
+				
+				Assert.Equal ( HttpStatusCode.Forbidden, ex.StatusCode );
 
                 Assert.DoesNotThrow(() =>
                 {

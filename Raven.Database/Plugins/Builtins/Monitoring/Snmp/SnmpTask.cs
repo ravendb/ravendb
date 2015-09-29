@@ -188,7 +188,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 			if (databaseName == null || string.Equals(databaseName, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 				return 1;
 
-			var mappingDocument = systemDatabase.Documents.Get(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey, null) ?? new JsonDocument();
+			var mappingDocument = systemDatabase.Documents.Get(Constants.Monitoring.Snmp.DatabaseMappingDocumentKey) ?? new JsonDocument();
 
 			RavenJToken value;
 			if (mappingDocument.DataAsJson.TryGetValue(databaseName, out value))

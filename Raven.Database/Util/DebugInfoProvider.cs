@@ -247,7 +247,7 @@ namespace Raven.Database.Util
 					streamWriter.Flush();
         }
 
-				var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+				var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey);
 				if (configurationJson == null)
 					return;
 

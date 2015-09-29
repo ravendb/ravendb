@@ -53,7 +53,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                   }
                                               }
                                           }
-                                      }), new RavenJObject(), null);
+                                      }), new RavenJObject());
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
@@ -70,7 +70,7 @@ namespace Raven.Tests.FileSystem.Auth
             ms.Position = 0;
             result.Position = 0;
 
-            Assert.Equal(ms.GetMD5Hash(), result.GetMD5Hash());
+            Assert.Equal(ms.GetHashAsHex(), result.GetHashAsHex());
             await client.RenameAsync("/dir/ms.bin", "/dir/sm.bin");
 
             var searchResults = await client.SearchOnDirectoryAsync("/dir");

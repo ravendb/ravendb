@@ -14,8 +14,6 @@ namespace Raven.Client.Document.SessionOperations
 		private bool firstRequest = true;
 		private JsonDocument documentFound;
 
-		private Stopwatch sp;
-
 		public LoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string id)
 		{
 			if (id == null) throw new ArgumentNullException("id","The document id cannot be null");
@@ -34,21 +32,16 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (firstRequest == false) // if this is a repeated request, we mustn't use the cached result, but have to re-query the server
 				return disableAllCaching();
-			sp = Stopwatch.StartNew();
+
 			return null;
 		}
 
-		public bool SetResult(JsonDocument document)
+        public bool SetResult(JsonDocument document)
 		{
 			firstRequest = false;
 			documentFound = document;
-			if (documentFound == null)
-				return false;
-			return
-				documentFound.NonAuthoritativeInformation.HasValue &&
-				documentFound.NonAuthoritativeInformation.Value &&
-				sessionOperations.AllowNonAuthoritativeInformation == false &&
-				sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout;
+
+            return false;
 		}
 
 		public virtual T Complete<T>()

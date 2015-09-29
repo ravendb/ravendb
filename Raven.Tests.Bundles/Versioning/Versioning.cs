@@ -277,7 +277,6 @@ namespace Raven.Tests.Bundles.Versioning
 				session.Advanced.Defer(new DeleteCommandData
 				{
 					Key = "companies/1/revisions/1",
-					TransactionInformation = new TransactionInformation()
 				});
 
 				Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
@@ -312,7 +311,6 @@ namespace Raven.Tests.Bundles.Versioning
 				session.Advanced.Defer(new DeleteCommandData
 				{
 					Key = "companies/1/revisions/1",
-					TransactionInformation = new TransactionInformation()
 				});
 				session.SaveChanges();
 			}

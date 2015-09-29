@@ -34,7 +34,7 @@ namespace Raven.Bundles.Replication.Impl
 
 			// backward compatibility, read the hilo max then delete it, storing the value in the identity val
 
-			var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
+			var document = database.Documents.Get(RavenReplicationVersionHiLo);
 			if (document == null)
 			{
 				currentMax = new Holder(0);

@@ -594,7 +594,7 @@ namespace Raven.Tests.Helpers
 
 		protected PeriodicExportStatus GetPeriodicBackupStatus(DocumentDatabase db)
 		{
-			return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
+			return GetPerodicBackupStatus(key => db.Documents.Get(key));
 		}
 
 		protected PeriodicExportStatus GetPerodicBackupStatus(IDatabaseCommands commands)
@@ -614,7 +614,7 @@ namespace Raven.Tests.Helpers
 		protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus,
 			PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
 		{
-			WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus, statusEtags);
+			WaitForPeriodicExport(key => db.Documents.Get(key), previousStatus, statusEtags);
 		}
 
 		protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus,
@@ -644,7 +644,7 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			WaitForBackup(key => db.Documents.Get(key, null), checkError);
+			WaitForBackup(key => db.Documents.Get(key), checkError);
 		}
 
 		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
@@ -1134,7 +1134,7 @@ namespace Raven.Tests.Helpers
 				Enabled = true,
 				Name = apiKeyTokens[0],
 				Secret = apiKeyTokens[1]
-			}), new RavenJObject(), null);
+			}), new RavenJObject());
 
 			NewRemoteDocumentStore(ravenDbServer: server);
 

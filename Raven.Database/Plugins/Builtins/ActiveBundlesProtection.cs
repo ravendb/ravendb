@@ -17,7 +17,7 @@ namespace Raven.Database.Plugins.Builtins
 	{
 		private const string RavenDatabasesPrefix = "Raven/Databases/";
 
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
 		    if (Database.Name != null && Database.Name != Constants.SystemDatabase)
 		        return VetoResult.Allowed;
@@ -37,7 +37,7 @@ namespace Raven.Database.Plugins.Builtins
 		    if (bundlesChangesAllowed)
 		        return VetoResult.Allowed;
 
-		    var existingDbDoc = Database.Documents.Get(key, transactionInformation);
+		    var existingDbDoc = Database.Documents.Get(key);
 
 		    if (existingDbDoc == null)
 		        return VetoResult.Allowed;

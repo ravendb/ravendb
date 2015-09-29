@@ -236,7 +236,7 @@ namespace Raven.Database.Actions
 				{
 					throw new IndexDisabledException(indexFailureInformation);
 				}
-				docRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+				docRetriever = new DocumentRetriever(database.Configuration, actions, database.ReadTriggers, query.TransformerParameters, idsToLoad);
 				var fieldsToFetch = new FieldsToFetch(query,
 					viewGenerator.ReduceDefinition == null
 						? Constants.DocumentIdFieldName
@@ -255,7 +255,6 @@ namespace Raven.Database.Actions
 				var docs = from queryResult in indexQueryResults
 						   let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
 						   where doc != null
-						   let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
 						   let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
 						   select doc;
 
@@ -299,7 +298,6 @@ namespace Raven.Database.Actions
 				{
 					IndexName = indexName,
 					IsStale = stale,
-					NonAuthoritativeInformation = nonAuthoritativeInformation,
 					SkippedResults = query.SkippedResults.Value,
 					TotalResults = query.TotalSize.Value,
 					IndexTimestamp = indexTimestamp.Item1,

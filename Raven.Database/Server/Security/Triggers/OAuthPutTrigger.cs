@@ -9,7 +9,7 @@ namespace Raven.Database.Server.Security.Triggers
 {
 	public class OAuthPutTrigger : AbstractPutTrigger
 	{
-		public override VetoResult AllowPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Raven.Abstractions.Data.TransactionInformation transactionInformation)
+		public override VetoResult AllowPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata)
 		{
 			if (key != null && key.StartsWith("Raven/ApiKeys/") && Authentication.IsEnabled == false)
 				return VetoResult.Deny("Cannot setup OAuth Authentication without a valid commercial license.");

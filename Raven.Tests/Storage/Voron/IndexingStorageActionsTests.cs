@@ -14,8 +14,6 @@ namespace Raven.Tests.Storage.Voron
 	using System.Linq;
 	using System.Threading;
 
-	using Microsoft.Isam.Esent.Interop;
-
 	using Raven.Abstractions;
 	using Raven.Abstractions.Data;
 	using Raven.Database.Indexing;

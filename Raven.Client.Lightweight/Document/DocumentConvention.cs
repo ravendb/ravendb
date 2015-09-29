@@ -66,7 +66,6 @@ namespace Raven.Client.Document
 			PreserveDocumentPropertiesNotFoundOnModel = true;
 			PrettifyGeneratedLinqExpressions = true;
 			DisableProfiling = true;
-			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
 			DefaultQueryingConsistency = ConsistencyOptions.None;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
@@ -641,11 +640,6 @@ namespace Raven.Client.Document
 		/// Translate the type tag name to the document key prefix
 		/// </summary>
 		public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
-
-		///<summary>
-		/// Whatever or not RavenDB will automatically enlist in distributed transactions
-		///</summary>
-		public bool EnlistInDistributedTransactions { get; set; }
 
 		/// <summary>
 		/// Clone the current conventions to a new instance

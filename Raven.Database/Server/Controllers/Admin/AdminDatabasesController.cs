@@ -8,11 +8,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
 using Raven.Database.Extensions;
-using Raven.Database.Plugins.Builtins;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -33,7 +31,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			var docKey = Constants.Database.Prefix + id;
-			var document = Database.Documents.Get(docKey, null);
+			var document = Database.Documents.Get(docKey);
 			if (document == null)
 				return GetMessageWithString("Database " + id + " wasn't found", HttpStatusCode.NotFound);
 
@@ -328,7 +326,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (ClusterManager.IsActive())
 			{
-				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(databaseId), null);
+				var documentJson = Database.Documents.Get(DatabaseHelper.GetDatabaseKey(databaseId));
 				if (documentJson == null)
 					return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database wasn't found" };
 
@@ -361,7 +359,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document cannot be disabled" };
 
 			var docKey = Constants.Database.Prefix + databaseId;
-			var document = Database.Documents.Get(docKey, null);
+			var document = Database.Documents.Get(docKey);
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
@@ -386,7 +384,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document indexing cannot be disabled" };
 
 			var docKey = Constants.Database.Prefix + databaseId;
-            var document = Database.Documents.Get(docKey, null);
+            var document = Database.Documents.Get(docKey);
             if (document == null)
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
@@ -414,7 +412,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database clients rejection can't change." };
 
 			var docKey = Constants.Database.Prefix + databaseId;
-            var document = Database.Documents.Get(docKey, null);
+            var document = Database.Documents.Get(docKey);
             if (document == null)
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
@@ -440,7 +438,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			string errorMessage = null;
 			var docKey = Constants.Database.Prefix + id;
-			var database = Database.Documents.Get(docKey, null);
+			var database = Database.Documents.Get(docKey);
 			var isExistingDatabase = (database != null);
 
 			if (isExistingDatabase && etag == null)

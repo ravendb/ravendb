@@ -22,7 +22,7 @@ namespace Raven.Database.Data
             '{', '}', (char) 9 /*HT*/, (char) 32 /*SP*/
         };
 
-    public static ICommandData CreateCommand(RavenJObject jsonCommand, TransactionInformation transactionInformation)
+    public static ICommandData CreateCommand(RavenJObject jsonCommand)
 		{
 			var key = jsonCommand["Key"].Value<string>();
 			switch (jsonCommand.Value<string>("Method"))
@@ -34,7 +34,6 @@ namespace Raven.Database.Data
 						Etag = GetEtagFromCommand(jsonCommand),
 						Document = jsonCommand["Document"] as RavenJObject,
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
-						TransactionInformation = transactionInformation
 					};
 			        ValidateMetadataKeys(putCommand.Metadata);
 			        return putCommand;
@@ -43,14 +42,12 @@ namespace Raven.Database.Data
 					{
 						Key = key,
 						Etag = GetEtagFromCommand(jsonCommand),
-						TransactionInformation = transactionInformation
 					};
 				case "PATCH":
 					return new PatchCommandData
 					{
 						Key = key,
 						Etag = GetEtagFromCommand(jsonCommand),
-						TransactionInformation = transactionInformation,
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						Patches = jsonCommand
 							.Value<RavenJArray>("Patches")
@@ -71,7 +68,6 @@ namespace Raven.Database.Data
 						Key = key,
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						Etag = GetEtagFromCommand(jsonCommand),
-						TransactionInformation = transactionInformation,
 						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
 						PatchIfMissing = jsonCommand["PatchIfMissing"] == null ? null : ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("PatchIfMissing")),
 						DebugMode = debug

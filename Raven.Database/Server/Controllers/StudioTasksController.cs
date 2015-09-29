@@ -402,7 +402,7 @@ for(var customFunction in customFunctions) {{
                 }, HttpStatusCode.NotFound);
             SqlReplicationStatistics stats;
             task.Statistics.TryRemove(sqlReplicationName, out stats);
-            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlReplicationStatus, null);
+            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlReplicationStatus);
             if (jsonDocument != null)
             {
                 var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();

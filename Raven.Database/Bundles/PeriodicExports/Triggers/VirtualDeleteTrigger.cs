@@ -16,7 +16,7 @@ namespace Raven.Database.Bundles.PeriodicExports.Triggers
     [InheritedExport(typeof(AbstractDeleteTrigger))]
     public class VirtualDeleteTrigger : AbstractDeleteTrigger
     {
-        public override void AfterDelete(string key, TransactionInformation transactionInformation)
+        public override void AfterDelete(string key)
         {
             var metadata = new RavenJObject
 			{

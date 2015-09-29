@@ -9,7 +9,7 @@ namespace Raven.Bundles.Quotas.Documents.Triggers
 	[ExportMetadata("Bundle", "Quotas")]
 	public class DatabaseCountDocumentDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
+		public override void AfterDelete(string key)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("configuration/global/settings")]
         public HttpResponseMessage ConfigurationGlobalSettingsGet()
         {
-            var json = Database.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
+            var json = Database.Documents.Get(Constants.Global.GlobalSettingsDocumentKey);
             var globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
             GlobalSettingsDocumentProtector.Unprotect(globalSettings);
             return GetMessageWithObject(globalSettings, HttpStatusCode.OK, (json != null ) ? json.Etag : null);

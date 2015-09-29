@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
+using Sparrow;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -42,7 +43,7 @@ namespace Raven.Database.Server.Controllers
             }
             else
             {
-                var jsonDocument = Database.Documents.Get(facetSetupDoc, null);
+                var jsonDocument = Database.Documents.Get(facetSetupDoc);
 	            if (jsonDocument == null)
 		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
 
@@ -146,8 +147,8 @@ namespace Raven.Database.Server.Controllers
 
         private Etag GetFacetsEtag(string index, byte[] additionalEtagBytes)
         {
-            var etagBytes = Encryptor.Current.Hash.Compute16(Database.Indexes.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());
-            return Etag.Parse(etagBytes);
+            var bytes = Database.Indexes.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray();
+            return Etag.FromHash(Hashing.Metro128.Calculate(bytes));
         }
 
         private int GetFacetStart()

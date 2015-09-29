@@ -211,7 +211,7 @@ namespace Raven.Database.Server.WebApi
 					{
 						if (controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
 						{
-							if (controller.Resource.Configuration.RejectClientsMode)
+							if (controller.RejectClientRequests)
 							{
 								response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 								{

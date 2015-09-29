@@ -21,7 +21,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class AncestryPutTrigger : AbstractPutTrigger
 	{
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
 		{
 			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
 				key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
@@ -68,7 +68,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 
 		private RavenJObject GetDocumentMetadata(string key)
 		{
-			var doc = Database.Documents.GetDocumentMetadata(key, null);
+			var doc = Database.Documents.GetDocumentMetadata(key);
             if (doc != null)
             {
                 var doesNotExist = doc.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists); // occurs when in transaction

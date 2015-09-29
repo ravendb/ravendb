@@ -765,7 +765,7 @@ namespace Raven.Client.Connection.Async
 			}
 
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, 
 					(operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), 
 					HttpMethod.Get, 
@@ -843,7 +843,6 @@ namespace Raven.Client.Connection.Async
 			}
 
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
 
 			var uniqueIds = new HashSet<string>(keys);
 			HttpJsonRequest request = null;
@@ -999,7 +998,7 @@ namespace Raven.Client.Connection.Async
 			var result = await ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
+
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
 				{
 					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -1286,7 +1285,6 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
 
 				var actualStart = start;
 
@@ -1555,7 +1553,6 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
 
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
 				{
@@ -1600,19 +1597,6 @@ namespace Raven.Client.Connection.Async
 				ActualETag = errorResults.actualETag,
 				ExpectedETag = errorResults.expectedETag
 			};
-		}
-
-		private void AddTransactionInformation(RavenJObject metadata)
-		{
-			if (convention.EnlistInDistributedTransactions == false)
-				return;
-
-			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
-			if (transactionInformation == null)
-				return;
-
-			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
-			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -2085,7 +2069,7 @@ namespace Raven.Client.Connection.Async
 		private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
 		{
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+	
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
 			{
 				try
@@ -2111,7 +2095,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
+
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
 				{
 					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
@@ -2122,7 +2106,7 @@ namespace Raven.Client.Connection.Async
 		public HttpJsonRequest CreateRequest(string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, Url + requestUrl, method, metadata, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url), timeout)
 				.AddOperationHeaders(OperationsHeaders);
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
@@ -2133,7 +2117,7 @@ namespace Raven.Client.Connection.Async
 		public HttpJsonRequest CreateRequest(OperationMetadata operationMetadata, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + requestUrl), method, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), timeout)
 				.AddOperationHeaders(OperationsHeaders);
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
@@ -2144,7 +2128,7 @@ namespace Raven.Client.Connection.Async
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
 			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+
 
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, currentServerUrl + requestUrl, method, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication,
 																			  convention, GetRequestTimeMetric(currentServerUrl), timeout).AddOperationHeaders(OperationsHeaders);

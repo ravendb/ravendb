@@ -12,12 +12,12 @@ namespace Raven.Bundles.UniqueConstraints
 
 	public class UniqueConstraintsDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override void OnDelete(string key, TransactionInformation transactionInformation)
+		public override void OnDelete(string key)
 		{
 			if (key.StartsWith("Raven"))
 				return;
 
-			var doc = Database.Documents.Get(key, transactionInformation);
+			var doc = Database.Documents.Get(key);
 
 			if (doc == null)
 				return;
@@ -45,7 +45,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
                     var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey);
 
                     if (uniqueConstraintsDocument == null)
                         continue;
@@ -54,7 +54,7 @@ namespace Raven.Bundles.UniqueConstraints
 
                     if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
                     {
-                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null);
                     }
                     else if (removed)
                     {
@@ -62,8 +62,7 @@ namespace Raven.Bundles.UniqueConstraints
                             uniqueConstraintsDocumentKey,
                             null,
                             uniqueConstraintsDocument.DataAsJson,
-                            uniqueConstraintsDocument.Metadata,
-                            transactionInformation);
+                            uniqueConstraintsDocument.Metadata);
                     }
 				}
 			}

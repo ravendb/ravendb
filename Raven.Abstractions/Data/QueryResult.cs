@@ -73,12 +73,6 @@ namespace Raven.Abstractions.Data
         public Dictionary<string, Dictionary<string, string[]>> Highlightings { get; set; }
 
 		/// <summary>
-		/// Indicates whether any of the documents returned by this query
-		/// are non authoritative (modified by uncommitted transaction).
-		/// </summary>
-		public bool NonAuthoritativeInformation { get; set; }
-
-		/// <summary>
 		/// The timestamp of the last time the index was queried
 		/// </summary>
 		public DateTime LastQueryTime { get; set; }
@@ -150,7 +144,6 @@ namespace Raven.Abstractions.Data
 				TimingsInMilliseconds = this.TimingsInMilliseconds  == null ?  null :  this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
 				LastQueryTime = this.LastQueryTime,
 				DurationMilliseconds = this.DurationMilliseconds,
-				NonAuthoritativeInformation = this.NonAuthoritativeInformation,
 				ResultEtag = this.ResultEtag
 			};
 		}

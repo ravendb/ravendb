@@ -10,7 +10,7 @@ namespace Raven.Bundles.UniqueConstraints
 {
 	public class UniqueConstraintsPutTrigger : AbstractPutTrigger
 	{
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag)
 		{
 			if (key.StartsWith("Raven/"))
 			{
@@ -39,7 +39,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
 				    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey);
 
                     if (uniqueConstraintsDocument != null)
                         ConvertUniqueConstraintsDocumentIfNecessary(uniqueConstraintsDocument, escapedUniqueValue); // backward compatibility
@@ -53,13 +53,12 @@ namespace Raven.Bundles.UniqueConstraints
                         uniqueConstraintsDocumentKey,
 						null,
 						uniqueConstraintsDocument.DataAsJson,
-						uniqueConstraintsDocument.Metadata,
-						transactionInformation);
+						uniqueConstraintsDocument.Metadata);
 				}
 			}
 		}
 
-	    public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+	    public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
 		{
 			if (key.StartsWith("Raven/"))
 			{
@@ -96,7 +95,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
                     var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
 				    var checkDocKey = prefix + escapedUniqueValue;
-                    var checkDoc = Database.Documents.Get(checkDocKey, transactionInformation);
+                    var checkDoc = Database.Documents.Get(checkDocKey);
 
 					if (checkDoc == null)
 						continue;
@@ -117,7 +116,7 @@ namespace Raven.Bundles.UniqueConstraints
 			return VetoResult.Allowed;
 		}
 
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
 		{
 			if (key.StartsWith("Raven/"))
 			{
@@ -131,7 +130,7 @@ namespace Raven.Bundles.UniqueConstraints
 			if (properties == null || properties.Length <= 0)
 				return;
 
-			var oldDoc = Database.Documents.Get(key, transactionInformation);
+			var oldDoc = Database.Documents.Get(key);
 
 			if (oldDoc == null)
 			{
@@ -169,7 +168,7 @@ namespace Raven.Bundles.UniqueConstraints
 			    {
                     var escapedUniqueValue = Util.EscapeUniqueValue(oldUniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey);
 
                     if (uniqueConstraintsDocument == null)
                         continue;
@@ -178,16 +177,14 @@ namespace Raven.Bundles.UniqueConstraints
 
                     if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
                     {
-                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null);
                     }
                     else if (removed)
                     {
                         Database.Documents.Put(
-                            uniqueConstraintsDocumentKey,
-                            null,
+                            uniqueConstraintsDocumentKey, null,
                             uniqueConstraintsDocument.DataAsJson,
-                            uniqueConstraintsDocument.Metadata,
-                            transactionInformation);
+                            uniqueConstraintsDocument.Metadata);
                     }
 			    }
 

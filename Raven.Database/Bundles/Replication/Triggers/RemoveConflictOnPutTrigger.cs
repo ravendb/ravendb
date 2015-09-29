@@ -18,7 +18,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class RemoveConflictOnPutTrigger : AbstractPutTrigger
 	{
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
@@ -35,7 +35,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 
 				metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
 
-				var oldVersion = Database.Documents.Get(key, transactionInformation);
+				var oldVersion = Database.Documents.Get(key);
 				if (oldVersion == null)
 					return;
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
@@ -58,7 +58,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
-					Database.Documents.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
+					Database.Documents.Delete(prop.Value<string>(), null, out deletedMetadata);
 
 				    if (deletedMetadata != null)
 				    {

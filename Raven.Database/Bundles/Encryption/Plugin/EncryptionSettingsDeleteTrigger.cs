@@ -9,12 +9,12 @@ namespace Raven.Bundles.Encryption.Plugin
 	[ExportMetadata("Bundle", "Encryption")]
 	public class EncryptionSettingsDeleteTrigger : AbstractDeleteTrigger
 	{
-		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
+		public override VetoResult AllowDelete(string key)
 		{
 			if (key == Constants.InResourceKeyVerificationDocumentName)
 				return VetoResult.Deny("Cannot delete the encryption verification document.");
 
-			return base.AllowDelete(key, transactionInformation);
+			return base.AllowDelete(key);
 		}
 	}
 }

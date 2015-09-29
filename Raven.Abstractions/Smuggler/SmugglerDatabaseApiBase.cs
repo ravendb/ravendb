@@ -167,7 +167,7 @@ namespace Raven.Abstractions.Smuggler
                     WriteLastEtagsToFile(result, result.FilePath, IncrementalExportStateFile);
 
                 if (Options.ExportDeletions)
-				{
+				{		
 					Operations.PurgeTombstones(result);
 				}
 
@@ -872,25 +872,25 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-            if (Options.UseContinuationFile)
-            {
-                lastEtagsDocument = Operations.GetDocument(continuationDocId);
+				if (Options.UseContinuationFile)
+				{
+					lastEtagsDocument = Operations.GetDocument(continuationDocId);
 					if (lastEtagsDocument == null)
-                {
-                    lastEtagsDocument = new JsonDocument
-                    {
-                        Key = continuationDocId,                        
-                        Etag = Etag.Empty,
-                        DataAsJson = RavenJObject.FromObject(state)
-                    };
-                }
-                else
-                {                    
-                    state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
-                }
+					{
+						lastEtagsDocument = new JsonDocument
+						{
+							Key = continuationDocId,
+							Etag = Etag.Empty,
+							DataAsJson = RavenJObject.FromObject(state)
+						};
+					}
+					else
+					{
+						state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
+					}
 
-                JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
-            }
+					JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
+				}
 			}
 			catch (Exception e)
 			{
@@ -900,7 +900,7 @@ namespace Raven.Abstractions.Smuggler
 				Operations.ShowProgress("Failed loading continuation state. Message: {0}", e.Message);
 			}
 
-            int skippedDocuments = 0;
+			int skippedDocuments = 0;
             long skippedDocumentsSize = 0;
 
             Etag tempLastEtag = Etag.Empty;
@@ -920,7 +920,6 @@ namespace Raven.Abstractions.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
-
 				RavenJObject document = null;
 				try
 				{

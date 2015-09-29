@@ -44,7 +44,7 @@ namespace Raven.Database.Smuggler
 
 		public JsonDocument GetDocument(string key)
 		{
-			return database.Documents.Get(key, null);
+			return database.Documents.Get(key);
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)

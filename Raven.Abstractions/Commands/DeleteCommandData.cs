@@ -32,11 +32,6 @@ namespace Raven.Abstractions.Commands
 		public virtual Etag Etag { get; set; }
 
 		/// <summary>
-		/// Information used to identify a transaction. Contains transaction Id and timeout.
-		/// </summary>
-		public TransactionInformation TransactionInformation { get; set; }
-
-		/// <summary>
 		/// RavenJObject representing document's metadata. In this case null.
 		/// </summary>
 		public RavenJObject Metadata
