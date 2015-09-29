@@ -58,7 +58,6 @@ namespace Voron.Impl.Paging
 		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
 
 	    public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
-		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 
 		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
 

@@ -12,7 +12,6 @@ namespace Voron.Trees.Compact
     public unsafe partial class PrefixTree
     {
         private readonly Transaction _tx;
-        private readonly Slice _treeName;
         private readonly PrefixTreeMutableState _state = new PrefixTreeMutableState();
 
         public PrefixTreeMutableState State
@@ -45,11 +44,6 @@ namespace Voron.Trees.Compact
             tree.State.RecordNewPage(newRootPage, 1);
 
             return tree;
-        }
-
-        public Slice Name
-        {
-            get { return _treeName; }
         }
 
         public void Add(Slice key, Stream value, ushort? version = null)
