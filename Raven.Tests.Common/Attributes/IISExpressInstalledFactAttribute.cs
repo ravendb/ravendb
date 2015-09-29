@@ -14,7 +14,7 @@ namespace Raven.Tests.Common.Attributes
 		{
 			var displayName = method.TypeName + "." + method.Name;
 
-			if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false && File.Exists(@"c:\Program Files\IIS Express\iisexpress.exe") == false)
+			if (File.Exists(@"c:\Program Files\IIS Express\iisexpress.exe") == false)
 			{
 				yield return
 					new SkipCommand(method, displayName,

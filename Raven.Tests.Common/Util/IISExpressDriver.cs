@@ -6,12 +6,7 @@ namespace Raven.Tests.Common.Util
 {
 	public class IISExpressDriver : ProcessDriver
 	{
-		private readonly bool run64Bit;
-
-		public IISExpressDriver(bool run64Bit)
-		{
-			this.run64Bit = run64Bit;
-		}
+		
 
 		public string Url { get; private set;  }
 
@@ -23,11 +18,9 @@ namespace Raven.Tests.Common.Util
 			{
 				process.Kill();
 			}
-
-			var processFileName = run64Bit
-				? @"c:\program files\IIS Express\IISExpress.exe" 
-				: @"c:\program files (x86)\IIS Express\IISExpress.exe";
-
+			
+			var processFileName =
+				 @"c:\program files\IIS Express\IISExpress.exe";
 			StartProcess(processFileName, @"/systray:false /trace:error /port:" + port + @" /path:" + sitePhysicalDirectory);
 
 			var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
