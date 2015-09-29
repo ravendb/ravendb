@@ -103,7 +103,7 @@ task Test -depends Compile {
 	Clear-Host
 
 	$test_prjs = @( `
-		"$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.dll", `
+		"$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `
 		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
