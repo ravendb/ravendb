@@ -21,7 +21,5 @@ namespace Voron.Impl.FileHeaders
         public int Depth;
         [FieldOffset(60)]
         public TreeFlags Flags;
-		[FieldOffset(61)]
-		public bool KeysPrefixing;
     }
 }

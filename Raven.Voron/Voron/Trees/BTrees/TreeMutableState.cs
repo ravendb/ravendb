@@ -14,7 +14,6 @@ namespace Voron.Trees
         public long PageCount;
         public long EntriesCount;
 	    public TreeFlags Flags;
-		public bool KeysPrefixing;
 
         public long RootPageNumber;
         private bool _isModified;
@@ -42,7 +41,6 @@ namespace Voron.Trees
             header->PageCount = PageCount;
             header->EntriesCount = EntriesCount;
             header->RootPageNumber = RootPageNumber;
-		    header->KeysPrefixing = KeysPrefixing;
         }
 
         public TreeMutableState Clone()
@@ -57,7 +55,6 @@ namespace Voron.Trees
                     PageCount = PageCount,
 					Flags = Flags,
                     RootPageNumber = RootPageNumber,
-					KeysPrefixing = KeysPrefixing
                 };
         }
 

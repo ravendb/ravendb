@@ -55,8 +55,6 @@ namespace Voron.Trees
             _state = state;
         }
 
-        public bool KeysPrefixing { get { return _state.KeysPrefixing; } }
-
         public static Tree Open(Transaction tx, TreeRootHeader* header)
         {
             return new Tree(tx, header->RootPageNumber)
@@ -71,18 +69,13 @@ namespace Voron.Trees
                     EntriesCount = header->EntriesCount,
                     Flags = header->Flags,
                     InWriteTransaction = tx.Flags.HasFlag(TransactionFlags.ReadWrite),
-                    KeysPrefixing = header->KeysPrefixing
                 }
             };
         }
 
-        public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
+        public static Tree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
         {
-			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/KeysPrefixing") as bool?);
-	        if (globalKeysPrefixingSetting != null)
-				keysPrefixing = globalKeysPrefixingSetting.Value;
-
-            var newRootPage = tx.AllocatePage(1, keysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf);
+            var newRootPage = tx.AllocatePage(1, TreePageFlags.Leaf);
             var tree = new Tree(tx, newRootPage.PageNumber)
             {
                 _state =
@@ -90,7 +83,6 @@ namespace Voron.Trees
                     Depth = 1,
                     Flags = flags,
                     InWriteTransaction = true,
-                    KeysPrefixing = keysPrefixing
                 }
             };
 
@@ -195,7 +187,7 @@ namespace Voron.Trees
             }
         }
 
-        internal byte* DirectAdd(MemorySlice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
+        internal byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -205,8 +197,8 @@ namespace Voron.Trees
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
-			if (AbstractPager.IsKeySizeValid(key.Size, KeysPrefixing) == false)
-				throw new ArgumentException("Key size is too big, must be at most " + AbstractPager.GetMaxKeySize(KeysPrefixing) + " bytes, but was " + key.Size, "key");
+			if (AbstractPager.IsKeySizeValid(key.Size) == false)
+				throw new ArgumentException("Key size is too big, must be at most " + AbstractPager.GetMaxKeySize() + " bytes, but was " + key.Size, "key");
 
             Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
@@ -257,10 +249,8 @@ namespace Voron.Trees
                 nodeType = TreeNodeFlags.PageRef;
             }
 
-            var keyToInsert = page.PrepareKeyToInsert(key, lastSearchPosition);
-
             byte* dataPos;
-            if (page.HasSpaceFor(_tx, keyToInsert, len) == false)
+            if (page.HasSpaceFor(_tx, key, len) == false)
             {
                 using ( var cursor = lazy.Value )
                 {
@@ -277,13 +267,13 @@ namespace Voron.Trees
                 switch (nodeType)
                 {
                     case TreeNodeFlags.PageRef:
-                        dataPos = page.AddPageRefNode(lastSearchPosition, keyToInsert, pageNumber);
+                        dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
                         break;
                     case TreeNodeFlags.Data:
-                        dataPos = page.AddDataNode(lastSearchPosition, keyToInsert, len, nodeVersion);
+                        dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
                         break;
                     case TreeNodeFlags.MultiValuePageRef:
-                        dataPos = page.AddMultiValueNode(lastSearchPosition, keyToInsert, len, nodeVersion);
+                        dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
                         break;
                     default:
                         throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
@@ -359,7 +349,7 @@ namespace Voron.Trees
             }
         }
 
-        internal TreePage FindPageFor(MemorySlice key, out TreeNodeHeader* node, out Lazy<TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Lazy<TreeCursor> cursor)
         {
             TreePage p;
 
@@ -371,7 +361,7 @@ namespace Voron.Trees
             return SearchForPage(key, out cursor, out node);
         }
 
-        private TreePage SearchForPage(MemorySlice key, out Lazy<TreeCursor> cursor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, out Lazy<TreeCursor> cursor, out TreeNodeHeader* node)
         {
             var p = _tx.GetReadOnlyPage(State.RootPageNumber);
             var c = new TreeCursor();
@@ -438,26 +428,20 @@ namespace Voron.Trees
 
         private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool? leftmostPage, bool? rightmostPage)
         {
-            MemorySlice firstKey;
+            Slice firstKey;
             if (leftmostPage == true)
             {
-                if (p.KeysPrefixed)
-                    firstKey = PrefixedSlice.BeforeAllKeys;
-                else
-                    firstKey = Slice.BeforeAllKeys;
+                firstKey = Slice.BeforeAllKeys;
             }
             else
             {
                 firstKey = p.GetNodeKey(0);
             }
 
-            MemorySlice lastKey;
+            Slice lastKey;
             if (rightmostPage == true)
-            {
-                if (p.KeysPrefixed)
-                    lastKey = PrefixedSlice.AfterAllKeys;
-                else
-                    lastKey = Slice.AfterAllKeys;
+            {               
+                lastKey = Slice.AfterAllKeys;
             }
             else
             {
@@ -479,7 +463,7 @@ namespace Voron.Trees
             RecentlyFoundPages.Add(foundPage);
         }
 
-        private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
+        private bool TryUseRecentTransactionPage(Slice key, out Lazy<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
@@ -741,7 +725,7 @@ namespace Voron.Trees
         }
 
 
-        private void CheckConcurrency(MemorySlice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
+        private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
         {
             if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
                 throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name));
@@ -765,8 +749,7 @@ namespace Voron.Trees
             return new Tree(tx, _state.Clone()) { Name = Name };
         }
 
-		private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode,
-                                                      MemorySlice key, int len, ushort? version, out byte* pos)
+		private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, Slice key, int len, ushort? version, out byte* pos)
         {
             if (updatedNode->Flags == TreeNodeFlags.PageRef &&
                 _tx.Id <= _tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows

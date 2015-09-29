@@ -100,7 +100,7 @@ namespace Voron.Trees
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
 			}
 
-			var valueToInsert = nestedPage.PrepareKeyToInsert(value, nestedPage.LastSearchPosition);
+            var valueToInsert = value;
 
 			if (nestedPage.HasSpaceFor(_tx, valueToInsert, 0))
 			{
@@ -122,7 +122,7 @@ namespace Voron.Trees
 				return;
 			}
 			// we now have to convert this into a tree instance, instead of just a nested page
-			var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
+			var tree = Create(_tx, TreeFlags.MultiValue);
 			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 			{
 				var existingValue = nestedPage.GetNodeKey(i);
@@ -150,36 +150,27 @@ namespace Voron.Trees
 				var newNestedPage = new TreePage(ptr, "multi tree", newSize)
 				{
 					Lower = (ushort)Constants.PageHeaderSize,
-					Upper = KeysPrefixing ? (ushort) (newSize - Constants.PrefixInfoSectionSize) : newSize,
-					Flags = KeysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf,
+					Upper = newSize,
+					Flags = TreePageFlags.Leaf,
 					PageNumber = -1L // mark as invalid page number
 				};
-
-				newNestedPage.ClearPrefixInfo();
-
-				MemorySlice nodeKey = nestedPage.CreateNewEmptyKey();
+			
+				Slice nodeKey = nestedPage.CreateNewEmptyKey();
 				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 				{
 					var nodeHeader = nestedPage.GetNode(i);
 					nestedPage.SetNodeKey(nodeHeader, ref nodeKey);
-					nodeKey = newNestedPage.PrepareKeyToInsert(nodeKey, i);
-					newNestedPage.AddDataNode(i, nodeKey, 0,
-						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+					newNestedPage.AddDataNode(i, nodeKey, 0, (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
 
 				newNestedPage.Search(value);
-				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.PrepareKeyToInsert(value, newNestedPage.LastSearchPosition), 0, 0);
+				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
 			}
 		}
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			MemorySlice valueToInsert;
-			
-			if(KeysPrefixing)
-				valueToInsert = new PrefixedSlice(value); // first item is never prefixed
-			else
-				valueToInsert = value;
+			Slice valueToInsert = value;
 
 			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
@@ -187,7 +178,7 @@ namespace Voron.Trees
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
 				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-				var tree = Create(tx, KeysPrefixing, TreeFlags.MultiValue);
+				var tree = Create(tx, TreeFlags.MultiValue);
 				tree.DirectAdd(value, 0);
 				tx.AddMultiValueTree(this, key, tree);
 
@@ -203,11 +194,9 @@ namespace Voron.Trees
 			{
 				PageNumber = -1L,// hint that this is an inner page
 				Lower = (ushort) Constants.PageHeaderSize,
-				Upper = KeysPrefixing ? (ushort)(actualPageSize - Constants.PrefixInfoSectionSize) : actualPageSize,
-				Flags = KeysPrefixing ? TreePageFlags.Leaf | TreePageFlags.KeysPrefixed : TreePageFlags.Leaf,
+				Upper = actualPageSize,
+				Flags = TreePageFlags.Leaf,
 			};
-
-			nestedPage.ClearPrefixInfo();
 
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
@@ -332,7 +321,7 @@ namespace Voron.Trees
 			return new TreePageIterator(nestedPage);
 		}
 
-		private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, TreeNodeHeader* item)
+		private Tree OpenMultiValueTree(Transaction tx, Slice key, TreeNodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -350,9 +339,8 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		private bool TryOverwriteDataOrMultiValuePageRefNode(TreeNodeHeader* updatedNode, MemorySlice key, int len,
-														TreeNodeFlags requestedNodeType, ushort? version,
-														out byte* pos)
+		private bool TryOverwriteDataOrMultiValuePageRefNode(TreeNodeHeader* updatedNode, Slice key, int len,
+														     TreeNodeFlags requestedNodeType, ushort? version, out byte* pos)
 		{
 			switch (requestedNodeType)
 			{

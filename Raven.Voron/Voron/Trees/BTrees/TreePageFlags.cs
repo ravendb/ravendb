@@ -9,7 +9,7 @@
 		Branch = 1,
 		Leaf = 2,
 		Overflow = 4,
-		KeysPrefixed = 8,
+		Unused = 8,
 		FixedSize = 16
 	}
 }

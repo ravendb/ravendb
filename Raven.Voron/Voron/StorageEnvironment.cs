@@ -151,8 +151,8 @@ namespace Voron
             };
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Create(tx, false);
-                var freeSpace = Tree.Create(tx, false);
+                var root = Tree.Create(tx);
+                var freeSpace = Tree.Create(tx);
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
@@ -301,7 +301,7 @@ namespace Voron
                 DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, (Slice)toName, fromName, Stream.Null);
 	    }
 
-        public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
+        public unsafe Tree CreateTree(Transaction tx, string name)
         {
             Tree tree = tx.ReadTree(name);
             if (tree != null)
@@ -317,7 +317,7 @@ namespace Voron
 
             Slice key = name;
 
-            tree = Tree.Create(tx, keysPrefixing);
+            tree = Tree.Create(tx);
             tree.Name = name;
             var space = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
 

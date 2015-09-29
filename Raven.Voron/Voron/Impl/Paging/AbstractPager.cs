@@ -54,13 +54,13 @@ namespace Voron.Impl.Paging
         public bool DeleteOnClose { get; set; }
 
         public const int PageSize = 4096;
+
 		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
 
 	    public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
-		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize + Constants.PrefixedSliceHeaderSize;
+		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 
 		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
-	    public static readonly int NodeMaxSizePrefixedKeys = (PageMaxSpace - (Constants.PrefixInfoSectionSize + (TreePage.PrefixCount*Constants.PrefixNodeHeaderSize) + TreePage.PrefixCount /* possible 2-byte alignment for each prefix */))/2 - 1;
 
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
@@ -255,28 +255,18 @@ namespace Voron.Impl.Paging
 
 	    public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
 
-	    public static int GetMaxKeySize(bool keysPrefixing)
+	    public static int GetMaxKeySize()
 	    {
-		    return keysPrefixing == false 
-				? NodeMaxSize - RequiredSpaceForNewNode 
-				: NodeMaxSizePrefixedKeys - RequiredSpaceForNewNodePrefixedKeys;
+		    return NodeMaxSize - RequiredSpaceForNewNode;
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    public static bool IsKeySizeValid(int keySize, bool keysPrefixing)
+	    public static bool IsKeySizeValid(int keySize)
 	    {
-			if (keysPrefixing == false)
-			{
-				if (keySize + RequiredSpaceForNewNode > NodeMaxSize)
-                    return false;
+            if (keySize + RequiredSpaceForNewNode > NodeMaxSize)
+                return false;
 
-				return true;
-			}
-
-			if (keySize + RequiredSpaceForNewNodePrefixedKeys > NodeMaxSizePrefixedKeys)
-				return false;
-
-			return true;
+            return true;
 	    }
     }
 }

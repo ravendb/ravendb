@@ -132,7 +132,7 @@ namespace Voron.Trees
 			TemporaryPage tmp;
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
-				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
+				var mergedPage = tmp.GetTempPage();
                 Memory.Copy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
@@ -140,18 +140,17 @@ namespace Voron.Trees
 				for (int i = 0; i < right.NumberOfEntries; i++)
 				{
 					right.LastSearchPosition = i;
+
 					var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
 					var node = right.GetNode(i);
 
-					var prefixedKey = mergedPage.PrepareKeyToInsert(key, mergedPage.NumberOfEntries);
-
-					if (mergedPage.HasSpaceFor(_tx, SizeOf.NodeEntryWithAnotherKey(node, prefixedKey) + Constants.NodeOffsetSize + SizeOf.NewPrefix(prefixedKey)) == false)
+					if (mergedPage.HasSpaceFor(_tx, SizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize ) == false)
 					{
 						right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
 						return false;
 					}
 
-					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
+					mergedPage.CopyNodeDataToEndOfPage(node, key);
 				}
 
                 Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
@@ -202,23 +201,21 @@ namespace Voron.Trees
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-	        var prefixedOriginalFromKey = to.PrepareKeyToInsert(originalFromKeyStart, to.LastSearchPosition);
-
 	        byte* dataPos;
 	        var fromDataSize = fromNode->DataSize;
 	        switch (fromNode->Flags)
 	        {
 				case TreeNodeFlags.PageRef:
-					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, -1);
-					dataPos = to.AddPageRefNode(to.LastSearchPosition, prefixedOriginalFromKey, fromNode->PageNumber);
+					to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
+					dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
 					break;
 				case TreeNodeFlags.Data:
-					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
-					dataPos = to.AddDataNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
+					dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
 					break;
 				case TreeNodeFlags.MultiValuePageRef:
-					to.EnsureHasSpaceFor(_tx, prefixedOriginalFromKey, fromDataSize);
-					dataPos = to.AddMultiValueNode(to.LastSearchPosition, prefixedOriginalFromKey, fromDataSize, nodeVersion);
+					to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
+					dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
 					break;
 				default:
 			        throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
@@ -243,19 +240,16 @@ namespace Voron.Trees
 			AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
         }
 
-		private void AddSeparatorToParentPage(TreePage parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
+		private void AddSeparatorToParentPage(TreePage parentPage, long pageNumber, Slice separatorKey, int separatorKeyPosition)
 		{
-			var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
-
-			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
+			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
 			{
-				var pageSplitter = new TreePageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
-					0, _cursor);
+				var pageSplitter = new TreePageSplitter(_tx, _tree, separatorKey, -1, pageNumber, TreeNodeFlags.PageRef, 0, _cursor);
 				pageSplitter.Execute();
 			}
 			else
 			{
-				parentPage.AddPageRefNode(separatorKeyPosition, separatorKeyToInsert, pageNumber);
+				parentPage.AddPageRefNode(separatorKeyPosition, separatorKey, pageNumber);
 			}
 		}
 
@@ -263,7 +257,7 @@ namespace Voron.Trees
         {
             Debug.Assert(from.IsBranch);
 
-	        var originalFromKey = to.PrepareKeyToInsert(GetActualKey(from, from.LastSearchPositionOrLastEntry), to.LastSearchPosition);
+	        var originalFromKey = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             to.EnsureHasSpaceFor(_tx, originalFromKey, -1);
 
@@ -280,20 +274,16 @@ namespace Voron.Trees
 	            var implicitLeftNode = to.GetNode(0);
 				var leftPageNumber = implicitLeftNode->PageNumber;
 
-	            MemorySlice implicitLeftKeyToInsert;
+	            Slice implicitLeftKeyToInsert;
 
 	            if (implicitLeftNode == actualKeyNode)
 	            {
-					// no need to create a prefix, just use the existing prefixed key from the node
-					// this also prevents from creating a prefix which is the full key given in 'implicitLeftKey'
-
-		            if (_tree.KeysPrefixing)
-			            implicitLeftKeyToInsert = new PrefixedSlice(actualKeyNode);
-		            else
-			            implicitLeftKeyToInsert = new Slice(actualKeyNode);
+			        implicitLeftKeyToInsert = new Slice(actualKeyNode);
 	            }
 				else
-					implicitLeftKeyToInsert = to.PrepareKeyToInsert(implicitLeftKey, 1);
+                {
+                    implicitLeftKeyToInsert = implicitLeftKey;
+                }					
 	            
 				to.EnsureHasSpaceFor(_tx, implicitLeftKeyToInsert, -1);
 				to.AddPageRefNode(1, implicitLeftKeyToInsert, leftPageNumber);
@@ -331,14 +321,14 @@ namespace Voron.Trees
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private MemorySlice GetActualKey(TreePage page, int pos)
+	    private Slice GetActualKey(TreePage page, int pos)
 	    {
 		    TreeNodeHeader* _;
 		    return GetActualKey(page, pos, out _);
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private MemorySlice GetActualKey(TreePage page, int pos, out TreeNodeHeader* node)
+        private Slice GetActualKey(TreePage page, int pos, out TreeNodeHeader* node)
         {
             node = page.GetNode(pos);
 			var key = page.GetNodeKey(node);

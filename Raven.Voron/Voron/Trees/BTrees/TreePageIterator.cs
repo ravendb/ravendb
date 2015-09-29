@@ -7,7 +7,7 @@ namespace Voron.Trees
 	{
 		private readonly TreePage _page;
 		private Slice _currentKey = new Slice(SliceOptions.Key);
-		private MemorySlice _currentInternalKey;
+		private Slice _currentInternalKey;
 	    private bool _disposed;
 
 		public TreePageIterator(TreePage page)
@@ -34,6 +34,7 @@ namespace Voron.Trees
 
 			_page.SetNodeKey(current, ref _currentInternalKey);
 			_currentKey = _currentInternalKey.ToSlice();
+
 			return this.ValidateCurrentKey(current, _page);
 		}
 
