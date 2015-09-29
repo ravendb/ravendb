@@ -112,7 +112,6 @@
     <Compile Include="Counters\Connections\CounterConvention.cs" />
     <Compile Include="Counters\RavenCountersClient.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
-    <Compile Include="Document\AsyncPump.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\ChunkedRemoteBulkInsertOperation.cs" />
