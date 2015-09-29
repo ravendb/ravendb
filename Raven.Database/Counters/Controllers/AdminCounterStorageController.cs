@@ -158,9 +158,9 @@ namespace Raven.Database.Counters.Controllers
             }
 
 			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>().ConfigureAwait(false);
-            CountersLandlord.Protect(dbDoc);
-            var json = RavenJObject.FromObject(dbDoc);
-            json.Remove("Id");
+			CountersLandlord.Protect(dbDoc);
+			var json = RavenJObject.FromObject(dbDoc);
+			json.Remove("Id");
 
 			SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
