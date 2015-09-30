@@ -8,7 +8,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -51,47 +50,49 @@ namespace Raven.Tests.Core.ChangesApi
 	    {
 		    var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
 
-			using (var store = NewRemoteDocumentStore())
-		    {
-				using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
-				{
-					var testTimer = Stopwatch.StartNew();
-					store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(counter.Enqueue);
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
+                {
+                    var testTimer = Stopwatch.StartNew();
+                    store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(counter.Enqueue);
 
-						bulkInsert.Store(new ChunkedBulkInsert.Node
-						{
-							Name = "Parent"
-						});
- 
-		
-					IssueGCRequest(store);
+                    bulkInsert.Store(new ChunkedBulkInsert.Node
+                    {
+                        Name = "Parent"
+                    });
 
-					bulkInsert.Store(new ChunkedBulkInsert.Node
-					{
-						Name = "Parent"
-					});
+                    IssueGCRequest(store);
 
-					const int maxMillisecondsToWaitUntilConnectionRestores = 5000;
-				//wait until connection restores
-					RavenJArray response;
-			    var sw = Stopwatch.StartNew();
-					int retryCount = 0;
-			    do
-			    {
-				    response = IssueGetChangesRequest(store);
-						retryCount++;
-			    } while (response == null || 
-							 response.Length == 0 ||
-						 sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
-				
-				//sanity check, if the test fails here, then something is wrong
-			    response.Should().NotBeEmpty("if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.");
+                    bulkInsert.Store(new ChunkedBulkInsert.Node
+                    {
+                        Name = "Parent"
+                    });
 
-				var connectionAge = TimeSpan.Parse(response.First().Value<string>("Age"));
-			    var timeSinceTestStarted = TimeSpan.FromMilliseconds(testTimer.ElapsedMilliseconds);
-				connectionAge.Should().BeLessThan(timeSinceTestStarted);
-		    }
-	    }
+                    const int maxMillisecondsToWaitUntilConnectionRestores = 5000;
+
+                    //wait until connection restores
+                    RavenJArray response;
+                    var sw = Stopwatch.StartNew();
+
+                    int retryCount = 0;
+                    do
+                    {
+                        response = IssueGetChangesRequest(store);
+                        retryCount++;
+                    }
+                    while (response == null || response.Length == 0 || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
+
+                    //sanity check, if the test fails here, then something is wrong
+                    // if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.
+                    Assert.NotEmpty(response);
+
+                    var connectionAge = TimeSpan.Parse(response.First().Value<string>("Age"));
+                    var timeSinceTestStarted = TimeSpan.FromMilliseconds(testTimer.ElapsedMilliseconds);
+
+                    Assert.True(connectionAge < timeSinceTestStarted);
+                }
+            }
         }
 
 	    private static DateTime GetLastForcedGCDateTimeRequest(DocumentStore store)
