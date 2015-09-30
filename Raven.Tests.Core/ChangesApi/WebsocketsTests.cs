@@ -7,7 +7,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -86,16 +85,16 @@ namespace Raven.Tests.Core.ChangesApi
                     do
                     {
                         response = IssueGetChangesRequest(store);
-                    } while (response == null ||
-                             !response.Any() ||
-                             sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
-
+                    } while (response == null || !response.Any() || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
+                    
                     //sanity check, if the test fails here, then something is wrong
-                    response.Should().NotBeEmpty("if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.");
+                    // if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.
+                    Assert.NotEmpty(response);
 
                     var connectionAge = TimeSpan.Parse(response.First().Value<string>("Age"));
                     var timeSinceTestStarted = TimeSpan.FromMilliseconds(testTimer.ElapsedMilliseconds);
-                    connectionAge.Should().BeLessThan(timeSinceTestStarted);
+
+                    Assert.True(connectionAge < timeSinceTestStarted);
                 }
             }
         }
