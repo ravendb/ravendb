@@ -58,14 +58,13 @@ namespace Raven.Abstractions.Extensions
 		{
             var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
             if (IsJson(streamWithCachedHeader))
-			{
-                using (var jsonReader = RavenJsonTextReaderFromStream.Create(streamWithCachedHeader))
-                {
-                    return RavenJObject.Load(jsonReader);
-                }
+            {
+                // note that we intentionally don't close it here
+                var jsonReader = new JsonTextReader(new StreamReader(streamWithCachedHeader));
+                return RavenJObject.Load(jsonReader);
             }
 
-            return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
+		    return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
             {
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});

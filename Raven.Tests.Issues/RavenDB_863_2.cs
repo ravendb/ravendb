@@ -9,6 +9,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -23,10 +24,12 @@ namespace Raven.Tests.Issues
 			configuration.NumberOfItemsToExecuteReduceInSingleStep = 2;
 		}
 
-		[Fact]
-		public void MapReduceWorksEvenWhenReduceReduceKeysToTakeIsSmall()
-		{
-			using (var store = NewDocumentStore())
+        [Theory]
+        [PropertyData("Storages")]
+
+        public void MapReduceWorksEvenWhenReduceReduceKeysToTakeIsSmall(string requestedStorage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
@@ -52,10 +55,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void MapReduceWorksEvenWhenReduceReduceKeysToTakeIsSmall_WithManyReduceKey()
+		[Theory]
+        [PropertyData("Storages")]
+        public void MapReduceWorksEvenWhenReduceReduceKeysToTakeIsSmall_WithManyReduceKey(string requestedStorage)
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{

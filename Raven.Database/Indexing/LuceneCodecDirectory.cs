@@ -1,20 +1,23 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+
 using Lucene.Net.Store;
+
 using Microsoft.Win32.SafeHandles;
+
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
+
 using Sparrow;
+
 using Voron.Platform.Win32;
 
 namespace Raven.Database.Indexing
@@ -178,7 +181,7 @@ namespace Raven.Database.Indexing
                     }
                     catch (AccessViolationException)
                     {
-                        throw new ObjectDisposedException("MmapStream", "Cannot access '"+name+"' because the index input has been disposed");
+						throw new ObjectDisposedException("MmapStream", "Cannot access '" + name + "' because the index input has been disposed");
                     }
 		        }
 
@@ -189,7 +192,7 @@ namespace Raven.Database.Indexing
 		                return 0;
 		            if (count > len - pos)
 		            {
-		                count = (int) (len - pos);
+						count = (int)(len - pos);
 		            }
                     try
                     {
@@ -236,6 +239,11 @@ namespace Raven.Database.Indexing
 		        {
                     this.file = file;
                     this.applyCodecs = applyCodecs;
+					if (file.Length == 0)
+					{
+						stream = applyCodecs(Stream.Null);
+						return;
+					}
 
                     fileHandle = Win32NativeFileMethods.CreateFile(file.FullName,
                         Win32NativeFileAccess.GenericRead,
@@ -250,21 +258,21 @@ namespace Raven.Database.Indexing
                         const int ERROR_FILE_NOT_FOUND = 2;
                         if (Marshal.GetLastWin32Error() == ERROR_FILE_NOT_FOUND)
                             throw new FileNotFoundException(file.FullName);
-                        throw new Win32Exception();
+						throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not open file " + file.FullName);
                     }
 
                     mmf = Win32MemoryMapNativeMethods.CreateFileMapping(fileHandle.DangerousGetHandle(), IntPtr.Zero, Win32MemoryMapNativeMethods.FileMapProtection.PageReadonly,
                         0, 0, null);
                     if (mmf == IntPtr.Zero)
                     {
-                        throw new Win32Exception();
+						throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not create file mapping for " + file.FullName);
                     }
 
                     basePtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf,
                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read,
                         0, 0, UIntPtr.Zero, null);
                     if (basePtr == null)
-                        throw new Win32Exception();
+						throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not map file " + file.FullName);
 
                     stream = applyCodecs(new MmapStream(file.FullName, basePtr, file.Length));
 		        }
@@ -280,10 +288,10 @@ namespace Raven.Database.Indexing
                 if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
 
-                var clone = (CodecIndexInput) base.Clone();
+				var clone = (CodecIndexInput)base.Clone();
                 GC.SuppressFinalize(clone);
 		        clone.isOriginal = false;
-                clone.stream = applyCodecs(new MmapStream(file.FullName, basePtr, file.Length));
+				clone.stream = applyCodecs(file.Length != 0 ? new MmapStream(file.Name, basePtr, file.Length) : Stream.Null);
 		        clone.stream.Position = stream.Position;
                 return clone;
 		    }
@@ -302,7 +310,7 @@ namespace Raven.Database.Indexing
 		    {
                 if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
-                stream.Read(b, offset, len);
+				stream.ReadEntireBlock(b, offset, len);
 		    }
 
 		    protected override void Dispose(bool disposing)
@@ -338,7 +346,7 @@ namespace Raven.Database.Indexing
 
 		    public override void Seek(long pos)
 		    {
-                if(cts.IsCancellationRequested)
+				if (cts.IsCancellationRequested)
                     throw new ObjectDisposedException("CodecIndexInput");
 		        stream.Seek(pos, SeekOrigin.Begin);
 		    }
@@ -361,7 +369,7 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexOutput : BufferedIndexOutput
 		{
-			static readonly ILog log = LogManager.GetCurrentClassLogger();
+			private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 			private readonly FileInfo file;
 			private readonly Stream stream;
@@ -371,6 +379,20 @@ namespace Raven.Database.Indexing
 			{
 				this.file = file;
 				stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
+			}
+
+			~CodecIndexOutput()
+			{
+				try
+				{
+					Log.Error("~CodecIndexOutput() " + file.FullName + "!");
+					Dispose(false);
+				}
+				catch (Exception e)
+				{
+					// Can't throw exceptions from the finalizer thread
+					Log.ErrorException("Cannot dispose of CodecIndexOutput: " + e.Message, e);
+				}
 			}
 
 			public override void FlushBuffer(byte[] b, int offset, int len)
@@ -386,8 +408,8 @@ namespace Raven.Database.Indexing
 
 				using (stream)
 				{
-					base.Dispose(disposing);
-				}
+				base.Dispose(disposing);
+			}
 
 				disposed = true;
 			}

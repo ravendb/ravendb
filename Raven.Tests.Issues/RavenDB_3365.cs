@@ -16,8 +16,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void index_pretty_printer_ignores_whitespaces()
 		{
-			var firstFormat = IndexPrettyPrinter.Format("from order in docs.Orders select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
-			var secondFormat = IndexPrettyPrinter.Format("from order  \t   in docs.Orders       select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
+			var firstFormat = IndexPrettyPrinter.TryFormat("from order in docs.Orders select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
+			var secondFormat = IndexPrettyPrinter.TryFormat("from order  \t   in docs.Orders       select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
 
 			Assert.Equal(firstFormat, secondFormat);
 		}

@@ -811,7 +811,6 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSkipFilesWhenUsingContinuations()
         {

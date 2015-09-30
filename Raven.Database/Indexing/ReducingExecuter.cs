@@ -137,7 +137,7 @@ namespace Raven.Database.Indexing
 
 						if (latest == null)
 							return;
-						actions.Indexing.UpdateLastReduced(indexToWorkOn.Index.indexId, latest.Etag, latest.Timestamp);
+						actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexId, latest.Etag, latest.Timestamp);
 					});
 
 					postReducingOperations.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeleteScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
@@ -196,7 +196,6 @@ namespace Raven.Database.Indexing
 
 			var reducePerformance = new ReducingPerformanceStats(ReduceType.MultiStep);
 
-            var keysToReduceSet = new HashSet<string>(keysToReduce);
 
 			for (int i = 0; i < 3; i++)
 			{
@@ -210,7 +209,7 @@ namespace Raven.Database.Indexing
 
 				var reduceParams = new GetItemsToReduceParams(
 					index.IndexId,
-                    keysToReduceSet,
+                    new HashSet<string>(keysToReduce),
 					level,
 					true,
 					itemsToDelete);
@@ -237,7 +236,7 @@ namespace Raven.Database.Indexing
 
 							reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
-                            int size = 0;                            
+                            int size = 0;                  
           
                             IList<MappedResultInfo> persistedResults;
                             var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -267,15 +266,15 @@ namespace Raven.Database.Indexing
                                 if (persistedResults.Count > 0)
                                 {
 									if (Log.IsDebugEnabled)
-										Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+                                    Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
                                         persistedResults.Count,
                                         string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
-                                        index.IndexId, level, batchTimeWatcher.Elapsed));
+                                        index.Index.PublicName, level, batchTimeWatcher.Elapsed));
                                 }
 								else
                                 {
 									if (Log.IsDebugEnabled)
-										Log.Debug("No reduce keys found for {0}", index.IndexId);
+										Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
                                 }									
 							}
 
@@ -313,7 +312,7 @@ namespace Raven.Database.Indexing
 
 							var reduceTimeWatcher = Stopwatch.StartNew();
 
-                            var results = persistedResults.Where(x => x.Data != null)
+						    var results = persistedResults.Where(x => x.Data != null)
 						        .GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						        .ToList();                            
 
@@ -327,7 +326,7 @@ namespace Raven.Database.Indexing
 
                             if ( Log.IsDebugEnabled )
                             {
-                                Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration, performance.ItemsCount, index.IndexId, reduceTimeWatcher.Elapsed, level);
+                                Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration, performance.ItemsCount, index.Index.PublicName, reduceTimeWatcher.Elapsed, level);
                             }
 
 							autoTuner.AutoThrottleBatchSize(count, size, batchDuration);
@@ -506,11 +505,11 @@ namespace Raven.Database.Indexing
 				var getMappedResultsDuration = new Stopwatch();				
 
 				var reductionPerformanceStats = new List<IndexingPerformanceStats>();
-
-                var keysLeftToReduce = new HashSet<string>(keysToReduce);
+                
+                var keysLeftToReduce = new HashSet<string>(keysToReduce);                                              
 				while (keysLeftToReduce.Count > 0)
-				{					
-					var keysReturned = new HashSet<string>();
+				{
+                    var keysReturned = new HashSet<string>();       
 
                     // Try to diminish the allocations happening because of .Resize()
                     var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);                             
@@ -602,7 +601,7 @@ namespace Raven.Database.Indexing
 	        get { return context.RunReducing; }
 	    }
 
-		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
 			return null;
 		}

@@ -151,8 +151,27 @@ class indexDefinition {
     }
 
     private parseFields(): luceneField[] {
-        return this.fields()
-            .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestionsOptions.indexOf(name) >= 0 || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
+        var fieldSources = [
+            this.analyzers,
+            this.indexes,
+            this.sortOptions,
+            this.stores,
+            this.suggestionsOptions,
+            this.termVectors
+        ];
+
+        var keys = [];
+        for (var i = 0; i < fieldSources.length; i++) {
+            var src = fieldSources[i];
+            if (src == null)
+                continue;
+            for (var key in src) {
+                if (!keys.contains(key))
+                    keys.push(key);
+            }
+        }
+
+        return keys
             .map(fieldName => {
 				var suggestionsEnabled = this.suggestionsOptions && this.suggestionsOptions.indexOf(fieldName) >= 0;
                 return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestionsEnabled, this.termVectors[fieldName], this.fields());
@@ -162,9 +181,16 @@ class indexDefinition {
     private parseSpatialFields(): spatialIndexField[] {
         // The spatial fields are stored as properties on the .spatialIndexes object.
         // The property names will be one of the .fields.
-        return this.fields()
-            .filter(fieldName => this.spatialIndexes && this.spatialIndexes[fieldName])
-            .map(fieldName => new spatialIndexField(fieldName, this.spatialIndexes[fieldName]));
+        
+        var fields = [];
+        if (this.spatialIndexes == null)
+            return fields;
+
+        for (var key in this.spatialIndexes) {
+            var spatialIndex = this.spatialIndexes[key];
+            fields.push(new spatialIndexField(key, spatialIndex));
+        }
+        return fields;
     }
 }
 
