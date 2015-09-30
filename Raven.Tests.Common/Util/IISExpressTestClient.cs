@@ -55,7 +55,7 @@ namespace Raven.Tests.Common.Util
 		{
 			if (iisExpress == null)
 			{
-				iisExpress = new IISExpressDriver(true);
+				iisExpress = new IISExpressDriver();
 				var iisTestWebDirectory = DeployWebProjectToTestDirectory();
 
 				if (settings != null)

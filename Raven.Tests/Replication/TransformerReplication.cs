@@ -380,7 +380,7 @@ namespace Raven.Tests.Replication
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
 
-				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
+				var replicationRequestUrl = $"{source.Url}/databases/testDB/replication/replicate-transformers?op=replicate-all";
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
@@ -391,9 +391,9 @@ namespace Raven.Tests.Replication
 				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
 	
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name).ToList());
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name).ToList());
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name).ToList());
 			}
 		}
 
@@ -434,7 +434,7 @@ namespace Raven.Tests.Replication
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => store == destination2, destination1, destination2, destination3);
 
-				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
+				var replicationRequestUrl = $"{source.Url}/databases/testDB/replication/replicate-transformers?op=replicate-all";
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
