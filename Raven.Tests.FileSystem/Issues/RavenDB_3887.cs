@@ -18,11 +18,8 @@ namespace Raven.Tests.FileSystem.Issues
 	public class RavenDB_3887 : RavenFilesTestBase
 	{
 		[Theory]
-		[InlineData(4194304, "esent")]
 		[InlineData(4194304, "voron")]
-		[InlineData(4194305, "esent")]
 		[InlineData(4194305, "voron")]
-		[InlineData(9 * 1024 * 1024, "esent")]
 		[InlineData(9 * 1024 * 1024, "voron")]
 		public async Task ShouldNotReturnCorruptedFileContent(int size, string storage)
 		{

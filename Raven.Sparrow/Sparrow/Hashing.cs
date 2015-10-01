@@ -12,6 +12,40 @@ namespace Sparrow
     {
         public ulong H1;
         public ulong H2;
+
+        public Metro128Hash(ulong h1, ulong h2)
+        {
+            this.H1 = h1;
+            this.H2 = h2;
+        }
+
+        public byte[] ToByteArray()
+        {
+            var result = new byte[sizeof(ulong) * 2];
+            unsafe
+            {
+                fixed( byte* ptr = result )
+                {
+                    ((ulong*)ptr)[0] = H1;
+                    ((ulong*)ptr)[1] = H2;
+                }
+            }
+            return result;
+        }
+
+        public static Metro128Hash FromByteArray(byte[] source)
+        {
+            if (source.Length != sizeof(ulong) * 2)
+                throw new ArgumentException("Byte array is not a Metro128 hash.");
+
+            unsafe
+            {
+                fixed (byte* ptr = source)
+                {
+                    return new Metro128Hash(((ulong*)ptr)[0], ((ulong*)ptr)[1]);
+                }
+            }
+        }
     }
 
     public unsafe static partial class Hashing
