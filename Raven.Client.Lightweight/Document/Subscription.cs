@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,6 +115,9 @@ namespace Raven.Client.Document
 						Etag lastProcessedEtagOnServer = null;
 						int processedDocs = 0;
 
+						var queue = new BlockingCollection<T>();
+						Task processingTask = null;
+
 						using (var subscriptionRequest = CreatePullingRequest())
 						using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
 						{
@@ -136,7 +140,51 @@ namespace Raven.Client.Document
 									while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 									{
 										if (pulledDocs == false) // first doc in batch
+										{
 											BeforeBatch();
+
+											processingTask = Task.Run(() =>
+											{
+												T doc;
+												while (queue.TryTake(out doc, Timeout.Infinite))
+												{
+													cts.Token.ThrowIfCancellationRequested();
+
+													foreach (var subscriber in subscribers)
+													{
+														try
+														{
+															subscriber.OnNext(doc);
+														}
+														catch (Exception ex)
+														{
+															logger.WarnException(string.Format("Subscription #{0}. Subscriber threw an exception", id), ex);
+
+															if (options.IgnoreSubscribersErrors == false)
+															{
+																IsErroredBecauseOfSubscriber = true;
+																LastSubscriberException = ex;
+
+																try
+																{
+																	subscriber.OnError(ex);
+																}
+																catch (Exception)
+																{
+																	// can happen if a subscriber doesn't have an onError handler - just ignore it
+																}
+																break;
+															}
+														}
+													}
+
+													if (IsErroredBecauseOfSubscriber)
+														break;
+
+													processedDocs++;
+												}
+											});
+										}
 
 										pulledDocs = true;
 
@@ -144,54 +192,21 @@ namespace Raven.Client.Document
 
 										var jsonDoc = streamedDocs.Current;
 
-										T instance = null;
-
-										foreach (var subscriber in subscribers)
+										if (isStronglyTyped)
 										{
-											try
-											{
-												if (isStronglyTyped)
-												{
-													if (instance == null)
-													{
-														instance = jsonDoc.Deserialize<T>(conventions);
+											var instance = jsonDoc.Deserialize<T>(conventions);
 
-														var docId = jsonDoc[Constants.Metadata].Value<string>("@id");
+											var docId = jsonDoc[Constants.Metadata].Value<string>("@id");
 
-														if (string.IsNullOrEmpty(docId) == false)
-															generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
-													}
-												
-													subscriber.OnNext(instance);
-												}
-												else
-												{
-													subscriber.OnNext((T) (object) jsonDoc);
-												}
-											}
-											catch (Exception ex)
-											{
-												logger.WarnException(string.Format("Subscription #{0}. Subscriber threw an exception", id), ex);
+											if (string.IsNullOrEmpty(docId) == false)
+												generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
 
-												if (options.IgnoreSubscribersErrors == false)
-												{
-													IsErroredBecauseOfSubscriber = true;
-													LastSubscriberException = ex;
-
-													try
-													{
-														subscriber.OnError(ex);
-													}
-													catch (Exception)
-													{
-														// can happen if a subscriber doesn't have an onError handler - just ignore it
-													}
-													break;
-												}
-											}
+											queue.Add(instance);
 										}
-
-										processedDocs++;
+										else
+										{
+											queue.Add((T) (object) jsonDoc);
+										}
 
 										if (IsErroredBecauseOfSubscriber)
 											break;
@@ -199,6 +214,11 @@ namespace Raven.Client.Document
 								}
 							}
 						}
+
+						queue.CompleteAdding();
+
+						if (processingTask != null)
+							await processingTask;
 
 						if (IsErroredBecauseOfSubscriber)
 							break;
@@ -357,7 +377,7 @@ namespace Raven.Client.Document
 
 			if (ex is SubscriptionInUseException || // another client has connected to the subscription
 				ex is SubscriptionDoesNotExistException ||  // subscription has been deleted meanwhile
-			    ex is SubscriptionClosedException) // someone forced us to drop the connection by calling Subscriptions.Release
+			    (ex is SubscriptionClosedException)) // someone forced us to drop the connection by calling Subscriptions.Release
 			{
 				IsConnectionClosed = true;
 
