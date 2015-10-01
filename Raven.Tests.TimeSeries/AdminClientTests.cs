@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using System.Linq;
 using Raven.Abstractions.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Tests.Common;
@@ -20,8 +20,9 @@ namespace Raven.Tests.TimeSeries
 				await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(TimeSeriesName));
 
 				var timeSeriesNames = await store.Admin.GetTimeSeriesNamesAsync();
-				timeSeriesNames.Should().HaveCount(1)
-									.And.Contain(TimeSeriesName);
+
+                Assert.Equal(1, timeSeriesNames.Count());
+                Assert.Contains(TimeSeriesName, timeSeriesNames);
 			}
 		}
 
@@ -37,8 +38,11 @@ namespace Raven.Tests.TimeSeries
 				await store.Admin.CreateTimeSeriesAsync(MultiDatabase.CreateTimeSeriesDocument(expectedClientNames[2]));
 
 				var timeSeriesNames = await store.Admin.GetTimeSeriesNamesAsync();
-				timeSeriesNames.Should().BeEquivalentTo(expectedClientNames);
-			}
+
+                Assert.Equal(expectedClientNames.Length, timeSeriesNames.Count());
+                foreach (var name in expectedClientNames)
+                    Assert.Contains(name, timeSeriesNames);
+            }
 		}
 
 		[Fact]
@@ -54,8 +58,11 @@ namespace Raven.Tests.TimeSeries
 				await store.Admin.DeleteTimeSeriesAsync("TimeSeriesThatWillBeDeleted", true);
 
 				var timeSeriesNames = await store.Admin.GetTimeSeriesNamesAsync();
-				timeSeriesNames.Should().BeEquivalentTo(expectedClientNames);
-			}
+
+                Assert.Equal(expectedClientNames.Length, timeSeriesNames.Count());
+                foreach (var name in expectedClientNames)
+                    Assert.Contains(name, timeSeriesNames);
+            }
 		}
 
 		[Fact]
@@ -71,8 +78,11 @@ namespace Raven.Tests.TimeSeries
 				await Task.WhenAll(t1, t2, t3);
 
 				var timeSeriesNames = await store.Admin.GetTimeSeriesNamesAsync();
-				timeSeriesNames.Should().BeEquivalentTo(expectedClientNames);
-			}
+
+                Assert.Equal(expectedClientNames.Length, timeSeriesNames.Count());
+                foreach (var name in expectedClientNames)
+                    Assert.Contains(name, timeSeriesNames);
+            }
 		}
 
 

@@ -2,13 +2,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -650,8 +648,7 @@ namespace Raven.Tests.FileSystem
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
 
-	        adminClient.Invoking(x => x.CreateFileSystemAsync(fileSystemSpec).Wait())
-					   .ShouldThrow<InvalidOperationException>();
+            Assert.Throws<InvalidOperationException>(() => adminClient.CreateFileSystemAsync(fileSystemSpec).Wait());
         }
 
         [Fact]
