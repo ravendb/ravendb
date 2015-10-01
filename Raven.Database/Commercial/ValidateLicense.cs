@@ -241,7 +241,7 @@ namespace Raven.Database.Commercial
 			{
 				if (string.Equals(maxParallel, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
-					MemoryStatistics.MaxParallelism = Math.Min(2, (int.Parse(maxParallel) * 2));
+					MemoryStatistics.MaxParallelism = Math.Max(2, (int.Parse(maxParallel) * 2));
 				}
 			}
 			var clasterInspector = new ClusterInspecter();
