@@ -64,14 +64,12 @@ namespace Sparrow
 
                         while (buffer <= limit)
                         {
-                            v1 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v2 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v3 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v4 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
+                            v1 += ((uint*)buffer)[0] * XXHash32Constants.PRIME32_2;
+                            v2 += ((uint*)buffer)[1] * XXHash32Constants.PRIME32_2;
+                            v3 += ((uint*)buffer)[2] * XXHash32Constants.PRIME32_2;
+                            v4 += ((uint*)buffer)[3] * XXHash32Constants.PRIME32_2;
+
+                            buffer += 4 * sizeof(uint);
 
                             v1 = Bits.RotateLeft32(v1, 13);
                             v2 = Bits.RotateLeft32(v2, 13);
@@ -230,19 +228,17 @@ namespace Sparrow
 
                         while (buffer <= limit)
                         {
-                            v1 += *((ulong*)buffer) * XXHash64Constants.PRIME64_2;
-                            buffer += sizeof(ulong);
-                            v2 += *((ulong*)buffer) * XXHash64Constants.PRIME64_2;
-                            buffer += sizeof(ulong);
-                            v3 += *((ulong*)buffer) * XXHash64Constants.PRIME64_2;
-                            buffer += sizeof(ulong);
-                            v4 += *((ulong*)buffer) * XXHash64Constants.PRIME64_2;
-                            buffer += sizeof(ulong);
+                            v1 += ((ulong*)buffer)[0] * XXHash64Constants.PRIME64_2;
+                            v2 += ((ulong*)buffer)[1] * XXHash64Constants.PRIME64_2;
+                            v3 += ((ulong*)buffer)[2] * XXHash64Constants.PRIME64_2;
+                            v4 += ((ulong*)buffer)[3] * XXHash64Constants.PRIME64_2;
+
+                            buffer += 4 * sizeof(ulong);
 
                             v1 = Bits.RotateLeft64(v1, 31);
                             v2 = Bits.RotateLeft64(v2, 31);
                             v3 = Bits.RotateLeft64(v3, 31);
-                            v4 = Bits.RotateLeft64(v4, 31);
+                            v4 = Bits.RotateLeft64(v4, 31);                            
 
                             v1 *= XXHash64Constants.PRIME64_1;
                             v2 *= XXHash64Constants.PRIME64_1;
@@ -281,28 +277,30 @@ namespace Sparrow
                         h64 = Bits.RotateLeft64(v1, 1) + Bits.RotateLeft64(v2, 7) + Bits.RotateLeft64(v3, 12) + Bits.RotateLeft64(v4, 18);
 
                         v1 *= XXHash64Constants.PRIME64_2;
+                        v2 *= XXHash64Constants.PRIME64_2;
+                        v3 *= XXHash64Constants.PRIME64_2;
+                        v4 *= XXHash64Constants.PRIME64_2;
+
                         v1 = Bits.RotateLeft64(v1, 31);
+                        v2 = Bits.RotateLeft64(v2, 31);
+                        v3 = Bits.RotateLeft64(v3, 31);
+                        v4 = Bits.RotateLeft64(v4, 31);
+
                         v1 *= XXHash64Constants.PRIME64_1;
+                        v2 *= XXHash64Constants.PRIME64_1;
+                        v3 *= XXHash64Constants.PRIME64_1;
+                        v4 *= XXHash64Constants.PRIME64_1;
+
                         h64 ^= v1;
                         h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
-                        v2 *= XXHash64Constants.PRIME64_2;
-                        v2 = Bits.RotateLeft64(v2, 31);
-                        v2 *= XXHash64Constants.PRIME64_1;
                         h64 ^= v2;
                         h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
-                        v3 *= XXHash64Constants.PRIME64_2;
-                        v3 = Bits.RotateLeft64(v3, 31);
-                        v3 *= XXHash64Constants.PRIME64_1;
                         h64 ^= v3;
                         h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
 
-                        v4 *= XXHash64Constants.PRIME64_2;
-                        v4 = Bits.RotateLeft64(v4, 31);
-                        v4 *= XXHash64Constants.PRIME64_1;
                         h64 ^= v4;
-
                         h64 = h64 * XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_4;
                     }
                     else
