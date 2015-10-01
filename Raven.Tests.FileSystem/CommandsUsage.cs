@@ -2,13 +2,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -299,14 +297,13 @@ namespace Raven.Tests.FileSystem
 		[Fact]
 		public async Task Should_modify_etag_after_upload()
 		{
-			var content = new RandomStream(10);
 			var client = NewAsyncClient();
 
 			// note that file upload modifies ETag twice and indicates file to delete what creates another etag for tombstone
-            await client.UploadAsync("test.bin", content, new RavenJObject());
+            await client.UploadAsync("test.bin", new RandomStream(10), new RavenJObject());
             var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
             var etag0 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
-            await client.UploadAsync("test.bin", content, new RavenJObject());
+            await client.UploadAsync("test.bin", new RandomStream(10), new RavenJObject());
             resultFileMetadata = await client.GetMetadataForAsync("test.bin");
             var etag1 = Etag.Parse(resultFileMetadata.Value<string>(Constants.MetadataEtagField));
 			
@@ -651,8 +648,7 @@ namespace Raven.Tests.FileSystem
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
 
-	        adminClient.Invoking(x => x.CreateFileSystemAsync(fileSystemSpec).Wait())
-					   .ShouldThrow<InvalidOperationException>();
+            Assert.Throws<InvalidOperationException>(() => adminClient.CreateFileSystemAsync(fileSystemSpec).Wait());
         }
 
         [Fact]

@@ -17,6 +17,7 @@ properties {
 	$version = "3.5"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
+	$liveTest_dir = "C:\Sites\RavenDB 3\Web"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
 }
@@ -439,31 +440,18 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
-@'
-	<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
 
-  <title>Maintenance work</title>
-</head>
-<body>
-  <h1>Maintenance work</h1>
-  <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
-</body>
-</html>
-'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
-
-
-	Remove-Item "C:\Sites\RavenDB $version\Web\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
-	mkdir "C:\Sites\RavenDB $version\Web\Plugins" -ErrorAction SilentlyContinue
-	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "C:\Sites\RavenDB $version\Web\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
+	Stop-WebAppPool "RavenDB 3" -ErrorAction SilentlyContinue # The error is probably because it was already stopped
 	
-	Remove-Item "C:\Sites\RavenDB $version\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
-	mkdir "C:\Sites\RavenDB $version\Web\bin" -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB $version\Web\" -Recurse -ErrorAction SilentlyContinue
+	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
+	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
+	
+	Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
 
-	Remove-Item "$build_dir\Output\Web\app_offline.htm"
+	Start-WebAppPool "RavenDB 3"
 }
 
 task Upload {

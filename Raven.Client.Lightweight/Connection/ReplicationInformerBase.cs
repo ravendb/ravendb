@@ -258,9 +258,7 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-
-                bool isPrimary = replicationDestination.Url == primaryOperation.Url;
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, isPrimary, operationResult.Error, token) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error,token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;

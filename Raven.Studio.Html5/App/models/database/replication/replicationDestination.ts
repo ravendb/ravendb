@@ -147,6 +147,10 @@ class replicationDestination {
         return typeof(item.script()) !== "undefined";
     }
 
+    toggleSkipIndexReplication() {
+        this.skipIndexReplication.toggle();
+    }
+
     static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
             Url: null,

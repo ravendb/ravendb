@@ -12,41 +12,20 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Common.Attributes
 {
-	public class TimeBombedFactAttribute : FactAttribute, ITestCommand
-	{
-		public TimeBombedFactAttribute(int year, int month, int day, string msg)
-		{
-			SkipUntil = new DateTime(year, month, day);
-		}
-
-		public DateTime SkipUntil { get; set; }
-
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			if (DateTime.Today < SkipUntil)
-				return Enumerable.Empty<ITestCommand>();
-		    DisplayName = method.TypeName + "." + method.Name;
-		    return new[] {this};
-		    //return base.EnumerateTestCommands(method);
-		}
-
-
-	    public MethodResult Execute(object testClass)
-	    {
-            throw new InvalidOperationException("Time bombed fact expired");
-        }
-
-        public XmlNode ToStartXml()
+    public class TimeBombedFactAttribute : FactAttribute
+    {
+        public TimeBombedFactAttribute(int year, int month, int day, string msg)
         {
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml("<dummy/>");
-            XmlNode testNode = XmlUtility.AddElement(doc.ChildNodes[0], "start");
-
-            XmlUtility.AddAttribute(testNode, "name", DisplayName);
-
-            return testNode;
+            SkipUntil = new DateTime(year, month, day);
         }
 
-	    public bool ShouldCreateInstance { get { return false; } }
-	}
+        public DateTime SkipUntil { get; set; }
+
+        protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+        {
+            if (DateTime.Today < SkipUntil)
+                return Enumerable.Empty<ITestCommand>();
+            return base.EnumerateTestCommands(method);
+        }
+    }
 }

@@ -1,15 +1,24 @@
 ﻿using Raven.Json.Linq;
-using System.Collections.Specialized;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.FileSystem.Storage
 {
 	public class RenameFileOperation
 	{
-        public string FileSystem { get; set; }
-		public string Name { get; set; }
+		public RenameFileOperation(string name, string rename, Etag currentEtag, RavenJObject metadataAfterOperation)
+		{
+			Name = name;
+			Rename = rename;
+			Etag = currentEtag;
+			MetadataAfterOperation = metadataAfterOperation;
+		}
 
-		public string Rename { get; set; }
+		public string Name { get; private set; }
 
-		public RavenJObject MetadataAfterOperation { get; set; }
+		public string Rename { get; private set; }
+
+		public Etag Etag { get; private set; }
+
+		public RavenJObject MetadataAfterOperation { get; private set; }
 	}
 }

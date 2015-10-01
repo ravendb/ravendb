@@ -197,7 +197,6 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public async Task Should_mark_file_as_conflicted_when_two_differnet_versions()
 		{
-			var sourceContent = new RandomStream(10);
             var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
@@ -206,8 +205,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var destinationClient = NewAsyncClient(0);
 			var sourceClient = NewAsyncClient(1);
 
-            await sourceClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
-            await destinationClient.UploadAsync("test.bin", sourceContent, sourceMetadata);
+            await sourceClient.UploadAsync("test.bin", new RandomStream(10), sourceMetadata);
+            await destinationClient.UploadAsync("test.bin", new RandomStream(10), sourceMetadata);
 
 			var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 

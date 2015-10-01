@@ -168,17 +168,21 @@ namespace Raven.StorageExporter
             } while (totalIdentities > currentIdentitiesCount);
         }
 
-        public bool FilterIdentity(string indentityName)
-        {
-            if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
-                return false;
+		public bool FilterIdentity(string identityName)
+		{
+			if ("Raven/Etag".Equals(identityName, StringComparison.OrdinalIgnoreCase))
+				return false;
 
-            if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
-                return false;
-            return true;
-        }
+			if ("IndexId".Equals(identityName, StringComparison.OrdinalIgnoreCase))
+				return false;
 
-        private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
+			if (Constants.RavenSubscriptionsPrefix.Equals(identityName, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			return false;
+		}
+
+		private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
         {
             if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
             {

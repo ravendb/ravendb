@@ -19,6 +19,7 @@ namespace Raven.Abstractions.Data
 			BatchOptions = new SubscriptionBatchOptions();
 			ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
 			TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
+			PullingRequestTimeout = TimeSpan.FromMinutes(5);
 			Strategy = SubscriptionOpeningStrategy.OpenIfFree;
 		}
 
@@ -29,6 +30,8 @@ namespace Raven.Abstractions.Data
 		public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
 
 		public TimeSpan ClientAliveNotificationInterval { get; set; }
+
+		public TimeSpan PullingRequestTimeout { get; set; }
 
 		public bool IgnoreSubscribersErrors { get; set; }
 

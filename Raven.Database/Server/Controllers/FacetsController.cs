@@ -15,6 +15,7 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Sparrow;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {

@@ -154,10 +154,13 @@ namespace Raven.Smuggler
 
 			var filteredIdentities = identities.Where(x =>
 			{
-				if ("Raven/Etag".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase))
+				if ("Raven/Etag".Equals(x.Key, StringComparison.OrdinalIgnoreCase))
 					return false;
 
-				if ("IndexId".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
+				if ("IndexId".Equals(x.Key, StringComparison.OrdinalIgnoreCase))
+					return false;
+
+				if (Constants.RavenSubscriptionsPrefix.Equals(x.Key, StringComparison.OrdinalIgnoreCase))
 					return false;
 
 				if (operateOnTypes.HasFlag(ItemType.Documents))

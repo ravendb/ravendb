@@ -120,7 +120,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return newPageId;
         }
 
-        public MetadataUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
+        public FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
         {
 			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
@@ -158,7 +158,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 fileCount.Add(writeBatch.Value, keySlice, keyString);
 	        }
 
-	        return new MetadataUpdateResult()
+	        return new FileUpdateResult()
 	        {
 		        Etag = newEtag
 	        };
@@ -384,7 +384,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             DeleteFile(filename);
         }
 
-        public MetadataUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
+        public FileUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag)
         {
             var key = CreateKey(filename);
             var keySlice = (Slice)key;
@@ -416,7 +416,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             filesByEtag.Delete(writeBatch.Value, CreateKey(existingEtag));
             filesByEtag.Add(writeBatch.Value, (Slice)CreateKey(newEtag), key);
 
-	        return new MetadataUpdateResult()
+	        return new FileUpdateResult()
 	        {
 		        PrevEtag = existingEtag,
 		        Etag = newEtag

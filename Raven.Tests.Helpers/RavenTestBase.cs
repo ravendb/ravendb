@@ -157,6 +157,7 @@ namespace Raven.Tests.Helpers
         /// <param name="transformers">A collection of transformers to execute.</param>
         /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
         /// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executed.</param>
+        /// <param name="conventions">The conventions to be used when creating a new embeddable document store</param>
         /// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>noStaleQueries</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
         /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
         public EmbeddableDocumentStore NewDocumentStore(
@@ -173,7 +174,8 @@ namespace Raven.Tests.Helpers
             IEnumerable<AbstractIndexCreationTask> indexes = null,
             IEnumerable<AbstractTransformerCreationTask> transformers = null,
             IEnumerable<IEnumerable> seedData = null,
-            bool noStaleQueries = false)
+            bool noStaleQueries = false,
+			DocumentConvention conventions = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
 
@@ -190,7 +192,8 @@ namespace Raven.Tests.Helpers
                     RunInMemory = runInMemory,
                     Port = port ?? 8079,
                     AnonymousUserAccessMode = anonymousUserAccessMode
-                }
+                },
+				Conventions = conventions ?? new DocumentConvention()
             };
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");

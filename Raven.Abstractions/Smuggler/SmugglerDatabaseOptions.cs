@@ -36,6 +36,7 @@ namespace Raven.Abstractions.Smuggler
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
+	        HeartbeatLatency = TimeSpan.FromSeconds(10);
 		}
 
         private void ConfigureDefaultFilters()
@@ -56,6 +57,9 @@ namespace Raven.Abstractions.Smuggler
 
         private string continuationFile;
         private bool useContinuationFile = false;
+
+		public TimeSpan HeartbeatLatency { get; set; }
+
         public string ContinuationToken 
         {
             get { return continuationFile; }

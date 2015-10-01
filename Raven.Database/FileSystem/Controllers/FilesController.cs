@@ -324,13 +324,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 				Historian.UpdateLastModified(metadata);
 
-				var operation = new RenameFileOperation
-				{
-					FileSystem = FileSystem.Name,
-					Name = name,
-					Rename = rename,
-					MetadataAfterOperation = metadata
-				};
+				var operation = new RenameFileOperation(name, rename, existingFile.Etag, metadata);
 
 				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 				accessor.PulseTransaction(); // commit rename operation config

@@ -79,10 +79,14 @@ namespace Raven.Tests.FileSystem.Shard
             ms.Position = 0;
 
             await shardedClient.UploadAsync("a.txt", ms);
-            await shardedClient.UploadAsync("b.txt", ms);
-            await shardedClient.UploadAsync("c.txt", ms);
-            await shardedClient.UploadAsync("d.txt", ms);
-            await shardedClient.UploadAsync("e.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("b.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("c.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("d.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("e.txt", ms);
 
             var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards);
 	        var result = await shardedClient.BrowseAsync(2, pagingInfo);
@@ -112,12 +116,17 @@ namespace Raven.Tests.FileSystem.Shard
             ms.Position = 0;
 
             await shardedClient.UploadAsync("a.txt", ms);
-            await shardedClient.UploadAsync("b.txt", ms);
-            await shardedClient.UploadAsync("c.txt", ms);
-            await shardedClient.UploadAsync("d.txt", ms);
-            await shardedClient.UploadAsync("e.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("b.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("c.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("d.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("e.txt", ms);
+			ms.Position = 0;
 
-            var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 2 };
+			var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 2 };
             var result = await shardedClient.BrowseAsync(2, pagingInfo);
             Assert.Equal(1, result.Length);
 
@@ -138,12 +147,17 @@ namespace Raven.Tests.FileSystem.Shard
             ms.Position = 0;
 
             await shardedClient.UploadAsync("a.txt", ms);
-            await shardedClient.UploadAsync("b.txt", ms);
-            await shardedClient.UploadAsync("c.txt", ms);
-            await shardedClient.UploadAsync("d.txt", ms);
-            await shardedClient.UploadAsync("e.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("b.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("c.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("d.txt", ms);
+			ms.Position = 0;
+			await shardedClient.UploadAsync("e.txt", ms);
+			ms.Position = 0;
 
-            var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 20 };
+			var pagingInfo = new ShardPagingInfo(shardedClient.NumberOfShards) { CurrentPage = 20 };
             try
             {
                 await shardedClient.BrowseAsync(2, pagingInfo);

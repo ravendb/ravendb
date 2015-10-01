@@ -36,7 +36,9 @@ namespace Raven.Client.Indexes
 		private readonly bool translateIdentityProperty;
 		private ExpressionOperatorPrecedence _currentPrecedence;
 		private Dictionary<object, int> _ids;
+        private Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); 
 		private bool castLambdas;
+
 
 		// Methods
 		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
@@ -48,7 +50,7 @@ namespace Raven.Client.Indexes
 			this.queryRootName = queryRootName;
 		}
 
-		private void AddLabel(LabelTarget label)
+		private int GetLabelId(LabelTarget label)
 		{
 			if (_ids == null)
 			{
@@ -58,6 +60,7 @@ namespace Raven.Client.Indexes
 			{
 				_ids.Add(label, _ids.Count);
 			}
+		    return _ids.Count;
 		}
 
 		private void AddParam(ParameterExpression p)
@@ -170,22 +173,6 @@ namespace Raven.Client.Indexes
 			return "CallSiteBinder";
 		}
 
-		private int GetLabelId(LabelTarget label)
-		{
-			int count;
-			if (_ids == null)
-			{
-				_ids = new Dictionary<object, int>();
-				AddLabel(label);
-				return 0;
-			}
-			if (!_ids.TryGetValue(label, out count))
-			{
-				count = _ids.Count;
-				AddLabel(label);
-			}
-			return count;
-		}
 
 		private int GetParamId(ParameterExpression p)
 		{
@@ -1605,29 +1592,34 @@ namespace Raven.Client.Indexes
 				var old = castLambdas;
 				try
 				{
-					switch (node.Method.Name)
-					{
-						case "Sum":
-						case "Average":
-						case "Min":
-						case "Max":
-							castLambdas = true;
-							break;
-						default:
-							castLambdas = false;
-							break;
-					}
-					Visit(node.Arguments[num2]);
-
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-					if (node.Method.Name == "OfType")
-					{
-						var type = node.Method.GetGenericArguments()[0];
-						var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
-						Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
-						Out(typeFullName);
-						Out("\", StringComparison.Ordinal))");
-					}
+				    switch (node.Method.Name)
+				    {
+				        case "Sum":
+				        case "Average":
+				        case "Min":
+				        case "Max":
+				            castLambdas = true;
+				            break;
+				        default:
+				            castLambdas = false;
+				            break;
+				    }
+				    var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
+				    if (node.Method.Name == "Select")
+				    {
+				        _avoidDuplicatedParameters = true;
+				    }
+				    Visit(node.Arguments[num2]);
+				    _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
+				    // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
+				    if (node.Method.Name == "OfType")
+				    {
+				        var type = node.Method.GetGenericArguments()[0];
+				        var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+				        Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
+				        Out(typeFullName);
+				        Out("\", StringComparison.Ordinal))");
+				    }
 				}
 				finally
 				{
@@ -1666,7 +1658,7 @@ namespace Raven.Client.Indexes
             {
                 case "Enumerable":
                 case "Queryable":
-                    return; // we don't need thos, we have LinqOnDynamic for it
+                    return; // we don't need those, we have LinqOnDynamic for it
             }
 
             Out("<");
@@ -1966,8 +1958,9 @@ namespace Raven.Client.Indexes
 			"volatile",
 			"while"
 		});
+	    private bool _avoidDuplicatedParameters;
 
-		/// <summary>
+	    /// <summary>
 		///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
 		/// </summary>
 		/// <param name = "node">The expression to visit.</param>
@@ -1976,23 +1969,39 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitParameter(ParameterExpression node)
 		{
-			if (node.IsByRef)
-			{
-				Out("ref ");
-			}
-			if (string.IsNullOrEmpty(node.Name))
-			{
-				Out("Param_" + GetParamId(node));
-				return node;
-			}
-			var name = node.Name.StartsWith("$VB$") ? node.Name.Substring(4) : node.Name;
-			if (keywordsInCSharp.Contains(name))
-				Out('@');
-			Out(name);
-			return node;
+		    if (node.IsByRef)
+		    {
+		        Out("ref ");
+		    }
+		    if (string.IsNullOrEmpty(node.Name))
+		    {
+		        Out("Param_" + GetParamId(node));
+		        return node;
+		    }
+
+
+		    var name = node.Name;
+	        if (_avoidDuplicatedParameters)
+	        {
+	            object other;
+	            if (_duplicatedParams.TryGetValue(name, out other) && ReferenceEquals(other, node) == false)
+	            {
+	                name += GetParamId(node);
+	                _duplicatedParams[name] = node;
+	            }
+	            else
+	            {
+	                _duplicatedParams[name] = node;
+	            }
+	        }
+	        name = name.StartsWith("$VB$") ? name.Substring(4) : name;
+		    if (keywordsInCSharp.Contains(name))
+		        Out('@');
+		    Out(name);
+		    return node;
 		}
 
-		/// <summary>
+	    /// <summary>
 		///   Visits the children of the <see cref = "T:System.Linq.Expressions.RuntimeVariablesExpression" />.
 		/// </summary>
 		/// <param name = "node">The expression to visit.</param>
