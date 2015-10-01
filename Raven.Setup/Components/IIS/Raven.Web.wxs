@@ -225,7 +225,7 @@
 			</Component>
 			<Component Id="PersistWebSiteValues" Guid="{BA5C1D27-7DD0-4521-BE13-4BC0A57D9D1D}">
 				<RegistryKey Action="create" Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0">
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5">
 					<RegistryValue Name="WEBSITE_DESCRIPTION" Type="string" Value="[WEBSITE_DESCRIPTION]"/>
 					<RegistryValue Name="WEBSITE_ID" Type="string" Value="[WEBSITE_ID]"/>
 					<RegistryValue Name="WEBSITE_VD" Type="string" Value="[WEBSITE_VD]"/>
@@ -233,6 +233,14 @@
 					<RegistryValue Name="WEBSITE_PORT" Type="string" Value="[WEBSITE_PORT]"/>
 					<RegistryValue Name="WEBSITE_HOSTNAME" Type="string" Value="[WEBSITE_HOSTNAME]"/>
 				</RegistryKey>
+			</Component>
+			<Component Id="Raven.Web.Shortcut" Guid="0C2BD57F-4FE3-425E-9E74-D22BF6495041">
+				<CreateFolder />
+				<util:InternetShortcut
+					Id="IISLocalhostShortcut"
+					Directory="DesktopFolder"
+					Name="RavenDB Studio"
+					Target="http://localhost:[WEBSITE_PORT]/[WEBSITE_VD]" Type="url" />
 			</Component>
 		</DirectoryRef>
 	</Fragment>

@@ -11,5 +11,6 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 		public string Name { get; set; }
 		public string PhysicalPath { get; set; }
 		public string DefaultAppPool { get; set; }
+		public string Port { get; set; }
 	}
 }
