@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Globalization;
@@ -31,6 +33,19 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 						webSiteModel.Name = webSiteEntry.Properties[ServerComment].Value.ToString();
 						webSiteModel.PhysicalPath = webSiteEntry.PhysicalPath();
 						webSiteModel.DefaultAppPool = (string)webSiteEntry.Properties["AppPoolId"].Value;
+
+						try
+						{
+							int port;
+							if (int.TryParse(((string) webSiteEntry.Properties["ServerBindings"][0]).Split(':')[1], out port)) // format - IP:Port:Hostname
+							{
+								webSiteModel.Port = port.ToString(CultureInfo.InvariantCulture);
+							}
+						}
+						catch (Exception)
+						{
+							
+						}
 
 						yield return webSiteModel;
 					}
