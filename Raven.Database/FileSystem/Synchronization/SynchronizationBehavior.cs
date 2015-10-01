@@ -24,16 +24,16 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		private readonly string fileName;
 		private readonly Etag sourceFileEtag;
-		private readonly RavenJObject metadata;
+		private readonly RavenJObject sourceMetadata;
 		private readonly FileSystemInfo sourceFs;
 		private readonly SynchronizationType type;
 		private readonly RavenFileSystem fs;
 
-		public SynchronizationBehavior(string fileName, Etag sourceFileEtag, RavenJObject metadata, FileSystemInfo sourceFs, SynchronizationType type, RavenFileSystem fs)
+		public SynchronizationBehavior(string fileName, Etag sourceFileEtag, RavenJObject sourceMetadata, FileSystemInfo sourceFs, SynchronizationType type, RavenFileSystem fs)
 		{
 			this.fileName = fileName;
 			this.sourceFileEtag = sourceFileEtag;
-			this.metadata = metadata;
+			this.sourceMetadata = sourceMetadata;
 			this.sourceFs = sourceFs;
 			this.type = type;
 			this.fs = fs;
@@ -60,7 +60,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				bool conflictResolved;
 				AssertConflictDetection(localMetadata, out conflictResolved);
 
-				fs.SynchronizationTriggers.Apply(trigger => trigger.BeforeSynchronization(fileName, metadata, type));
+				fs.SynchronizationTriggers.Apply(trigger => trigger.BeforeSynchronization(fileName, sourceMetadata, type));
 
 				dynamic afterSynchronizationTriggerData = null;
 
@@ -88,7 +88,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				}
 
 
-				fs.SynchronizationTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, metadata, type, afterSynchronizationTriggerData));
+				fs.SynchronizationTriggers.Apply(trigger => trigger.AfterSynchronization(fileName, sourceMetadata, type, afterSynchronizationTriggerData));
 
 				if (conflictResolved)
 				{
@@ -125,7 +125,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				fs.Synchronizations.AssertFileIsNotBeingSynced(fileName);
 
 				if (type == SynchronizationType.ContentUpdate)
-					fs.Files.AssertPutOperationNotVetoed(fileName, metadata);
+					fs.Files.AssertPutOperationNotVetoed(fileName, sourceMetadata);
 
 				fs.FileLockManager.LockByCreatingSyncConfiguration(fileName, sourceFs, accessor);
 			});
@@ -184,7 +184,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				return;
 			}
 
-			var conflict = fs.ConflictDetector.Check(fileName, localMetadata, metadata, sourceFs.Url);
+			var conflict = fs.ConflictDetector.Check(fileName, localMetadata, sourceMetadata, sourceFs.Url);
 			if (conflict == null)
 			{
 				isConflictResolved = false;
@@ -197,7 +197,7 @@ namespace Raven.Database.FileSystem.Synchronization
 				return;
 
 			ConflictResolutionStrategy strategy;
-			if (fs.ConflictResolver.TryResolveConflict(fileName, conflict, localMetadata, metadata, out strategy))
+			if (fs.ConflictResolver.TryResolveConflict(fileName, conflict, localMetadata, sourceMetadata, out strategy))
 			{
 				switch (strategy)
 				{
@@ -249,18 +249,19 @@ namespace Raven.Database.FileSystem.Synchronization
 
 		private void ExecuteMetadataUpdate()
 		{
-			fs.Files.UpdateMetadata(fileName, metadata, null);
+			fs.Files.UpdateMetadata(fileName, sourceMetadata, null);
 		}
 
 		private void ExecuteRename(string rename)
 		{
-			fs.Files.ExecuteRenameOperation(new RenameFileOperation
+			Etag currentEtag = null;
+
+			fs.Storage.Batch(accessor =>
 			{
-				FileSystem = fs.Name,
-				Name = fileName,
-				Rename = rename,
-				MetadataAfterOperation = metadata.DropRenameMarkers()
+				currentEtag = accessor.ReadFile(fileName).Etag;
 			});
+
+			fs.Files.ExecuteRenameOperation(new RenameFileOperation(fileName, rename, currentEtag, sourceMetadata.DropRenameMarkers()));
 		}
 
 		private async Task ExecuteContentUpdate(RavenJObject localMetadata, SynchronizationReport report)
@@ -269,13 +270,13 @@ namespace Raven.Database.FileSystem.Synchronization
 
 			using (var localFile = localMetadata != null ? StorageStream.Reading(fs.Storage, fileName) : null)
 			{
-				fs.PutTriggers.Apply(trigger => trigger.OnPut(tempFileName, metadata));
+				fs.PutTriggers.Apply(trigger => trigger.OnPut(tempFileName, sourceMetadata));
 
-				fs.Historian.UpdateLastModified(metadata);
+				fs.Historian.UpdateLastModified(sourceMetadata);
 
-				var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(fs, tempFileName, metadata);
+				var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(fs, tempFileName, sourceMetadata);
 
-				fs.PutTriggers.Apply(trigger => trigger.AfterPut(tempFileName, null, metadata));
+				fs.PutTriggers.Apply(trigger => trigger.AfterPut(tempFileName, null, sourceMetadata));
 
 				var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
@@ -292,10 +293,10 @@ namespace Raven.Database.FileSystem.Synchronization
 				synchronizingFile.PreventUploadComplete = false;
 				synchronizingFile.Flush();
 				synchronizingFile.Dispose();
-				metadata["Content-MD5"] = synchronizingFile.FileHash;
+				sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-				MetadataUpdateResult updateResult = null;
-				fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, metadata, null));
+				FileUpdateResult updateResult = null;
+				fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
 				fs.Storage.Batch(accessor =>
 				{
@@ -307,7 +308,7 @@ namespace Raven.Database.FileSystem.Synchronization
 					accessor.RenameFile(tempFileName, fileName);
 
 					fs.Search.Delete(tempFileName);
-					fs.Search.Index(fileName, metadata, updateResult.Etag);
+					fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
 				});
 
 				if (localFile == null)

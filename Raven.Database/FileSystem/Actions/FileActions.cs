@@ -53,6 +53,8 @@ namespace Raven.Database.FileSystem.Actions
 
 		public async Task PutAsync(string name, Etag etag, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)
 		{
+			FileUpdateResult putResult = null;
+
 			try
 			{
 				FileSystem.MetricsCounters.FilesPerSecond.Mark();
@@ -84,6 +86,7 @@ namespace Raven.Database.FileSystem.Actions
 				Historian.Update(name, metadata);
 
 				long? size = -1;
+
 				Storage.Batch(accessor =>
 				{
 					FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
@@ -112,26 +115,22 @@ namespace Raven.Database.FileSystem.Actions
 						IndicateFileToDelete(name, etag);
 					}
 
-					var putResult = accessor.PutFile(name, size, metadata);
+					putResult = accessor.PutFile(name, size, metadata);
 
 					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, metadata));
 
 					Search.Index(name, metadata, putResult.Etag);
 				});
 
-				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
+				Log.Debug("Inserted a new file '{0}' with ETag {1}", name, putResult.Etag);
 
-				using (var contentStream = await streamAsync())
+				using (var contentStream = await streamAsync().ConfigureAwait(false))
 				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, metadata))
 				{
-					await readFileToDatabase.Execute();
+					await readFileToDatabase.Execute().ConfigureAwait(false);
 
 					if (size != null && readFileToDatabase.TotalSizeRead != size)
 					{
-						using (FileSystem.DisableAllTriggersForCurrentThread())
-						{
-							IndicateFileToDelete(name, null);
-						}
 						throw new HttpResponseException(HttpStatusCode.BadRequest);
 					}
 
@@ -142,20 +141,28 @@ namespace Raven.Database.FileSystem.Actions
 
 					metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
-					MetadataUpdateResult updateMetadata = null;
+					FileUpdateResult updateMetadata = null;
 					Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
 
-					int totalSizeRead = readFileToDatabase.TotalSizeRead;
+					long totalSizeRead = readFileToDatabase.TotalSizeRead;
 					metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
 					Search.Index(name, metadata, updateMetadata.Etag);
 					Publisher.Publish(new FileChangeNotification { Action = FileChangeAction.Add, File = name });
 
-					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, metadata.Value<string>(Constants.MetadataEtagField));
+					Log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, updateMetadata.Etag);
 				}
 			}
 			catch (Exception ex)
 			{
+				if (putResult != null)
+				{
+					using (FileSystem.DisableAllTriggersForCurrentThread())
+					{
+						IndicateFileToDelete(name, null);
+					}
+				}
+
 				Log.WarnException(string.Format("Failed to upload a file '{0}'", name), ex);
 
 				throw;
@@ -208,7 +215,7 @@ namespace Raven.Database.FileSystem.Actions
 
 		public void UpdateMetadata(string name, RavenJObject metadata, Etag etag)
 		{
-			MetadataUpdateResult updateMetadata = null;
+			FileUpdateResult updateMetadata = null;
 
 			Storage.Batch(accessor =>
 			{
@@ -481,6 +488,19 @@ namespace Raven.Database.FileSystem.Actions
 
 				if (IsRenameInProgress(renameOperation.Name))
 					continue;
+
+				FileHeader existingFile = null;
+
+				Storage.Batch(accessor => existingFile = accessor.ReadFile(renameOperation.Name));
+
+				if (existingFile == null)
+					continue;
+
+				if (renameOperation.Etag != null && renameOperation.Etag != existingFile.Etag)
+				{
+					Storage.Batch(accessor => accessor.DeleteConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(renameOperation.Name)));
+					continue;
+				}
 
 				Log.Debug("Starting to resume a rename operation of a file '{0}' to '{1}'", renameOperation.Name,
 						  renameOperation.Rename);

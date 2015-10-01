@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -26,17 +27,17 @@ namespace Raven.Client
 		///     Commits the specified tx id
 		/// </summary>
 		/// <param name="txId">transaction identifier</param>
-		void Commit(string txId);
+		Task Commit(string txId);
 
 		/// <summary>
 		///     Prepares the transaction on the server.
 		/// </summary>
-		void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
+		Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
 		/// <summary>
 		///     Rollbacks the specified tx id
 		/// </summary>
 		/// <param name="txId">transaction identifier</param>
-		void Rollback(string txId);
+		Task Rollback(string txId);
 	}
 }

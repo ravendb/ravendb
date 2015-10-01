@@ -467,6 +467,7 @@
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
+    <Compile Include="ValerioBorioni.cs" />
     <Compile Include="Vicente.cs" />
     <Compile Include="Victor.cs" />
     <Compile Include="Vitaliy.cs" />

@@ -83,13 +83,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
-    <Reference Include="FluentAssertions">
-      <HintPath>..\packages\FluentAssertions.3.4.1\lib\net45\FluentAssertions.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentAssertions.Core">
-      <HintPath>..\packages\FluentAssertions.3.4.1\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>

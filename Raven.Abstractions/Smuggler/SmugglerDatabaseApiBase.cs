@@ -267,12 +267,15 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public bool FilterIdentity(string indentityName, ItemType operateOnTypes)
+		public bool FilterIdentity(string identityName, ItemType operateOnTypes)
 		{
-			if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+			if ("Raven/Etag".Equals(identityName, StringComparison.OrdinalIgnoreCase))
 				return false;
 
-			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+			if ("IndexId".Equals(identityName, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			if (Constants.RavenSubscriptionsPrefix.Equals(identityName, StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			if (operateOnTypes.HasFlag(ItemType.Documents))
