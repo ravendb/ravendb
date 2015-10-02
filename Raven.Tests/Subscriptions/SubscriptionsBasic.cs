@@ -656,6 +656,7 @@ namespace Raven.Tests.Subscriptions
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
+					TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
 					BatchOptions = new SubscriptionBatchOptions()
 					{
 						MaxDocCount = 1
@@ -975,7 +976,10 @@ namespace Raven.Tests.Subscriptions
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
+				{
+					TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+				});
 				store.Changes().WaitForAllPendingSubscriptions();
 
 				using (var session = store.OpenSession())
@@ -989,6 +993,7 @@ namespace Raven.Tests.Subscriptions
 				var subscribe = subscription.Subscribe(docs.Add);
 
 				RavenJObject doc;
+
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 

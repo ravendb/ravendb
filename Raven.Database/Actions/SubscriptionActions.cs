@@ -13,7 +13,9 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Database.Actions
 {
@@ -23,6 +25,8 @@ namespace Raven.Database.Actions
 			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
 		private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
+
+		private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
 
 		public SubscriptionActions(DocumentDatabase database, ILog log)
 			: base(database, null, null, log)
@@ -71,6 +75,10 @@ namespace Raven.Database.Actions
 
 		public void OpenSubscription(long id, SubscriptionConnectionOptions options)
 		{
+			SizeLimitedConcurrentSet<string> releasedConnections;
+			if (forciblyReleasedSubscriptions.TryGetValue(id, out releasedConnections) && releasedConnections.Contains(options.ConnectionId))
+				throw new SubscriptionClosedException("Subscription " + id + " was forcibly released. Cannot reopen it.");
+
 			if (openSubscriptions.TryAdd(id, options))
 			{
 				UpdateClientActivityDate(id);
@@ -122,10 +130,15 @@ namespace Raven.Database.Actions
 			UpdateClientActivityDate(id);
 		}
 
-		public void ReleaseSubscription(long id)
+		public void ReleaseSubscription(long id, bool forced = false)
 		{
 			SubscriptionConnectionOptions options;
 			openSubscriptions.TryRemove(id, out options);
+
+			if (forced && options != null)
+			{
+				forciblyReleasedSubscriptions.GetOrAdd(id, new SizeLimitedConcurrentSet<string>(50, StringComparer.OrdinalIgnoreCase)).Add(options.ConnectionId);
+			}
 		}
 
 		public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
