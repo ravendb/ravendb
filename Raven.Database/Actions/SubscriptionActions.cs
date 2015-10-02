@@ -99,9 +99,13 @@ namespace Raven.Database.Actions
 
 			var config = GetSubscriptionConfig(id);
 
-			if (SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
+			var now = SystemTime.UtcNow;
+			var timeSinceBatchSent = now - config.TimeOfSendingLastBatch;
+
+			if (timeSinceBatchSent > existingOptions.BatchOptions.AcknowledgmentTimeout && 
+				SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
 			{
-				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
+				// last connected client exceeded ACK timeout and didn't send at least two 'client-alive' notifications - let the requesting client to open it
 				ForceReleaseAndOpenForNewClient(id, options);
 				return;
 			}
