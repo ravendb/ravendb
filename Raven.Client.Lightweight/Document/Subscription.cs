@@ -329,7 +329,7 @@ namespace Raven.Client.Document
 
 				logger.WarnException(string.Format("Subscription #{0}. Pulling task threw the following exception", id), ex);
 
-				if (TryHandleRejectedConnection(ex))
+				if (TryHandleRejectedConnection(ex, reopenTried: false))
 				{
 					logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
 					return;
@@ -361,7 +361,7 @@ namespace Raven.Client.Document
 			}
 			catch (Exception ex)
 			{
-				if (TryHandleRejectedConnection(ex))
+				if (TryHandleRejectedConnection(ex, reopenTried: true))
 					return;
 
 				RestartPullingTask().ConfigureAwait(false);
@@ -371,13 +371,13 @@ namespace Raven.Client.Document
 			startPullingTask = StartPullingDocs().ObserveException();
 		}
 
-		private bool TryHandleRejectedConnection(Exception ex)
+		private bool TryHandleRejectedConnection(Exception ex, bool reopenTried)
 		{
 			SubscriptionConnectionException = ex;
 
 			if (ex is SubscriptionInUseException || // another client has connected to the subscription
 				ex is SubscriptionDoesNotExistException ||  // subscription has been deleted meanwhile
-			    (ex is SubscriptionClosedException)) // someone forced us to drop the connection by calling Subscriptions.Release
+			    (ex is SubscriptionClosedException && reopenTried)) // someone forced us to drop the connection by calling Subscriptions.Release
 			{
 				IsConnectionClosed = true;
 
