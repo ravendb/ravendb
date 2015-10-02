@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 				}
 			}
 
-			Database.Subscriptions.ReleaseSubscription(id);
+			Database.Subscriptions.ReleaseSubscription(id, force);
 
 			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
 			{
