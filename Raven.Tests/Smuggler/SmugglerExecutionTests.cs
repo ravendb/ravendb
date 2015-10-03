@@ -697,7 +697,7 @@ namespace Raven.Tests.Smuggler
                 }).WaitForCompletion();
 
 
-                Etag user6DeletionEtag = null, user9DeletionEtag = null, attach5DeletionEtag = null, attach7DeletionEtag = null;
+                Etag user6DeletionEtag = null, user9DeletionEtag = null;
 
                 WaitForUserToContinueTheTest(store);
 

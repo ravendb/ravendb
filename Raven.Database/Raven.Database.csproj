@@ -819,10 +819,8 @@
     <Compile Include="FileSystem\Util\AwaitableQueue.cs" />
     <Compile Include="FileSystem\Util\CombinedStream.cs" />
     <Compile Include="FileSystem\Util\FilePathTools.cs" />
-    <Compile Include="FileSystem\Util\HashKey.cs" />
     <Compile Include="FileSystem\Util\NarrowedStream.cs" />
     <Compile Include="FileSystem\Util\NaveValueCollectionJsonConverterOnlyForConfigFormatters.cs" />
-    <Compile Include="FileSystem\Util\RabinKarpHasher.cs" />
     <Compile Include="FileSystem\Util\RavenFileNameHelper.cs" />
     <Compile Include="FileSystem\Util\StorageStream.cs" />
     <Compile Include="FileSystem\Util\StorageStreamAccess.cs" />

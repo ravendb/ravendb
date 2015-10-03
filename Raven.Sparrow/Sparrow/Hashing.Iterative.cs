@@ -148,14 +148,12 @@ namespace Sparrow
 
                         for ( int i = 1; i < iterations; i++ )
                         {
-                            v1 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v2 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v3 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
-                            v4 += *((uint*)buffer) * XXHash32Constants.PRIME32_2;
-                            buffer += sizeof(uint);
+                            v1 += ((uint*)buffer)[0] * XXHash32Constants.PRIME32_2;
+                            v2 += ((uint*)buffer)[1] * XXHash32Constants.PRIME32_2;
+                            v3 += ((uint*)buffer)[2] * XXHash32Constants.PRIME32_2;
+                            v4 += ((uint*)buffer)[3] * XXHash32Constants.PRIME32_2;
+
+                            buffer += 4 * sizeof(uint);
 
                             v1 = Bits.RotateLeft32(v1, 13);
                             v2 = Bits.RotateLeft32(v2, 13);

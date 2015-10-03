@@ -38,8 +38,8 @@ namespace Raven.Client.Connection.Implementation
 	/// </summary>
 	public class HttpJsonRequest : IDisposable
 	{
-	    public const int MinimumServerVersion = 3000;
-	    public const int CustomBuildVersion = 13;
+	    public const int MinimumServerVersion = 4000;
+	    public const int CustomBuildVersion = 40;
 
 		internal  string Url
 		{

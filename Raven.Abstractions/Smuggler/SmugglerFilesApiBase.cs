@@ -332,12 +332,12 @@ namespace Raven.Abstractions.Smuggler
                 throw new SmugglerExportException("Server version is not available.");
 
             var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerFilesApiBase>()).ProductVersion;
-            var subServerVersion = serverVersion.Substring(0, 3);
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+            var subServerVersion = serverVersion.Substring(0, 4);
+            var subSmugglerVersion = smugglerVersion.Substring(0, 4);
 
             var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
-            if (intServerVersion < 30)
-                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion));
+            if (intServerVersion < 40)
+                throw new SmugglerExportException(string.Format("This smuggler version requires a v4.0 or higher server. Smuggler version: {0}.", subSmugglerVersion));
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)

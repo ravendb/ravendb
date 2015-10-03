@@ -44,11 +44,6 @@ namespace Raven.Database.FileSystem.Storage.Voron
 		    IdGenerator = idGenerator;
 		}
 
-        protected string ConvertToKey(HashKey hashKey)
-        {
-            return CreateKey(Encoding.UTF8.GetString(hashKey.Strong), hashKey.Weak);
-        }
-
 		protected string CreateKey(params object[] values)
 		{
 			if (values == null || values.Length == 0)

@@ -1407,7 +1407,6 @@ namespace Raven.Client.FileSystem
 	            string newFileSystemName = filesystemDocument.Id.Replace(Constants.FileSystem.Prefix, "");
 				var requestUriString = string.Format("{0}/admin/fs/{1}", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystemName);
-
 				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, client.PrimaryCredentials, convention)))
 	            {
 					try
@@ -1417,7 +1416,7 @@ namespace Raven.Client.FileSystem
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e).SimplifyException();
+							throw new InvalidOperationException("Cannot create file system with the name '" + newFileSystemName + "' because it already exists. Use CreateOrUpdateFileSystemAsync in case you want to update an existing file system", e);
 
 						throw;
 					}

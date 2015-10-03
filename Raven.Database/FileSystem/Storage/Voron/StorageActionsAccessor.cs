@@ -25,6 +25,7 @@ using RavenConstants = Raven.Abstractions.Data.Constants;
 
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Sparrow;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
@@ -64,8 +65,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public int InsertPage(byte[] buffer, int size)
         {
-            var hashKey = new HashKey(buffer, size);
-            var key = (Slice)ConvertToKey(hashKey);
+            var hashKey = Hashing.Metro128.Calculate(buffer).ToByteArray();
+            var key = new Slice(hashKey);
 
             var pageByKey = storage.Pages.GetIndex(Tables.Pages.Indices.ByKey);
             var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
@@ -95,8 +96,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var newPage = new RavenJObject
                    {
                        {"id", newPageId},
-                       {"page_strong_hash", hashKey.Strong},
-                       {"page_weak_hash", hashKey.Weak},
+                       {"page_hash", hashKey},
                        {"usage_count", 1}
                    };
 
@@ -955,18 +955,11 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
                 var pagesByKey = storage.Pages.GetIndex(Tables.Pages.Indices.ByKey);
 
-                var strongHash = page.Value<byte[]>("page_strong_hash");
-                var weakHash = page.Value<int>("page_weak_hash");
-
-                var hashKey = new HashKey
-                              {
-                                  Strong = strongHash,
-                                  Weak = weakHash
-                              };
+                var hash = page.Value<byte[]>("page_hash");              
 
                 storage.Pages.Delete(writeBatch.Value, key, version);
                 pageData.Delete(writeBatch.Value, key);
-                pagesByKey.Delete(writeBatch.Value, ConvertToKey(hashKey));
+                pagesByKey.Delete(writeBatch.Value, new Slice(hash));
             }
             else
             {
