@@ -77,27 +77,8 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddDays(-1),
-							End = start.AddDays(2),
-							Duration = PeriodDuration.Hours(6),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddDays(-2),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddDays(-1), start.AddDays(2), PeriodDuration.Hours(6)).ToArray();
+					var money = r.GetAggregatedPoints("Simple", "Money", start.AddDays(-2), start.AddDays(1), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(12, time.Length);
 					Assert.Equal(new DateTimeOffset(2015, 3, 31, 0, 0, 0, TimeSpan.Zero), time[0].StartAt);
@@ -149,27 +130,8 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddDays(-1),
-							End = start.AddMonths(1),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
+					var money = r.GetAggregatedPoints("Simple", "Money", start.AddDays(-1), start.AddMonths(1), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(24 / 3 * 32, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -228,27 +190,8 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddDays(-1),
-							End = start.AddMonths(1),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
+					var money = r.GetAggregatedPoints("Simple", "Money", start.AddDays(-1), start.AddMonths(1), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(24/3*32, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -309,27 +252,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddMonths(-2).AddDays(-1),
-							End = start.AddMonths(2),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
+					var money = r.GetAggregatedPoints("Simple", "Money", start.AddMonths(-2).AddDays(-1), start.AddMonths(2), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(24/3*32, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -423,27 +347,8 @@ namespace Raven.Tests.TimeSeries
 				var start = new DateTimeOffset(2015, 4, 1, 0, 0, 0, TimeSpan.Zero);
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddHours(-1),
-							End = start.AddHours(4),
-							Duration = PeriodDuration.Seconds(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Money",
-							Start = start.AddHours(-1),
-							End = start.AddHours(4),
-							Duration = PeriodDuration.Minutes(3),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddHours(-1), start.AddHours(4), PeriodDuration.Seconds(3)).ToArray();
+					var money = r.GetAggregatedPoints("Simple", "Money", start.AddHours(-1), start.AddHours(4), PeriodDuration.Minutes(3)).ToArray();
 
 					Assert.Equal(5 * 60 * 60 / 3, time.Length);
 					for (int i = 0; i < 6000; i++)

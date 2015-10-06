@@ -26,15 +26,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddYears(-1),
-							End = start.AddYears(2),
-							Duration = PeriodDuration.Days(2),
-						}).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Days(2)).ToArray();
 
 					Assert.Equal(548, time.Length);
 					for (int i = 0; i < 548; i++)
@@ -93,15 +85,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddYears(-1),
-							End = start.AddYears(2),
-							Duration = PeriodDuration.Months(2),
-						}).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Months(2)).ToArray();
 
 					Assert.Equal(3 * 12 / 2, time.Length);
 					Assert.Equal(new DateTimeOffset(2014, 4, 1, 0, 0, 0, TimeSpan.Zero), time[0].StartAt);
@@ -175,15 +159,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "Simple",
-							Key = "Time",
-							Start = start.AddYears(-2),
-							End = start.AddYears(6),
-							Duration = PeriodDuration.Years(2),
-						}).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-2), start.AddYears(6), PeriodDuration.Years(2)).ToArray();
 
 					Assert.Equal(8/2, time.Length);
 					Assert.Equal(new DateTimeOffset(2012, 1, 1, 0, 0, 0, TimeSpan.Zero), time[0].StartAt);

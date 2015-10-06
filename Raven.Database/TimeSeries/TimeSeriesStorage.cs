@@ -152,113 +152,98 @@ namespace Raven.Database.TimeSeries
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
 			}
 
-			public IEnumerable<Range> QueryRollup(TimeSeriesRollupQuery query)
+			public IEnumerable<Range> GetAggregatedPoints(string typeName, string key, DateTimeOffset start, DateTimeOffset end, PeriodDuration duration, int skip = 0)
 			{
-				return GetQueryRollup(query);
-			}
-
-			public IEnumerable<Range>[] QueryRollup(params TimeSeriesRollupQuery[] queries)
-			{
-				var result = new IEnumerable<Range>[queries.Length];
-				for (int i = 0; i < queries.Length; i++)
-				{
-					result[i] = GetQueryRollup(queries[i]);
-				}
-				return result;
-			}
-
-			private IEnumerable<Range> GetQueryRollup(TimeSeriesRollupQuery query)
-			{
-				switch (query.Duration.Type)
+				switch (duration.Type)
 				{
 					case PeriodType.Seconds:
-						if (query.Start.Millisecond != 0)
+						if (start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by seconds, you cannot specify milliseconds");
-						if (query.End.Millisecond != 0)
+						if (end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by seconds, you cannot specify milliseconds");
-						if (query.Start.Second%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Second%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Second%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Second%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					case PeriodType.Minutes:
-						if (query.Start.Second != 0 || query.Start.Millisecond != 0)
+						if (start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by minutes, you cannot specify seconds or milliseconds");
-						if (query.End.Second != 0 || query.End.Millisecond != 0)
+						if (end.Second != 0 || end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by minutes, you cannot specify seconds or milliseconds");
-						if (query.Start.Minute%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Minute%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Minute%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Minute%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					case PeriodType.Hours:
-						if (query.Start.Minute != 0 || query.Start.Second != 0 || query.Start.Millisecond != 0)
+						if (start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify minutes, seconds or milliseconds");
-						if (query.End.Minute != 0 || query.End.Second != 0 || query.End.Millisecond != 0)
+						if (end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify minutes, seconds or milliseconds");
-						if (query.Start.Hour%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Hour%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Hour%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Hour%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					case PeriodType.Days:
-						if (query.Start.Hour != 0 || query.Start.Minute != 0 || query.Start.Second != 0 || query.Start.Millisecond != 0)
+						if (start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify hours, minutes, seconds or milliseconds");
-						if (query.End.Hour != 0 || query.End.Minute != 0 || query.End.Second != 0 || query.End.Millisecond != 0)
+						if (end.Hour != 0 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify hours, minutes, seconds or milliseconds");
-						if (query.Start.Day%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Day%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Day%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Day%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					case PeriodType.Months:
-						if (query.Start.Day != 1 || query.Start.Hour != 0 || query.Start.Minute != 0 || query.Start.Second != 0 || query.Start.Millisecond != 0)
+						if (start.Day != 1 || start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify days, hours, minutes, seconds or milliseconds");
-						if (query.End.Day != 1 || query.End.Minute != 0 || query.End.Second != 0 || query.End.Millisecond != 0)
+						if (end.Day != 1 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify days, hours, minutes, seconds or milliseconds");
-						if (query.Start.Month%(query.Duration.Duration) != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Month%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Month%(duration.Duration) != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Month%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					case PeriodType.Years:
-						if (query.Start.Month != 1 || query.Start.Day != 1 || query.Start.Hour != 0 || query.Start.Minute != 0 || query.Start.Second != 0 || query.Start.Millisecond != 0)
+						if (start.Month != 1 || start.Day != 1 || start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by years, you cannot specify months, days, hours, minutes, seconds or milliseconds");
-						if (query.End.Month != 1 || query.End.Day != 1 || query.End.Minute != 0 || query.End.Second != 0 || query.End.Millisecond != 0)
+						if (end.Month != 1 || end.Day != 1 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by years, you cannot specify months, days, hours, minutes, seconds or milliseconds");
-						if (query.Start.Year%(query.Duration.Duration) != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", query.Duration.Duration, query.Duration.Type));
-						if (query.End.Year%query.Duration.Duration != 0)
-							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", query.Duration.Duration, query.Duration.Type));
+						if (start.Year%(duration.Duration) != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that starts from midnight", duration.Duration, duration.Type));
+						if (end.Year%duration.Duration != 0)
+							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
 
-				if (string.IsNullOrWhiteSpace(query.Type))
+				if (string.IsNullOrWhiteSpace(typeName))
 					throw new InvalidOperationException("Type cannot be empty");
 
-				var tree = tx.ReadTree(SeriesTreePrefix + query.Type);
+				var tree = tx.ReadTree(SeriesTreePrefix + typeName);
 				if (tree == null)
 					yield break;
 
-				var type = storage.GetType(tx, query.Type);
+				var type = storage.GetType(tx, typeName);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 
 				using (var periodTx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var fixedTree = tree.FixedTreeFor(query.Key, (byte)(type.Fields.Length * sizeof(double)));
-					var treeName = PeriodTreePrefix + query.Type;
+					var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
+					var treeName = PeriodTreePrefix + typeName;
 					var periodFixedTree = (periodTx.ReadTree(treeName) ?? storage.storageEnvironment.CreateTree(periodTx, treeName))
-						.FixedTreeFor(query.Key + PeriodsKeySeparator + query.Duration.Type + "-" + query.Duration.Duration, (byte)(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double)));
+						.FixedTreeFor(key + PeriodsKeySeparator + duration.Type + "-" + duration.Duration, (byte)(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double)));
 
 					using (var periodWriter = new RollupWriter(periodFixedTree, type.Fields.Length))
 					{
 						using (var periodTreeIterator = periodFixedTree.Iterate())
 						using (var rawTreeIterator = fixedTree.Iterate())
 						{
-							foreach (var range in GetRanges(query, type.Fields.Length))
+							foreach (var range in GetAggregatedPointsRanges(key, start, end, duration, type.Fields.Length))
 							{
 								// seek period tree iterator, if found exact match!!, add and move to the next
 								var startTicks = range.StartAt.UtcTicks;
@@ -362,15 +347,15 @@ namespace Raven.Database.TimeSeries
 				} while (rawTreeIterator.MoveNext());
 			}
 
-			private IEnumerable<Range> GetRanges(TimeSeriesRollupQuery query, int valueLength)
+			private IEnumerable<Range> GetAggregatedPointsRanges(string key, DateTimeOffset start, DateTimeOffset end, PeriodDuration duration, int valueLength)
 			{
-				var startAt = query.Start;
+				var startAt = start;
 				while (true)
 				{
-					var nextStartAt = query.Duration.AddToDateTime(startAt);
-					if (startAt == query.End)
+					var nextStartAt = duration.AddToDateTime(startAt);
+					if (startAt == end)
 						yield break;
-					if (nextStartAt > query.End)
+					if (nextStartAt > end)
 					{
 						throw new InvalidOperationException("Debug: Duration is not aligned with the end of the range.");
 					}
@@ -382,10 +367,10 @@ namespace Raven.Database.TimeSeries
 					yield return new Range
 					{
 #if DEBUG
-						DebugKey = query.Key,
+						DebugKey = key,
 #endif
 						StartAt = startAt,
-						Duration = query.Duration,
+						Duration = duration,
 						Values = rangeValues,
 					};
 					startAt = nextStartAt;

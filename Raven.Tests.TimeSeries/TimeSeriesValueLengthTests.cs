@@ -95,27 +95,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Money",
-							Start = start.AddDays(-1),
-							End = start.AddMonths(1),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", start.AddDays(-1), start.AddMonths(2), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -215,27 +196,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Money",
-							Start = start.AddMonths(-2).AddDays(-1),
-							End = start.AddMonths(2),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", start.AddMonths(-2).AddDays(-1), start.AddMonths(2), PeriodDuration.Hours(2)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
