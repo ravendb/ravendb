@@ -434,10 +434,22 @@ task UpdateLiveTest {
 
 	if($appPoolState -ne "Stopped") {
 		Stop-WebAppPool $appPoolName -ErrorAction SilentlyContinue # The error is probably because it was already stopped
+
+		# Wait for the apppool to shut down.
+		do
+		{
+			Write-Host "Wait for '$appPoolState' to be stopped"
+			Start-Sleep -Seconds 1
+			$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+		}
+		until ($appPoolState -eq "Stopped")
 	}
 
-	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
-	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
+	if(Test-Path "$liveTest_dir\Plugins") {
+		Remove-Item "$liveTest_dir\Plugins\*" -Force -Recurse -ErrorAction SilentlyContinue
+	} else {
+		mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
+	}
 	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
 	
 	Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
