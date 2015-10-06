@@ -428,9 +428,14 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
+	$appPoolName = "RavenDB 3"
+	$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	Write-Host "App pool state is: $appPoolState"
 
-	Stop-WebAppPool "RavenDB 3" -ErrorAction SilentlyContinue # The error is probably because it was already stopped
-	
+	if($appPoolState -ne "Stopped") {
+		Stop-WebAppPool $appPoolName -ErrorAction SilentlyContinue # The error is probably because it was already stopped
+	}
+
 	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
 	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
@@ -439,7 +444,17 @@ task UpdateLiveTest {
 	mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
 
-	Start-WebAppPool "RavenDB 3"
+	$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	Write-Host "App pool state is: $appPoolState"
+
+	if ($appPoolState -eq "Stopped") {
+    	Write-Output "Starting IIS app pool $appPoolName"
+    	Start-WebAppPool $appPoolName
+	} else {
+    	Write-Output "Restarting IIS app pool $appPoolName"
+    	Restart-WebAppPool $appPoolName
+	}
+	Write-Output "Done updating $appPoolName"
 }
 
 task Upload {
