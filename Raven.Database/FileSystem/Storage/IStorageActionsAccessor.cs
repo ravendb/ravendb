@@ -20,7 +20,7 @@ namespace Raven.Database.FileSystem.Storage
 
         int InsertPage(byte[] buffer, int size);
 
-        MetadataUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false);
+        FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false);
 
         void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize);
 
@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Storage
 
         void Delete(string filename);
        
-        MetadataUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag);
+        FileUpdateResult UpdateFileMetadata(string filename, RavenJObject metadata, Etag etag);
 
         void CompleteFileUpload(string filename);
 
@@ -79,7 +79,7 @@ namespace Raven.Database.FileSystem.Storage
 		bool IsNested { get; set; }
     }
 
-	public class MetadataUpdateResult
+	public class FileUpdateResult
 	{
 		public Etag Etag;
 		public Etag PrevEtag;

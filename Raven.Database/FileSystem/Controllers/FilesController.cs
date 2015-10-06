@@ -324,13 +324,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 				Historian.UpdateLastModified(metadata);
 
-				var operation = new RenameFileOperation
-				{
-					FileSystem = FileSystem.Name,
-					Name = name,
-					Rename = rename,
-					MetadataAfterOperation = metadata
-				};
+				var operation = new RenameFileOperation(name, rename, existingFile.Etag, metadata);
 
 				accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 				accessor.PulseTransaction(); // commit rename operation config
@@ -374,7 +368,7 @@ namespace Raven.Database.FileSystem.Controllers
 			options.ContentLength = Request.Content.Headers.ContentLength;
 			options.TransferEncodingChunked = Request.Headers.TransferEncodingChunked ?? false;
 
-			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options);
+			await FileSystem.Files.PutAsync(name, etag, metadata, () => Request.Content.ReadAsStreamAsync(), options).ConfigureAwait(false);
 
 			SynchronizationTask.Context.NotifyAboutWork();
 

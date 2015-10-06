@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -193,17 +194,17 @@ namespace Raven.Client.Shard
 
 		#region Transaction methods (not supported)
 
-		public override void Commit(string txId)
+		public override Task Commit(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		public override void Rollback(string txId)
+		public override Task Rollback(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+		public Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}

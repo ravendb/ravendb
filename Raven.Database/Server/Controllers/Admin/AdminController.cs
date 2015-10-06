@@ -58,14 +58,13 @@ namespace Raven.Database.Server.Controllers.Admin
 			                                                          typeof(AuthenticationForCommercialUseOnly).FullName,
 																	  typeof(RemoveBackupDocumentStartupTask).FullName,
 																	  typeof(CreateFolderIcon).FullName,
-																	  typeof(DeleteRemovedIndexes).FullName
 		                                                           };
 
 		[HttpPost]
 		[RavenRoute("admin/serverSmuggling")]
 		public async Task<HttpResponseMessage> ServerSmuggling()
 		{
-			var request = await ReadJsonObjectAsync<ServerSmugglerRequest>();
+			var request = await ReadJsonObjectAsync<ServerSmugglerRequest>().ConfigureAwait(false);
 			var targetStore = CreateStore(request.TargetServer);
 
 			var status = new ServerSmugglingOperationState();
@@ -87,7 +86,7 @@ namespace Raven.Database.Server.Controllers.Admin
 							targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
 						}
 
-						var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name);
+						var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name).ConfigureAwait(false);
 
 						var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
 						{
@@ -104,7 +103,7 @@ namespace Raven.Database.Server.Controllers.Admin
 								DefaultDatabase = serverSmugglingItem.Name
 							},
 							ReportProgress = message => status.Messages.Add(message)
-						});
+						}).ConfigureAwait(false);
 					}
 
 					status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");
@@ -175,7 +174,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
-			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
+			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>().ConfigureAwait(false);
 			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
@@ -222,7 +221,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
-			var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>();
+			var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>().ConfigureAwait(false);
 
 			DatabaseDocument databaseDocument = null;
 
@@ -294,7 +293,7 @@ namespace Raven.Database.Server.Controllers.Admin
 							var token = cts.Token;
 							do
 							{
-								await Task.Delay(500, token);
+								await Task.Delay(500, token).ConfigureAwait(false);
 							}
 							while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
 						}
@@ -1129,7 +1128,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
 			}
-		    var json = await ReadJsonAsync();
+		    var json = await ReadJsonAsync().ConfigureAwait(false);
 		    var testType = json.Value<string>("TestType");
 
 		    AbstractPerformanceTestRequest ioTestRequest;
@@ -1250,7 +1249,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/replication/topology/global")]
 		public async Task<HttpResponseMessage> GlobalReplicationTopology()
 		{
-			var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>();
+			var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>().ConfigureAwait(false);
 
 			ReplicationTopology databasesTopology = null;
 			SynchronizationTopology filesystemsTopology = null;

@@ -52,6 +52,11 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <NoWarn>618</NoWarn>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Lucene.Net, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
     <OutputPath>bin\Profiling\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>

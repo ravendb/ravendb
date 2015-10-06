@@ -60,8 +60,8 @@ namespace Raven.Tests.Issues
 				{
 					var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
 
-					Assert.Equal(1, alerts.Alerts.Count);
-					Assert.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId", alerts.Alerts[0].Title);
+					Assert.Equal(5, alerts.Alerts.Count);
+					Assert.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId", alerts.Alerts[4].Title);
 				}
 
 				SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(11);

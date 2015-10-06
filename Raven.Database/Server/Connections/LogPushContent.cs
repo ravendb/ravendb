@@ -44,8 +44,8 @@ namespace Raven.Database.Server.Connections
 		{
 			using (var writer = new StreamWriter(stream))
 			{
-                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-				await writer.FlushAsync();
+                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
+				await writer.FlushAsync().ConfigureAwait(false);
 							
 				while (Connected)
 				{
@@ -57,11 +57,11 @@ namespace Raven.Database.Server.Connections
                             if (Connected == false)
                                 return;
 
-                            await SendMessage(message, writer);
+                            await SendMessage(message, writer).ConfigureAwait(false);
                         }
 
-                        await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-                        await writer.FlushAsync();
+                        await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
+                        await writer.FlushAsync().ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -86,9 +86,9 @@ namespace Raven.Database.Server.Connections
 		private async Task SendMessage(LogEventInfo message, StreamWriter writer)
 		{
             var o = JsonExtensions.ToJObject(new LogEventInfoFormatted(message));        
-            await writer.WriteAsync("data: ");
-            await writer.WriteAsync(o.ToString(Formatting.None));
-            await writer.WriteAsync("\r\n\r\n");
+            await writer.WriteAsync("data: ").ConfigureAwait(false);
+            await writer.WriteAsync(o.ToString(Formatting.None)).ConfigureAwait(false);
+            await writer.WriteAsync("\r\n\r\n").ConfigureAwait(false);
 		}
 
 		protected override bool TryComputeLength(out long length)

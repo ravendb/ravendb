@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = operationId.ToString()
                                                  }, out id, tre);
 
-            await task;
+            await task.ConfigureAwait(false);
 
             if (error != null)
             {
@@ -236,12 +236,12 @@ namespace Raven.Database.Server.Controllers
 		{
 			using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
 			{
-				for (var i = 0; i < count; i++)
-				{
-					timeout.Delay();
+                for (var i = 0; i < count; i++)
+                {
+                    timeout.Delay();
 
 					while (jsonReader.Read())
-					{
+                                                                 {
 						if (jsonReader.TokenType == JsonToken.StartObject)
 							break;
 					}
@@ -251,7 +251,11 @@ namespace Raven.Database.Server.Controllers
 
 					var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 
-					yield return PrepareJsonDocument(doc);
+					var jsonDocument = PrepareJsonDocument(doc);
+					if (jsonDocument == null)
+						continue;
+
+					yield return jsonDocument;
 				}
 
 				increaseDocumentsCount(count);
@@ -277,34 +281,45 @@ namespace Raven.Database.Server.Controllers
 
                     var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 
-                    yield return PrepareJsonDocument(doc);
+                    var jsonDocument = PrepareJsonDocument(doc);
+	                if (jsonDocument == null)
+		                continue;
+
+	                yield return jsonDocument;
                 }
 
                 increaseDocumentsCount(count);
             }
         }
 
-        private static JsonDocument PrepareJsonDocument(RavenJObject doc)
-        {
-            var metadata = doc.Value<RavenJObject>("@metadata");
-                    if (metadata == null)
-                        throw new InvalidOperationException("Could not find metadata for document");
+		private static JsonDocument PrepareJsonDocument(RavenJObject doc)
+		{
+			var metadata = doc.Value<RavenJObject>("@metadata");
+			if (metadata == null)
+				throw new InvalidOperationException("Could not find metadata for document");
 
-                    var id = metadata.Value<string>("@id");
-                    if (string.IsNullOrEmpty(id))
-                        throw new InvalidOperationException("Could not get id from metadata");
+			var id = metadata.Value<string>("@id");
+			if (string.IsNullOrEmpty(id))
+				throw new InvalidOperationException("Could not get id from metadata");
 
-                    doc.Remove("@metadata");
+			if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
+				return null; //its just a token document, should not get written into the database
+							 //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
+							 //during long pauses in the bulk insert operation.
+							 // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
+							 //continuation token and lots of document skips
 
-            return new JsonDocument
-                    {
-                        Key = id,
-                        DataAsJson = doc,
-                        Metadata = metadata
-                    };
-                }
+			doc.Remove("@metadata");
 
-        public class BulkInsertStatus : IOperationState
+			return new JsonDocument
+			{
+				Key = id,
+				DataAsJson = doc,
+				Metadata = metadata
+			};
+		}
+
+		public class BulkInsertStatus : IOperationState
         {
             public int Documents { get; set; }
             public bool Completed { get; set; }

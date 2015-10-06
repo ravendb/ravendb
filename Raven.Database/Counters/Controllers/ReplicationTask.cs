@@ -43,7 +43,7 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		public ReplicationTask(CounterStorage storage)
-		{
+		{			
 			this.storage = storage;
 			this.storage.CounterUpdated += SignalCounterUpdate;
 			cancellation = new CancellationTokenSource();
@@ -66,18 +66,20 @@ namespace Raven.Database.Counters.Controllers
             replicationTask.Start();
 	    }
 
-	    private void ReplicationAction()
+		private void ReplicationAction()
 	    {
 	        var runningBecauseOfDataModification = false;
-            var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
+			var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10);
 
             //NotifySiblings(); //TODO: implement
 
             while (!cancellation.IsCancellationRequested)
             {
                 SendReplicationToAllServers(runningBecauseOfDataModification);
-                runningBecauseOfDataModification = WaitForCountersUpdate(timeToWaitInMinutes);
-                timeToWaitInMinutes = runningBecauseOfDataModification ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(5);
+                runningBecauseOfDataModification = WaitForCountersUpdate(timeToWait);
+				timeToWait = runningBecauseOfDataModification ? 
+					TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs) : //by default this is 30 sec
+					TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10); //by default this is 5 min
             }
 	    }
 
@@ -113,19 +115,18 @@ namespace Raven.Database.Counters.Controllers
 			SignalCounterUpdate();
 		}
 
-		private void SendReplicationToAllServers(bool runningBecauseOfDataModifications)
+		public void SendReplicationToAllServers(bool runningBecauseOfDataModifications)
 		{
 			try
 			{
 				var replicationDestinations = GetReplicationDestinations();
-
 				if (replicationDestinations == null || replicationDestinations.Count <= 0) 
 					return;
 
 				var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-				var destinationForReplication = replicationDestinations.Where(
-					destination => (!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
+				var destinationForReplication = replicationDestinations.Where(destination => 
+					(!runningBecauseOfDataModifications || IsNotFailing(destination.CounterStorageUrl, currentReplicationAttempts)) && !destination.Disabled);
 
 				foreach (var destination in destinationForReplication)
 				{
@@ -222,7 +223,7 @@ namespace Raven.Database.Counters.Controllers
 
 		private ReplicationResult TryReplicate(CounterReplicationDestination destination, out long lastEtagSent, out string lastError)
 		{
-            long etag = 0;
+            long etag;
 		    lastEtagSent = 0;
 			var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
 

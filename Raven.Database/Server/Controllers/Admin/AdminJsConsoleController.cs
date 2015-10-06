@@ -20,9 +20,9 @@ namespace Raven.Database.Server.Controllers.Admin
 		[RavenRoute("admin/console/{*id}")]
 		public async Task<HttpResponseMessage> Console(string id)
 		{
-			var database = await DatabasesLandlord.GetResourceInternal(id);
+			var database = await DatabasesLandlord.GetResourceInternal(id).ConfigureAwait(false);
 
-			var script = await ReadJsonObjectAsync<AdminJsScript>();
+			var script = await ReadJsonObjectAsync<AdminJsScript>().ConfigureAwait(false);
 
 			var console = new AdminJsConsole(database);
 

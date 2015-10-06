@@ -8,11 +8,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
 using Raven.Database.Extensions;
-using Raven.Database.Plugins.Builtins;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -69,7 +67,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString(error, HttpStatusCode.BadRequest);
 			}
-			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
 			
 			string bundles;			
 			if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))

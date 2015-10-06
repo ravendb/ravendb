@@ -94,7 +94,7 @@ namespace Owin
 			if (accept == null)
 			{
 				// Not a websocket request
-				await next();
+				await next().ConfigureAwait(false);
 				return;
 			}
 
@@ -102,7 +102,7 @@ namespace Owin
 
 			if (webSocketsTrasport != null)
 			{
-				if (await webSocketsTrasport.TrySetupRequest())
+				if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
 				{
 					accept(new Dictionary<string, object>()
 					{
@@ -208,8 +208,9 @@ namespace Owin
 				    {
                         var localPath = pathString.Value;
 				        var length = localPath.Length;
-				        if (length < 10)
+				        if (length < 10) // the shortest possible URL to consider here: fs/{fs_name_at_least_one_character}/files
 				            return true;
+
 				        var prev = localPath[length - 2];
 				        switch (localPath[length-1])
 				        {
@@ -234,22 +235,35 @@ namespace Owin
                                     case 'l':
                                     case 'L':
                                         return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
-                                    default:
+									default:
 				                        return true;
-				                }    
-                            case 's':
+				                }
+							case 'D':
+							case 'd':
+								switch (prev)
+								{
+									case 'E':
+									case 'e':
+										return localPath.EndsWith("synchronization/MultipartProceed", StringComparison.OrdinalIgnoreCase) == false;
+									default:
+										return true;
+								}
+							case 's':
                             case 'S':
 				                switch (prev)
 				                {
                                     case 'T':
                                     case 't':
                                         return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
-                                    case 'o':
-                                    case 'O':
+                                    case 'c':
+                                    case 'C':
                                         if (localPath[length - 4] == '/')
 				                        return true;
 				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
-                                    default:
+									case 'E':
+									case 'e':
+										return localPath.EndsWith("files", StringComparison.OrdinalIgnoreCase) == false || context.Request.Method != "PUT";
+									default:
 				                        return true;
 				                }
                             default:
@@ -295,7 +309,7 @@ namespace Owin
 				// Pre request stuff
                 try
                 {
-                    await Next.Invoke(context);
+                    await Next.Invoke(context).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -317,7 +331,7 @@ namespace Owin
             {
                 try
                 {
-                    await Next.Invoke(context);
+                    await Next.Invoke(context).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

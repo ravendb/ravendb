@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Controllers
 		    {
 			    try
 			    {
-				    itemsToLoad = await ReadJsonArrayAsync();
+				    itemsToLoad = await ReadJsonArrayAsync().ConfigureAwait(false);
 			    }
 				catch (InvalidOperationException e)
 				{

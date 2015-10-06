@@ -25,13 +25,13 @@ namespace Raven.Database.Counters.Controllers
             }
 
             var name = (!string.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : string.Empty;
-			var globalConnectionState = Counters.TransportState.For(id, this);
+			var globalConnectionState = CounterStorage.TransportState.For(id, this);
 			var connectionState = globalConnectionState.CounterStorage;
 
             var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
             {
-				Counters.TransportState.Disconnect(id);
+				CounterStorage.TransportState.Disconnect(id);
             }
 			else if (Match(cmd, "watch-counters"))
 			{
@@ -90,7 +90,7 @@ namespace Raven.Database.Counters.Controllers
         {
             var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-			Counters.TransportState.Register(eventsTransport);
+			CounterStorage.TransportState.Register(eventsTransport);
             return new HttpResponseMessage { Content = eventsTransport };
         }
     }

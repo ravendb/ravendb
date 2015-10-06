@@ -990,12 +990,11 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSkipFilesWhenUsingContinuations()
         {
             var dataDir = NewDataPath(forceCreateDir: true);
-            var continuationToken = "Token";
+            const string continuationToken = "Token";
 
             using (var store = NewRemoteDocumentStore( dataDirectory: dataDir ))
             {

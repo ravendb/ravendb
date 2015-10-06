@@ -629,13 +629,13 @@ namespace Raven.Client.Document
 			return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
 		}
 
-		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken))
+		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
 		{
 			var q = GetIndexQuery(true);
 			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
 		}
 
-		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken))
+		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
 		{
 			var q = GetIndexQuery(true);
 			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
@@ -779,9 +779,9 @@ namespace Raven.Client.Document
 		///   Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		public async Task<QueryResult> QueryResultAsync(CancellationToken token = default (CancellationToken))
+		public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
 		{
-			var result = await InitAsync().WithCancellation(token);
+			var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
 			return result.CurrentQueryResults.CreateSnapshot();
 		}
 
@@ -793,7 +793,7 @@ namespace Raven.Client.Document
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation();
-			return await ExecuteActualQueryAsync();
+			return await ExecuteActualQueryAsync().ConfigureAwait(false);
 		}
 
 		protected void ExecuteBeforeQueryListeners()
@@ -1003,8 +1003,8 @@ namespace Raven.Client.Document
 					throw;
 			}
 
-			var result = await ExecuteActualQueryAsync();
-			return await ProcessEnumerator(result);
+			var result = await ExecuteActualQueryAsync().ConfigureAwait(false);
+			return await ProcessEnumerator(result).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -1832,7 +1832,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Callback to get the results of the stream
 		/// </summary>
-        public void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecutedCallback)
+		public void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecutedCallback)
 		{
 			this.afterStreamExecutedCallback += afterStreamExecutedCallback;
 		}
@@ -1867,11 +1867,11 @@ If you really want to do in memory filtering on the data returned from the query
 				using (queryOperation.EnterQueryContext())
 				{
 					queryOperation.LogQuery();
-					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
 
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						await Task.Delay(100);
+						await Task.Delay(100).ConfigureAwait(false);
 						continue;
 					}
 					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
@@ -1892,11 +1892,10 @@ If you really want to do in memory filtering on the data returned from the query
 				if (indexName == "dynamic" || indexName.StartsWith("dynamic/"))
 					throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
 
-				return new SpatialIndexQuery
+				var spatialQuery = new SpatialIndexQuery
 				{
 					IsDistinct = isDistinct,
 					Query = query,
-					PageSize = pageSize ?? 128,
 					Start = start,
 					Cutoff = cutoff,
 					WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
@@ -1923,6 +1922,11 @@ If you really want to do in memory filtering on the data returned from the query
 					ShowTimings = showQueryTimings,
 					ExplainScores = shouldExplainScores
 				};
+
+				if (pageSize.HasValue)
+					spatialQuery.PageSize = pageSize.Value;
+
+				return spatialQuery;
 			}
 
 			var indexQuery = new IndexQuery
@@ -2321,20 +2325,20 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public async Task<IList<T>> ToListAsync(CancellationToken token = default (CancellationToken))
+		public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
 		{
-			var currentQueryOperation = await InitAsync().WithCancellation(token);
-			var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token);
+			var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+			var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
 			return tuple.Item2;
 		}
 
 		/// <summary>
 		/// Gets the total count of records for this query
 		/// </summary>
-		public async Task<int> CountAsync(CancellationToken token = default (CancellationToken))
+		public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
 		{
 			Take(0);
-			var result = await QueryResultAsync(token);
+			var result = await QueryResultAsync(token).ConfigureAwait(false);
 			return result.TotalResults;
 		}
 

@@ -24,7 +24,7 @@ namespace Raven.Client.FileSystem.Shard
 			{
 				try
 				{
-					var id = await shard.Value.GetServerIdAsync();
+					var id = await shard.Value.GetServerIdAsync().ConfigureAwait(false);
 					shardsKeyIdList.Add(Tuple.Create(shard.Key, id));
 				}
 				catch (Exception)
@@ -46,7 +46,7 @@ namespace Raven.Client.FileSystem.Shard
 
         public async Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation)
         {
-	        await runFirst;
+	        await runFirst.ConfigureAwait(false);
 
 			var list = new List<T>();
 			var errors = new List<Exception>();
@@ -54,7 +54,7 @@ namespace Raven.Client.FileSystem.Shard
 			{
 				try
 				{
-					list.Add(await operation(commands[i], i));
+					list.Add(await operation(commands[i], i).ConfigureAwait(false));
 				}
 				catch (Exception e)
 				{

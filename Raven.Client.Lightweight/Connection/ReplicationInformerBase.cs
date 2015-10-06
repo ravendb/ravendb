@@ -56,7 +56,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-        public int DelayTimeInMiliSec { get;  set; }
+        public int DelayTimeInMiliSec { get; set; }
 
         public List<OperationMetadata> ReplicationDestinations { get; protected set; }
 
@@ -114,11 +114,44 @@ namespace Raven.Client.Connection
 	            return true;
 
 	        var currentTask = failureCounter.CheckDestination;
-            if (currentTask.Status != TaskStatus.Running && DelayTimeInMiliSec > 0)
+            if ((currentTask.IsCompleted || currentTask.IsFaulted || currentTask.IsCanceled) && DelayTimeInMiliSec > 0)
 	        {
-	            var checkDestination = new Task(async delegate
+                var tcs = new TaskCompletionSource<object>();
+
+                var old = Interlocked.CompareExchange(ref failureCounter.CheckDestination, tcs.Task, currentTask);
+                if (old == currentTask)
+                {
+                    CheckIfServerIsUpNow(operationMetadata, primaryOperation, token)
+                        .ContinueWith(task =>
+                        {
+                            switch (task.Status)
+                            {
+                                case TaskStatus.RanToCompletion:
+                                    tcs.TrySetResult(null);
+                                    break;
+                                case TaskStatus.Canceled:
+                                    tcs.TrySetCanceled();
+                                    break;
+                                case TaskStatus.Faulted:
+                                    if(task.Exception != null)
+                                        tcs.TrySetException(task.Exception);
+                                    else
+                                        goto default;
+                                    break;
+                                default:
+                                    tcs.TrySetCanceled();
+                                    break;
+                            }
+                        }, token);
+                }
+            }
+
+            return false;
+        }
+
+        private async Task CheckIfServerIsUpNow(OperationMetadata operationMetadata, OperationMetadata primaryOperation, CancellationToken token)
 	            {
-	                for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
 	                {
 						token.ThrowCancellationIfNotDefault();
 	                    try
@@ -140,21 +173,11 @@ namespace Raven.Client.Connection
 	                    }
 	                    catch (ObjectDisposedException)
 	                    {
-	                        return; // disposed, nothing to do here
+                    return;
 	                    }
                         await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
 	                }
-	            });
-
-	            var old = Interlocked.CompareExchange(ref failureCounter.CheckDestination, checkDestination, currentTask);
-	            if (old == currentTask)
-	            {
-	                  checkDestination.Start(TaskScheduler.Default);
 	            }
-	        }
-
-	        return false;
-	    }
 
 	    protected abstract string GetServerCheckUrl(string baseUrl);
 
@@ -200,7 +223,7 @@ namespace Raven.Client.Connection
 			int currentRequest, 
 			int currentReadStripingBase, 
 			Func<OperationMetadata, Task<T>> operation, 
-			CancellationToken token = default (CancellationToken))
+            CancellationToken token = default(CancellationToken))
         {
 			Debug.Assert(typeof(T).FullName.Contains("Task") == false);
 
@@ -225,7 +248,7 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
                     {
                         operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -234,7 +257,7 @@ namespace Raven.Client.Connection
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
+            if (ShouldExecuteUsing(primaryOperation, primaryOperation, method, true, null, token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
@@ -258,7 +281,7 @@ namespace Raven.Client.Connection
 				token.ThrowCancellationIfNotDefault();
 
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error,token) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error, token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
@@ -288,7 +311,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 		protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
 			OperationMetadata primaryOperationMetadata, bool avoidThrowing)
 		{
- 			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken));
+ 			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken)).ConfigureAwait(false);
 		}
 
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
@@ -360,7 +383,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					throw;
 		    }
 			}
-            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken).ConfigureAwait(false);
 		}
 
 	    public virtual void Dispose()

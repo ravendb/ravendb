@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -25,12 +28,12 @@ namespace Raven.Client.Counters
 
 		public async Task IncrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			await ChangeAsync(groupName, counterName, 1, token);
+			await ChangeAsync(groupName, counterName, 1, token).ConfigureAwait(false);
 		}
 
 		public async Task DecrementAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			await ChangeAsync(groupName, counterName, -1, token);
+			await ChangeAsync(groupName, counterName, -1, token).ConfigureAwait(false);
 		}
 
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
@@ -68,8 +71,17 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/cs/{1}/getCounterOverallTotal/{2}/{3}", url, counterStoreName, groupName, counterName);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
-					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.Value<long>();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+						return response.Value<long>();
+					}
+					catch (ErrorResponseException e)
+					{
+						if (e.StatusCode == HttpStatusCode.NotFound)
+							throw new InvalidOperationException(e.Message, e);
+						throw;
+					}
 				}
 			}, token).WithCancellation(token).ConfigureAwait(false);
 		}

@@ -66,14 +66,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
       <Private>True</Private>
     </Reference>
@@ -150,6 +151,8 @@
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
+    <Compile Include="Issues\RavenDB_3887.cs" />
+    <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />
@@ -158,6 +161,7 @@
     <Compile Include="Issues\RavenDB_3672.cs" />
     <Compile Include="Issues\RavenDB_3692.cs" />
     <Compile Include="Issues\RavenDB_3742.cs" />
+    <Compile Include="Issues\RavenDB_3919.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Synchronization\FailoverReadFromAllServers.cs" />
     <Compile Include="Synchronization\RavenSynchronizationTestBase.cs" />

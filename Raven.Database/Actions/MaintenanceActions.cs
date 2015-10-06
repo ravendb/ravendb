@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -13,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -134,5 +136,57 @@ namespace Raven.Database.Actions
 			    TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
 		    }
 	    }
+        public void DeleteRemovedIndexes(Dictionary<int, DocumentDatabase.IndexFailDetails> reason)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
+                {
+                    Database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
+                }
+
+                List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
+                foreach (int id in indexIds)
+                {
+                    var index = IndexDefinitionStorage.GetIndexDefinition(id);
+                    if (index != null)
+                        continue;
+
+                    // index is not found on disk, better kill for good
+                    // Even though technically we are running into a situation that is considered to be corrupt data
+                    // we can safely recover from it by removing the other parts of the index.
+                    Database.IndexStorage.DeleteIndex(id);
+                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
+
+                    string indexName;
+                    string msg;
+                    string ex;
+
+                    DocumentDatabase.IndexFailDetails failDetails;
+                    if (reason == null || reason.TryGetValue(id, out failDetails) == false)
+                    {
+                        indexName = "Unknown Name";
+                        msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", id, indexName);
+                        ex = "";
+                    }
+                    else
+                    {
+                        indexName = failDetails.IndexName;
+                        msg = failDetails.Reason;
+                        ex = failDetails.Ex.ToString();
+                    }
+
+                    Database.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = SystemTime.UtcNow,
+                        Message = msg,
+                        Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", id, indexName),
+                        Exception = ex,
+                        UniqueKey = msg
+                    });
+                }
+            });
+        }
     }
 }

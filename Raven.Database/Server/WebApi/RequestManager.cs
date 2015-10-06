@@ -202,7 +202,7 @@ namespace Raven.Database.Server.WebApi
 				LastRequestTime = SystemTime.UtcNow;
 				Interlocked.Increment(ref concurrentRequests);
 
-				RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource();
+				RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource().ConfigureAwait(false);
 				if (args != null)
 				{
 					OnBeforeRequest(args);
@@ -227,12 +227,12 @@ namespace Raven.Database.Server.WebApi
 							}
 							else
 							{
-								response = await action();
+								response = await action().ConfigureAwait(false);
 							}
 						}
 						else
 						{
-							response = await action();
+							response = await action().ConfigureAwait(false);
 						}
 					}
 					finally

@@ -102,7 +102,7 @@ namespace Raven.Client.TimeSeries.Operations
 						}
 					}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-					await response.AssertNotFailingResponse();
+					await response.AssertNotFailingResponse().ConfigureAwait(false);
 
 					using (response)
 					{
@@ -148,7 +148,7 @@ namespace Raven.Client.TimeSeries.Operations
 
 			try
 			{
-				var status = await GetOperationStatusAsync(operationId);
+				var status = await GetOperationStatusAsync(operationId).ConfigureAwait(false);
 
 				if (status == null)
 					return true;

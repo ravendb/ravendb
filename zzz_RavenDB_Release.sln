@@ -102,6 +102,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rachis", "Rachis\Rachis\Rac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rachis.Tests", "Rachis\Rachis.Tests\Rachis.Tests.csproj", "{61B3D01A-F286-42B1-AA6B-83D9D6DF0873}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sparrow.Tests", "Raven.Sparrow\Sparrow.Tests\Sparrow.Tests.csproj", "{794CC625-31A4-4DA2-968E-5D33CF1CADA1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sparrow", "Raven.Sparrow\Sparrow\Sparrow.csproj", "{104699C8-0FD3-4AB9-8542-E8FA89ED199B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -588,6 +592,30 @@ Global
 		{61B3D01A-F286-42B1-AA6B-83D9D6DF0873}.Release|Any CPU.Build.0 = Release|Any CPU
 		{61B3D01A-F286-42B1-AA6B-83D9D6DF0873}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{61B3D01A-F286-42B1-AA6B-83D9D6DF0873}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Profiling|Mixed Platforms.ActiveCfg = Profiling|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Profiling|Mixed Platforms.Build.0 = Profiling|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Profiling|Mixed Platforms.ActiveCfg = Profiling|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Profiling|Mixed Platforms.Build.0 = Profiling|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{104699C8-0FD3-4AB9-8542-E8FA89ED199B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -625,6 +653,7 @@ Global
 		{44C65E90-D6D8-40D6-A114-9FB12EFB0D90} = {34CAACF8-D3EB-4161-931D-C850F076115C}
 		{F796F69F-D17B-4260-92D6-65CB94C0E05C} = {52695218-B037-40B0-BC2C-745505D5EEC0}
 		{61B3D01A-F286-42B1-AA6B-83D9D6DF0873} = {52695218-B037-40B0-BC2C-745505D5EEC0}
+		{794CC625-31A4-4DA2-968E-5D33CF1CADA1} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 90d6cc9d-ef79-4360-ac7d-a7523ee38ad0

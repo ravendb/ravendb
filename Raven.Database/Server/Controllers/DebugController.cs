@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("cs/{counterStorageName}/debug/")]
 		public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName)
 		{
-			var counter = await CountersLandlord.GetResourceInternal(counterStorageName);
+			var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
 			if (counter == null)
 				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
 
@@ -96,7 +96,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("cs/{counterStorageName}/debug/metrics")]
 		public async Task<HttpResponseMessage> GetCounterMetrics(string counterStorageName)
 		{
-			var counter = await CountersLandlord.GetResourceInternal(counterStorageName);
+			var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
 			if (counter == null)
 				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName), HttpStatusCode.NotFound);
 
@@ -161,7 +161,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				array = await ReadJsonArrayAsync();
+				array = await ReadJsonArrayAsync().ConfigureAwait(false);
 			}
 			catch (InvalidOperationException e)
 			{
@@ -189,7 +189,7 @@ namespace Raven.Database.Server.Controllers
 				var value = array[i].Value<string>();
 				try
 				{
-					results[i] = IndexPrettyPrinter.Format(value);
+					results[i] = IndexPrettyPrinter.FormatOrError(value);
 				}
 				catch (Exception e)
 				{
@@ -589,7 +589,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
 		{
-			var indexStr = await ReadStringAsync();
+			var indexStr = await ReadStringAsync().ConfigureAwait(false);
 			bool querySyntax = indexStr.Trim().StartsWith("from");
 			var mapDefinition = querySyntax
 				? QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexStr, true)

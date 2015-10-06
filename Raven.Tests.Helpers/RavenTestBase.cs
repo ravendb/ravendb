@@ -140,26 +140,27 @@ namespace Raven.Tests.Helpers
 			return newDataDir;
 		}
 
-        /// <summary>
-        /// Creates a new Embeddable document store.
-        /// </summary>
-        /// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
-        /// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
-        /// <param name="catalog">Custom bundles that are not provided by RavenDb.</param>
+		/// <summary>
+		/// Creates a new Embeddable document store.
+		/// </summary>
+		/// <param name="runInMemory">Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost.<br/>Default: <b>true</b></param>
+		/// <param name="requestedStorage">What storage type to use (see: RavenDB Storage engines).<br/>Allowed values: <b>vornon</b>, <b>esent</b>.<br/>Default: <b>voron</b></param>
+		/// <param name="catalog">Custom bundles that are not provided by RavenDb.</param>
 		/// <param name="dataDir">The path for the database directory. Can use ~\ as the root, in which case the path will start from the server base directory. <br/>Default: <b>~\Databases\System</b></param>
-        /// <param name="enableAuthentication"></param>
-        /// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
-        /// <param name="port">The port to use when creating the http listener. Allowed: 1 - 65,536 or * (find first available port from 8079 and upward).<br/>Default: <b>8079</b></param>
-        /// <param name="anonymousUserAccessMode">Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users, Admin - all (including administrative actions).<br/>Default: <b>Get</b></param>
-        /// <param name="configureStore">An action delegate which allows you to configure the document store instance that is returned. eg. <code>configureStore: store => store.DefaultDatabase = "MasterDb"</code></param>
-        /// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
-        /// <param name="indexes">A collection of indexes to execute.</param>
-        /// <param name="transformers">A collection of transformers to execute.</param>
-        /// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
-        /// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executed.</param>
-        /// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>noStaleQueries</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
-        /// <returns>A new instance of an EmbeddableDocumentStore.</returns>
-        public EmbeddableDocumentStore NewDocumentStore(
+		/// <param name="enableAuthentication"></param>
+		/// <param name="activeBundles">Semicolon separated list of bundles names, such as: 'Replication;Versioning'.<br/>Default: no bundles turned on.</param>
+		/// <param name="port">The port to use when creating the http listener. Allowed: 1 - 65,536 or * (find first available port from 8079 and upward).<br/>Default: <b>8079</b></param>
+		/// <param name="anonymousUserAccessMode">Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users, Admin - all (including administrative actions).<br/>Default: <b>Get</b></param>
+		/// <param name="configureStore">An action delegate which allows you to configure the document store instance that is returned. eg. <code>configureStore: store => store.DefaultDatabase = "MasterDb"</code></param>
+		/// <param name="databaseName">Name of the server that will show up on /admin/stats endpoint.</param>
+		/// <param name="indexes">A collection of indexes to execute.</param>
+		/// <param name="transformers">A collection of transformers to execute.</param>
+		/// <param name="seedData">A collection of some fake data that will be automatically stored into the document store.</param>
+		/// <param name="noStaleQueries">When you query an index, the query will wait for the index to complete it's indexing and not be stale -before- the query is executed.</param>
+		/// <param name="conventions">The conventions to be used when creating a new embeddable document store</param>
+		/// <remarks>Besides the document store being instantiated, it is also Initialized.<br/>Also, if you provide some indexes to be used, make sure you understand that they might be stale when you query them. To make sure you're querying against indexes that have completed their indexing (ie. index is not stale), use the <code>noStaleQueries</code> parameter to determine if you wish to query against a stale or not-stale query.</remarks>
+		/// <returns>A new instance of an EmbeddableDocumentStore.</returns>
+		public EmbeddableDocumentStore NewDocumentStore(
             bool runInMemory = true,
             string requestedStorage = null,
             ComposablePartCatalog catalog = null,
@@ -173,7 +174,8 @@ namespace Raven.Tests.Helpers
             IEnumerable<AbstractIndexCreationTask> indexes = null,
             IEnumerable<AbstractTransformerCreationTask> transformers = null,
             IEnumerable<IEnumerable> seedData = null,
-            bool noStaleQueries = false)
+            bool noStaleQueries = false,
+			DocumentConvention conventions = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
 
@@ -190,7 +192,8 @@ namespace Raven.Tests.Helpers
                     RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
                     Port = port ?? 8079,
                     AnonymousUserAccessMode = anonymousUserAccessMode
-                }
+                },
+				Conventions = conventions ?? new DocumentConvention()
             };
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
@@ -558,10 +561,12 @@ namespace Raven.Tests.Helpers
 
 		    var statistics = databaseCommands.GetStatistics();
 		    var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
-		    var errorMessage = string.Format("The indexes stayed stale for more than {0}{1}{2}",
+            var file = Path.GetTempFileName() + ".json";
+            File.WriteAllText(file, stats);
+		    var errorMessage = string.Format("The indexes stayed stale for more than {0},{1}Details at: {2}",
 		        timeout.Value,
 		        Environment.NewLine,
-		        stats);
+		        file);
 		    throw new TimeoutException(errorMessage);
 		}
 

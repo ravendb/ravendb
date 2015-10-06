@@ -24,6 +24,8 @@
     <NoWarn>1591, 618</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -36,6 +38,8 @@
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <NoWarn>1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -52,7 +56,8 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -101,9 +106,6 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="System.Web.Http">
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -516,6 +518,9 @@
       <Name>Sparrow</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="FodyWeavers.xml" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
@@ -526,6 +531,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <ItemGroup>
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />

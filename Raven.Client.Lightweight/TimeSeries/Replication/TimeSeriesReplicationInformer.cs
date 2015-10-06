@@ -98,7 +98,7 @@ namespace Raven.Client.TimeSeries.Replication
 
 				if (shouldReadFromAllServers && localReplicationDestinations.Count > 0 && !shouldFailImmediately)
 				{
-					operationResult = await TryExecuteOperationWithLoadBalancing(timeSeriesStoreUrl, operation, token, localReplicationDestinations, operationCredentials);
+					operationResult = await TryExecuteOperationWithLoadBalancing(timeSeriesStoreUrl, operation, token, localReplicationDestinations, operationCredentials).ConfigureAwait(false);
 					if (operationResult.Success)
 						return operationResult.Result;
 
@@ -110,7 +110,7 @@ namespace Raven.Client.TimeSeries.Replication
 
 				//otherwise we didn't do load balancing; therefore go the usual route -> try to read from primary and if fails -> try to read from secondary
 
-				operationResult = await TryExecuteOperationAsync(timeSeriesStoreUrl, timeSeriesStore.Name, operation, false, operationCredentials, token);
+				operationResult = await TryExecuteOperationAsync(timeSeriesStoreUrl, timeSeriesStore.Name, operation, false, operationCredentials, token).ConfigureAwait(false);
 				if (operationResult.Success )
 					return operationResult.Result;
 
@@ -118,7 +118,7 @@ namespace Raven.Client.TimeSeries.Replication
 				if (operationResult.Success == false && failureTimeSeries.IsFirstFailure(timeSeriesStoreUrl)) 
 				{
 					RefreshReplicationInformation();
-					operationResult = await TryExecuteOperationWithFailover(timeSeriesStoreUrl, operation, token, operationCredentials, shouldFailImmediately, localReplicationDestinations);
+					operationResult = await TryExecuteOperationWithFailover(timeSeriesStoreUrl, operation, token, operationCredentials, shouldFailImmediately, localReplicationDestinations).ConfigureAwait(false);
 					if (operationResult.Success)
 						return operationResult.Result;
 				}
@@ -145,14 +145,14 @@ namespace Raven.Client.TimeSeries.Replication
 
 		private async Task<AsyncOperationResult<T>> TryExecuteOperationWithFailover<T>(string timeSeriesStoreUrl, Func<string, string, Task<T>> operation, CancellationToken token, OperationCredentials operationCredentials, bool shouldFailImmediately, List<TimeSeriesReplicationDestination> localReplicationDestinations)
 		{
-			var operationResult = await TryExecuteOperationOnPrimaryNode(timeSeriesStoreUrl, operation, token, operationCredentials);
+			var operationResult = await TryExecuteOperationOnPrimaryNode(timeSeriesStoreUrl, operation, token, operationCredentials).ConfigureAwait(false);
 			if (operationResult.Success)
 				return operationResult;
 
 			if (shouldFailImmediately)
 				throw new InvalidOperationException(@"Attempted to connect to master and failed. Since there is FailImmediately flag specified in FailoverBehavior, failing the operation.");
 
-			operationResult = await TryExecutingOperationsOnSecondaryNodes(operation, token, localReplicationDestinations, operationCredentials);
+			operationResult = await TryExecutingOperationsOnSecondaryNodes(operation, token, localReplicationDestinations, operationCredentials).ConfigureAwait(false);
 			if (operationResult.Success)
 				return operationResult;
 
@@ -282,7 +282,7 @@ namespace Raven.Client.TimeSeries.Replication
 					throw;
 				}
 			}
-			return await TryExecuteOperationAsync(url,timeSeriesStoreName, operation, avoidThrowing, credentials, cancellationToken);
+			return await TryExecuteOperationAsync(url,timeSeriesStoreName, operation, avoidThrowing, credentials, cancellationToken).ConfigureAwait(false);
 		}
 
 		private bool ShouldExecuteUsing(string timeSeriesStoreUrl, OperationCredentials credentials, CancellationToken token)

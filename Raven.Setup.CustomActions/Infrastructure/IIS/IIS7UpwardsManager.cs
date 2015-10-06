@@ -24,6 +24,11 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 					webSiteModel.Name = webSite.Name;
 					webSiteModel.PhysicalPath = webSite.PhysicalPath();
 					webSiteModel.DefaultAppPool = webSite.ApplicationDefaults.ApplicationPoolName;
+					
+					var firstBinding = webSite.Bindings.FirstOrDefault();
+
+					if (firstBinding != null)
+						webSiteModel.Port = firstBinding.EndPoint.Port.ToString(CultureInfo.InvariantCulture);
 
 					yield return webSiteModel;
 				}

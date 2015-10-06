@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -93,6 +94,13 @@ namespace Raven.Database
 
 		private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
 
+        public class IndexFailDetails
+        {
+            public string IndexName;
+            public string Reason;
+            public Exception Ex;
+        }
+
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
 		{
 			TimerManager = new ResourceTimerManager();
@@ -164,8 +172,8 @@ namespace Raven.Database
 
 				try
 				{
-					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-                    initializer.InitializeIndexDefinitionStorage();
+                    TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+                    var reason = initializer.InitializeIndexDefinitionStorage();
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
                     Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
@@ -203,6 +211,7 @@ namespace Raven.Database
 
 					RaiseIndexingWiringComplete();
 
+                    Maintenance.DeleteRemovedIndexes(reason);
 
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
@@ -1343,9 +1352,20 @@ namespace Raven.Database
 
 			public void ExecuteAlterConfiguration()
 			{
-				foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+				try
 				{
-					alterConfiguration.AlterConfiguration(configuration);
+					foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+					{
+						alterConfiguration.AlterConfiguration(configuration);
+					}
+				}
+				catch (ReflectionTypeLoadException e)
+				{
+					//throw more informative exception
+					if (e.LoaderExceptions != null && e.LoaderExceptions.Length > 0)
+						throw e.LoaderExceptions.First();
+
+					throw;
 				}
 			}
 
@@ -1366,10 +1386,11 @@ namespace Raven.Database
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
-		    public void InitializeIndexDefinitionStorage()
+		    public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()
 			{
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
-		    }
+		        return database.IndexDefinitionStorage.Initialize();
+			}
 
 			public void InitializeIndexStorage()
 			{
@@ -1438,5 +1459,8 @@ namespace Raven.Database
 		{
 			throw new NotImplementedException();
 		}
+
+        
+
 	}
 }

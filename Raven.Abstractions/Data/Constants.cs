@@ -114,6 +114,7 @@ namespace Raven.Abstractions.Data
 		public const int DefaultPrefetchingDurationLimit = 5000;
 
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
+		public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 
@@ -324,6 +325,9 @@ namespace Raven.Abstractions.Data
 			public const string TombstoneRetentionTime = "Raven/Counter/TombstoneRetentionTime";
 
 			public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
+
+			//in milliseconds
+			public const string ReplicationLatencyMs = "Raven/Counter/ReplicationLatency";
 
 			public const string UrlPrefix = "cs";
 		}

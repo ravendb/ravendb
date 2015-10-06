@@ -328,6 +328,7 @@ namespace Raven.Database.Config
 			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
 			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
 			Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
+			Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
 
 			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
 
@@ -1542,6 +1543,8 @@ namespace Raven.Database.Config
 			public TimeSpan TombstoneRetentionTime { get; set; }
 
 			public int DeletedTombstonesInBatch { get; set; }
+
+			public int ReplicationLatencyInMs { get; set; }
 		}
 
 		public class TimeSeriesConfiguration

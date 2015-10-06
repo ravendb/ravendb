@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -18,8 +17,8 @@ namespace Raven.Tests.Counters
 				
 				var stats = await store.GetCounterStatsAsync();
 
-				stats.GroupsCount.Should().Be(3);
-				stats.CountersCount.Should().Be(4);
+                Assert.Equal(3, stats.GroupsCount);
+                Assert.Equal(4, stats.CountersCount);
 			}
 	    }
 	}

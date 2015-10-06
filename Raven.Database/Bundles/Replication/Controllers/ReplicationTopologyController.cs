@@ -34,7 +34,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			else
 			{
 				ttl = int.Parse(ttlAsString);
-				from = await ReadJsonArrayAsync();
+				from = await ReadJsonArrayAsync().ConfigureAwait(false);
 			}
 
 			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from, ttl, Log);

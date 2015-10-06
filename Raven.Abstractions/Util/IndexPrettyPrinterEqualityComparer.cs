@@ -17,8 +17,8 @@ namespace Raven.Abstractions.Util
 			if (x == null || y == null)
 				return false;
 
-			var xFormatted = IndexPrettyPrinter.Format(x);
-			var yFormatted = IndexPrettyPrinter.Format(y);
+			var xFormatted = IndexPrettyPrinter.TryFormat(x);
+			var yFormatted = IndexPrettyPrinter.TryFormat(y);
 			return xFormatted.Equals(yFormatted);
 		}
 

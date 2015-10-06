@@ -29,13 +29,13 @@ namespace Raven.Smuggler
             if (betweenOptions.To == null)
                 throw new ArgumentNullException("betweenOptions.To");            
 
-            using (primaryStore = await CreateStore(betweenOptions.From))
-            using (secondaryStore = await CreateStore(betweenOptions.To))
+            using (primaryStore = await CreateStore(betweenOptions.From).ConfigureAwait(false))
+            using (secondaryStore = await CreateStore(betweenOptions.To).ConfigureAwait(false))
             using (documentStore = CreateDocumentStore(betweenOptions.To))
             {
                 Operations = new SmugglerBetweenRemoteFilesOperations(() => primaryStore, () => secondaryStore, () => documentStore);
 
-                await base.Between(betweenOptions);
+                await base.Between(betweenOptions).ConfigureAwait(false);
             }              
         }
 
@@ -44,12 +44,12 @@ namespace Raven.Smuggler
             if (exportOptions.From == null)
                 throw new ArgumentNullException("exportOptions");
 
-            using (primaryStore = await CreateStore(exportOptions.From))
+            using (primaryStore = await CreateStore(exportOptions.From).ConfigureAwait(false))
             using (documentStore = CreateDocumentStore(exportOptions.From))
 			{
                 Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
 
-				return await base.ExportData(exportOptions);
+				return await base.ExportData(exportOptions).ConfigureAwait(false);
 			}
         }
 
@@ -58,12 +58,12 @@ namespace Raven.Smuggler
             if (importOptions.To == null)
                 throw new ArgumentNullException("importOptions");
 
-            using (primaryStore = await CreateStore(importOptions.To))
+            using (primaryStore = await CreateStore(importOptions.To).ConfigureAwait(false))
             using (documentStore = CreateDocumentStore(importOptions.To))
             {
                 Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
 
-                await base.ImportData(importOptions);
+                await base.ImportData(importOptions).ConfigureAwait(false);
             }
         }
 
@@ -89,7 +89,7 @@ namespace Raven.Smuggler
 
             store.Initialize(false);
 
-            await ValidateThatServerIsUpAndFilesystemExists(options, store);
+            await ValidateThatServerIsUpAndFilesystemExists(options, store).ConfigureAwait(false);
 
             return store;
         }
@@ -104,7 +104,7 @@ namespace Raven.Smuggler
                                    ? s.AsyncFilesCommands.ForFileSystem(server.DefaultFileSystem)
                                    : s.AsyncFilesCommands;
 
-                await commands.GetStatisticsAsync(); // check if file system exist
+                await commands.GetStatisticsAsync().ConfigureAwait(false); // check if file system exist
             }
             catch (Exception e)
             {

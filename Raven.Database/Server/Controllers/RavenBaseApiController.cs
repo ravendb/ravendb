@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Controllers
 
 		public async Task<T> ReadJsonObjectAsync<T>()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
 			using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			{
@@ -149,7 +149,7 @@ namespace Raven.Database.Server.Controllers
 
 	    protected async Task<RavenJObject> ReadJsonAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
@@ -157,7 +157,7 @@ namespace Raven.Database.Server.Controllers
 
 	    protected async Task<RavenJArray> ReadJsonArrayAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 			{
@@ -167,14 +167,14 @@ namespace Raven.Database.Server.Controllers
 
 	    protected async Task<string> ReadStringAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 				return streamReader.ReadToEnd();
 		}
 
 	    protected async Task<RavenJArray> ReadBsonArrayAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
 			using (var jsonReader = new BsonReader(stream))
 			{
 				var jObject = RavenJObject.Load(jsonReader);

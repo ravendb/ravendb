@@ -81,7 +81,7 @@ namespace Raven.Database.FileSystem.Controllers
 					                                            {
                                                                     Name = canonicalFilename,
                                                                     LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.RavenLastModified).ToUniversalTime()
-					                                            });
+					                                            }).ConfigureAwait(false);
 				signatureManifest.FileLength = fileLength ?? 0;
 
 				if (Log.IsDebugEnabled)

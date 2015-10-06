@@ -35,37 +35,37 @@ namespace Raven.Database.Server.Controllers
 				var clusterAwareHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterAwareHeader);
 				bool clusterAware;
 				if (clusterAwareHeader == null || bool.TryParse(clusterAwareHeader, out clusterAware) == false || clusterAware == false)
-					return await base.ExecuteAsync(controllerContext, cancellationToken);
+					return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 			}
 
 			InnerInitialization(controllerContext);
 
 			if (Database == null || ClusterManager.IsActive() == false)
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 
-			if (DatabaseName != null && await DatabasesLandlord.GetResourceInternal(DatabaseName) == null)
+			if (DatabaseName != null && await DatabasesLandlord.GetResourceInternal(DatabaseName).ConfigureAwait(false) == null)
 			{
 				var msg = "Could not find a database named: " + DatabaseName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
 			if (Database.IsClusterDatabase() == false)
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 
 			if (ClusterManager.IsLeader())
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 
 			if (IsReadRequest(controllerContext))
 			{
 				var clusterReadBehaviorHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterReadBehaviorHeader);
 				if (string.Equals(clusterReadBehaviorHeader, "All", StringComparison.OrdinalIgnoreCase))
-					return await base.ExecuteAsync(controllerContext, cancellationToken);
+					return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 			}
 
 			var clusterFailoverBehaviorHeader = GetClusterHeader(controllerContext, Constants.Cluster.ClusterFailoverBehaviorHeader);
 			bool clusterFailoverBehavior;
 			if (bool.TryParse(clusterFailoverBehaviorHeader, out clusterFailoverBehavior) && clusterFailoverBehavior)
-				return await base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 
 			return RedirectToLeader(controllerContext.Request);
 		}

@@ -1,19 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Counters;
+using Raven.Database.Counters;
 using Raven.Database.Extensions;
-using Raven.Database.Smuggler;
 using Xunit;
 using Xunit.Extensions;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Counters
 {
@@ -35,24 +30,27 @@ namespace Raven.Tests.Counters
 				await counterStore.IncrementAsync("g", "c");
 
 				var deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(0);
-				deltas.Should().ContainSingle(x => x.CounterName == "c1" && x.GroupName == "g1");
-				deltas.Should().ContainSingle(x => x.CounterName == "c2" && x.GroupName == "g1");
-				deltas.Should().ContainSingle(x => x.CounterName == "c" && x.GroupName == "g");
+				Assert.NotNull(deltas.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
+                Assert.NotNull(deltas.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
+                Assert.NotNull(deltas.SingleOrDefault(x => x.CounterName == "c" && x.GroupName == "g"));
 
-				deltas.First(x => x.CounterName == "c1" && x.GroupName == "g1").Value.Should().Be(5);
-				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(1);
+                Assert.Equal(5, deltas.First(x => x.CounterName == "c1" && x.GroupName == "g1").Value);
+			    Assert.Equal(1, deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value);
 
 				await counterStore.ChangeAsync("g1", "c2",1);
 				await counterStore.ChangeAsync("g", "c",-2);
 
 				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
 
-				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-2);
-				deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1").Value.Should().Be(2);
+				var deltaForGandC = deltas.First(x => x.CounterName == "c" && x.GroupName == "g");
+				Assert.True(deltaForGandC.Value == 2 && deltaForGandC.Sign == ValueSign.Negative);
+				var deltaForG1andC2 = deltas.First(x => x.CounterName == "c2" && x.GroupName == "g1");
+				Assert.True(deltaForG1andC2.Value == 2 && deltaForG1andC2.Sign == ValueSign.Positive);
 
 				await counterStore.ChangeAsync("g", "c", -3);
 				deltas = await counterStore.Advanced.GetCounterStatesSinceEtag(deltas.Max(x => x.Etag));
-				deltas.First(x => x.CounterName == "c" && x.GroupName == "g").Value.Should().Be(-3);
+				deltaForGandC = deltas.First(x => x.CounterName == "c" && x.GroupName == "g");
+				Assert.True(deltaForGandC.Value == 5 && deltaForGandC.Sign == ValueSign.Negative);
 			}
 		}
 
@@ -81,9 +79,9 @@ namespace Raven.Tests.Counters
 				{
 					counterStore.Initialize(true);
 					var summary = await counterStore.Admin.GetCounterStorageSummary(DefaultCounterStorageName);
-					summary.Should().HaveCount(2);
-					summary.Should().ContainSingle(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C");
-					summary.Should().ContainSingle(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2");
+                    Assert.Equal(2, summary.Length);
+                    Assert.NotNull(summary.SingleOrDefault(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C"));
+					Assert.NotNull(summary.SingleOrDefault(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2"));
 				}
 			}
 		}
@@ -107,17 +105,20 @@ namespace Raven.Tests.Counters
 				await store.ChangeAsync(counterGroupName, CounterName, delta);
 
 				var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-				total.Should().Be(delta);
+                Assert.Equal(total, delta);
+				
 				await store.ResetAsync(counterGroupName, CounterName);
 
 				total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-				total.Should().Be(0);
+				Assert.Equal(0, total);
 			}	
 		}
 
 		[Theory]
 		[InlineData(2)]
 		[InlineData(-2)]
+		[InlineData(5)]
+		[InlineData(-7)]
 		public async Task CountersDelete_should_work(int delta)
 		{
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
@@ -134,10 +135,9 @@ namespace Raven.Tests.Counters
 				await store.ChangeAsync(counterGroupName, CounterName, delta);
 
 				var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-				total.Should().Be(delta);
+			    Assert.Equal(total, delta);
 
-				store.Invoking(x => AsyncHelpers.RunSync(() => x.DeleteAsync(counterGroupName, CounterName)))
-					 .ShouldNotThrow<InvalidOperationException>();
+			    AsyncHelpers.RunSync(() => store.DeleteAsync(counterGroupName, CounterName));
 			}
 		}
 
@@ -158,12 +158,12 @@ namespace Raven.Tests.Counters
 				await store.IncrementAsync(CounterGroupName, CounterName);
 
 				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-				total.Should().Be(1);
+				Assert.Equal(1, total);
 
 				await store.IncrementAsync(CounterGroupName, CounterName);
 
 				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-				total.Should().Be(2);
+				Assert.Equal(2, total);
 			}
 		}
 
@@ -184,12 +184,12 @@ namespace Raven.Tests.Counters
 				await store.ChangeAsync(CounterGroupName, CounterName, 5);
 
 				var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-				total.Should().Be(5);
+				Assert.Equal(5, total);
 
 				await store.ChangeAsync(CounterGroupName, CounterName, -30);
 
 				total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-				total.Should().Be(-25);
+				Assert.Equal(-25,total);
 			}
 		}
 	}

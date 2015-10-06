@@ -13,8 +13,6 @@ using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,12 +27,12 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly FileSystemInfo fileSystemInfo;
-        private readonly RavenJObject sourceMetadata;
+		private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 
 		public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
-                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
+											   RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.synchronizationServerClient = synchronizationServerClient;
 			this.fileSystemInfo = fileSystemInfo;
@@ -58,7 +56,12 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			var credentials = synchronizationServerClient.Credentials;
 			var conventions = synchronizationServerClient.Conventions;
 
-			using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions)))
+			var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
+			{
+				DisableRequestCompression = true
+			};
+
+			using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(requestParams))
 			{
 				request.AddHeaders(sourceMetadata);
 				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
@@ -69,7 +72,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 				try
 				{
-					await request.WriteAsync(PrepareMultipartContent(token));
+					await request.WriteAsync(PrepareMultipartContent(token)).ConfigureAwait(false);
 
 					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
@@ -95,7 +98,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 		internal MultipartContent PrepareMultipartContent(CancellationToken token)
 		{
-			var content = new CompressedMultiPartContent("form-data", syncingBoundary);
+			var content = new MultipartContent("form-data", syncingBoundary);
 
 			foreach (var item in needList)
 			{
@@ -120,22 +123,6 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 
 			return content;
 		}
-
-		public class CompressedMultiPartContent : MultipartContent
-		{
-			public CompressedMultiPartContent(string subtype, string boundary) : base(subtype, boundary)
-			{
-				Headers.ContentEncoding.Add("gzip");
-				Headers.ContentLength = null;
-			}
-
-			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				using (stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
-					await base.SerializeToStreamAsync(stream, context);
-			}
-		}
-
 
 		public ProfilingInformation ProfilingInformation { get; private set; }
 	}
