@@ -124,6 +124,10 @@ class patch extends viewModelBase {
         super.activate(navigationArgs);
         this.updateHelpLink('QGGJR5');
         this.patchDocument(patchDocument.empty());
+        this.queryText.throttle(1000).subscribe(v => {
+            this.runQuery();
+        });
+
         this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatchDoc())) ? true : false);
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
@@ -205,6 +209,7 @@ class patch extends viewModelBase {
                 break;
             case "Index":
                 this.fetchAllIndexes();
+                $("#matchingDocumentsGrid").resize();
                 break;
             default:
                 this.currentCollectionPagedItems(null);
@@ -259,8 +264,8 @@ class patch extends viewModelBase {
     runQuery(): pagedList {
         var selectedIndex = this.patchDocument().selectedItem();
         if (selectedIndex) {
-            var queryText = this.patchDocument().query();
-            this.queryText(queryText);
+            var queryText = this.queryText();
+            this.patchDocument().query(queryText);
             var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, []);
@@ -271,10 +276,6 @@ class patch extends viewModelBase {
             return resultsList;
         }
         return null;
-    }
-
-    runQueryWithDelay() {
-        setTimeout(() => this.runQuery(), 1000);
     }
 
     savePatch() {
