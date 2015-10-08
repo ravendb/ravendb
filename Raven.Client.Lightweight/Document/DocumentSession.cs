@@ -787,27 +787,30 @@ namespace Raven.Client.Document
         /// Commits the specified tx id.
         /// </summary>
         /// <param name="txId">The tx id.</param>
-        public override void Commit(string txId)
+        public override Task Commit(string txId)
         {
             DatabaseCommands.Commit(txId);
             ClearEnlistment();
-        }
+			return Task.FromResult(0);
+		}
 
         /// <summary>
         /// Rollbacks the specified tx id.
         /// </summary>
         /// <param name="txId">The tx id.</param>
-        public override void Rollback(string txId)
+        public override Task Rollback(string txId)
         {
             DatabaseCommands.Rollback(txId);
             ClearEnlistment();
+	        return Task.FromResult(0);
         }
 
-        public void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+        public Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
         {
             DatabaseCommands.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
             ClearEnlistment();
-        }
+			return Task.FromResult(0);
+		}
 
         /// <summary>
         /// Query RavenDB dynamically using LINQ

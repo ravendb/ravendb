@@ -767,7 +767,7 @@ namespace Raven.Client.Document
 			var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
 			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
-			return changes == null ? new CompletedTask() : changes.ConnectionTask;
+            return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
 	}
 }

@@ -257,7 +257,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var bucketReductionColumn = tableColumnsCache.ScheduledReductionColumns["bucket"];
 
             var keysToRemove = new List<string>();
-            var mappedResults = new List<MappedResultInfo>();
+            var output = new List<MappedResultInfo>();
             var seenLocally = new HashSet<ReduceKeyAndBucket>(ReduceKeyAndBucketEqualityComparer.Instance);
             
             try
@@ -275,10 +275,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			            {
 			                if (getItemsToReduceParams.LastReduceKeyAndBucket.ReduceKey != reduceKey)
 			                {
-			                    throw new InvalidOperationException("Mismatches last reduce key with the remaining reduce keys in the params");
+                                needToMoveNext = true;
+                                initialBucket = getItemsToReduceParams.LastReduceKeyAndBucket.Bucket;
 			                }
-			                needToMoveNext = true;
-                            initialBucket = getItemsToReduceParams.LastReduceKeyAndBucket.Bucket;
 			            }
 			        }
 
@@ -286,19 +285,25 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				    Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				    Api.MakeKey(session, ScheduledReductions, initialBucket, MakeKeyGrbit.None);
-				    if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
-					    continue;
-
-			        if (needToMoveNext && Api.TryMoveNext(session, ScheduledReductions) == false)
+			        
+                    if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false ||
+			            (needToMoveNext && Api.TryMoveNext(session, ScheduledReductions) == false) )
+			        {
+                        keysToRemove.Add(reduceKey);
 			            continue;
+			        }
+
 
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				    Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				    Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				    Api.MakeKey(session, ScheduledReductions, int.MaxValue, MakeKeyGrbit.None);
 
-				    if(Api.TrySetIndexRange(session, ScheduledReductions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit) == false)
-					    continue;
+			        if (Api.TrySetIndexRange(session, ScheduledReductions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit) == false)
+                    {
+                        keysToRemove.Add(reduceKey);
+			            continue;
+			        }
 
 				    // this isn't used for optimized reading, but to make it easier to delete records later on
 				    OptimizedDeleter reader;
@@ -318,20 +323,20 @@ namespace Raven.Database.Storage.Esent.StorageActions
 					    cancellationToken.ThrowIfCancellationRequested();
 
                         if (getItemsToReduceParams.Take <= 0)
-                            break;
+                            return output;
 
                         var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, viewReductionColumn, RetrieveColumnGrbit.RetrieveFromIndex);
                         var levelFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, levelReductionColumn, RetrieveColumnGrbit.RetrieveFromIndex).Value;
                         var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, reduceReductionColumn);
 
 					    if (getItemsToReduceParams.Index != indexFromDb)
-						    continue;
+						    break;
 
 					    if (levelFromDb != getItemsToReduceParams.Level)
-						    continue;
+                            break;
 
 					    if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
-						    continue;
+                            break;
 
                         var bucket = Api.RetrieveColumnAsInt32(session, ScheduledReductions, bucketReductionColumn).Value;
 
@@ -348,13 +353,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
 							    {
 								    getItemsToReduceParams.Take--;
 
-                                    mappedResults.Add(mappedResultInfo);
+                                    output.Add(mappedResultInfo);
 							    }
 						    }
 					    }
-
-					    if (getItemsToReduceParams.Take <= 0)
-                            return mappedResults;
 				    } 
                     while (Api.TryMoveNext(session, ScheduledReductions));
 
@@ -364,7 +366,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 					    break;
 			    }
 
-                return mappedResults;
+                return output;
             }
             finally
             {

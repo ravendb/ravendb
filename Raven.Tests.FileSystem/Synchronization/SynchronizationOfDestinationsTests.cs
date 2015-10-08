@@ -40,7 +40,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 			sourceContent.Position = 0;
 
             await destination1Client.UploadAsync("test.bin", destination1Content);
-            await destination2Client.UploadAsync("test.bin", destination2Content);
+			sourceContent.Position = 0;
+			await destination2Client.UploadAsync("test.bin", destination2Content);
 
 			sourceContent.Position = 0;
             await sourceClient.UploadAsync("test.bin", sourceContent);
@@ -224,7 +225,6 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Fact]
 		public async Task File_should_be_in_pending_queue_if_no_synchronization_requests_available()
 		{
-			var sourceContent = new RandomStream(1);
             var sourceClient = NewAsyncClient(0);
 
             await sourceClient.Configuration.SetKeyAsync(SynchronizationConstants.RavenSynchronizationConfig, new SynchronizationConfig
@@ -234,8 +234,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var destinationClient = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
-			await sourceClient.UploadAsync("test.bin", sourceContent);
-			await sourceClient.UploadAsync("test2.bin", sourceContent);
+			await sourceClient.UploadAsync("test.bin", new RandomStream(1));
+			await sourceClient.UploadAsync("test2.bin", new RandomStream(1));
 
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 			await sourceClient.Synchronization.StartAsync();

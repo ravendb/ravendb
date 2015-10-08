@@ -7,6 +7,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;
+using System.IO;
 using System.Net;
 
 namespace Raven.Backup
@@ -34,12 +35,12 @@ namespace Raven.Backup
 
                 var serverHostname = serverUri.Scheme + Uri.SchemeDelimiter + serverUri.Host + ":" + serverUri.Port;
 
-                store = new DocumentStore { Url = serverHostname, DefaultDatabase = parameters.Database, ApiKey = parameters.ApiKey };
+                store = new DocumentStore { Url = serverHostname, DefaultDatabase = parameters.Database, ApiKey = parameters.ApiKey, Credentials = parameters.Credentials };
                 store.Initialize();
             }
             catch (Exception exc)
             {
-                Console.WriteLine(exc.Message);
+                Console.WriteLine(exc);
                 try
                 {
                     store.Dispose();
@@ -75,7 +76,7 @@ namespace Raven.Backup
             }
             catch (Exception exc)
             {
-                Console.WriteLine(exc.Message);
+                Console.WriteLine(exc);
                 return false;
             }
 
@@ -92,7 +93,7 @@ namespace Raven.Backup
 
             uriString += url;
 
-            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions, timeout: parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
+            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, parameters.Credentials), store.Conventions, timeout: parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 
         public override BackupStatus GetStatusDoc()
@@ -109,7 +110,7 @@ namespace Raven.Backup
 			        var res = ex.Response as HttpWebResponse;
 			        if (res == null)
 			        {
-				        throw new Exception("Network error");
+				        throw new IOException("Network error", ex);
 			        }
 			        if (res.StatusCode == HttpStatusCode.NotFound)
 			        {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.IO;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
@@ -24,7 +25,10 @@ namespace Raven.Tests.FileSystem.Synchronization
                 var sourceClient = sourceStore.AsyncFilesCommands;
                 var destinationClient = destinationStore.AsyncFilesCommands;
 
-                var sourceContent = new RandomlyModifiedStream(new RandomStream(1), 0.01);
+                var sourceContent = new MemoryStream();
+				new RandomlyModifiedStream(new RandomStream(1), 0.01).CopyTo(sourceContent);
+
+	            sourceContent.Position = 0;
                 var destinationContent = new RandomlyModifiedStream(sourceContent, 0.01);
 
                 var sourceMetadata = new RavenJObject
@@ -38,6 +42,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 				                          };
 
                 await destinationClient.UploadAsync("abc.txt", destinationContent, destinationMetadata);
+	            sourceContent.Position = 0;
                 await sourceClient.UploadAsync("abc.txt", sourceContent, sourceMetadata);
 
                 var notificationTask = destinationStore.Changes()

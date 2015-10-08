@@ -1,4 +1,4 @@
-enum indexPriority {
+const enum indexPriority {
     normal,
     idle,
     disabled,

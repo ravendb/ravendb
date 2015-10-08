@@ -60,7 +60,7 @@ namespace Raven.Database.FileSystem.Controllers
 		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>().ConfigureAwait(false);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to synchronize a file '{0}' to {1}", canonicalFilename, destination.Url);
+            Log.Debug("Starting to synchronize a file '{0}' to {1}", canonicalFilename, destination.Url);
 
             var result = await SynchronizationTask.SynchronizeFileToAsync(canonicalFilename, destination).ConfigureAwait(false);
 
@@ -80,17 +80,17 @@ namespace Raven.Database.FileSystem.Controllers
 			var sourceFileETag = GetEtag();
 			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceInfo);
+			Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.ContentUpdate, FileSystem)
 							{
 								MultipartContent = Request.Content
-							}.Execute().ConfigureAwait(false);
+			}.Execute().ConfigureAwait(false);
 
 			if (report.Exception == null)
 			{
 				if (Log.IsDebugEnabled)
-					Log.Debug(
+				Log.Debug(
 					"File '{0}' was synchronized successfully from {1}. {2} bytes were transfered and {3} bytes copied. Need list length was {4}",
 					fileName, sourceInfo, report.BytesTransfered, report.BytesCopied, report.NeedListLength);
 			}
@@ -113,10 +113,10 @@ namespace Raven.Database.FileSystem.Controllers
 			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
+            Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.MetadataUpdate, FileSystem)
-								.Execute().ConfigureAwait(false);
+				.Execute().ConfigureAwait(false);
 
 			if (Log.IsDebugEnabled && report.Exception == null)
 				Log.Debug("Metadata of file '{0}' was synchronized successfully from {1}", fileName, sourceInfo);
@@ -136,10 +136,10 @@ namespace Raven.Database.FileSystem.Controllers
 			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
+            Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.Delete, FileSystem)
-								.Execute().ConfigureAwait(false);
+				.Execute().ConfigureAwait(false);
 
 			if (Log.IsDebugEnabled && report.Exception == null)
 				Log.Debug("File '{0}' was deleted during synchronization from {1}", fileName, sourceInfo);
@@ -159,7 +159,7 @@ namespace Raven.Database.FileSystem.Controllers
             var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
+			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileEtag, sourceInfo);
 
 			var report = await new SynchronizationBehavior(fileName, sourceFileEtag, sourceMetadata, sourceInfo, SynchronizationType.Rename, FileSystem)
@@ -299,7 +299,7 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(filename);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", filename, strategy);
+            Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", filename, strategy);
 
 			switch (strategy)
 			{
@@ -422,7 +422,7 @@ namespace Raven.Database.FileSystem.Controllers
 			});
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);
+			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -434,7 +434,7 @@ namespace Raven.Database.FileSystem.Controllers
 			SourceSynchronizationInformation lastEtag= Synchronizations.GetLastSynchronization(from);
 
 			if (Log.IsDebugEnabled)
-				Log.Debug("Got synchronization last ETag request from {0}: [{1}]", from, lastEtag);
+			Log.Debug("Got synchronization last ETag request from {0}: [{1}]", from, lastEtag);
 
             return GetMessageWithObject(lastEtag)
                        .WithNoCache();

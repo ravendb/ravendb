@@ -172,7 +172,7 @@ namespace Raven.Client.Document
 											}
 											catch (Exception ex)
 											{
-												logger.WarnException("Subscriber threw an exception", ex);
+												logger.WarnException(string.Format("Subscription #{0}. Subscriber threw an exception", id), ex);
 
 												if (options.IgnoreSubscribersErrors == false)
 												{
@@ -308,8 +308,14 @@ namespace Raven.Client.Document
 				if (cts.Token.IsCancellationRequested)
 					return;
 
+				logger.WarnException(string.Format("Subscription #{0}. Pulling task threw the following exception", id), ex);
+
 				if (TryHandleRejectedConnection(ex))
+				{
+					if (logger.IsDebugEnabled)
+						logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
 					return;
+				}
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 				RestartPullingTask().ConfigureAwait(false);
@@ -325,7 +331,7 @@ namespace Raven.Client.Document
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Exception happened during an attempt to close subscription after it had become faulted", e);
+					logger.WarnException(string.Format("Subscription #{0}. Exception happened during an attempt to close subscription after it had become faulted", id), e);
 				}
 			}
 		}
@@ -472,7 +478,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreatePullingRequest()
 		{
-			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Get);
+			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get, timeout: options.PullingRequestTimeout);
 		}
 
 		private HttpJsonRequest CreateClientAliveRequest()

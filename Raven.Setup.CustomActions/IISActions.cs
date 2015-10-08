@@ -92,6 +92,7 @@ namespace Raven.Setup.CustomActions
 								session["WEBSITE_DESCRIPTION"] = (string)record[2];
 								session["WEBSITE_PATH"] = (string)record[3];
 								session["WEBSITE_DEFAULT_APPPOOL"] = (string)record[4];
+								session["WEBSITE_PORT"] = iisManager.GetWebSites().First(x => x.Id == selectedWebSiteId).Port ?? string.Empty;
 							}
 						}
 					}

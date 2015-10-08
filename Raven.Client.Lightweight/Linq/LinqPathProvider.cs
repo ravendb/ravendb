@@ -238,7 +238,7 @@ namespace Raven.Client.Linq
 						return GetValueFromExpressionWithoutConversion(unaryExpression.Operand, out value);
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
-				case ExpressionType.NewArrayInit:
+                case ExpressionType.NewArrayInit:
 					var expressions = ((NewArrayExpression)expression).Expressions;
 					var values = new object[expressions.Count];
 					value = null;
@@ -246,7 +246,16 @@ namespace Raven.Client.Linq
 						return false;
 					value = values;
 					return true;
-				default:
+                case ExpressionType.NewArrayBounds:
+			        value = null;
+                    expressions = ((NewArrayExpression)expression).Expressions;
+			        var constantExpression = (ConstantExpression)expressions.FirstOrDefault();
+			        if (constantExpression == null) return false;
+			        if (constantExpression.Value.GetType() != typeof (int)) return false;
+			        var length = (int)constantExpression.Value;
+                    value = new object[length];
+			        return true;
+                default:
 					value = null;
 					return false;
 			}

@@ -12,7 +12,7 @@ import getInfoPackage = require('commands/database/debug/getInfoPackage');
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 
-enum parserState {
+const enum parserState {
   pid,
   stack
 }

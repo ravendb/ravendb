@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using FluentAssertions;
 using Raven.Client.Linq;
 using Raven.Tests.Common;
 
@@ -32,10 +31,11 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 
 					var foundDocs = session.Query<TestDoc>()
-										   .Where(doc => doc.Name.In(nameList)).ToList();
+                                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                           .Where(doc => doc.Name.In(nameList)).ToList();
 
-					foundDocs.Should().HaveSameCount(nameList);
-				}
+                    Assert.Equal(nameList.Count, foundDocs.Count);
+                }
 			}
 		}
 
@@ -62,10 +62,10 @@ namespace Raven.Tests.MailingList
 					WaitForIndexing(store);
 
 					var foundDocs = session.Query<TestDoc>()
-										   .Where(doc =>
-											   doc.Name.In(nameList)).ToList();
+                                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                           .Where(doc => doc.Name.In(nameList)).ToList();
 
-					foundDocs.Should().HaveSameCount(nameList);
+                    Assert.Equal(nameList.Count, foundDocs.Count);
 				}
 			}
 		}
