@@ -2,13 +2,13 @@ using System;
 
 namespace Raven.Database.TimeSeries
 {
-	public class RollupRange
+	public class AggregationRange
 	{
 		public string Type { get; set; }
 		
 		public string Key { get; set; }
 
-		public RollupRange(string type, string key, DateTimeOffset time)
+		public AggregationRange(string type, string key, DateTimeOffset time)
 		{
 			Type = type;
 			Key = key;

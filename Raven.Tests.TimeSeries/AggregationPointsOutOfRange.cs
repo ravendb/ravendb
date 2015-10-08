@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Linq;
-using Raven.Database.TimeSeries;
-using Voron;
+using Raven.Abstractions.TimeSeries;
 using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class TimeSeriesRollupsOutOfRange : TimeSeriesTest
+	public class AggregationPointsOutOfRange : TimeSeriesTest
 	{
 		[Fact]
 		public void HourlyData_QueryPer3Hours_StartedAt4()
@@ -18,7 +17,7 @@ namespace Raven.Tests.TimeSeries
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(1), PeriodDuration.Hours(3)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Hours(3), start.AddYears(-1), start.AddYears(1)).ToArray();
 				});
 			}
 		}
@@ -33,7 +32,7 @@ namespace Raven.Tests.TimeSeries
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(1), PeriodDuration.Hours(2)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Hours(2), start.AddYears(-1), start.AddYears(1)).ToArray();
 				});
 			}
 		}
@@ -48,7 +47,7 @@ namespace Raven.Tests.TimeSeries
 				var r = tss.CreateReader();
 				Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Months(3)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Months(3), start.AddYears(-1), start.AddYears(2)).ToArray();
 				});
 			}
 		}
@@ -63,7 +62,7 @@ namespace Raven.Tests.TimeSeries
 				var r = tss.CreateReader();
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Years(2)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Years(2), start.AddYears(-1), start.AddYears(2)).ToArray();
 				});
 				Assert.Equal("When querying a roll up by years, you cannot specify months, days, hours, minutes, seconds or milliseconds", exception.Message);
 			}
@@ -80,7 +79,7 @@ namespace Raven.Tests.TimeSeries
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Years(2)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Years(2), start.AddYears(-1), start.AddYears(2)).ToArray();
 				});
 				Assert.Equal("Cannot create a roll up by 2 Years as it cannot be divided to candles that ends in midnight", exception.Message);
 			}
@@ -97,7 +96,7 @@ namespace Raven.Tests.TimeSeries
 
 				var exception = Assert.Throws<InvalidOperationException>(() =>
 				{
-					r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(7), PeriodDuration.Years(3)).ToArray();
+					r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Years(3), start.AddYears(-1), start.AddYears(7)).ToArray();
 				});
 				Assert.Equal("Cannot create a roll up by 3 Years as it cannot be divided to candles that starts from midnight", exception.Message);
 			}

@@ -95,8 +95,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.GetAggregatedPoints("3Val", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
-					var money = r.GetAggregatedPoints("3Val", "Money", start.AddDays(-1), start.AddMonths(2), PeriodDuration.Hours(2)).ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", AggregationDuration.Hours(3), start.AddMonths(-1), start.AddDays(1)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddDays(-1), start.AddMonths(2)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -196,8 +196,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.GetAggregatedPoints("3Val", "Time", start.AddMonths(-1), start.AddDays(1), PeriodDuration.Hours(3)).ToArray();
-					var money = r.GetAggregatedPoints("3Val", "Money", start.AddMonths(-2).AddDays(-1), start.AddMonths(2), PeriodDuration.Hours(2)).ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", AggregationDuration.Hours(3), start.AddMonths(-1), start.AddDays(1)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddMonths(-2).AddDays(-1), start.AddMonths(2)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -287,7 +287,7 @@ namespace Raven.Tests.TimeSeries
 #if DEBUG
 						Assert.Equal("Money", money[i].DebugKey);
 #endif
-						Assert.Equal(PeriodDuration.Hours(2), money[i].Duration);
+						Assert.Equal(AggregationDuration.Hours(2), money[i].Duration);
 						Assert.Equal(start.AddMonths(-2).AddDays(-1).AddHours(2 * i), money[i].StartAt);
 
 						if ((i >= 409 && i <= 410) || 

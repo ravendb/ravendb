@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
+using Raven.Abstractions.TimeSeries;
 using Raven.Database.TimeSeries;
 using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class RollupsRanges : TimeSeriesTest
+	public class AggregationPoints : TimeSeriesTest
 	{
 		[Fact]
 		public void ByDays()
@@ -26,7 +27,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Days(2)).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Days(2), start.AddYears(-1), start.AddYears(2)).ToArray();
 
 					Assert.Equal(548, time.Length);
 					for (int i = 0; i < 548; i++)
@@ -34,32 +35,32 @@ namespace Raven.Tests.TimeSeries
 #if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
 #endif
-						Assert.Equal(PeriodDuration.Days(2), time[i].Duration);
+						Assert.Equal(AggregationDuration.Days(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
 										  DateTime.DaysInMonth(time[i].StartAt.AddMonths(1).Year, time[i].StartAt.AddMonths(1).Month);
 						if (i == 182)
 						{
-							Assert.Equal(710, time[i].Value.Volume);
-							Assert.Equal(258795, time[i].Value.Sum);
-							Assert.Equal(10, time[i].Value.Open);
-							Assert.Equal(10, time[i].Value.Low);
-							Assert.Equal(719, time[i].Value.Close);
-							Assert.Equal(719, time[i].Value.High);
+							Assert.Equal(710, time[i].Values[0].Volume);
+							Assert.Equal(258795, time[i].Values[0].Sum);
+							Assert.Equal(10, time[i].Values[0].Open);
+							Assert.Equal(10, time[i].Values[0].Low);
+							Assert.Equal(719, time[i].Values[0].Close);
+							Assert.Equal(719, time[i].Values[0].High);
 						}
 						else if (i == 183)
 						{
-							Assert.Equal(1280, time[i].Value.Volume);
-							Assert.Equal(1740160, time[i].Value.Sum);
-							Assert.Equal(720, time[i].Value.Open);
-							Assert.Equal(720, time[i].Value.Low);
-							Assert.Equal(1999, time[i].Value.Close);
-							Assert.Equal(1999, time[i].Value.High);
+							Assert.Equal(1280, time[i].Values[0].Volume);
+							Assert.Equal(1740160, time[i].Values[0].Sum);
+							Assert.Equal(720, time[i].Values[0].Open);
+							Assert.Equal(720, time[i].Values[0].Low);
+							Assert.Equal(1999, time[i].Values[0].Close);
+							Assert.Equal(1999, time[i].Values[0].High);
 						}
 						else
 						{
-							Assert.Equal(0, time[i].Value.Volume);
-							Assert.Equal(0, time[i].Value.Sum);
+							Assert.Equal(0, time[i].Values[0].Volume);
+							Assert.Equal(0, time[i].Values[0].Sum);
 						}
 					}
 				}
@@ -85,7 +86,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-1), start.AddYears(2), PeriodDuration.Months(2)).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Months(2), start.AddYears(-1), start.AddYears(2)).ToArray();
 
 					Assert.Equal(3 * 12 / 2, time.Length);
 					Assert.Equal(new DateTimeOffset(2014, 4, 1, 0, 0, 0, TimeSpan.Zero), time[0].StartAt);
@@ -112,28 +113,28 @@ namespace Raven.Tests.TimeSeries
 #if DEBUG
 						Assert.Equal("Time", time[i].DebugKey);
 #endif
-						Assert.Equal(PeriodDuration.Months(2), time[i].Duration);
+						Assert.Equal(AggregationDuration.Months(2), time[i].Duration);
 
 						var daysInMonth = DateTime.DaysInMonth(time[i].StartAt.Year, time[i].StartAt.Month) +
 										  DateTime.DaysInMonth(time[i].StartAt.AddMonths(1).Year, time[i].StartAt.AddMonths(1).Month);
 						if (i == 6)
 						{
-							Assert.Equal(daysInMonth * 4 - 2.5 * 4, time[i].Value.Volume);
-							Assert.NotEqual(0, time[i].Value.Sum);
+							Assert.Equal(daysInMonth * 4 - 2.5 * 4, time[i].Values[0].Volume);
+							Assert.NotEqual(0, time[i].Values[0].Sum);
 						}
 						else if (i > 6)
 						{
-							Assert.Equal(daysInMonth * 4, time[i].Value.Volume);
-							Assert.NotEqual(0, time[i].Value.Sum);
-							Assert.NotEqual(0, time[i].Value.High);
-							Assert.NotEqual(0, time[i].Value.Low);
-							Assert.NotEqual(0, time[i].Value.Open);
-							Assert.NotEqual(0, time[i].Value.Close);
+							Assert.Equal(daysInMonth * 4, time[i].Values[0].Volume);
+							Assert.NotEqual(0, time[i].Values[0].Sum);
+							Assert.NotEqual(0, time[i].Values[0].High);
+							Assert.NotEqual(0, time[i].Values[0].Low);
+							Assert.NotEqual(0, time[i].Values[0].Open);
+							Assert.NotEqual(0, time[i].Values[0].Close);
 						}
 						else
 						{
-							Assert.Equal(0, time[i].Value.Volume);
-							Assert.Equal(0, time[i].Value.Sum);
+							Assert.Equal(0, time[i].Values[0].Volume);
+							Assert.Equal(0, time[i].Values[0].Sum);
 						}
 					}
 				}
@@ -159,7 +160,7 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var time = r.GetAggregatedPoints("Simple", "Time", start.AddYears(-2), start.AddYears(6), PeriodDuration.Years(2)).ToArray();
+					var time = r.GetAggregatedPoints("Simple", "Time", AggregationDuration.Years(2), start.AddYears(-2), start.AddYears(6)).ToArray();
 
 					Assert.Equal(8/2, time.Length);
 					Assert.Equal(new DateTimeOffset(2012, 1, 1, 0, 0, 0, TimeSpan.Zero), time[0].StartAt);
@@ -167,14 +168,14 @@ namespace Raven.Tests.TimeSeries
 					Assert.Equal(new DateTimeOffset(2016, 1, 1, 0, 0, 0, TimeSpan.Zero), time[2].StartAt);
 					Assert.Equal(new DateTimeOffset(2018, 1, 1, 0, 0, 0, TimeSpan.Zero), time[3].StartAt);
 
-					Assert.Equal(0, time[0].Value.Volume);
-					Assert.Equal(0, time[0].Value.Sum);
-					Assert.Equal(2910, time[1].Value.Volume);
-					Assert.Equal(4261695, time[1].Value.Sum);
-					Assert.Equal(2080, time[2].Value.Volume);
-					Assert.Equal(8235760, time[2].Value.Sum);
-					Assert.Equal(0, time[3].Value.Volume);
-					Assert.Equal(0, time[3].Value.Sum);
+					Assert.Equal(0, time[0].Values[0].Volume);
+					Assert.Equal(0, time[0].Values[0].Sum);
+					Assert.Equal(2910, time[1].Values[0].Volume);
+					Assert.Equal(4261695, time[1].Values[0].Sum);
+					Assert.Equal(2080, time[2].Values[0].Volume);
+					Assert.Equal(8235760, time[2].Values[0].Sum);
+					Assert.Equal(0, time[3].Values[0].Volume);
+					Assert.Equal(0, time[3].Values[0].Sum);
 				}
 			}
 		}

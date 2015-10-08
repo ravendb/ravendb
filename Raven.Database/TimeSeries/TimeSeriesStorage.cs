@@ -38,6 +38,8 @@ namespace Raven.Database.TimeSeries
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
 
+		internal const int AggregationPointStorageItemsLength = 6;
+
 		public Guid ServerId { get; set; }
 
 		public string TimeSeriesUrl { get; private set; }
@@ -152,11 +154,11 @@ namespace Raven.Database.TimeSeries
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
 			}
 
-			public IEnumerable<Range> GetAggregatedPoints(string typeName, string key, DateTimeOffset start, DateTimeOffset end, PeriodDuration duration, int skip = 0)
+			public IEnumerable<AggregatedPoint> GetAggregatedPoints(string typeName, string key, AggregationDuration duration, DateTimeOffset start, DateTimeOffset end, int skip = 0)
 			{
 				switch (duration.Type)
 				{
-					case PeriodType.Seconds:
+					case AggregationDurationType.Seconds:
 						if (start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by seconds, you cannot specify milliseconds");
 						if (end.Millisecond != 0)
@@ -166,7 +168,7 @@ namespace Raven.Database.TimeSeries
 						if (end.Second%duration.Duration != 0)
 							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
-					case PeriodType.Minutes:
+					case AggregationDurationType.Minutes:
 						if (start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by minutes, you cannot specify seconds or milliseconds");
 						if (end.Second != 0 || end.Millisecond != 0)
@@ -176,7 +178,7 @@ namespace Raven.Database.TimeSeries
 						if (end.Minute%duration.Duration != 0)
 							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
-					case PeriodType.Hours:
+					case AggregationDurationType.Hours:
 						if (start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify minutes, seconds or milliseconds");
 						if (end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
@@ -186,7 +188,7 @@ namespace Raven.Database.TimeSeries
 						if (end.Hour%duration.Duration != 0)
 							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
-					case PeriodType.Days:
+					case AggregationDurationType.Days:
 						if (start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify hours, minutes, seconds or milliseconds");
 						if (end.Hour != 0 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
@@ -196,7 +198,7 @@ namespace Raven.Database.TimeSeries
 						if (end.Day%duration.Duration != 0)
 							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
-					case PeriodType.Months:
+					case AggregationDurationType.Months:
 						if (start.Day != 1 || start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by hours, you cannot specify days, hours, minutes, seconds or milliseconds");
 						if (end.Day != 1 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
@@ -206,7 +208,7 @@ namespace Raven.Database.TimeSeries
 						if (end.Month%duration.Duration != 0)
 							throw new InvalidOperationException(string.Format("Cannot create a roll up by {0} {1} as it cannot be divided to candles that ends in midnight", duration.Duration, duration.Type));
 						break;
-					case PeriodType.Years:
+					case AggregationDurationType.Years:
 						if (start.Month != 1 || start.Day != 1 || start.Hour != 0 || start.Minute != 0 || start.Second != 0 || start.Millisecond != 0)
 							throw new InvalidOperationException("When querying a roll up by years, you cannot specify months, days, hours, minutes, seconds or milliseconds");
 						if (end.Month != 1 || end.Day != 1 || end.Minute != 0 || end.Second != 0 || end.Millisecond != 0)
@@ -236,7 +238,7 @@ namespace Raven.Database.TimeSeries
 					var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
 					var treeName = PeriodTreePrefix + typeName;
 					var periodFixedTree = (periodTx.ReadTree(treeName) ?? storage.storageEnvironment.CreateTree(periodTx, treeName))
-						.FixedTreeFor(key + PeriodsKeySeparator + duration.Type + "-" + duration.Duration, (byte)(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double)));
+						.FixedTreeFor(key + PeriodsKeySeparator + duration.Type + "-" + duration.Duration, (byte)(type.Fields.Length * AggregationPointStorageItemsLength * sizeof(double)));
 
 					using (var periodWriter = new RollupWriter(periodFixedTree, type.Fields.Length))
 					{
@@ -253,12 +255,12 @@ namespace Raven.Database.TimeSeries
 									{
 										var valueReader = periodTreeIterator.CreateReaderForCurrent();
 										int used;
-										var bytes = valueReader.ReadBytes(type.Fields.Length * Range.RangeValue.StorageItemsLength * sizeof(double), out used);
-										Debug.Assert(used == type.Fields.Length*Range.RangeValue.StorageItemsLength*sizeof (double));
+										var bytes = valueReader.ReadBytes(type.Fields.Length * AggregationPointStorageItemsLength * sizeof(double), out used);
+										Debug.Assert(used == type.Fields.Length*AggregationPointStorageItemsLength*sizeof (double));
 
 										for (int i = 0; i < type.Fields.Length; i++)
 										{
-											var startPosition = i * Range.RangeValue.StorageItemsLength;
+											var startPosition = i * AggregationPointStorageItemsLength;
 											range.Values[i].Volume = EndianBitConverter.Big.ToDouble(bytes, (startPosition + 0) * sizeof(double));
 											if (range.Values[i].Volume != 0)
 											{
@@ -298,9 +300,9 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, Range range, int valueLength)
+			private void GetAllPointsForRange(FixedSizeTree.IFixedSizeIterator rawTreeIterator, AggregatedPoint aggregatedPoint, int valueLength)
 			{
-				var endTicks = range.Duration.AddToDateTime(range.StartAt).Ticks;
+				var endTicks = aggregatedPoint.Duration.AddToDateTime(aggregatedPoint.StartAt).Ticks;
 				var buffer = new byte[sizeof(double) * valueLength];
 				var firstPoint = true;
 
@@ -313,7 +315,7 @@ namespace Raven.Database.TimeSeries
 					var point = new TimeSeriesPoint
 					{
 #if DEBUG
-						DebugKey = range.DebugKey,
+						DebugKey = aggregatedPoint.DebugKey,
 #endif
 						At = new DateTimeOffset(ticks, TimeSpan.Zero),
 						Values = new double[valueLength],
@@ -328,18 +330,18 @@ namespace Raven.Database.TimeSeries
 
 						if (firstPoint)
 						{
-							range.Values[i].Open = range.Values[i].High = range.Values[i].Low = range.Values[i].Sum = value;
-							range.Values[i].Volume = 1;
+							aggregatedPoint.Values[i].Open = aggregatedPoint.Values[i].High = aggregatedPoint.Values[i].Low = aggregatedPoint.Values[i].Sum = value;
+							aggregatedPoint.Values[i].Volume = 1;
 						}
 						else
 						{
-							range.Values[i].High = Math.Max(range.Values[i].High, value);
-							range.Values[i].Low = Math.Min(range.Values[i].Low, value);
-							range.Values[i].Sum += value;
-							range.Values[i].Volume += 1;
+							aggregatedPoint.Values[i].High = Math.Max(aggregatedPoint.Values[i].High, value);
+							aggregatedPoint.Values[i].Low = Math.Min(aggregatedPoint.Values[i].Low, value);
+							aggregatedPoint.Values[i].Sum += value;
+							aggregatedPoint.Values[i].Volume += 1;
 						}
 
-						range.Values[i].Close = value;
+						aggregatedPoint.Values[i].Close = value;
 
 					}
 					firstPoint = false;
@@ -347,7 +349,7 @@ namespace Raven.Database.TimeSeries
 				} while (rawTreeIterator.MoveNext());
 			}
 
-			private IEnumerable<Range> GetAggregatedPointsRanges(string key, DateTimeOffset start, DateTimeOffset end, PeriodDuration duration, int valueLength)
+			private IEnumerable<AggregatedPoint> GetAggregatedPointsRanges(string key, DateTimeOffset start, DateTimeOffset end, AggregationDuration duration, int valueLength)
 			{
 				var startAt = start;
 				while (true)
@@ -359,12 +361,12 @@ namespace Raven.Database.TimeSeries
 					{
 						throw new InvalidOperationException("Debug: Duration is not aligned with the end of the range.");
 					}
-					var rangeValues = new Range.RangeValue[valueLength];
+					var rangeValues = new AggregatedPoint.AggregationValue[valueLength];
 					for (int i = 0; i < valueLength; i++)
 					{
-						rangeValues[i] = new Range.RangeValue();
+						rangeValues[i] = new AggregatedPoint.AggregationValue();
 					}
-					yield return new Range
+					yield return new AggregatedPoint
 					{
 #if DEBUG
 						DebugKey = key,
@@ -510,7 +512,7 @@ namespace Raven.Database.TimeSeries
 			private readonly Transaction tx;
 
 			private Tree tree;
-			private readonly Dictionary<string, RollupRange> rollupsToClear = new Dictionary<string, RollupRange>();
+			private readonly Dictionary<string, AggregationRange> rollupsToClear = new Dictionary<string, AggregationRange>();
 			private TimeSeriesType currentType;
 			private readonly Dictionary<byte, byte[]> valBuffers = new Dictionary<byte, byte[]>(); 
 
@@ -541,7 +543,7 @@ namespace Raven.Database.TimeSeries
 				if (values.Length != currentType.Fields.Length)
 					throw new ArgumentOutOfRangeException("values", string.Format("Appended values should be the same length the series values length which is {0} and not {1}", currentType.Fields.Length, values.Length));
 
-				RollupRange range;
+				AggregationRange range;
 				var clearKey = type + PeriodsKeySeparator + key;
 				if (rollupsToClear.TryGetValue(clearKey, out range))
 				{
@@ -556,7 +558,7 @@ namespace Raven.Database.TimeSeries
 				}
 				else
 				{
-					rollupsToClear.Add(clearKey, new RollupRange(type, key, time));
+					rollupsToClear.Add(clearKey, new AggregationRange(type, key, time));
 				}
 
 				var bufferSize = (byte) (currentType.Fields.Length*sizeof (double));
@@ -617,7 +619,7 @@ namespace Raven.Database.TimeSeries
 					do
 					{
 						var periodTreeName = it.CurrentKey.ToString();
-						var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (type.Fields.Length*Range.RangeValue.StorageItemsLength*sizeof (double)));
+						var periodFixedTree = periodTree.FixedTreeFor(periodTreeName, (byte) (type.Fields.Length*AggregationPointStorageItemsLength*sizeof (double)));
 						if (periodFixedTree == null)
 							continue;
 
@@ -640,12 +642,12 @@ namespace Raven.Database.TimeSeries
 				}
 			}
 
-			private PeriodDuration GetDurationFromTreeName(string periodTreeName)
+			private AggregationDuration GetDurationFromTreeName(string periodTreeName)
 			{
 				var separatorIndex = periodTreeName.LastIndexOf(PeriodsKeySeparator);
 				var s = periodTreeName.Substring(separatorIndex + 1);
 				var strings = s.Split('-');
-				return new PeriodDuration(GenericUtil.ParseEnum<PeriodType>(strings[0]), int.Parse(strings[1]));
+				return new AggregationDuration(GenericUtil.ParseEnum<AggregationDurationType>(strings[0]), int.Parse(strings[1]));
 			}
 
 			public long DeleteKey(string typeName, string key)
@@ -746,15 +748,15 @@ namespace Raven.Database.TimeSeries
 			{
 				this.tree = tree;
 				this.numberOfValues = numberOfValues;
-				valBuffer = new byte[numberOfValues * Range.RangeValue.StorageItemsLength * sizeof(double)];
+				valBuffer = new byte[numberOfValues * AggregationPointStorageItemsLength * sizeof(double)];
 			}
 
-			public void Append(DateTimeOffset time, Range range)
+			public void Append(DateTimeOffset time, AggregatedPoint aggregatedPoint)
 			{
 				for (int i = 0; i < numberOfValues; i++)
 				{
-					var rangeValue = range.Values[i];
-					var startPosition = i * Range.RangeValue.StorageItemsLength;
+					var rangeValue = aggregatedPoint.Values[i];
+					var startPosition = i * AggregationPointStorageItemsLength;
 					EndianBitConverter.Big.CopyBytes(rangeValue.Volume, valBuffer, (startPosition + 0) * sizeof(double));
 					// if (rangeValue.Volume != 0)
 					{

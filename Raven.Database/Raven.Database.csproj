@@ -569,10 +569,7 @@
     <Compile Include="TimeSeries\Notifications\NotificationPublisher.cs" />
     <Compile Include="TimeSeries\TimeSeriesMetricsManager.cs" />
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
-    <Compile Include="TimeSeries\PeriodDuration.cs" />
-    <Compile Include="TimeSeries\PeriodType.cs" />
-    <Compile Include="TimeSeries\Range.cs" />
-    <Compile Include="TimeSeries\RollupRange.cs" />
+    <Compile Include="TimeSeries\AggregationRange.cs" />
     <Compile Include="TimeSeries\TimeSeriesServer.cs" />
     <Compile Include="TimeSeries\TimeSeriesStorage.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
