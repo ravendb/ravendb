@@ -96,7 +96,7 @@ namespace Raven.Tests.TimeSeries
 				using (var r = tss.CreateReader())
 				{
 					var time = r.GetAggregatedPoints("3Val", "Time", AggregationDuration.Hours(3), start.AddMonths(-1), start.AddDays(1)).ToArray();
-					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddDays(-1), start.AddMonths(2)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddDays(-1), start.AddMonths(1)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
