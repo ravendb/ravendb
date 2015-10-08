@@ -77,7 +77,7 @@ namespace Raven.Database.Config
 			{
 				IsBackground = true,
 				Name = "CPU usage notification thread"
-			};//.Start();
+			}.Start();
 		}
 
 		private static void HandleCpuUsage(float usageInPercents)
