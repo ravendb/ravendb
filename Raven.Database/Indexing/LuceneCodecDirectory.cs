@@ -230,7 +230,7 @@ namespace Raven.Database.Indexing
 				{
 					get { return len; }
 				}
-				public override long Position { get { return pos; } set { pos = (int)value; } }
+				public override long Position { get { return pos; } set { pos = value; } }
 			}
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
