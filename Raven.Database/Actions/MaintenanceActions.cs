@@ -155,7 +155,7 @@ namespace Raven.Database.Actions
                     string ex;
 
                     DocumentDatabase.IndexFailDetails failDetails;
-                    if (reason.TryGetValue(id, out failDetails) == false)
+                    if (reason == null || reason.TryGetValue(id, out failDetails) == false)
                     {
                         indexName = "Unknown Name";
                         msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", id, indexName);

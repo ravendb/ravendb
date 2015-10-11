@@ -3,14 +3,14 @@
   <Property Id="WEBSITE_DESCRIPTION" Value="RavenDB Web Site">
     <RegistrySearch Id="WebsiteDescriptionFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_DESCRIPTION"
                      Type="raw" />
   </Property>
   <Property Id="WEBSITE_ID">
     <RegistrySearch Id="WebsiteIdFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_ID"
                      Type="raw" />
   </Property>
@@ -18,7 +18,7 @@
   <Property Id="WEBSITE_VD">
     <RegistrySearch Id="WebsiteVirtualDirectoryFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_VD"
                      Type="raw" />
   </Property>
@@ -26,7 +26,7 @@
   <Property Id="WEBSITE_PATH" Value="C:\RavenSite">
     <RegistrySearch Id="WebsitePathFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_PATH"
                      Type="raw" />
   </Property>
@@ -37,14 +37,14 @@
   <Property Id="WEBSITE_PORT" Value="8080">
     <RegistrySearch Id="WebsitePortFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_PORT"
                      Type="raw" />
   </Property>
   <Property Id="WEBSITE_HOSTNAME">
     <RegistrySearch Id="WebsiteHostNameFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="WEBSITE_HOSTNAME"
                      Type="raw" />
   </Property>
