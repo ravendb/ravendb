@@ -94,13 +94,15 @@ namespace Raven.Storage.Managed
 
 		public IDisposable DisableBatchNesting()
 		{
-			disableBatchNesting.Value = new object();
+			// Removed Munin support in disabling bath nesting due to munin concurrency issues
+
+			/*disableBatchNesting.Value = new object();
 		    var old = tableStorage.CurrentTransactionId.Value;
-            tableStorage.CurrentTransactionId.Value = Guid.Empty;
+            tableStorage.CurrentTransactionId.Value = Guid.Empty;*/
 			return new DisposableAction(() =>
 			{
-			    tableStorage.CurrentTransactionId.Value = old;
-			    disableBatchNesting.Value = null;
+			    /*tableStorage.CurrentTransactionId.Value = old;
+			    disableBatchNesting.Value = null;*/
 			});
 		}
 
