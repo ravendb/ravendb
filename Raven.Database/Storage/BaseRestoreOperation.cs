@@ -146,7 +146,7 @@ namespace Raven.Database.Storage
             {
                 if (Directory.Exists(Path.Combine(backupLocation, IndexesSubfolder)) == false)
                 {
-                    output(String.Format("Failed to restore indexes - path '{0}' doesn't exists",
+                    output(String.Format("Failed to restore index - path '{0}' doesn't exists",
                         Path.Combine(backupLocation, IndexesSubfolder)));
                     return;
                 }
@@ -157,7 +157,7 @@ namespace Raven.Database.Storage
                     var indexPath = Path.Combine(indexLocation, indexName);
                     if (badIndexId.Contains(indexName))
                     {
-                        output(String.Format("Detected a corrupt index - {0}, forcing index reset",indexName));
+                        output(string.Format("Detected a corrupt index - {0}, forcing index reset",indexName));
                         ForceIndexReset(indexPath, indexName, null);
                         continue;
                     }
@@ -168,7 +168,7 @@ namespace Raven.Database.Storage
                     }
                     catch (Exception ex)
                     {
-						output("Failed to restore indexes, forcing index reset. Reason : " + ex);
+						output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
 						ForceIndexReset(indexPath, indexName, ex);
                     }
                 }
@@ -224,6 +224,7 @@ namespace Raven.Database.Storage
                 }
                 catch (Exception ex)
                 {
+                    output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
                     ForceIndexReset(indexPath, indexName, ex);
                 }
             }
