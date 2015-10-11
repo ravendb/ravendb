@@ -144,6 +144,13 @@ namespace Raven.Database.Storage
 
 	        if (directories.Count == 0)
             {
+                if (Directory.Exists(Path.Combine(backupLocation, IndexesSubfolder)) == false)
+                {
+                    output(String.Format("Failed to restore indexes - path '{0}' doesn't exists",
+                        Path.Combine(backupLocation, IndexesSubfolder)));
+                    return;
+                }
+
                 foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, IndexesSubfolder)))
                 {
                     var indexName = Path.GetFileName(backupIndex);                    
