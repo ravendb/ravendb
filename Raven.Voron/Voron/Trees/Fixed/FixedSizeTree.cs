@@ -828,7 +828,7 @@ namespace Voron.Trees.Fixed
                 {
                     var childPage = PageValueFor(page, 0);
                     var rootPageNum = page.PageNumber;
-                    Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, AbstractPager.PageSize);
+                    Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, _tx.DataPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
 	                if (largeTreeHeader != null)
@@ -842,7 +842,7 @@ namespace Voron.Trees.Fixed
 
 
             var sizeOfEntryInPage = (page.IsLeaf ? _entrySize : BranchEntrySize);
-            var minNumberOfEntriesBeforeRebalance = (AbstractPager.PageMaxSpace / sizeOfEntryInPage) / 4;
+            var minNumberOfEntriesBeforeRebalance = (_tx.DataPager.PageMaxSpace / sizeOfEntryInPage) / 4;
             if (page.FixedSize_NumberOfEntries > minNumberOfEntriesBeforeRebalance)
             {
                 // if we have more than 25% of the entries that would fit in the page, there is nothing that needs to be done

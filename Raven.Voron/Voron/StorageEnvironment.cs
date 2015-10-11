@@ -573,8 +573,8 @@ namespace Voron
                     FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
                     RootPages = tx.Root.State.PageCount,
                     UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
-                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
+                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
+					AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
                     ActiveTransactions = ActiveTransactions
                 };
@@ -687,7 +687,7 @@ namespace Voron
 			    return tmp.ReturnTemporaryPageToPool;
 		    }
 
-			tmp = new TemporaryPage();
+			tmp = new TemporaryPage(Options);
 		    try
 		    {
 			    return tmp.ReturnTemporaryPageToPool = new ReturnTemporaryPageToPool(this, tmp);

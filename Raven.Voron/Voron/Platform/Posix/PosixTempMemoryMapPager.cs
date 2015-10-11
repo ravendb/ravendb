@@ -31,15 +31,16 @@ namespace Voron.Platform.Posix
 		private long _totalAllocationSize;
 		private static int _counter;
 
-		public PosixTempMemoryMapPager(string file, long? initialFileSize = null)
+		public PosixTempMemoryMapPager(int pageSize, string file, long? initialFileSize = null)
+			: base(pageSize)
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
 			_file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
-            _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL, 
-                FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+			_fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
+				FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
-		    DeleteOnClose = true;
+			DeleteOnClose = true;
 
 			SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
@@ -56,12 +57,12 @@ namespace Voron.Platform.Posix
 			if (size == 0)
 				return SysPageSize * 16;
 
-			var mod = size%SysPageSize;
+			var mod = size % SysPageSize;
 			if (mod == 0)
 			{
 				return size;
 			}
-			return ((size/SysPageSize) + 1)*SysPageSize;
+			return ((size / SysPageSize) + 1) * SysPageSize;
 		}
 
 		protected override string GetSourceName()
@@ -80,7 +81,7 @@ namespace Voron.Platform.Posix
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
+			PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
 			_totalAllocationSize += allocationSize;
 
 			PagerState newPagerState = CreatePagerState();
@@ -111,8 +112,8 @@ namespace Voron.Platform.Posix
 		private PagerState CreatePagerState()
 		{
 			var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)_totalAllocationSize,
-			                                          MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-			                                          MmapFlags.MAP_SHARED, _fd, 0);
+													  MmapProts.PROT_READ | MmapProts.PROT_WRITE,
+													  MmapFlags.MAP_SHARED, _fd, 0);
 
 			if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
@@ -135,14 +136,14 @@ namespace Voron.Platform.Posix
 			return newPager;
 		}
 
-		
+
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
 			ThrowObjectDisposedIfNeeded();
 			return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
 		}
 
-	    public override  void Sync()
+		public override void Sync()
 		{
 			//nothing to do here
 		}
@@ -155,28 +156,29 @@ namespace Voron.Platform.Posix
 
 		public override void ReleaseAllocationInfo(byte* baseAddress, long size)
 		{
-			var result = Syscall.munmap(new IntPtr(baseAddress), (ulong) size);
+			var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
 			if (result == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 		}
 
-		public override void Dispose ()
+		public override void Dispose()
 		{
-			base.Dispose ();
-			if (_fd != -1) 
+			base.Dispose();
+			if (_fd != -1)
 			{
 				// note that the orders of operations is important here, we first unlink the file
 				// we are supposed to be the only one using it, so Linux would be ready to delete it
 				// and hopefully when we close it, won't waste any time trying to sync the memory state
 				// to disk just to discard it
-				if (DeleteOnClose) {
-					Syscall.unlink (_file);
+				if (DeleteOnClose)
+				{
+					Syscall.unlink(_file);
 					// explicitly ignoring the result here, there isn't
 					// much we can do to recover from being unable to delete it
 				}
-				Syscall.close (_fd);
+				Syscall.close(_fd);
 				_fd = -1;
-			}		
+			}
 		}
 	}
 }

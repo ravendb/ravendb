@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -29,7 +30,7 @@ namespace Voron.Impl.Backup
 			infoNotify = infoNotify ?? (s => { });
 
 			var dataPager = env.Options.DataPager;
-			var copier = new DataCopier(AbstractPager.PageSize * 16);
+			var copier = new DataCopier(env.Options.PageSize * 16);
 			Transaction txr = null;
 			try
 			{
@@ -67,7 +68,7 @@ namespace Voron.Impl.Backup
 									long journalSize;
 									using (var pager = env.Options.OpenJournalPager(journalNum))
 									{
-										journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+										journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * env.Options.PageSize);
 									}
 
 									journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
@@ -100,7 +101,7 @@ namespace Voron.Impl.Backup
 								// now can copy everything else
 								var firstDataPage = dataPager.Read(0);
 
-								copier.ToStream(firstDataPage.Base, AbstractPager.PageSize * allocatedPages, dataStream);
+								copier.ToStream(firstDataPage.Base, env.Options.PageSize * allocatedPages, dataStream);
 							}
 						}
 
@@ -118,7 +119,7 @@ namespace Voron.Impl.Backup
 
 								using (var stream = journalPart.Open())
 								{
-									copier.ToStream(journalFile, 0, pagesToCopy, stream);
+									copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
 									infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
 								}
 

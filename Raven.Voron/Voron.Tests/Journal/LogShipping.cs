@@ -41,7 +41,7 @@ namespace Voron.Tests.Journal
 				fixed (byte* pageDataBufferPtr = tx.PagesSnapshot)
 				{
 					//calculate crc, but skip the first page --> it is a header
-					var crc = Crc.Value(pageDataBufferPtr + AbstractPager.PageSize, 0, tx.PagesSnapshot.Length - AbstractPager.PageSize);
+					var crc = Crc.Value(pageDataBufferPtr + tx.PageSize, 0, tx.PagesSnapshot.Length - tx.PageSize);
 					Assert.Equal(tx.Header.Crc, crc);
 
 					if (previousCrc != 0)

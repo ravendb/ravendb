@@ -35,31 +35,35 @@ namespace Voron.Impl.Paging
         }
 
 	    private string _source;
-        protected AbstractPager()
+		protected AbstractPager(int pageSize)
         {
-            _increaseSize = MinIncreaseSize;
+            Debug.Assert((pageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
-            // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
+	        PageSize = pageSize;
+	        PageMaxSpace = PageSize - Constants.PageHeaderSize;
+	        NodeMaxSize = PageMaxSpace/2 - 1;
+			// MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
-            Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
-            
+			
+			_increaseSize = MinIncreaseSize;
+
             PageMinSpace = (int)(PageMaxSpace * 0.33);
             PagerState = new PagerState(this);
           
             PagerState.AddRef();
         }
 
+		public int PageSize { get; private set; }
         public int PageMinSpace { get; private set; }
 
         public bool DeleteOnClose { get; set; }
 
-        public const int PageSize = 4096;
+		public int NodeMaxSize { get; private set; }
 
-		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+		public int PageMaxSpace { get; private set; }
 
 	    public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 
-		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
 
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
@@ -256,13 +260,14 @@ namespace Voron.Impl.Paging
 
 	    public static int GetMaxKeySize()
 	    {
-		    return NodeMaxSize - RequiredSpaceForNewNode;
+			// NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+		    return 2000;
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public static bool IsKeySizeValid(int keySize)
 	    {
-            if (keySize + RequiredSpaceForNewNode > NodeMaxSize)
+            if (keySize + RequiredSpaceForNewNode > 2000)
                 return false;
 
             return true;

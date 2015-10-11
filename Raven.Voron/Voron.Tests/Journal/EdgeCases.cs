@@ -16,7 +16,7 @@ namespace Voron.Tests.Journal
 		// all tests here relay on the fact than one log file can contains max 10 pages
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 		}
 
 		[Fact]
@@ -24,28 +24,28 @@ namespace Voron.Tests.Journal
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[4 * AbstractPager.PageSize]; 
+				var bytes = new byte[4 * tx.DataPager.PageSize]; 
 				tx.Root.Add			("items/0", new MemoryStream(bytes));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[1 * AbstractPager.PageSize];
+				var bytes = new byte[1 * tx.DataPager.PageSize];
 				tx.Root.Add			("items/1", new MemoryStream(bytes));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[1 * AbstractPager.PageSize];
+				var bytes = new byte[1 * tx.DataPager.PageSize];
 				tx.Root.Add			("items/1", new MemoryStream(bytes));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[1 * AbstractPager.PageSize];
+				var bytes = new byte[1 * tx.DataPager.PageSize];
 				tx.Root.Add			("items/1", new MemoryStream(bytes));
 				tx.Commit();
 			}

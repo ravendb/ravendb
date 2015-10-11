@@ -15,7 +15,7 @@ namespace Voron.Tests.Backups
 	{
 		protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 1000 * options.PageSize;
 			options.IncrementalBackupEnabled = true;
 			options.ManualFlushing = true;
 

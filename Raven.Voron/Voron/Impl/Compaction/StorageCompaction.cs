@@ -45,7 +45,7 @@ namespace Voron.Impl.Compaction
 				compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
 				compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
-				minimalCompactedDataFileSize = compactedEnv.NextPageNumber*AbstractPager.PageSize;
+				minimalCompactedDataFileSize = compactedEnv.NextPageNumber * existingEnv.Options.PageSize;
 			}
 
 			using (var compactedDataFile = new FileStream(Path.Combine(compactOptions.BasePath, Constants.DatabaseFilename), FileMode.Open, FileAccess.ReadWrite))

@@ -18,18 +18,18 @@ namespace Voron.Platform.Win32
     /// </summary>
     public unsafe class Win32FileJournalWriter : IJournalWriter
     {
-
-
-        private readonly string _filename;
+	    private readonly StorageEnvironmentOptions _options;
+	    private readonly string _filename;
         private readonly SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private Win32NativeFileMethods.FileSegmentElement* _segments;
         private int _segmentsSize;
         private NativeOverlapped* _nativeOverlapped;
 
-        public Win32FileJournalWriter(string filename, long journalSize)
+        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
-            _filename = filename;
+	        _options = options;
+	        _filename = filename;
             _handle = Win32NativeFileMethods.CreateFile(filename,
                 Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Read, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
@@ -40,7 +40,7 @@ namespace Voron.Platform.Win32
 
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
-            NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
+			NumberOfAllocatedPages = journalSize / _options.PageSize;
 
             _nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
 
@@ -112,7 +112,7 @@ namespace Voron.Platform.Win32
 
         public IVirtualPager CreatePager()
         {
-            return new Win32MemoryMapPager(_filename);
+			return new Win32MemoryMapPager(_options.PageSize,_filename);
         }
 
         public bool Read(long pageNumber, byte* buffer, int count)
@@ -128,7 +128,7 @@ namespace Voron.Platform.Win32
                     IntPtr.Zero);
             }
 
-            long position = pageNumber*AbstractPager.PageSize;
+			long position = pageNumber * _options.PageSize;
             var overlapped = new Overlapped((int) (position & 0xffffffff), (int) (position >> 32), IntPtr.Zero, null);
             NativeOverlapped* nativeOverlapped = overlapped.Pack(null, null);
             try

@@ -45,10 +45,10 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
 	        {
 	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
                 {"UsedPages", env.State.NextPageNumber-1},
-	            {"MaxNodeSize", AbstractPager.NodeMaxSize},
+	            {"MaxNodeSize", _options.DataPager.NodeMaxSize},
 	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
-	            {"PageSize", AbstractPager.PageSize},
+	            {"PageMaxSpace", _options.DataPager.PageMaxSpace},
+	            {"PageSize", _options.PageSize},
                 {"Files", GetEntriesCount(Files)},
 	        };
 

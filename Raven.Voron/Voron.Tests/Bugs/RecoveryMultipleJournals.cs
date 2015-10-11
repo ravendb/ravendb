@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 			options.OnRecoveryError += (sender, args) => { }; // just shut it up
 			options.ManualFlushing = true;
 			options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
@@ -276,9 +276,9 @@ namespace Voron.Tests.Bugs
 				FileAccess.ReadWrite, 
 				FileShare.ReadWrite | FileShare.Delete))
 		    {
-		        fileStream.Position = page*AbstractPager.PageSize;
+		        fileStream.Position = page*_options.PageSize;
 
-				var buffer = new byte[AbstractPager.PageSize];
+				var buffer = new byte[_options.PageSize];
 
 		        var remaining = buffer.Length;
 		        var start = 0;
@@ -292,7 +292,7 @@ namespace Voron.Tests.Bugs
 		        }
 
 		        buffer[pos] = 42;
-				fileStream.Position = page * AbstractPager.PageSize;
+				fileStream.Position = page * _options.PageSize;
 		        fileStream.Write(buffer, 0, buffer.Length);
 		    }
 		}

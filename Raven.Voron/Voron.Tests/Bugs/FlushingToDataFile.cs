@@ -21,7 +21,7 @@ namespace Voron.Tests.Bugs
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.MaxLogFileSize = 2 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 2 * options.PageSize;
         }
 
         [Fact]
@@ -31,7 +31,7 @@ namespace Voron.Tests.Bugs
 
             new Random().NextBytes(value1);
 
-            Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
+            Assert.Equal(2 * Env.Options.PageSize, Env.Options.MaxLogFileSize);
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
@@ -81,7 +81,7 @@ namespace Voron.Tests.Bugs
 
             new Random().NextBytes(value1);
 
-            Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
+			Assert.Equal(2 * Env.Options.PageSize, Env.Options.MaxLogFileSize);
 
             Env.FlushLogToDataFile();
 

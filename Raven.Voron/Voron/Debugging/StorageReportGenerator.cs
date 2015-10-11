@@ -154,6 +154,7 @@ namespace Voron.Debugging
 		{
 			var densities = new List<double>();
 			var allPages = tree.AllPages();
+			var pageSize = tree.Tx.Environment.Options.PageSize;
 
 			for (var i = 0; i < allPages.Count; i++)
 			{
@@ -163,7 +164,7 @@ namespace Voron.Debugging
 				{
 					var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-					densities.Add(((double) (page.OverflowSize + Constants.PageHeaderSize))/(numberOfPages*AbstractPager.PageSize));
+					densities.Add(((double)(page.OverflowSize + Constants.PageHeaderSize)) / (numberOfPages * pageSize));
 
 					i += (numberOfPages - 1);
 				}
@@ -172,11 +173,11 @@ namespace Voron.Debugging
 					if (page.IsFixedSize)
 					{
 						var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
-						densities.Add(((double) sizeUsed)/AbstractPager.PageSize);
+						densities.Add(((double) sizeUsed)/pageSize);
 					}
 					else
 					{
-						densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
+						densities.Add(((double)page.SizeUsed) / pageSize);
 					}
 				}
 			}
@@ -191,9 +192,9 @@ namespace Voron.Debugging
 			return nestedPage;
 		}
 
-		private static long PagesToBytes(long pageCount)
+		private long PagesToBytes(long pageCount)
 		{
-			return pageCount * AbstractPager.PageSize;
+			return pageCount * _tx.Environment.Options.PageSize;
 		}
 
 		public static double CalculateTreeDensity(List<double> pageDensities)

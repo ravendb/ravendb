@@ -155,7 +155,7 @@ namespace Voron.Impl
 			    int numberOfPages = 1;
 			    if (page.IsOverflow)
 		        {
-					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					numberOfPages = (page.OverflowSize / Environment.Options.PageSize) + (page.OverflowSize % Environment.Options.PageSize == 0 ? 0 : 1);
 					i += numberOfPages;
 			        _overflowPagesInTransaction += (numberOfPages - 1);
 		        }
@@ -174,7 +174,7 @@ namespace Voron.Impl
 				var page = pages[i];
 				if (page.IsOverflow)
 				{
-					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					numberOfPages = (page.OverflowSize / Environment.Options.PageSize) + (page.OverflowSize % Environment.Options.PageSize == 0 ? 0 : 1);
 					i += numberOfPages;
 					_overflowPagesInTransaction += (numberOfPages - 1);
 				}
@@ -188,7 +188,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
 			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-            Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+			Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * Environment.Options.PageSize);
 
 			_allocatedPagesInTransaction++;
 
@@ -209,7 +209,7 @@ namespace Voron.Impl
 			
             _transactionHeaderPage = allocation;
 
-			UnmanagedMemory.Set(page.Base, 0, AbstractPager.PageSize);
+			UnmanagedMemory.Set(page.Base, 0, Environment.Options.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -276,7 +276,7 @@ namespace Voron.Impl
 
 		    var newPage = AllocatePage(1, TreePageFlags.None, num); // allocate new page in a log file but with the same number
 
-            Memory.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
+			Memory.Copy(newPage.Base, page.Base, Environment.Options.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 			tree.RecentlyFoundPages.Reset(num);
@@ -353,7 +353,7 @@ namespace Voron.Impl
 
 			if (_env.Options.MaxStorageSize.HasValue) // check against quota
 			{
-				var maxAvailablePageNumber = _env.Options.MaxStorageSize / AbstractPager.PageSize;
+				var maxAvailablePageNumber = _env.Options.MaxStorageSize / Environment.Options.PageSize;
 
 				if(pageNumber.Value > maxAvailablePageNumber)
 					throw new QuotaException(
@@ -383,7 +383,7 @@ namespace Voron.Impl
 
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Flags = flags;
-			page.Upper = AbstractPager.PageSize;
+			page.Upper = (ushort)Environment.Options.PageSize;
 			page.Dirty = true;
 
 			_dirtyPages.Add(page.PageNumber);

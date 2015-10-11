@@ -11,6 +11,8 @@ namespace Voron.Impl.Journal
 {
 	public unsafe class PureMemoryJournalWriter : IJournalWriter
 	{
+		private readonly StorageEnvironmentOptions _options;
+
 		internal class Buffer
 		{
 			public byte* Pointer;
@@ -23,9 +25,10 @@ namespace Voron.Impl.Journal
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
-		public PureMemoryJournalWriter(long journalSize)
+		public PureMemoryJournalWriter(StorageEnvironmentOptions options, long journalSize)
 		{
-			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
+			_options = options;
+			NumberOfAllocatedPages = journalSize/options.PageSize;
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
@@ -37,7 +40,7 @@ namespace Voron.Impl.Journal
 			_locker.EnterReadLock();
 			try
 			{
-				return new FragmentedPureMemoryPager(_buffers);
+				return new FragmentedPureMemoryPager(_options.PageSize, _buffers);
 			}
 			finally
 			{
@@ -81,7 +84,7 @@ namespace Voron.Impl.Journal
 				if (position != _lastPos)
 					throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
-				var size = pages.Length * AbstractPager.PageSize;
+				var size = pages.Length * _options.PageSize;
 			    _lastPos += size;
 
 				var handle = Marshal.AllocHGlobal(size);
@@ -96,7 +99,7 @@ namespace Voron.Impl.Journal
 
 				for (int index = 0; index < pages.Length; index++)
 				{
-					Memory.Copy(buffer.Pointer + (index * AbstractPager.PageSize), (byte*)pages[index].ToPointer(), AbstractPager.PageSize);
+					Memory.Copy(buffer.Pointer + (index * _options.PageSize), (byte*)pages[index].ToPointer(), _options.PageSize);
 				}
 			}
 			finally

@@ -17,6 +17,9 @@ namespace Voron.Impl.Paging
 		long NumberOfAllocatedPages { get; }
 		int PageMinSpace { get; }
 	    bool DeleteOnClose { get; set; }
+	    int PageSize { get; }
+	    int NodeMaxSize { get; }
+	    int PageMaxSpace { get; }
 
 	    void Sync();
 
@@ -30,6 +33,7 @@ namespace Voron.Impl.Paging
         int Write(TreePage page, long? pageNumber = null);
 
         int WriteDirect(TreePage start, long pagePosition, int pagesToWrite);
+
 	    TreePage GetWritable(long pageNumber);
         void MaybePrefetchMemory(List<TreePage> sortedPages);
         void TryPrefetchingWholeFile();

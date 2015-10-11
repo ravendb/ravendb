@@ -152,7 +152,7 @@ namespace Voron.Impl.Journal
 				_unusedPages.AddRange(unused);
 			}
 
-			var position = pageWritePos * AbstractPager.PageSize;
+			var position = pageWritePos * tx.Environment.Options.PageSize;
 			_journalWriter.WriteGather(position, pages);
 
 			return pageWritePos;

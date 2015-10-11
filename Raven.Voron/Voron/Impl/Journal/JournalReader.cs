@@ -62,7 +62,7 @@ namespace Voron.Impl.Journal
 			if (!TryReadAndValidateHeader(options, out current))
 				return false;
 
-			var transactionSize = GetNumberOfPagesFromSize(current->Compressed ? current->CompressedSize : current->UncompressedSize);
+			var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize : current->UncompressedSize);
 
 			if (current->TransactionId <= _lastSyncedTransactionId)
 			{
@@ -77,7 +77,7 @@ namespace Voron.Impl.Journal
 			_recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
 			var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
-			UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+			UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
 			if (current->Compressed)
 			{
 				if (TryDecompressTransactionPages(options, current, dataPage) == false)
@@ -85,7 +85,7 @@ namespace Voron.Impl.Journal
 			}
 			else
 			{
-                Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+				Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
 			}
 
 			var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -158,9 +158,9 @@ namespace Voron.Impl.Journal
 			return true;
 		}
 
-		internal static int GetNumberOfPagesFromSize(int size)
+		internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, int size)
 		{
-			return (size / AbstractPager.PageSize) + (size % AbstractPager.PageSize == 0 ? 0 : 1);
+			return (size / options.PageSize) + (size % options.PageSize == 0 ? 0 : 1);
 		}
 
 		public void RecoverAndValidate(StorageEnvironmentOptions options)
@@ -246,7 +246,7 @@ namespace Voron.Impl.Journal
 
 		private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
 		{
-			uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
+			uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * options.PageSize);
 
 			if (crc != current->Crc)
 			{

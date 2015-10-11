@@ -61,6 +61,22 @@ namespace Voron
 			}
 		}
 
+		public int PageSize
+		{
+			get { return _pageSize; }
+			set
+			{
+				if (value > ushort.MaxValue)
+					throw new ArgumentOutOfRangeException("value", "PageSize must be less than " + ushort.MaxValue);
+				if (value < 4096)
+					throw new ArgumentOutOfRangeException("value", "PageSize must be higher than 4096 bytes");
+
+				if (value % 512 != 0)
+					throw new ArgumentException("PageSize must be evenly divisible by 512 (sector size)", "value");
+				_pageSize = value;
+			}
+		}
+
 		public long MaxScratchBufferSize { get; set; }
 
 		public long MaxNumberOfPagesInMergedTransaction { get; set; }
@@ -85,11 +101,13 @@ namespace Voron
 		protected bool Disposed;
 		private long _initialLogFileSize;
 		private long _maxLogFileSize;
+		private int _pageSize;
 
-	    public Func<string, bool> ShouldUseKeyPrefix { get; set; }
+		public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
 		protected StorageEnvironmentOptions()
 		{
+			PageSize = 4096;
             ShouldUseKeyPrefix = name => false;
 			MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
 
@@ -160,8 +178,8 @@ namespace Voron
 				{
 					FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
 					if (RunningOnPosix)
-						return new PosixMemoryMapPager(FilePath, InitialFileSize);
-					return new Win32MemoryMapPager(FilePath, InitialFileSize);
+						return new PosixMemoryMapPager(PageSize, FilePath, InitialFileSize);
+					return new Win32MemoryMapPager(PageSize, FilePath, InitialFileSize);
 				});
 			}
 
@@ -188,9 +206,9 @@ namespace Voron
             public override IVirtualPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
-                    return new PosixMemoryMapPager(filename);
+					return new PosixMemoryMapPager(PageSize, filename);
 
-                return new Win32MemoryMapPager(filename);
+                return new Win32MemoryMapPager(PageSize,filename);
             }
 
 
@@ -201,9 +219,9 @@ namespace Voron
 				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
 				{
 					if (RunningOnPosix)
-						return new PosixJournalWriter(path, journalSize);
+						return new PosixJournalWriter(this,path, journalSize);
 
-					return new Win32FileJournalWriter(path, journalSize);
+					return new Win32FileJournalWriter(this,path, journalSize);
 				}));
 
 				if (result.Value.Disposed)
@@ -211,9 +229,9 @@ namespace Voron
 					var newWriter = new Lazy<IJournalWriter>(() =>
 					{
 						if (RunningOnPosix)
-							return new PosixJournalWriter(path, journalSize);
+							return new PosixJournalWriter(this,path, journalSize);
 
-						return new Win32FileJournalWriter(path, journalSize);
+						return new Win32FileJournalWriter(this, path, journalSize);
 					});
 					if (_journals.TryUpdate(name, newWriter, result) == false)
 						throw new InvalidOperationException("Could not update journal pager");
@@ -283,12 +301,12 @@ namespace Voron
 
 				if (RunningOnPosix)
 				{
-					return new PosixMemoryMapPager(scratchFile, InitialFileSize)
+					return new PosixMemoryMapPager(PageSize,scratchFile, InitialFileSize)
 					{
 						DeleteOnClose = true
 					};
 				}
-				return new Win32MemoryMapPager(scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+				return new Win32MemoryMapPager(PageSize, scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -298,8 +316,8 @@ namespace Voron
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
 				if (RunningOnPosix)
-					return new PosixMemoryMapPager(path);
-			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
+					return new PosixMemoryMapPager(PageSize, path);
+				var win32MemoryMapPager = new Win32MemoryMapPager(PageSize, path, access: Win32NativeFileAccess.GenericRead, 
                     options:Win32NativeFileAttributes.SequentialScan);
 			    win32MemoryMapPager.TryPrefetchingWholeFile();
 			    return win32MemoryMapPager;
@@ -323,9 +341,9 @@ namespace Voron
 			{
 				_instanceId = Interlocked.Increment(ref _counter);
 				if (RunningOnPosix)
-					_dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
+					_dataPager = new PosixTempMemoryMapPager(PageSize, "data.pager", InitialFileSize);
 				else
-					_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
+					_dataPager = new Win32PageFileBackedMemoryMappedPager(PageSize, "data.pager", InitialFileSize);
 			}
 
 			public override IVirtualPager DataPager
@@ -344,7 +362,7 @@ namespace Voron
 				IJournalWriter value;
 				if (_logs.TryGetValue(name, out value))
 					return value;
-				value = new PureMemoryJournalWriter(journalSize);
+				value = new PureMemoryJournalWriter(this, journalSize);
 				_logs[name] = value;
 				return value;
 			}
@@ -408,15 +426,15 @@ namespace Voron
 			public override IVirtualPager CreateScratchPager(string name)
 			{
 				if (RunningOnPosix)
-					return new PosixTempMemoryMapPager(name, InitialFileSize);
-				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
+					return new PosixTempMemoryMapPager(PageSize, name, InitialFileSize);
+				return new Win32PageFileBackedMemoryMappedPager(PageSize, name, InitialFileSize);
 			}
 
             public override IVirtualPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
-                    return new PosixMemoryMapPager(filename);
-                return new Win32MemoryMapPager(filename);
+					return new PosixMemoryMapPager(PageSize, filename);
+				return new Win32MemoryMapPager(PageSize, filename);
             }
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)

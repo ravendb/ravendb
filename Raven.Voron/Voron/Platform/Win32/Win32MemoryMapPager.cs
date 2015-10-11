@@ -40,10 +40,11 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-        public Win32MemoryMapPager(string file,
+		public Win32MemoryMapPager(int pageSize,string file,
             long? initialFileSize = null,
                                    Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
+			:base(pageSize)
         {
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
@@ -339,7 +340,7 @@ namespace Voron.Platform.Win32
 
                 list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
-                    NumberOfBytes = (IntPtr)(sizeInPages * AbstractPager.PageSize),
+                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize),
                     VirtualAddress = AcquirePagePointer(lastPage)
                 });
                 lastPage = page.PageNumber;

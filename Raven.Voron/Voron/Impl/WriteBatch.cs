@@ -269,9 +269,8 @@ namespace Voron.Impl
 
 		private void AssertValidKey(Slice key)
 		{
-			if (key.Size + Constants.NodeHeaderSize > AbstractPager.NodeMaxSize)
-				throw new ArgumentException(
-					"Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - Constants.NodeHeaderSize) + " bytes, but was " + key.Size, "key");
+			if (AbstractPager.IsKeySizeValid(key.Size))
+				throw new ArgumentException("Key size is too big, was " + key.Size, "key");
 		}
 
 		internal class BatchOperation : IComparable<BatchOperation>

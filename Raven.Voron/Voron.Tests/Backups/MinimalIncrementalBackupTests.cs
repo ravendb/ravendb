@@ -17,7 +17,7 @@ namespace Voron.Tests.Backups
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.IncrementalBackupEnabled = true;
-			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 1000 * options.PageSize;
 		}
 
 		public override void Dispose()

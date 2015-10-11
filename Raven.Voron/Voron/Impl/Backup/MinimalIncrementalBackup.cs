@@ -2,6 +2,7 @@
 using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.IO.Compression;
 using Voron.Impl.Journal;
@@ -138,7 +139,7 @@ namespace Voron.Impl.Backup
 				{
 					using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
 					{
-						var copier = new DataCopier(AbstractPager.PageSize * 16);
+						var copier = new DataCopier(env.Options.PageSize * 16);
 
 						var finalPager = env.Options.CreateScratchPager("min-inc-backup-final.scratch");
 						toDispose.Add(finalPager);
@@ -161,14 +162,14 @@ namespace Voron.Impl.Backup
 								totalNumberOfPages += size;
 								finalPager.EnsureContinuous(null, start, size); //maybe increase size
 
-                                Memory.Copy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+								Memory.Copy(finalPager.AcquirePagePointer(start), p.Base, size * env.Options.PageSize);
 
 								start += size;
 							}
 
 
 							var txPage = finalPager.AcquirePagePointer(0);
-							UnmanagedMemory.Set(txPage, 0, AbstractPager.PageSize);
+							UnmanagedMemory.Set(txPage, 0, env.Options.PageSize);
 							var txHeader = (TransactionHeader*)txPage;
 							txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 							txHeader->FreeSpace = lastTransaction.FreeSpace;
@@ -181,16 +182,16 @@ namespace Voron.Impl.Backup
 							txHeader->LastPageNumber = lastTransaction.LastPageNumber;
 							txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
 							txHeader->Compressed = false;
-							txHeader->UncompressedSize = txHeader->CompressedSize = totalNumberOfPages * AbstractPager.PageSize;
+							txHeader->UncompressedSize = txHeader->CompressedSize = totalNumberOfPages * env.Options.PageSize;
 
-							txHeader->Crc = Crc.Value(finalPager.AcquirePagePointer(1), 0, totalNumberOfPages * AbstractPager.PageSize);
+							txHeader->Crc = Crc.Value(finalPager.AcquirePagePointer(1), 0, totalNumberOfPages * env.Options.PageSize);
 
 
 							var entry = package.CreateEntry(string.Format("{0:D19}.merged-journal", nextJournalNum), compression);
 							nextJournalNum++;
 							using (var stream = entry.Open())
 							{
-								copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
+								copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * env.Options.PageSize, stream);
 							}
 						}
 

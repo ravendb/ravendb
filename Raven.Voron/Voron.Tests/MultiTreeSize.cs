@@ -20,7 +20,7 @@ namespace Voron.Tests
 				tx.Commit();
 			}
 
-			Assert.Equal(AbstractPager.PageSize,
+			Assert.Equal(Env.Options.PageSize,
 				Env.Stats().UsedDataFileSizeInBytes
 			);
 		}
@@ -35,7 +35,7 @@ namespace Voron.Tests
 				tx.Commit();
 			}
 
-			Assert.Equal(AbstractPager.PageSize,
+			Assert.Equal(Env.Options.PageSize,
 				Env.Stats().UsedDataFileSizeInBytes
 			);
 		}

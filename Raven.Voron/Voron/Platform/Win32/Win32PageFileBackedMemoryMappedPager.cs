@@ -24,7 +24,8 @@ namespace Voron.Platform.Win32
 	    private readonly int _instanceId;
 
 
-	    public Win32PageFileBackedMemoryMappedPager(string name, long? initialFileSize = null)
+	    public Win32PageFileBackedMemoryMappedPager(int pageSize, string name, long? initialFileSize = null)
+			:base(pageSize)
 		{
 		    _name = name;
 		    Win32NativeMethods.SYSTEM_INFO systemInfo;

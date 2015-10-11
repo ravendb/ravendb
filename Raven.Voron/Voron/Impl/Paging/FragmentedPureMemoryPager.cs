@@ -12,7 +12,8 @@ namespace Voron.Impl.Paging
 		private readonly ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> _buffers;
 
 
-		internal FragmentedPureMemoryPager(ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> buffers)
+		internal FragmentedPureMemoryPager(int pageSize, ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> buffers)
+			: base(pageSize)
 		{
 			_buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);

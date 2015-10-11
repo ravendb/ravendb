@@ -333,7 +333,7 @@ namespace Voron.Trees
         {
             Slice keyToInsert = _newKey;
 
-	        int pageSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
+	        int pageSize = SizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
 
 			if (toRight == false)
 			{
@@ -342,7 +342,7 @@ namespace Voron.Trees
 					TreeNodeHeader* node = _page.GetNode(i);
 					pageSize += node->GetNodeSize();
 					pageSize += pageSize & 1;
-					if (pageSize > AbstractPager.PageMaxSpace)
+					if (pageSize > _tx.DataPager.PageMaxSpace)
 					{
 						if (i <= currentIndex)
 						{
@@ -361,7 +361,7 @@ namespace Voron.Trees
 					TreeNodeHeader* node = _page.GetNode(i);
 					pageSize += node->GetNodeSize();
 					pageSize += pageSize & 1;
-					if (pageSize > AbstractPager.PageMaxSpace)
+					if (pageSize > _tx.DataPager.PageMaxSpace)
 					{
 						if (i >= currentIndex)
 						{

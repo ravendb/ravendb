@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
@@ -7,7 +8,8 @@ namespace Voron.Trees
 {
     public unsafe class TreeMutableState
     {
-        public long BranchPages;
+	    private readonly Transaction _tx;
+	    public long BranchPages;
         public long LeafPages;
         public long OverflowPages;
         public int Depth;
@@ -20,7 +22,12 @@ namespace Voron.Trees
 
         public bool InWriteTransaction;
 
-        public bool IsModified
+	    public TreeMutableState(Transaction tx)
+	    {
+		    _tx = tx;
+	    }
+
+	    public bool IsModified
         {
             get { return _isModified; }
             set
@@ -45,7 +52,7 @@ namespace Voron.Trees
 
         public TreeMutableState Clone()
         {
-            return new TreeMutableState
+            return new TreeMutableState(_tx)
                 {
                     BranchPages = BranchPages,
                     Depth = Depth,
@@ -104,7 +111,7 @@ namespace Voron.Trees
     Depth: {0}, Flags: {3}
     Root Page: {4}
     Leafs: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}
-    Size: {8:F2} Mb", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, ((float)(PageCount * AbstractPager.PageSize) / (1024 * 1024)));
+    Size: {8:F2} Mb", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, ((float)(PageCount * _tx.DataPager.PageSize) / (1024 * 1024)));
         }
     }
 }

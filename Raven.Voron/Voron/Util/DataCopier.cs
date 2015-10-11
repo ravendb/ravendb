@@ -34,9 +34,9 @@ namespace Voron.Util
 			}
 		}
 
-		public void ToStream(JournalFile journal, long startPage, long pagesToCopy, Stream output)
+		public void ToStream(StorageEnvironment env, JournalFile journal, long startPage, long pagesToCopy, Stream output)
 		{
-			var maxNumOfPagesToCopyAtOnce = _buffer.Length/AbstractPager.PageSize;
+			var maxNumOfPagesToCopyAtOnce = _buffer.Length/env.Options.PageSize;
 			var page = startPage;
 
 			fixed (byte* ptr = _buffer)
@@ -44,7 +44,7 @@ namespace Voron.Util
 				while (pagesToCopy > 0)
 				{
 					var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
-					var bytesCount = (int) (pageCount*AbstractPager.PageSize);
+					var bytesCount = (int)(pageCount * env.Options.PageSize);
 
 					journal.JournalWriter.Read(page, ptr, bytesCount);
 					output.Write(_buffer, 0, bytesCount);

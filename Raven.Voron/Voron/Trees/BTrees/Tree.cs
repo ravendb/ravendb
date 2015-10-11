@@ -1,28 +1,22 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
+using Sparrow;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Trees.Fixed;
-using Voron.Util;
 
 namespace Voron.Trees
 {
     public unsafe partial class Tree
     {
 		private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
-        private readonly TreeMutableState _state = new TreeMutableState();
+        private readonly TreeMutableState _state;
 
         private RecentlyFoundPages _recentlyFoundPages;
         public RecentlyFoundPages RecentlyFoundPages
@@ -46,13 +40,15 @@ namespace Voron.Trees
         private Tree(Transaction tx, long root)
         {
             _tx = tx;
-            _state.RootPageNumber = root;
+	        _state = new TreeMutableState(tx);
+	        _state.RootPageNumber = root;
         }
 
         public Tree(Transaction tx, TreeMutableState state)
         {
             _tx = tx;
-            _state = state;
+	        _state = new TreeMutableState(tx);
+	        _state = state;
         }
 
         public static Tree Open(Transaction tx, TreeRootHeader* header)
@@ -174,7 +170,7 @@ namespace Voron.Trees
                 var tempPagePointer = tmp.TempPagePointer;
                 while (true)
                 {
-                    var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
+                    var read = value.Read(tempPageBuffer, 0, tx.DataPager.PageSize);
                     if (read == 0)
                         break;
 

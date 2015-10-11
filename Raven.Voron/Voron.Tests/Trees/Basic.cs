@@ -87,7 +87,7 @@ namespace Voron.Tests.Trees
                 }
 
                 tx.Commit();
-                if (AbstractPager.PageSize != 4096)
+				if (Env.Options.PageSize != 4096)
 #pragma warning disable 162
                     return;
 #pragma warning restore 162

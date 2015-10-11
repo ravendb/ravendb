@@ -19,7 +19,7 @@ namespace Voron.Platform.Posix
         public readonly long SysPageSize;
         private long _totalAllocationSize;
 
-        public PosixMemoryMapPager(string file, long? initialFileSize = null)
+        public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
             _file = file;
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,

@@ -41,7 +41,7 @@ namespace Voron.Trees
 		public void MultiAdd(Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
-			int maxNodeSize = AbstractPager.NodeMaxSize;
+			int maxNodeSize = Tx.DataPager.NodeMaxSize;
 			if (value.Size > maxNodeSize)
 				throw new ArgumentException(
 					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");

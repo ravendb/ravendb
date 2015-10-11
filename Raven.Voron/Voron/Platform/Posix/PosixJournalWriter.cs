@@ -19,11 +19,13 @@ namespace Voron.Platform.Posix
 	/// </summary>
 	public class PosixJournalWriter : IJournalWriter
 	{
+		private readonly StorageEnvironmentOptions _options;
 		private readonly string _filename;
 		private int _fd, _fdReads = -1;
 
-		public PosixJournalWriter(string filename, long journalSize)
+		public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
 		{
+			_options = options;
 			_filename = filename;
 
 			_fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
@@ -37,7 +39,7 @@ namespace Voron.Platform.Posix
 			if (result != 0)
 				PosixHelper.ThrowLastError(result);
 
-			NumberOfAllocatedPages = journalSize / AbstractPager.PageSize;
+			NumberOfAllocatedPages = journalSize / _options.PageSize;
 		}
 
 		public void Dispose()
@@ -80,18 +82,18 @@ namespace Voron.Platform.Posix
 					new Iovec
 					{
 						iov_base = pages[start],
-						iov_len = AbstractPager.PageSize
+						iov_len = (ulong)_options.PageSize
 					}
 				};
                 start++;
-				byteLen += AbstractPager.PageSize;
+				byteLen += _options.PageSize;
 				for (int i = 1; i < pages.Length && locs.Count < IOV_MAX; i++, start++)
 				{
-					byteLen += AbstractPager.PageSize;
+					byteLen += _options.PageSize;
 					var cur = locs[locs.Count - 1];
 					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == (byte*)pages[i].ToPointer())
 					{
-						cur.iov_len = cur.iov_len + AbstractPager.PageSize;
+						cur.iov_len = cur.iov_len + (ulong)_options.PageSize;
 						locs[locs.Count - 1] = cur;
 					} 
 					else
@@ -99,7 +101,7 @@ namespace Voron.Platform.Posix
 						locs.Add(new Iovec
 						{
 							iov_base = pages[i],
-							iov_len = AbstractPager.PageSize
+							iov_len = (ulong)_options.PageSize
 						});
 					}
 				}
@@ -118,7 +120,7 @@ namespace Voron.Platform.Posix
 
 		public IVirtualPager CreatePager()
 		{
-			return new PosixMemoryMapPager(_filename);
+			return new PosixMemoryMapPager(_options.PageSize,_filename);
 		}
 
 		public unsafe bool Read(long pageNumber, byte* buffer, int count)
@@ -129,7 +131,7 @@ namespace Voron.Platform.Posix
 				if (_fdReads == -1)
 					PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 			}
-			long position = pageNumber * AbstractPager.PageSize;
+			long position = pageNumber * _options.PageSize;
 
 			while (count > 0)
 			{

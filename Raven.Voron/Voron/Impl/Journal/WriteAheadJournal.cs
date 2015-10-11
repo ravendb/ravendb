@@ -73,7 +73,7 @@ namespace Voron.Impl.Journal
 
 		internal long CompressionBufferSize
 		{
-			get { return _compressionPager.NumberOfAllocatedPages*AbstractPager.PageSize; }
+			get { return _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize; }
 		}
 
 		private JournalFile NextFile(int numberOfPages = 1)
@@ -86,7 +86,7 @@ namespace Voron.Impl.Journal
 				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
 			var actualLogSize = _currentJournalFileSize;
-			var minRequiredSize = numberOfPages * AbstractPager.PageSize;
+			var minRequiredSize = numberOfPages * _compressionPager.PageSize;
 			if (_currentJournalFileSize < minRequiredSize)
 			{
 				actualLogSize = minRequiredSize;
@@ -173,7 +173,7 @@ namespace Voron.Impl.Journal
 
 					if (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal)
 					{
-						var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+						var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _compressionPager.PageSize);
 						var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
 						jrnlFile.InitFrom(journalReader);
 						jrnlFile.AddRef(); // creator reference - write ahead log
@@ -264,7 +264,7 @@ namespace Voron.Impl.Journal
 
 		private void RecoverCurrentJournalSize(IVirtualPager pager)
 		{
-			var journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+			var journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * pager.PageSize);
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 
@@ -734,7 +734,7 @@ namespace Voron.Impl.Journal
 
 					lastReadTxHeader = *readTxHeader;
 
-					var compressedPages = (readTxHeader->CompressedSize / AbstractPager.PageSize) + (readTxHeader->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					var compressedPages = (readTxHeader->CompressedSize / _waj._env.Options.PageSize) + (readTxHeader->CompressedSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
 
 					txPos += compressedPages + 1;
 				}
@@ -850,7 +850,7 @@ namespace Voron.Impl.Journal
 			var onTransactionCommit = OnTransactionCommit;
 			if (onTransactionCommit != null)
 			{
-				var transactionToShip = new TransactionToShip(transactionHeader)
+				var transactionToShip = new TransactionToShip(transactionHeader, tx.DataPager.PageSize)
 				{
 					CompressedPages = pages
 				};
@@ -868,10 +868,11 @@ namespace Voron.Impl.Journal
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;
-			var sizeInBytes = dataPagesCount * AbstractPager.PageSize;
+			var pageSize = tx.Environment.Options.PageSize;
+			var sizeInBytes = dataPagesCount * pageSize;
 			var outputBuffer = LZ4.MaximumOutputLength(sizeInBytes);
-			var outputBufferInPages = outputBuffer / AbstractPager.PageSize +
-									  (outputBuffer % AbstractPager.PageSize == 0 ? 0 : 1);
+			var outputBufferInPages = outputBuffer / pageSize +
+									  (outputBuffer % pageSize == 0 ? 0 : 1);
 			var pagesRequired = (dataPagesCount + outputBufferInPages);
 
 			compressionPager.EnsureContinuous(tx, 0, pagesRequired);
@@ -884,14 +885,14 @@ namespace Voron.Impl.Journal
             foreach( var txPage in txPages )
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-                var count = txPage.NumberOfPages * AbstractPager.PageSize;
+                var count = txPage.NumberOfPages * pageSize;
                 Memory.BulkCopy(write, scratchPage, count);
                 write += count;
             }
 
 			var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
-		    var remainder = len % AbstractPager.PageSize;
-            var compressedPages = (len / AbstractPager.PageSize) + (remainder == 0 ? 0 : 1);
+			var remainder = len % pageSize;
+			var compressedPages = (len / pageSize) + (remainder == 0 ? 0 : 1);
 
 		    if (remainder != 0)
 		    {
@@ -913,10 +914,10 @@ namespace Voron.Impl.Journal
 			pages[0] = new IntPtr(txHeaderBase);
 			for (int index = 0; index < compressedPages; index++)
 			{
-				pages[index + 1] = new IntPtr(compressionBuffer + (index * AbstractPager.PageSize));
+				pages[index + 1] = new IntPtr(compressionBuffer + (index * pageSize));
 			}
 
-			txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * AbstractPager.PageSize);
+			txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * pageSize);
 
 			return pages;
 		}

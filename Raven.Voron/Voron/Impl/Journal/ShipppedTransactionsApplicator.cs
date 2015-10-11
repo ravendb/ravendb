@@ -44,10 +44,10 @@ namespace Voron.Impl.Journal
 			    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 			    {
 				    var transactionHeader = (TransactionHeader*) pages;
-				    var dataPages = pages + AbstractPager.PageSize;
+					var dataPages = pages + _env.Options.PageSize;
 
-				    var compressedPages = (transactionHeader->CompressedSize/AbstractPager.PageSize) + (transactionHeader->CompressedSize%AbstractPager.PageSize == 0 ? 0 : 1);
-				    var crc = Crc.Value(dataPages, 0, compressedPages*AbstractPager.PageSize);
+					var compressedPages = (transactionHeader->CompressedSize / _env.Options.PageSize) + (transactionHeader->CompressedSize % _env.Options.PageSize == 0 ? 0 : 1);
+					var crc = Crc.Value(dataPages, 0, compressedPages * _env.Options.PageSize);
 
 				    var transactionId = transactionHeader->TransactionId;
 				    if (transactionHeader->Crc != crc)

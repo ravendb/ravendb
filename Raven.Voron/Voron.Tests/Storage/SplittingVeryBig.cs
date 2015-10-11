@@ -13,7 +13,7 @@ namespace Voron.Tests.Storage
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 		}
 
 		[Fact]
@@ -57,7 +57,7 @@ namespace Voron.Tests.Storage
 			random.NextBytes(buffer);
 
 			var options = StorageEnvironmentOptions.ForPath("test2.data");
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -75,7 +75,7 @@ namespace Voron.Tests.Storage
 			}
 
 			options = StorageEnvironmentOptions.ForPath("test2.data");
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{

@@ -17,7 +17,7 @@ namespace Voron.Tests.Journal
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.ManualFlushing = true;
-			options.MaxLogFileSize = 3 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 3 * options.PageSize;
 		}
 
 		[Fact]

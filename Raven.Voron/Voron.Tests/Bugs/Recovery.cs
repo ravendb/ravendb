@@ -279,7 +279,7 @@ namespace Voron.Tests.Bugs
 			DeleteDirectory(path);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -309,7 +309,7 @@ namespace Voron.Tests.Bugs
 			var expectedString = Encoding.UTF8.GetString(buffer);
 
 			options = StorageEnvironmentOptions.ForPath(path);
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{

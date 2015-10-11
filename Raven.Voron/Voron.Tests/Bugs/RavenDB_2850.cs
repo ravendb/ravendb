@@ -46,7 +46,7 @@ namespace Voron.Tests.Bugs
 					txw.Commit();
 				}
 
-				size += AbstractPager.PageSize;
+				size += Env.Options.PageSize;
 			}
 
 			for (int i = 0; i < 100; i++)
@@ -55,7 +55,7 @@ namespace Voron.Tests.Bugs
 				{
 					var tree = Env.CreateTree(txw, "foo");
 
-					var value = new byte[AbstractPager.PageSize];
+					var value = new byte[Env.Options.PageSize];
 
 					random.NextBytes(value);
 
@@ -69,7 +69,7 @@ namespace Voron.Tests.Bugs
 			{
 				var tree = Env.CreateTree(txw, "foo/1");
 
-				var value = new byte[40 * AbstractPager.PageSize];
+				var value = new byte[40 * Env.Options.PageSize];
 
 				random.NextBytes(value);
 

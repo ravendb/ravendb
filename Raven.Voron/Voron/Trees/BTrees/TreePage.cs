@@ -20,13 +20,13 @@ namespace Voron.Trees
         private readonly TreePageHeader* _header;
 
 	    public readonly string Source;
-	    private readonly ushort _pageSize;
+	    private readonly int _pageSize;
 
 	    public int LastMatch;
 	    public int LastSearchPosition;
 	    public bool Dirty;
 
-	    public TreePage(byte* b, string source, ushort pageSize)
+	    public TreePage(byte* b, string source, int pageSize)
         {
             _base = b;
             _header = (TreePageHeader*)b;
@@ -75,7 +75,7 @@ namespace Voron.Trees
             set { _header->OverflowSize = value; } 
         }
 
-		public ushort PageSize 
+		public int PageSize 
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _pageSize; } 
@@ -487,7 +487,7 @@ namespace Voron.Trees
 
 			    var numberOfEntries = NumberOfEntries;
 
-                Upper = _pageSize;
+                Upper = (ushort)_pageSize;
 
 			    for (int i = 0; i < numberOfEntries; i++)
 			    {

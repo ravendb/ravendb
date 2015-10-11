@@ -86,7 +86,7 @@ namespace Voron.Impl.Scratch
 			}
 			else
 			{
-				sizeAfterAllocation = size * AbstractPager.PageSize;
+				sizeAfterAllocation = size * tx.Environment.Options.PageSize;
 
 				var scratchesToDelete = new List<int>();
 
@@ -174,8 +174,8 @@ namespace Voron.Impl.Scratch
 
 					createNextFile = true;
 				}
-				else if (_scratchBuffers.Count == 1 && _current.Size < _sizeLimit && 
-						(_current.ActivelyUsedBytes(oldestActiveTransaction) + size * AbstractPager.PageSize) < _sizeLimit)
+				else if (_scratchBuffers.Count == 1 && _current.Size < _sizeLimit &&
+						(_current.ActivelyUsedBytes(oldestActiveTransaction) + size * tx.Environment.Options.PageSize) < _sizeLimit)
 				{
 					// there is only one scratch file that hasn't reach the size limit yet and
 					// the number of bytes being in active use allows to allocate the requested size
@@ -194,58 +194,7 @@ namespace Voron.Impl.Scratch
 					return _current.Allocate(tx, numberOfPages, size);
 				}
 
-				var debugInfoBuilder = new StringBuilder();
-
-				debugInfoBuilder.AppendFormat("Current transaction id: {0}\r\n", tx.Id);
-				debugInfoBuilder.AppendFormat("Requested number of pages: {0} (adjusted size: {1} == {2:#,#;;0} KB)\r\n", numberOfPages, size, size * AbstractPager.PageSize / 1024);
-				debugInfoBuilder.AppendFormat("Oldest active transaction: {0} (snapshot: {1})\r\n", tx.Environment.OldestTransaction, oldestActiveTransaction);
-				debugInfoBuilder.AppendFormat("Oldest active transaction when flush was forced: {0}\r\n", _oldestTransactionWhenFlushWasForced);
-				debugInfoBuilder.AppendFormat("Next write transaction id: {0}\r\n", tx.Environment.NextWriteTransactionId + 1);
-
-				debugInfoBuilder.AppendLine("Active transactions:");
-				foreach (var activeTransaction in tx.Environment.ActiveTransactions)
-				{
-					debugInfoBuilder.AppendFormat("\tId: {0} - {1}\r\n", activeTransaction.Id, activeTransaction.Flags);
-				}
-
-				debugInfoBuilder.AppendLine("Scratch files usage:");
-				foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
-				{
-					debugInfoBuilder.AppendFormat("\t{0} - size: {1:#,#;;0} KB, in active use: {2:#,#;;0} KB\r\n", StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number), scratchBufferFile.Value.Size / 1024, scratchBufferFile.Value.ActivelyUsedBytes(oldestActiveTransaction) / 1024);
-				}
-
-				debugInfoBuilder.AppendLine("Most available free pages:");
-				foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
-				{
-					debugInfoBuilder.AppendFormat("\t{0}\r\n", StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number));
-
-					foreach (var freePage in scratchBufferFile.Value.GetMostAvailableFreePagesBySize())
-					{
-						debugInfoBuilder.AppendFormat("\t\tSize:{0}, ValidAfterTransactionId: {1}\r\n", freePage.Key, freePage.Value);
-					}
-				}
-
-				debugInfoBuilder.AppendFormat("Compression buffer size: {0:#,#;;0} KB\r\n", tx.Environment.Journal.CompressionBufferSize / 1024);
-
-				string debugInfo = debugInfoBuilder.ToString();
-
-				string message = string.Format("Cannot allocate more space for the scratch buffer.\r\n" +
-											   "Current file size is:\t{0:#,#;;0} KB.\r\n" +
-											   "Requested size for current file:\t{1:#,#;;0} KB.\r\n" +
-											   "Requested total size for all files:\t{2:#,#;;0} KB.\r\n" +
-											   "Limit:\t\t\t{3:#,#;;0} KB.\r\n" +
-											   "Already flushed and waited for {4:#,#;;0} ms for read transactions to complete.\r\n" +
-											   "Do you have a long running read transaction executing?\r\n" + 
-											   "Debug info:\r\n{5}",
-					_current.Size / 1024L,
-					_current.SizeAfterAllocation(size) / 1024L,
-					sizeAfterAllocation / 1024L,
-					_sizeLimit / 1024L,
-					sp.ElapsedMilliseconds,
-					debugInfo
-					);
-
-				throw new ScratchBufferSizeLimitException(message);
+				ThrowScratchBufferTooBig(tx, numberOfPages, size, oldestActiveTransaction, sizeAfterAllocation, sp);
 			}
 
 			// we don't have free pages to give out, need to allocate some
@@ -253,6 +202,69 @@ namespace Voron.Impl.Scratch
 			_options.OnScratchBufferSizeChanged(sizeAfterAllocation);
 
 			return result;
+		}
+
+		private void ThrowScratchBufferTooBig(Transaction tx, int numberOfPages, long size, long oldestActiveTransaction,
+			long sizeAfterAllocation, Stopwatch sp)
+		{
+			var debugInfoBuilder = new StringBuilder();
+
+			debugInfoBuilder.AppendFormat("Current transaction id: {0}\r\n", tx.Id);
+			debugInfoBuilder.AppendFormat("Requested number of pages: {0} (adjusted size: {1} == {2:#,#;;0} KB)\r\n", numberOfPages,
+				size, size*tx.Environment.Options.PageSize/1024);
+			debugInfoBuilder.AppendFormat("Oldest active transaction: {0} (snapshot: {1})\r\n", tx.Environment.OldestTransaction,
+				oldestActiveTransaction);
+			debugInfoBuilder.AppendFormat("Oldest active transaction when flush was forced: {0}\r\n",
+				_oldestTransactionWhenFlushWasForced);
+			debugInfoBuilder.AppendFormat("Next write transaction id: {0}\r\n", tx.Environment.NextWriteTransactionId + 1);
+
+			debugInfoBuilder.AppendLine("Active transactions:");
+			foreach (var activeTransaction in tx.Environment.ActiveTransactions)
+			{
+				debugInfoBuilder.AppendFormat("\tId: {0} - {1}\r\n", activeTransaction.Id, activeTransaction.Flags);
+			}
+
+			debugInfoBuilder.AppendLine("Scratch files usage:");
+			foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
+			{
+				debugInfoBuilder.AppendFormat("\t{0} - size: {1:#,#;;0} KB, in active use: {2:#,#;;0} KB\r\n",
+					StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number), scratchBufferFile.Value.Size/1024,
+					scratchBufferFile.Value.ActivelyUsedBytes(oldestActiveTransaction)/1024);
+			}
+
+			debugInfoBuilder.AppendLine("Most available free pages:");
+			foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
+			{
+				debugInfoBuilder.AppendFormat("\t{0}\r\n", StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number));
+
+				foreach (var freePage in scratchBufferFile.Value.GetMostAvailableFreePagesBySize())
+				{
+					debugInfoBuilder.AppendFormat("\t\tSize:{0}, ValidAfterTransactionId: {1}\r\n", freePage.Key, freePage.Value);
+				}
+			}
+
+			debugInfoBuilder.AppendFormat("Compression buffer size: {0:#,#;;0} KB\r\n",
+				tx.Environment.Journal.CompressionBufferSize/1024);
+
+			string debugInfo = debugInfoBuilder.ToString();
+
+			string message = string.Format("Cannot allocate more space for the scratch buffer.\r\n" +
+			                               "Current file size is:\t{0:#,#;;0} KB.\r\n" +
+			                               "Requested size for current file:\t{1:#,#;;0} KB.\r\n" +
+			                               "Requested total size for all files:\t{2:#,#;;0} KB.\r\n" +
+			                               "Limit:\t\t\t{3:#,#;;0} KB.\r\n" +
+			                               "Already flushed and waited for {4:#,#;;0} ms for read transactions to complete.\r\n" +
+			                               "Do you have a long running read transaction executing?\r\n" +
+			                               "Debug info:\r\n{5}",
+				_current.Size/1024L,
+				_current.SizeAfterAllocation(size)/1024L,
+				sizeAfterAllocation/1024L,
+				_sizeLimit/1024L,
+				sp.ElapsedMilliseconds,
+				debugInfo
+				);
+
+			throw new ScratchBufferSizeLimitException(message);
 		}
 
 		public void Free(int scratchNumber, long page, long asOfTxId)

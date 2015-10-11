@@ -42,7 +42,7 @@ namespace Voron.Impl.Backup
 
 			long numberOfBackedUpPages = 0;
 
-			var copier = new DataCopier(AbstractPager.PageSize * 16);
+			var copier = new DataCopier(env.Options.PageSize * 16);
 			var backupSuccess = true;
 
 			long lastWrittenLogPage = -1;
@@ -111,7 +111,7 @@ namespace Voron.Impl.Backup
 
 								using (var stream = part.Open())
 								{
-									copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream);
+									copier.ToStream(env, journalFile, startBackupAt, pagesToCopy, stream);
 									infoNotify(string.Format("Voron Incr copy journal number {0}", num));
 
 								}
@@ -181,7 +181,7 @@ namespace Voron.Impl.Backup
 			{
 				using (var pager = env.Options.OpenJournalPager(journalNum))
 				{
-					long journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+					long journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * env.Options.PageSize);
 					journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
 					journalFile.AddRef();
 					return journalFile;

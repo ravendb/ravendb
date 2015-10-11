@@ -43,7 +43,7 @@ namespace Voron.Tests.Bugs
                 DebugStuff.RenderAndShow(txw, 1);
 			}
 
-			var bytesToFillFirstJournalCompletely = new byte[8*AbstractPager.PageSize];
+			var bytesToFillFirstJournalCompletely = new byte[8*Env.Options.PageSize];
 
 			new Random().NextBytes(bytesToFillFirstJournalCompletely);
 

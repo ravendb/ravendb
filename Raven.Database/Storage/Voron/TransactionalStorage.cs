@@ -638,7 +638,7 @@ namespace Raven.Storage.Voron
 				sb.Append(seperator);
 				sb.Append(System.Environment.NewLine);
 				sb.Append("Owned Size: ");
-				var ownedSize = AbstractPager.PageSize * tree.PageCount;
+				var ownedSize = tableStorage.Environment.Options.PageSize * tree.PageCount;
 				sb.Append(SizeHelper.Humane(ownedSize));
 				sb.Append(System.Environment.NewLine);
 				if (computeExactSizes)
