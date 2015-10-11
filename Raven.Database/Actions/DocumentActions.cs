@@ -477,7 +477,6 @@ namespace Raven.Database.Actions
                     if (lastDocumentReadEtag != null)
                         etag = lastDocumentReadEtag;
 
-                    break;
                     start += docCount;
                 }
             });
