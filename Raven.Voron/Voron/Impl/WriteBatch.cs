@@ -269,7 +269,7 @@ namespace Voron.Impl
 
 		private void AssertValidKey(Slice key)
 		{
-			if (AbstractPager.IsKeySizeValid(key.Size))
+			if (AbstractPager.IsKeySizeValid(key.Size) == false)
 				throw new ArgumentException("Key size is too big, was " + key.Size, "key");
 		}
 
