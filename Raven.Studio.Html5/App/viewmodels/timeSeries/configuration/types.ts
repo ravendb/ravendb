@@ -15,6 +15,7 @@ import typeChange = require("models/timeSeries/typeChange");
 
 class types extends viewModelBase {
 
+    viewType = viewType.TimeSeries;
     typesList = ko.observable<pagedList>();
     hasTypes: KnockoutComputed<boolean>;
     selectedTypesIndices = ko.observableArray<number>();
