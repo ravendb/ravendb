@@ -167,7 +167,21 @@ class counters extends viewModelBase {
     }
 
     newCounter() {
-        var counterChangeVm = new editCounterDialog();
+        var counterChangeVm: editCounterDialog;
+        var currentGroupName = this.selectedGroup().name;
+        if (currentGroupName === counterGroup.allGroupsGroupName) {
+            counterChangeVm = new editCounterDialog();
+        } else {
+            var dto = {
+                CurrentValue: 0,
+                Group: currentGroupName,
+                CounterName: "",
+                Delta: 0
+            };
+            var change = new counterChange(dto, true);
+            counterChangeVm = new editCounterDialog(change);
+        }
+        
         counterChangeVm.updateTask.done((change: counterChange) => {
             var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), change.isNew());
             var execute = counterCommand.execute();
@@ -194,8 +208,8 @@ class counters extends viewModelBase {
             var counterData = grid.getSelectedItems(1).first();
             var dto = {
                 CurrentValue: counterData.Total,
-                Group: counterData.GroupName,
-                CounterName: counterData.Name,
+                Group: counterData["Group Name"],
+                CounterName: counterData["Counter Name"],
                 Delta: 0
             };
             var change = new counterChange(dto);
@@ -215,7 +229,7 @@ class counters extends viewModelBase {
             var counterData = grid.getSelectedItems(1).first();
             var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
             confirmation.done(() => {
-                var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData.GroupName, counterData.Name);
+                var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData["Group Name"], counterData["Counter Name"]);
                 var execute = resetCommand.execute();
 				execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });

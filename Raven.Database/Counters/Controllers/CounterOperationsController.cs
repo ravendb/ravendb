@@ -276,7 +276,7 @@ namespace Raven.Database.Counters.Controllers
 			public bool IsTimedOut { get; set; }
 		}
 
-		[RavenRoute("cs/{counterStorageName}/reset/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/reset")]
 		[HttpPost]
 		public HttpResponseMessage Reset(string groupName, string counterName)
 		{
@@ -307,7 +307,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/delete")]
 		[HttpDelete]
 		public HttpResponseMessage Delete(string groupName, string counterName)
 		{
@@ -335,7 +335,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/delete-by-group/{groupName}")]
+		[RavenRoute("cs/{counterStorageName}/delete-by-group")]
 		[HttpDelete]
 		public HttpResponseMessage DeleteByGroup(string groupName)
 		{

@@ -80,7 +80,7 @@ class deleteItems extends dialogViewModelBase {
 		var item = this.items()[0];
         if (item instanceof counterSummary) {
             var summary: any = item;
-            return " counter name: " + summary.getId() + ", group: " + summary.getEntityName();
+            return " counter name: " + summary.getId() + ", group name: " + summary.getEntityName();
 		}
 
 		return item.getId();
