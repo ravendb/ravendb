@@ -17,8 +17,10 @@ import deleteGroup = require("viewmodels/counter/deleteGroup");
 
 class counters extends viewModelBase {
 
+    viewType = viewType.Counters;
     groups = ko.observableArray<counterGroup>();
     allGroupsGroup: counterGroup;
+    isAllGroupsGroup: KnockoutObservable<boolean>;
     selectedGroup = ko.observable<counterGroup>().subscribeTo("ActivateGroup").distinctUntilChanged();
     currentGroup = ko.observable<counterGroup>();
     groupToSelectName: string;
@@ -30,8 +32,8 @@ class counters extends viewModelBase {
     hasAllCountersSelected: KnockoutComputed<boolean>;
     isAnyCountersAutoSelected = ko.observable<boolean>(false);
     isAllCountersAutoSelected = ko.observable<boolean>(false);
-	countersSelection: KnockoutComputed<checkbox>;
-
+    countersSelection: KnockoutComputed<checkbox>;
+    
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#countersGrid";
@@ -42,6 +44,8 @@ class counters extends viewModelBase {
         super();
 
         this.selectedGroup.subscribe(c => this.selectedGroupChanged(c));
+
+        this.isAllGroupsGroup = ko.computed(() => !!this.selectedGroup() ? this.selectedGroup().isAllGroupsGroup : true);
 
         this.hasCounters = ko.computed(() => {
             var selectedGroup: counterGroup = this.selectedGroup();
@@ -129,9 +133,15 @@ class counters extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("ChangeCounterValue", () => this.change()),
-			ko.postbox.subscribe("ResetCounter", () => this.reset()),
+            ko.postbox.subscribe("ResetCounter", () => this.reset()),
             ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs)),
-            ko.postbox.subscribe("SortGroups", () => this.sortGroups())
+            ko.postbox.subscribe("SortGroups", () => this.sortGroups()),
+            ko.postbox.subscribe("SelectGroup", (groupName: string) => {
+                var groupToSelect = this.groups.first(g => g.name === groupName);
+                if (!!groupToSelect) {
+                    this.selectGroupInternal(groupToSelect);
+                }
+            })
         ];
     }
 
@@ -348,10 +358,14 @@ class counters extends viewModelBase {
 
     selectGroup(group: counterGroup, event?: MouseEvent) {
         if (!event || event.which !== 3) {
-            group.activate();
-            var countersWithGroupUrl = appUrl.forCounterStorageCounters(group.name, this.activeCounterStorage());
-            router.navigate(countersWithGroupUrl, false);
+            this.selectGroupInternal(group);
         }
+    }
+
+    private selectGroupInternal(group: counterGroup) {
+        group.activate();
+        var countersWithGroupUrl = appUrl.forCounterStorageCounters(group.name, this.activeCounterStorage());
+        router.navigate(countersWithGroupUrl, false);
     }
 
     private getCountersGrid(): virtualTable {

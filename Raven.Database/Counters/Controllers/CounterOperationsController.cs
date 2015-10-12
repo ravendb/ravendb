@@ -423,7 +423,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounter/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/getCounter")]
 		[HttpGet]
 		public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{

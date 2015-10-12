@@ -60,6 +60,7 @@ class editCounter extends viewModelBase {
     }*/
 
     attached() {
+        super.attached();
         this.setupKeyboardShortcuts();
     }
 
