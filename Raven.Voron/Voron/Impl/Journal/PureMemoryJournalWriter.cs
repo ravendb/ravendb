@@ -1,6 +1,7 @@
 ﻿using Sparrow;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,9 +60,14 @@ namespace Voron.Impl.Journal
                     
 	                continue;
 	            }
-
-                Memory.Copy(buffer, current.Pointer, count);
-		        return true;
+	           
+	            var actualCount = Math.Min(count, (int)(current.SizeInPages*_options.PageSize));
+	           
+                Memory.Copy(buffer, current.Pointer, actualCount);
+	            count -= actualCount;
+	            pageNumber += current.SizeInPages;
+                if (count <= 0)
+	                return true;
 	        }
 		    return false;
 	    }
