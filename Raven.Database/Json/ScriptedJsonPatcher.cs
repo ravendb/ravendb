@@ -230,6 +230,7 @@ namespace Raven.Database.Json
 #endif
 				cfg.LimitRecursion(1024);
 				cfg.MaxStatements(maxSteps);
+				cfg.NullPropagation();
 			});
 
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
