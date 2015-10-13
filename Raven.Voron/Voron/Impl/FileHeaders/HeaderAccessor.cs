@@ -67,7 +67,7 @@ namespace Voron.Impl.FileHeaders
 				}
 
 				if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
-					throw new InvalidDataException("None of the header files start with the magic marker, probably not db files");
+					throw new InvalidDataException("None of the header files start with the magic marker, probably not db files opr");
 
 				// if one of the files is corrupted, but the other isn't, restore to the valid file
 				if (f1->MagicMarker != Constants.MagicMarker)
@@ -96,6 +96,15 @@ namespace Voron.Impl.FileHeaders
 					Memory.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
 				}
 				_revision = _theHeader->HeaderRevision;
+
+			    if (_theHeader->PageSize != _env.Options.PageSize)
+			    {
+			        var message = string.Format("PageSize mismatch, configured to be {0:#,#} but was {1:#,#}, using the actual value in the file {1:#,#}", 
+                        _env.Options.PageSize, _theHeader->PageSize);
+			        _env.Options.InvokeRecoveryError(this, message, null);
+			        _env.Options.PageSize = _theHeader->PageSize;
+			    }
+
 				return false;
 			}
 			finally
@@ -162,7 +171,7 @@ namespace Voron.Impl.FileHeaders
 			}
 		}
 
-		private static void FillInEmptyHeader(FileHeader* header)
+		private void FillInEmptyHeader(FileHeader* header)
 		{
 			header->MagicMarker = Constants.MagicMarker;
 			header->Version = Constants.CurrentVersion;
@@ -178,6 +187,7 @@ namespace Voron.Impl.FileHeaders
 			header->IncrementalBackup.LastBackedUpJournal = -1;
 			header->IncrementalBackup.LastBackedUpJournalPage = -1;
 			header->IncrementalBackup.LastCreatedJournal = -1;
+		    header->PageSize = _env.Options.PageSize;
 		}
 
 		public void Dispose()

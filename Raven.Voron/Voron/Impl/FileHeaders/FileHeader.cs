@@ -66,5 +66,11 @@ namespace Voron.Impl.FileHeaders
 		/// </summary>
 		[FieldOffset(212)]
 		public uint PreviousTransactionCrc;
-	}
+
+        /// <summary>
+        /// The page size for the data file
+        /// </summary>
+        [FieldOffset(216)]
+        public int PageSize;
+    }
 }
