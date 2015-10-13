@@ -69,7 +69,7 @@ namespace Raven.Database.Indexing
 				if (singleStepReduceKeys.Count > 0)
 				{
                     if ( Log.IsDebugEnabled )
-                        Log.Debug("SingleStep reduce for keys: {0}", singleStepReduceKeys.Select(x => x + ","));
+                        Log.Debug("SingleStep reduce for keys: {0}", string.Join(",", singleStepReduceKeys));
                     
 					var singleStepStats = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete, token);
 
@@ -79,9 +79,9 @@ namespace Raven.Database.Indexing
 				if (multiStepsReduceKeys.Count > 0)
 				{
                     if ( Log.IsDebugEnabled )
-                        Log.Debug("MultiStep reduce for keys: {0}", multiStepsReduceKeys.Select(x => x + ","));
+                        Log.Debug("MultiStep reduce for keys: {0}", string.Join(",", multiStepsReduceKeys));
 
-					var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete, token);
+                    var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete, token);
 
 					performanceStats.Add(multiStepStats);
 				}
