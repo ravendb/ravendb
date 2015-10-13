@@ -6,9 +6,12 @@
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Indexes;
 using Raven.Tests.Common.Dto;
@@ -35,8 +38,17 @@ namespace Raven.Tests.Raft.Client
 
 			SetupClusterConfiguration(clusterStores);
 
-			var store1 = clusterStores[0];
-			store1.DatabaseCommands.PutIndex("Test/Index", new Test_Index().CreateIndexDefinition(), true);
+
+            var store1 = clusterStores[0];
+            servers.ForEach( server =>  
+            {
+                var sourceDatabase = AsyncHelpers.RunSync(()=> server.Server.GetDatabaseInternal(store1.DefaultDatabase)) ;
+                var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
+                sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
+            });
+		    
+
+            store1.DatabaseCommands.PutIndex("Test/Index", new Test_Index().CreateIndexDefinition(), true);
 
 			var requestFactory = new HttpRavenRequestFactory();
 			var replicationRequestUrl = string.Format("{0}/replication/replicate-indexes?op=replicate-all", store1.Url.ForDatabase(store1.DefaultDatabase));
@@ -49,7 +61,6 @@ namespace Raven.Tests.Raft.Client
 			clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") != null, TimeSpan.FromMinutes(1)));
 
 			store1.DatabaseCommands.DeleteIndex("Test/Index");
-
 			if (numberOfNodes > 1)
 			{
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
