@@ -24,7 +24,7 @@ class getCountersCommand extends commandBase {
 
         var url = "/counters";
         var doneTask = $.Deferred();
-        var selector = (dtos: counterSummaryDto[]) => dtos.map(d => new counterSummary(d));
+        var selector = (dtos: counterSummaryDto[]) => dtos.map(d => new counterSummary(d, this.group == null));
         var task = this.query(url, args, this.cs, selector);
         task.done((summaries: counterSummary[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
         task.fail(xhr => doneTask.reject(xhr));

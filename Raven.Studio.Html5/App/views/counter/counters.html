@@ -66,6 +66,6 @@
             </span>
         </div>
 
-		<div id="countersGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentGroupPagedItems, selectedIndices: selectedCounterIndices, gridSelector: '#countersGrid', collections: groups, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyCountersAutoSelected, isAllAutoSelected: isAllCountersAutoSelected, contextMenuOptions: ['ChangeValue', 'Reset', 'Delete'], showIds: false, noResultsMessage: 'No counters were found!' }"></div>
+		<div id="countersGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentGroupPagedItems, selectedIndices: selectedCounterIndices, gridSelector: '#countersGrid', collections: groups, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyCountersAutoSelected, isAllAutoSelected: isAllCountersAutoSelected, contextMenuOptions: ['ChangeValue', 'Reset', 'Delete'], showIds: false, noResultsMessage: 'No counters were found!', viewType: viewType, isCounterAllGroupsGroup: isAllGroupsGroup }"></div>
     </div>
 </div>

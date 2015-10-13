@@ -57,6 +57,7 @@
 </div>
 
 <script id="defaultTemplate" type="text/template">
+    <span class="collection-color-strip"></span>
 	<span data-bind="text: $parent.getCellData(binding)"></span>
 </script>
 
@@ -84,17 +85,19 @@
 	<span data-bind="template: { name: $parents[1].getTemplateFor(binding), data: $parent.cellMap[binding].data }"></span>
 </script>
 
-<script id="counterGroupTemplate" type="text/template">
-	<span class="collection-color-strip" data-bind="css: $parent.calculateExternalGroupCellColor($parent.cellMap[binding].data())"></span>
-	<a href="#" data-bind="attr: { href: $parents[1].getGroupHref($parent.cellMap[binding].data()) }">
-		<span data-bind="text: $parent.cellMap[binding].data"></span>
-	</a>
+<script id="counterNameTemplate" type="text/template">
+    <span class="collection-color-strip"></span>
+    <a href="#" data-bind="attr: { href: $parent.editUrl }" style="margin-top: 5px">
+        <span data-bind="text: $parent.cellMap[binding].data"></span>
+    </a>
+
 </script>
 
-<script id="counterNameTemplate" type="text/template">
-	<a href="#" data-bind="attr: { href: $parent.editUrl }">
-		<span data-bind="text: $parent.cellMap[binding].data"></span>
-	</a>
+<script id="counterGroupTemplate" type="text/template">
+    <span class="collection-color-strip" data-bind="css: $parent.calculateExternalGroupCellColor($parent.cellMap[binding].data())"></span>
+    <a href="#" data-bind="click: $parents[1].selectGroup.bind($parents[1], $parent.cellMap[binding].data()),attr: { href: $parents[1].getGroupHref($parent.cellMap[binding].data()) }">
+        <span data-bind="text: $parent.cellMap[binding].data"></span>
+    </a>
 </script>
 
 <script id="timeSeriesKeyTemplate" type="text/template">

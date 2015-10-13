@@ -239,6 +239,12 @@ const enum buildType {
     Unstable = 1,
 }
 
+const enum viewType {
+    Documents = 0,
+    Counters = 1,
+    TimeSeries = 2,
+}
+
 interface latestServerBuildVersionDto {
     LatestBuild: number;
     Exception: string;

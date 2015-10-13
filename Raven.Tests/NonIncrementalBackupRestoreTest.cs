@@ -134,6 +134,109 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
         }
-        
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void NonIncrementalBackup_Restore_CanReadDocumentWithMissingIndexDir(string storageName)
+        {
+            InitializeDocumentDatabase(storageName);
+            IOExtensions.DeleteDirectory(BackupDir);
+
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
+
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            WaitForBackup(db, true);
+
+            db.Dispose();
+            IOExtensions.DeleteDirectory(DataDir);
+
+            IOExtensions.DeleteDirectory(Path.Combine(BackupDir, "IndexDefinitions")); // deliberate delete directory
+            IOExtensions.DeleteDirectory(Path.Combine(BackupDir, "Indexes")); // deliberate delete directory
+
+            //index directiory doesn't exists --> should NOT fail to restore backup
+            Assert.DoesNotThrow(() =>
+                MaintenanceActions.Restore(new RavenConfiguration
+                {
+                    DefaultStorageTypeName = storageName,
+                    DataDirectory = DataDir,
+                    RunInMemory = false,
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                    Settings =
+                    {
+                        {"Raven/Esent/CircularLog", "false"}
+                    }
+
+                }, new DatabaseRestoreRequest
+                {
+                    BackupLocation = BackupDir,
+                    DatabaseLocation = DataDir,
+                    Defrag = true
+                }, s => { }));
+
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+
+            var fetchedData = db.Documents.Get("Foo", null);
+            Assert.NotNull(fetchedData);
+
+            var jObject = fetchedData.ToJson();
+            Assert.NotNull(jObject);
+            Assert.Equal("foo@bar.com", jObject.Value<string>("email"));
+
+            db.Dispose();
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void NonIncrementalBackup_Restore_CanReadDocumentWithCorruptedIndex(string storageName)
+        {
+            InitializeDocumentDatabase(storageName);
+            IOExtensions.DeleteDirectory(BackupDir);
+
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
+
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            WaitForBackup(db, true);
+
+            db.Dispose();
+            IOExtensions.DeleteDirectory(DataDir);
+
+            var indexFile = Path.Combine(BackupDir, "IndexDefinitions", "1.index");
+            string text = File.ReadAllText(indexFile);
+            text = text.Replace("from", "corrupt");
+            File.WriteAllText(indexFile, text); // deliberately corrupt index
+
+            //index is corrupted --> should NOT fail to restore backup
+            Assert.DoesNotThrow(() =>
+                MaintenanceActions.Restore(new RavenConfiguration
+                {
+                    DefaultStorageTypeName = storageName,
+                    DataDirectory = DataDir,
+                    RunInMemory = false,
+                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                    Settings =
+                    {
+                        {"Raven/Esent/CircularLog", "false"}
+                    }
+
+                }, new DatabaseRestoreRequest
+                {
+                    BackupLocation = BackupDir,
+                    DatabaseLocation = DataDir,
+                    Defrag = true
+                }, s => { }));
+
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+
+            var fetchedData = db.Documents.Get("Foo", null);
+            Assert.NotNull(fetchedData);
+
+            var jObject = fetchedData.ToJson();
+            Assert.NotNull(jObject);
+            Assert.Equal("foo@bar.com", jObject.Value<string>("email"));
+
+            db.Dispose();
+        }
+
+
     }
 }
