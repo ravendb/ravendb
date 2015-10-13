@@ -466,6 +466,15 @@ task UpdateLiveTest {
     	Write-Output "Restarting IIS app pool $appPoolName"
     	Restart-WebAppPool $appPoolName
 	}
+	# Wait for the apppool to start.
+	do
+	{
+		Write-Host "Wait for '$appPoolState' to be started"
+		Start-Sleep -Seconds 1
+		$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	}
+	until ($appPoolState -eq "Started")
+
 	Write-Output "Done updating $appPoolName"
 }
 
