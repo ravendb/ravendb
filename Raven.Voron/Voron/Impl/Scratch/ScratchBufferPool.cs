@@ -52,7 +52,7 @@ namespace Voron.Impl.Scratch
         {
             _currentScratchNumber++;
             var scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
-            scratchPager.EnsureContinuous(null, 0, (int)Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize));
+            scratchPager.EnsureContinuous(null, 0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             _scratchBuffers.Add(_currentScratchNumber, scratchFile);

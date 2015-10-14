@@ -89,9 +89,7 @@ namespace Voron.Tests.Storage
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
-            var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier));
-            Assert.Equal(numberOfPagesBeforeAllocation * growthMultiplier, Env.Options.DataPager.NumberOfAllocatedPages);
+            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier / Env.Options.PageSize));
         }
 
         [Theory]
@@ -130,13 +128,11 @@ namespace Voron.Tests.Storage
         [Fact]
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
-            var pagerSize = PagerInitialSize;
+            var numberOfPages = PagerInitialSize / Env.Options.PageSize;
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
-                pagerSize *= 2;
-                var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)pagerSize));
-                Assert.Equal(numberOfPagesBeforeAllocation * 2, Env.Options.DataPager.NumberOfAllocatedPages);
+                numberOfPages *= 2;
+                Env.Options.DataPager.EnsureContinuous(null, 0, (int)(numberOfPages));
             }
         }
 
@@ -191,9 +187,7 @@ namespace Voron.Tests.Storage
                 adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
 
                 pagerSize *= 2;
-                var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)pagerSize));
-                Assert.Equal(numberOfPagesBeforeAllocation * 2, Env.Options.DataPager.NumberOfAllocatedPages);
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)(pagerSize / Env.Options.PageSize)));
 
             }
             finally
