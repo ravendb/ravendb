@@ -29,7 +29,7 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
-
+        
         public PosixTempMemoryMapPager(int pageSize, string file, long? initialFileSize = null)
             : base(pageSize)
         {
@@ -68,8 +68,7 @@ namespace Voron.Platform.Posix
             return "shm_open mmap: " + _fd + " " + _file;
         }
 
-        public override void AllocateMorePages(Transaction tx, long newLength)
-        {
+	    {
             ThrowObjectDisposedIfNeeded();
 
             var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
@@ -96,7 +95,6 @@ namespace Voron.Platform.Posix
 
             if (tx != null)
             {
-                newPagerState.AddRef();
                 tx.AddPagerState(newPagerState);
             }
 

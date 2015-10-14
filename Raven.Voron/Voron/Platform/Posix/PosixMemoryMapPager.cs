@@ -75,7 +75,7 @@ namespace Voron.Platform.Posix
             return "mmap: " + _fd + " " + _file;
         }
 
-        public override void AllocateMorePages(Transaction tx, long newLength)
+        protected override void AllocateMorePages(Transaction tx, long newLength)
         {
             ThrowObjectDisposedIfNeeded();
             var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
@@ -100,7 +100,6 @@ namespace Voron.Platform.Posix
 
             if (tx != null)
             {
-                newPagerState.AddRef();
                 tx.AddPagerState(newPagerState);
             }
 

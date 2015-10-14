@@ -108,7 +108,7 @@ namespace Voron.Platform.Win32
             return ((size / AllocationGranularity) + 1) * AllocationGranularity;
         }
 
-        public override void AllocateMorePages(Transaction tx, long newLength)
+        protected override void AllocateMorePages(Transaction tx, long newLength)
         {
             ThrowObjectDisposedIfNeeded();
 
@@ -136,7 +136,6 @@ namespace Voron.Platform.Win32
 
             if (tx != null)
             {
-                newPagerState.AddRef();
                 tx.AddPagerState(newPagerState);
             }
 
@@ -292,96 +291,5 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
-        private bool IsWindows8OrNewer()
-        {
-            var os = Environment.OSVersion;
-            return os.Platform == PlatformID.Win32NT &&
-                   (os.Version.Major > 6 || (os.Version.Major == 6 && os.Version.Minor >= 2));
-        }
-
-        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
-        {
-            if (sortedPages.Count == 0)
-                return;
-
-            if (IsWindows8OrNewer() == false)
-                return; // not supported
-
-            var list = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
-
-            long lastPage = -1;
-            const int numberOfPagesInBatch = 8;
-            int sizeInPages = numberOfPagesInBatch; // OS uses 32K when you touch a page, let us reuse this
-            foreach (var page in sortedPages)
-            {
-                if (lastPage == -1)
-                {
-                    lastPage = page.PageNumber;
-                }
-
-                var numberOfPagesInLastPage = page.IsOverflow == false
-                    ? 1
-                    : GetNumberOfOverflowPages(page.OverflowSize);
-
-                var endPage = page.PageNumber + numberOfPagesInLastPage - 1;
-
-                if (endPage <= lastPage + sizeInPages)
-                    continue; // already within the allocation granularity we have
-
-                if (page.PageNumber <= lastPage + sizeInPages + numberOfPagesInBatch)
-                {
-                    while (endPage > lastPage + sizeInPages)
-                    {
-                        sizeInPages += numberOfPagesInBatch;
-                    }
-
-                    continue;
-                }
-
-                list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-                {
-                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize),
-                    VirtualAddress = AcquirePagePointer(lastPage)
-                });
-                lastPage = page.PageNumber;
-                sizeInPages = numberOfPagesInBatch;
-                while (endPage > lastPage + sizeInPages)
-                {
-                    sizeInPages += numberOfPagesInBatch;
-                }
-            }
-            list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-            {
-                NumberOfBytes = (IntPtr)(sizeInPages * PageSize),
-                VirtualAddress = AcquirePagePointer(lastPage)
-            });
-
-            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = list.ToArray())
-            {
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
-                    (UIntPtr)list.Count,
-                    entries, 0);
-            }
-        }
-
-        public override void TryPrefetchingWholeFile()
-        {
-            if (IsWindows8OrNewer() == false)
-                return; // not supported
-
-            var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[PagerState.AllocationInfos.Length];
-
-            for (int i = 0; i < PagerState.AllocationInfos.Length; i++)
-            {
-                entries[i].VirtualAddress = PagerState.AllocationInfos[i].BaseAddress;
-                entries[i].NumberOfBytes = (IntPtr)PagerState.AllocationInfos[i].Size;
-            }
-
-
-            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
-                (UIntPtr)PagerState.AllocationInfos.Length, entries, 0) == false)
-                throw new Win32Exception();
-
-        }
     }
 }

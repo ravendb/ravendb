@@ -1,4 +1,4 @@
-using Sparrow;
+﻿using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -52,7 +52,7 @@ namespace Voron.Impl.Scratch
         {
             _currentScratchNumber++;
             var scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
-            scratchPager.AllocateMorePages(null, Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize));
+            scratchPager.EnsureContinuous(null, 0, (int)Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize));
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             _scratchBuffers.Add(_currentScratchNumber, scratchFile);
@@ -99,7 +99,7 @@ namespace Voron.Impl.Scratch
                         sizeAfterAllocation += bytesInUse;
                     else
                     {
-                        if(scratch != _current)
+                        if (scratch != _current)
                             scratchesToDelete.Add(scratch.Number);
                     }
                 }
@@ -113,7 +113,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 
-            if (sizeAfterAllocation >= (_sizeLimit*3)/4 && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
+            if (sizeAfterAllocation >= (_sizeLimit * 3) / 4 && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
             {
                 // we may get recursive flushing, so we want to avoid it
                 if (tx.Environment.Journal.Applicator.IsCurrentThreadInFlushOperation == false)
@@ -188,7 +188,6 @@ namespace Voron.Impl.Scratch
                 {
                     _current = NextFile();
 
-                    _current.PagerState.AddRef();
                     tx.AddPagerState(_current.PagerState);
 
                     return _current.Allocate(tx, numberOfPages, size);
@@ -211,7 +210,7 @@ namespace Voron.Impl.Scratch
 
             debugInfoBuilder.AppendFormat("Current transaction id: {0}\r\n", tx.Id);
             debugInfoBuilder.AppendFormat("Requested number of pages: {0} (adjusted size: {1} == {2:#,#;;0} KB)\r\n", numberOfPages,
-                size, size*tx.Environment.Options.PageSize/1024);
+                size, size * tx.Environment.Options.PageSize / 1024);
             debugInfoBuilder.AppendFormat("Oldest active transaction: {0} (snapshot: {1})\r\n", tx.Environment.OldestTransaction,
                 oldestActiveTransaction);
             debugInfoBuilder.AppendFormat("Oldest active transaction when flush was forced: {0}\r\n",
@@ -228,8 +227,8 @@ namespace Voron.Impl.Scratch
             foreach (var scratchBufferFile in _scratchBuffers.OrderBy(x => x.Key))
             {
                 debugInfoBuilder.AppendFormat("\t{0} - size: {1:#,#;;0} KB, in active use: {2:#,#;;0} KB\r\n",
-                    StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number), scratchBufferFile.Value.Size/1024,
-                    scratchBufferFile.Value.ActivelyUsedBytes(oldestActiveTransaction)/1024);
+                    StorageEnvironmentOptions.ScratchBufferName(scratchBufferFile.Value.Number), scratchBufferFile.Value.Size / 1024,
+                    scratchBufferFile.Value.ActivelyUsedBytes(oldestActiveTransaction) / 1024);
             }
 
             debugInfoBuilder.AppendLine("Most available free pages:");
@@ -244,7 +243,7 @@ namespace Voron.Impl.Scratch
             }
 
             debugInfoBuilder.AppendFormat("Compression buffer size: {0:#,#;;0} KB\r\n",
-                tx.Environment.Journal.CompressionBufferSize/1024);
+                tx.Environment.Journal.CompressionBufferSize / 1024);
 
             string debugInfo = debugInfoBuilder.ToString();
 
@@ -256,10 +255,10 @@ namespace Voron.Impl.Scratch
                                            "Already flushed and waited for {4:#,#;;0} ms for read transactions to complete.\r\n" +
                                            "Do you have a long running read transaction executing?\r\n" +
                                            "Debug info:\r\n{5}",
-                _current.Size/1024L,
-                _current.SizeAfterAllocation(size)/1024L,
-                sizeAfterAllocation/1024L,
-                _sizeLimit/1024L,
+                _current.Size / 1024L,
+                _current.SizeAfterAllocation(size) / 1024L,
+                sizeAfterAllocation / 1024L,
+                _sizeLimit / 1024L,
                 sp.ElapsedMilliseconds,
                 debugInfo
                 );
@@ -293,21 +292,21 @@ namespace Voron.Impl.Scratch
         }
 
         private const int InvalidScratchFileNumber = -1;
-        private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem( InvalidScratchFileNumber, null );
+        private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem(InvalidScratchFileNumber, null);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TreePage ReadPage(int scratchNumber, long p, PagerState pagerState = null)
         {
             ScratchBufferFile bufferFile;
             ScratchBufferCacheItem item = lastScratchBuffer;
-            if ( item.Number == scratchNumber )
+            if (item.Number == scratchNumber)
             {
                 bufferFile = item.File;
             }
             else
             {
                 bufferFile = _scratchBuffers[scratchNumber];
-                lastScratchBuffer = new ScratchBufferCacheItem( scratchNumber, bufferFile );
+                lastScratchBuffer = new ScratchBufferCacheItem(scratchNumber, bufferFile);
             }
 
             return bufferFile.ReadPage(p, pagerState);

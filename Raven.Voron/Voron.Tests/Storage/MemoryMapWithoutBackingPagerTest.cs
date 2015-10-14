@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -32,7 +32,7 @@ namespace Voron.Tests.Storage
             var testData = GenerateTestData().ToList();
 
             foreach (var dataPair in testData)
-                writeBatch.Add(dataPair.Key, StreamFor(dataPair.Value), TestTreeName);				
+                writeBatch.Add(dataPair.Key, StreamFor(dataPair.Value), TestTreeName);
 
             Env.Writer.Write(writeBatch);
 
@@ -46,13 +46,13 @@ namespace Voron.Tests.Storage
                     {
                         var value = iterator.CreateReaderForCurrent().ToStringValue();
                         var extractedDataPair = new KeyValuePair<string, string>(iterator.CurrentKey.ToString(), value);
-                        Assert.Contains(extractedDataPair,testData);
+                        Assert.Contains(extractedDataPair, testData);
 
                     } while (iterator.MoveNext());
                 }
-                
+
             }
-            
+
         }
 
         private string GenerateLoremIpsum(int count)
@@ -60,9 +60,9 @@ namespace Voron.Tests.Storage
             return String.Join(Environment.NewLine, Enumerable.Repeat(LoremIpsum, count));
         }
 
-        private IEnumerable<KeyValuePair<string,string>> GenerateTestData()
+        private IEnumerable<KeyValuePair<string, string>> GenerateTestData()
         {
-            for(int i = 0; i < 1000; i++)
+            for (int i = 0; i < 1000; i++)
                 yield return new KeyValuePair<string, string>("Key " + i, "Data:" + dummyData);
         }
 
@@ -71,13 +71,13 @@ namespace Voron.Tests.Storage
         {
             CreatTestSchema();
             var writeBatch = new WriteBatch();
-            writeBatch.Add("key",StreamFor("value"),TestTreeName);
+            writeBatch.Add("key", StreamFor("value"), TestTreeName);
             Env.Writer.Write(writeBatch);
 
             using (var snapshot = Env.CreateSnapshot())
             {
                 var storedValue = Encoding.UTF8.GetString(snapshot.Read(TestTreeName, "key").Reader.AsStream().ReadData());
-                Assert.Equal("value",storedValue);
+                Assert.Equal("value", storedValue);
             }
         }
 
@@ -90,7 +90,7 @@ namespace Voron.Tests.Storage
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
             var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-            Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize * growthMultiplier));
+            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier));
             Assert.Equal(numberOfPagesBeforeAllocation * growthMultiplier, Env.Options.DataPager.NumberOfAllocatedPages);
         }
 
@@ -103,7 +103,7 @@ namespace Voron.Tests.Storage
         public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
         {
             _options.ManualFlushing = true;
-            Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize*growthMultiplier));
+            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier));
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -120,7 +120,7 @@ namespace Voron.Tests.Storage
 
         private void CreatTestSchema()
         {
-            using(var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, TestTreeName);
                 tx.Commit();
@@ -135,37 +135,37 @@ namespace Voron.Tests.Storage
             {
                 pagerSize *= 2;
                 var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
-                Assert.Equal(numberOfPagesBeforeAllocation*2, Env.Options.DataPager.NumberOfAllocatedPages);
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)pagerSize));
+                Assert.Equal(numberOfPagesBeforeAllocation * 2, Env.Options.DataPager.NumberOfAllocatedPages);
             }
         }
 
-        byte* AllocateMemoryAtEndOfPager (long totalAllocationSize)
+        byte* AllocateMemoryAtEndOfPager(long totalAllocationSize)
         {
-            if(StorageEnvironmentOptions.RunningOnPosix)
+            if (StorageEnvironmentOptions.RunningOnPosix)
             {
-                var p = Syscall.mmap (new IntPtr (Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), 16,
+                var p = Syscall.mmap(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), 16,
                     MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0);
-                if(p.ToInt64() == -1)
+                if (p.ToInt64() == -1)
                 {
                     return null;
                 }
-                return (byte*)p.ToPointer ();
+                return (byte*)p.ToPointer();
             }
-            return Win32NativeMethods.VirtualAlloc (Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr (16), 
+            return Win32NativeMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
                 Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
         }
 
-        static void FreeMemoryAtEndOfPager (byte* adjacentBlockAddress)
+        static void FreeMemoryAtEndOfPager(byte* adjacentBlockAddress)
         {
             if (adjacentBlockAddress == null || adjacentBlockAddress == (byte*)0)
                 return;
-            if(StorageEnvironmentOptions.RunningOnPosix)
+            if (StorageEnvironmentOptions.RunningOnPosix)
             {
-                Syscall.munmap (new IntPtr (adjacentBlockAddress), 16);
+                Syscall.munmap(new IntPtr(adjacentBlockAddress), 16);
                 return;
             }
-            Win32NativeMethods.VirtualFree (adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
+            Win32NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
         }
 
         [Fact]
@@ -177,7 +177,7 @@ namespace Voron.Tests.Storage
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 2; allocateMorePagesCount++)
             {
                 pagerSize *= 2;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null,0, (int)pagerSize));
             }
 
             var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
@@ -188,17 +188,17 @@ namespace Voron.Tests.Storage
             {
                 //if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
                 //the allocation is here to make sure the remapping does happen in any case
-                adjacentBlockAddress = AllocateMemoryAtEndOfPager (totalAllocationSize);
+                adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
 
                 pagerSize *= 2;
                 var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, pagerSize));
-                Assert.Equal(numberOfPagesBeforeAllocation*2, Env.Options.DataPager.NumberOfAllocatedPages);
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)pagerSize));
+                Assert.Equal(numberOfPagesBeforeAllocation * 2, Env.Options.DataPager.NumberOfAllocatedPages);
 
             }
             finally
             {
-                FreeMemoryAtEndOfPager (adjacentBlockAddress);
+                FreeMemoryAtEndOfPager(adjacentBlockAddress);
             }
         }
     }

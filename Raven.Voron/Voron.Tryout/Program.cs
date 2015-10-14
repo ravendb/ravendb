@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Voron.Tests.Backups;
 using System.IO;
@@ -116,8 +116,8 @@ namespace Voron.Tryout
                 for (long size = initial; size < initial * 10000; size += 4096)
                 {
                     Console.WriteLine(size);
-                    pager.AllocateMorePages(null, size);
-                    pager.EnsureContinuous(null, 0, (int) size / pager.PageSize);
+                    pager.EnsureContinuous(null, 0, (int)size);
+                    pager.EnsureContinuous(null, 0, (int)size / pager.PageSize);
                     var p = pager.AcquirePagePointer(0);
                     for (int i = 0; i < size; i++)
                     {
