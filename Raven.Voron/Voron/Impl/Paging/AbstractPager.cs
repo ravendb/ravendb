@@ -135,6 +135,7 @@ namespace Voron.Impl.Paging
             Dispose();
         }
 
+        
         public abstract void AllocateMorePages(Transaction tx, long newLength);
 
         private long GetNewLength(long current)
@@ -200,14 +201,14 @@ namespace Voron.Impl.Paging
         public static int GetMaxKeySize()
         {
             // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-            return 2000;
+		    return 2038;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKeySizeValid(int keySize)
         {
-            
-            if (keySize  > GetMaxKeySize())
+           
+            if (keySize + RequiredSpaceForNewNode > GetMaxKeySize())
                 return false;
 
             return true;
