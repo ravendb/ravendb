@@ -165,7 +165,7 @@ namespace Raven.Database.Prefetching
 			if (nextEtagToIndex == firstEtagInQueue) // docs for requested etag are already in queue
 				return true;
 
-			if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex))
+			if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex) != null)
 				return true;
 
 			return false;
@@ -188,8 +188,22 @@ namespace Raven.Database.Prefetching
 
 				if (nextEtagToIndex != firstEtagInQueue)
 				{
-					if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex) == false)
+                    // if we have no results, and there is a future batch for it, we would wait for the results
+                    // if there are no other results that have been read.
+                    if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex, allowWaiting: result.Count == 0) == false)
 					{
+                        // we don't have a something ready in the future batch, now we need to know if we
+                        // have to wait for I/O, or if we can just let the caller get whatever it is that we 
+                        // have right now, and schedule another background task to run it.
+                        //
+                        // The idea is that we'll give you whatever we have right now, and you'll be happy with it, 
+                        // and next time you'll call, we'll have something ready
+					    if (result.Count > 0)
+					    {
+                            MaybeAddFutureBatch(result);
+					        return result;
+					    }
+                        // if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
 						LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
 					}
 				}
@@ -299,29 +313,46 @@ namespace Raven.Database.Prefetching
 			return result;
 		}
 
-		private bool CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
+		private TaskStatus? CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
 		{
 			if (context.Configuration.DisableDocumentPreFetching)
-				return false;
+				return null;
 
 			FutureIndexBatch batch;
 			if (futureIndexBatches.TryGetValue(nextDocEtag, out batch) == false)
-				return false;
+                return null;
 
-			if (Task.CurrentId == batch.Task.Id)
-				return false;
+		    if (Task.CurrentId == batch.Task.Id)
+		        return null;
 
-			return true;
+		    return batch.Task.Status;
 		}
 
-		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
+		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag, bool allowWaiting)
 		{
 			try
 			{
-				if (CanLoadDocumentsFromFutureBatches(nextDocEtag) == false)
-					return false;
+                switch (CanLoadDocumentsFromFutureBatches(nextDocEtag))
+                {
+                    case TaskStatus.Created:
+                    case TaskStatus.WaitingForActivation:
+                    case TaskStatus.WaitingToRun:
+                    case TaskStatus.Running:
+                    case TaskStatus.WaitingForChildrenToComplete:
+                        if (allowWaiting == false)
+                            return false;
+                        break;
+                    case TaskStatus.RanToCompletion:
+                        break;
+                    case TaskStatus.Canceled:
+                    case TaskStatus.Faulted:
+                    case null:
+                        return false;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
 
-				FutureIndexBatch nextBatch;
+			    FutureIndexBatch nextBatch;
 				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false) // here we need to remove the batch
 					return false;
 
