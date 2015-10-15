@@ -339,6 +339,13 @@ namespace Raven.Abstractions.Data
 
 			public const string DataDirectory = "Raven/TimeSeries/DataDir";
 
+			public const string TombstoneRetentionTime = "Raven/TimeSeries/TombstoneRetentionTime";
+
+			public const string DeletedTombstonesInBatch = "Raven/TimeSeries/DeletedTombstonesInBatch";
+
+			//in milliseconds
+			public const string ReplicationLatencyMs = "Raven/TimeSeries/ReplicationLatency";
+
 			public const string UrlPrefix = "ts";
 		}
 

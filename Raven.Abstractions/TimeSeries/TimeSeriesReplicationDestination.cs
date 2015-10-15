@@ -11,18 +11,9 @@ namespace Raven.Abstractions.TimeSeries
 {
     public class TimeSeriesReplicationDestination
     {
-        private string serverUrl;
+	    public string ServerUrl { get; set; }
 
-        public string ServerUrl
-        {
-            get { return serverUrl; }
-            set
-            {
-                serverUrl = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-            }
-        }
-
-        public string TimeSeriesName { get; set; }
+	    public string TimeSeriesName { get; set; }
 
         public string TimeSeriesUrl
         {
@@ -47,7 +38,7 @@ namespace Raven.Abstractions.TimeSeries
 
         protected bool Equals(TimeSeriesReplicationDestination other)
         {
-            return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
+            return string.Equals(ServerUrl, other.ServerUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(TimeSeriesName, other.TimeSeriesName);
         }
 
@@ -63,7 +54,7 @@ namespace Raven.Abstractions.TimeSeries
         {
             unchecked
             {
-                var hashCode = (serverUrl != null ? serverUrl.GetHashCode() : 0);
+                var hashCode = (ServerUrl != null ? ServerUrl.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Domain != null ? Domain.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Password != null ? Password.GetHashCode() : 0);
