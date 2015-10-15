@@ -544,7 +544,7 @@ for(var customFunction in customFunctions) {{
 			                if (string.IsNullOrEmpty(column))
 				                continue;
 
-			                if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
+			                if (string.Equals("@id", column, StringComparison.OrdinalIgnoreCase))
 			                {
 								id = record[index];
 			                }
