@@ -7,8 +7,8 @@ class cell {
     static checkboxTemplate = "checkboxTemplate";
     static externalIdTemplate = "externalIdTemplate";
     static customTemplate = "customTemplate";
+    static counterNameTemplate = "counterNameTemplate";
 	static counterGroupTemplate = "counterGroupTemplate";
-	static counterNameTemplate = "counterNameTemplate";
     static timeSeriesKeyTemplate = "timeSeriesKeyTemplate";
 
     constructor(data: any, public templateName: string) {

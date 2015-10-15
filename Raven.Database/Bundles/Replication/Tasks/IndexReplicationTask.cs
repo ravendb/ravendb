@@ -174,22 +174,37 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void OnIndexChange(DocumentDatabase documentDatabase, IndexChangeNotification eventArgs)
 		{
-			switch (eventArgs.Type)
+            switch (eventArgs.Type)
 			{
 				case IndexChangeTypes.IndexAdded:
 					//if created index with the same name as deleted one, we should prevent its deletion replication
-					database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name));
+					database.TransactionalStorage.Batch(
+					    accessor =>
+					    {
+					        var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
+                            if (li == null) return;
+					        int version;
+					        string versionStr = li.Data.Value<string>("IndexVersion");
+                            if (int.TryParse(versionStr, out version))
+					        {
+					            if (eventArgs.Version.HasValue && version < eventArgs.Version.Value)
+					            {
+                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
+                                }
+					        }					        
+					    });
 					break;
 				case IndexChangeTypes.IndexRemoved:
 					var metadata = new RavenJObject
 					{
 						{Constants.RavenIndexDeleteMarker, true},
 						{Constants.RavenReplicationSource, database.TransactionalStorage.Id.ToString()},
-						{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(database)}
+						{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(database)},
+                        {"IndexVersion",eventArgs.Version }
 					};
-
-					database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
-					break;
+			        
+                    database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
+                    break;
 			}
 		}
 

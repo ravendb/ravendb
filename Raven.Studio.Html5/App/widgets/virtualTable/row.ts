@@ -25,7 +25,7 @@ class row {
         return "";
     }
 
-	calculateExternalGroupCellColor(cellValue: string) {
+    calculateExternalGroupCellColor(cellValue: string) {
         var matchingGroup = this.viewModel.settings.collections.first((c: counterGroup) => c.name === cellValue);
 
         if (!!matchingGroup) {
@@ -164,7 +164,23 @@ class row {
             return cell.checkboxTemplate;
         }
 
-        // See if this is an ID or external ID cell.
+        switch (this.viewModel.settings.viewType) {
+            case viewType.Counters:
+                if (propertyName === "Counter Name") {
+                    return cell.counterNameTemplate;
+                }
+                else if (this.viewModel.settings.isCounterAllGroupsGroup() && propertyName === "Group Name") {
+                    return cell.counterGroupTemplate;
+                }
+                return cell.defaultTemplate;
+            case viewType.TimeSeries:
+                if (propertyName === "Key") {
+                    return cell.timeSeriesKeyTemplate;
+                }
+                return cell.defaultTemplate;
+        }
+
+        // see if this is an ID or external ID cell.
         if (!!data) {
             if (typeof data == "string") {
                 var cleanData = data.replace('/\t+/g', '')
@@ -187,25 +203,8 @@ class row {
 
         // note: we just inform here about custom template - without specific name of this template.
         var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
-        if (colParam && colParam.template() !== cell.defaultTemplate && colParam.template() !== cell.counterGroupTemplate && colParam.template() !== cell.counterNameTemplate) {
+        if (colParam && colParam.template() !== cell.defaultTemplate && colParam.template() !== cell.counterGroupTemplate) {
             return cell.customTemplate;
-        }
-
-		// see if this is a counter or counter group
-	    if (this.viewModel.isCounterView()) {
-		    switch(propertyName) {
-				case "Group":
-					return cell.counterGroupTemplate;
-				case "Name":
-					return cell.counterNameTemplate;
-		    }
-        }
-        else if (this.viewModel.isTimeSeriesView()) {
-            if (propertyName == "Key") {
-
-                return cell.timeSeriesKeyTemplate;
-            }
-            return cell.defaultTemplate;
         }
 
         return cell.defaultTemplate;

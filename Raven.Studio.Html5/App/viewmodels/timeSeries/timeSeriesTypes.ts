@@ -16,6 +16,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class timeSeriesTypes extends viewModelBase {
 
+    viewType = viewType.TimeSeries;
     types = ko.observableArray<timeSeriesType>();
     selectedType = ko.observable<timeSeriesType>().subscribeTo("ActivateType").distinctUntilChanged();
     currentType = ko.observable<timeSeriesType>();

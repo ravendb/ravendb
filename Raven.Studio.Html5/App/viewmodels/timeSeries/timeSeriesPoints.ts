@@ -19,6 +19,7 @@ import getPointsCommand = require("commands/timeSeries/getPointsCommand");
 
 class timeSeriesPoints extends viewModelBase {
 
+    viewType = viewType.TimeSeries;
     type = ko.observable<string>();
     fields = ko.observableArray<string>();
     key = ko.observable<string>();
