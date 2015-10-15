@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
- 
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -126,7 +125,6 @@
     <Compile Include="FixedSize\SimpleFixedSizeTrees.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
-    <Compile Include="Journal\LogShipping.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />

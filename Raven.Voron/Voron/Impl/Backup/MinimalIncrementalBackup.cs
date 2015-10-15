@@ -176,7 +176,6 @@ namespace Voron.Impl.Backup
 							txHeader->Root = lastTransaction.Root;
 							txHeader->OverflowPageCount = overflowPages;
 							txHeader->PageCount = totalNumberOfPages - overflowPages;
-							txHeader->PreviousTransactionCrc = lastTransaction.PreviousTransactionCrc;
 							txHeader->TransactionId = lastTransaction.TransactionId;
 							txHeader->NextPageNumber = lastTransaction.NextPageNumber;
 							txHeader->LastPageNumber = lastTransaction.LastPageNumber;

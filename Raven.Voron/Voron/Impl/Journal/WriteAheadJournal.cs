@@ -33,7 +33,6 @@ namespace Voron.Impl.Journal
 
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly JournalApplicator _journalApplicator;
-        private readonly ShipppedTransactionsApplicator _shipppedTransactionsApplicator;
 		private readonly ModifyHeaderAction _updateLogInfo;
 
 		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
@@ -41,8 +40,6 @@ namespace Voron.Impl.Journal
 
 		private readonly HeaderAccessor _headerAccessor;
 		private readonly IVirtualPager _compressionPager;
-
-		public event Action<TransactionToShip> OnTransactionCommit;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -59,8 +56,6 @@ namespace Voron.Impl.Journal
 				header->IncrementalBackup.LastCreatedJournal = _journalIndex;
 			};
 
-			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env, 0, _env.NextWriteTransactionId - 1);
-
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 			_journalApplicator = new JournalApplicator(this);
 		}
@@ -68,8 +63,6 @@ namespace Voron.Impl.Journal
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
 
 		public JournalApplicator Applicator { get { return _journalApplicator; } }
-
-		public ShipppedTransactionsApplicator Shipper { get { return _shipppedTransactionsApplicator; } }
 
 		internal long CompressionBufferSize
 		{
@@ -188,8 +181,6 @@ namespace Voron.Impl.Journal
 					}
 				}
 			}
-
-			Shipper.SetPreviousTransaction(lastSyncedTxId, lastShippedTxCrc);
 
 			_files = _files.AppendRange(journalFiles);
 			
@@ -326,7 +317,6 @@ namespace Voron.Impl.Journal
 			_lz4.Dispose();
 
             _journalApplicator.Dispose();
-            _shipppedTransactionsApplicator.Dispose();
             if (_env.Options.OwnsPagers)
 			{
 				foreach (var logFile in _files)
@@ -755,8 +745,6 @@ namespace Voron.Impl.Journal
 					header->Root = lastReadTxHeader.Root;
 					header->FreeSpace = lastReadTxHeader.FreeSpace;
 
-					header->PreviousTransactionCrc = _waj.Shipper.PreviousTransactionCrc;
-
 					_waj._updateLogInfo(header);
 				});
 			}
@@ -838,7 +826,7 @@ namespace Voron.Impl.Journal
 
 		public void WriteToJournal(Transaction tx, int pageCount)
 		{
-			var pages = CompressPages(tx, pageCount, _compressionPager, Shipper.PreviousTransactionCrc);
+			var pages = CompressPages(tx, pageCount, _compressionPager);
 
 			if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
 			{
@@ -849,24 +837,11 @@ namespace Voron.Impl.Journal
 
 			var transactionHeader = *(TransactionHeader*)pages[0];
 
-			var onTransactionCommit = OnTransactionCommit;
-			if (onTransactionCommit != null)
-			{
-				var transactionToShip = new TransactionToShip(transactionHeader, tx.DataPager.PageSize)
-				{
-					CompressedPages = pages
-				};
-
-				onTransactionCommit(transactionToShip);
-			}
-
-			Shipper.SetPreviousTransaction(transactionHeader.TransactionId, transactionHeader.Crc);
-
 			if (CurrentFile.AvailablePages == 0)
 				CurrentFile = null;
 		}
 
-		private IntPtr[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
+		private IntPtr[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;
@@ -912,7 +887,6 @@ namespace Voron.Impl.Journal
 			txHeader->Compressed = true;
 			txHeader->CompressedSize = len;
 			txHeader->UncompressedSize = sizeInBytes;
-			txHeader->PreviousTransactionCrc = previousTransactionCrc;
 
 			pages[0] = new IntPtr(txHeaderBase);
 			for (int index = 0; index < compressedPages; index++)

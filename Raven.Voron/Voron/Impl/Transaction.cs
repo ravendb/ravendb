@@ -147,61 +147,6 @@ namespace Voron.Impl
 	        }
 	    }
 
-	    internal void WriteDirect(TransactionHeader* transactionHeader, PageFromScratchBuffer pages)
-		{
-			for (int i = 0; i < pages.NumberOfPages; i++)
-		    {
-		        var page = _env.ScratchBufferPool.ReadPage(pages.ScratchFileNumber, pages.PositionInScratchBuffer+i);
-			    int numberOfPages = 1;
-			    if (page.IsOverflow)
-		        {
-					numberOfPages = (page.OverflowSize / Environment.Options.PageSize) + (page.OverflowSize % Environment.Options.PageSize == 0 ? 0 : 1);
-					i += numberOfPages;
-			        _overflowPagesInTransaction += (numberOfPages - 1);
-		        }
-
-			    WritePageDirect(page, numberOfPages);
-
-			    _state.NextPageNumber = transactionHeader->NextPageNumber;
-			}
-		}
-
-		internal void WriteDirect(TreePage[] pages, long nextPageNumber)
-		{
-			for (int i = 0; i < pages.Length; i++)
-			{
-				int numberOfPages = 1;
-				var page = pages[i];
-				if (page.IsOverflow)
-				{
-					numberOfPages = (page.OverflowSize / Environment.Options.PageSize) + (page.OverflowSize % Environment.Options.PageSize == 0 ? 0 : 1);
-					i += numberOfPages;
-					_overflowPagesInTransaction += (numberOfPages - 1);
-				}
-
-				WritePageDirect(page, numberOfPages);				
-			}
-		}
-
-		private void WritePageDirect(TreePage page, int numberOfPagesIncludingOverflow)
-		{
-			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
-
-			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-			Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * Environment.Options.PageSize);
-
-			_allocatedPagesInTransaction++;
-
-			_dirtyPages.Add(page.PageNumber);
-			page.Dirty = true;
-
-			if (numberOfPagesIncludingOverflow > 1)
-				_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPagesIncludingOverflow - 1);
-
-			_scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
-			_transactionPages.Add(pageFromScratchBuffer);
-		}
-
 		private void InitTransactionHeader()
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
