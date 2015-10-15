@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -97,10 +99,12 @@ namespace Raven.Database.Server.WebApi.Filters
 				StatusCode = HttpStatusCode.RequestTimeout
 			};
 
+            Stopwatch sp = ctx.Request.Properties["timer"] as Stopwatch;
+
 			SerializeError(ctx, new
 			{
 				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = "Request was canceled by the server due to timeout",
+                Error = string.Format("Request was canceled by the server due to timeout after {0}ms", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
 				e.Message
 			});
 		}
