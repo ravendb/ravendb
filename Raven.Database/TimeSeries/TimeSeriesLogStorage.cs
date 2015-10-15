@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
+using Voron.Util.Conversion;
 
 namespace Raven.Database.TimeSeries
 {
@@ -24,6 +26,25 @@ namespace Raven.Database.TimeSeries
 			var lastKey = openLog.LastKeyOrDefault();
 			var etag = lastKey?.CreateReader().ReadBigEndianInt64() ?? 0;
 			return etag;
+		}
+
+		public IEnumerable<ReplicationLogItem> GetLogsSinceEtag(long etag)
+		{
+			if (etag == lastEtag)
+				yield break;
+
+			using (var it = openLog.Iterate())
+			{
+				var key = new Slice(EndianBitConverter.Big.GetBytes(etag));
+				if (it.Seek(key) == false)
+					yield break;
+
+				yield return new ReplicationLogItem
+				{
+					Etag = it.CurrentKey.CreateReader().ReadBigEndianInt64(),
+					// TODO: BinaryData = it.CreateReaderForCurrent().,
+				};
+			}
 		}
 
 		private void WriteToLog(Action<BinaryWriter> writeAction)

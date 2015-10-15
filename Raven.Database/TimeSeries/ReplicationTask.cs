@@ -99,7 +99,7 @@ namespace Raven.Database.TimeSeries
 				}
 
 				if (Log.IsDebugEnabled)
-					Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.TimeSeriesUrl);
+					Log.Debug("No time series updates for time series {0} was found, will wait for updates", storage.TimeSeriesUrl);
 				return Monitor.Wait(waitForTimeSeriesUpdate, timeout);
 			}
 		}
@@ -148,7 +148,7 @@ namespace Raven.Database.TimeSeries
 			var replicationTask = Task.Factory.StartNew(
 				() =>
 				{
-					//using (LogContext.WithDatabase(storage.Name)) //TODO: log with counter storage contexe
+					//using (LogContext.WithDatabase(storage.Name)) //TODO: log with time series context
 					//{
 					try
 					{
@@ -178,7 +178,7 @@ namespace Raven.Database.TimeSeries
 		private bool ReplicateTo(TimeSeriesReplicationDestination destination)
 		{
             var replicationStopwatch = Stopwatch.StartNew();
-			//todo: here, build url according to :destination.Url + '/counters/' + destination.
+			//todo: here, build url according to :destination.Url + '/ts/' + destination.
 			try
 			{
 				string lastError;
@@ -223,16 +223,35 @@ namespace Raven.Database.TimeSeries
 
 		private ReplicationResult TryReplicate(TimeSeriesReplicationDestination destination, out long lastEtagSent, out string lastError)
 		{
-			throw new NotImplementedException();
+			long etag;
+			lastEtagSent = 0;
+			var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
+
+			if (connectionStringOptions == null ||
+				!GetLastReplicatedEtagFrom(connectionStringOptions, destination.TimeSeriesUrl, out etag, out lastError))
+				return ReplicationResult.Failure;
+
+			var replicationData = GetTimeSeriesDataSinceEtag(etag, out lastEtagSent);
+
+			storage.MetricsTimeSeries.GetReplicationBatchSizeMetric(destination.TimeSeriesUrl).Mark(replicationData.Logs.Count);
+			storage.MetricsTimeSeries.GetReplicationBatchSizeHistogram(destination.TimeSeriesUrl).Update(replicationData.Logs.Count);
+
+			if (replicationData.Logs.Count > 0)
+			{
+				return PerformReplicationToServer(connectionStringOptions, destination.TimeSeriesUrl, replicationData, out lastError) ?
+					ReplicationResult.Success : ReplicationResult.Failure;
+			}
+
+			return ReplicationResult.NotReplicated;
 		}
 
-		private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
+		private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string timeSeriesUrl, out long lastEtag, out string lastError)
 		{
-			if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError))
+			if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, timeSeriesUrl, out lastEtag, out lastError))
 			{
 				if (IsFirstFailure(connectionStringOptions.Url))
 				{
-					return TryGetLastReplicatedEtagFrom(connectionStringOptions, counterStorageUrl, out lastEtag, out lastError);
+					return TryGetLastReplicatedEtagFrom(connectionStringOptions, timeSeriesUrl, out lastEtag, out lastError);
 				}
 				return false;
 			}
@@ -240,13 +259,13 @@ namespace Raven.Database.TimeSeries
 			return true;
 		}
 
-		private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, out long lastEtag, out string lastError)
+		private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, string timeSeriesUrl, out long lastEtag, out string lastError)
 		{
 			lastEtag = 0;
 			try
 			{
 				long etag = 0;
-				var url = string.Format("{0}/lastEtag?serverId={1}", counterStorageUrl, storage.ServerId);
+				var url = string.Format("{0}/lastEtag?serverId={1}", timeSeriesUrl, storage.ServerId);
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
 				
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
@@ -257,7 +276,7 @@ namespace Raven.Database.TimeSeries
 			}
 			catch (WebException e)
 			{
-				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
+				lastError = HandleReplicationDistributionWebException(e, timeSeriesUrl);
 				return false;
 			}
 			catch (Exception e)
@@ -267,15 +286,15 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, ReplicationMessage message, out string lastError)
+		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string timeSeriesUrl, ReplicationMessage message, out string lastError)
 		{
 			var destinationUrl = connectionStringOptions.Url;
 
-			if (!TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError))
+			if (!TryPerformReplicationToServer(connectionStringOptions, timeSeriesUrl, message, out lastError))
 			{
 				if (IsFirstFailure(destinationUrl))
 				{
-					return TryPerformReplicationToServer(connectionStringOptions, counterStorageUrl, message, out lastError);
+					return TryPerformReplicationToServer(connectionStringOptions, timeSeriesUrl, message, out lastError);
 				}
 				return false;
 			}
@@ -283,11 +302,11 @@ namespace Raven.Database.TimeSeries
 			return true;
 		}
 
-		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string counterStorageUrl, ReplicationMessage message, out string lastError)
+		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, string timeSeriesUrl, ReplicationMessage message, out string lastError)
 		{
 			try
 			{
-				var url = string.Format("{0}/replication", counterStorageUrl);
+				var url = string.Format("{0}/replication", timeSeriesUrl);
 				lastError = string.Empty;
 				var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
@@ -297,12 +316,12 @@ namespace Raven.Database.TimeSeries
 			}
 			catch (WebException e)
 			{
-				lastError = HandleReplicationDistributionWebException(e, counterStorageUrl);
+				lastError = HandleReplicationDistributionWebException(e, timeSeriesUrl);
 				return false;
 			}
 			catch (Exception e)
 			{
-				Log.ErrorException("Error occured replicating to: " + counterStorageUrl, e);
+				Log.ErrorException("Error occured replicating to: " + timeSeriesUrl, e);
 				lastError = e.Message;
 				return false;
 			}
@@ -347,8 +366,17 @@ namespace Raven.Database.TimeSeries
 
 	    private ReplicationMessage GetTimeSeriesDataSinceEtag(long etag, out long lastEtagSent)
 	    {
-		    throw new NotImplementedException();
-	    }
+			var message = new ReplicationMessage { ServerId = storage.ServerId, SendingServerName = storage.TimeSeriesUrl };
+
+			using (var reader = storage.CreateReader())
+			{
+				message.Logs = reader.GetLogsSinceEtag(etag + 1).Take(1024).ToList();
+				throw new NotImplementedException();
+				//lastEtagSent = message.LoMaxEtagIsTheLatset.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
+			}
+
+			return message;
+		}
 
 		private RavenConnectionStringOptions GetConnectionOptionsSafe(TimeSeriesReplicationDestination destination, out string lastError)
 		{
@@ -383,7 +411,7 @@ namespace Raven.Database.TimeSeries
             return destStats.FailureCount == 0;
         }
 
-		//Notifies servers which send us counters that we are back online
+		//Notifies servers which send us time series that we are back online
 		private void NotifySiblings() //TODO: implement
 		{
 			var notifications = new BlockingCollection<RavenConnectionStringOptions>();

@@ -159,12 +159,14 @@ namespace Raven.Database.TimeSeries
 			private readonly TimeSeriesStorage storage;
 			private readonly Transaction tx;
 			private readonly Tree metadata;
+			private readonly TimeSeriesLogStorage logStorage;
 
 			public Reader(TimeSeriesStorage storage)
 			{
 				this.storage = storage;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
 				metadata = tx.ReadTree(TreeNames.Metadata);
+				logStorage = new TimeSeriesLogStorage(tx);
 			}
 
 			public IEnumerable<AggregatedPoint> GetAggregatedPoints(string typeName, string key, AggregationDuration duration, DateTimeOffset start, DateTimeOffset end, int skip = 0)
@@ -628,6 +630,11 @@ namespace Raven.Database.TimeSeries
 			public long GetLastEtag()
 			{
 				return new TimeSeriesLogStorage(tx).GetLastEtag();
+			}
+
+			public IEnumerable<ReplicationLogItem> GetLogsSinceEtag(long etag)
+			{
+				return logStorage.GetLogsSinceEtag(etag);
 			}
 		}
 
