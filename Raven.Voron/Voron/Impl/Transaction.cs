@@ -603,6 +603,9 @@ namespace Voron.Impl
 
 		internal void AddPagerState(PagerState state)
 		{
+		    if (state == null)
+		        return;
+
             state.AddRef();
 			_pagerStates.Add(state);
 		}

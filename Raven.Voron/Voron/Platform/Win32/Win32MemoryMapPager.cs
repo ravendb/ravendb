@@ -108,40 +108,33 @@ namespace Voron.Platform.Win32
             return ((size / AllocationGranularity) + 1) * AllocationGranularity;
         }
 
-        protected override void AllocateMorePages(Transaction tx, long newLength)
+        protected override PagerState AllocateMorePages(long newLength)
         {
             ThrowObjectDisposedIfNeeded();
 
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
             if (newLengthAfterAdjustment <= _totalAllocationSize)
-                return;
+                return null;
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
             Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize);
+            PagerState newPagerState = null;
             if (TryAllocateMoreContinuousPages(allocationSize) == false)
             {
-                RefreshMappedView(tx);
+                newPagerState = CreatePagerState();
+
+                var tmp = PagerState;
+                PagerState = newPagerState;
+                tmp.Release(); //replacing the pager state --> so one less reference for it
                 PagerState.DebugVerify(newLengthAfterAdjustment);
             }
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-        }
 
-        public void RefreshMappedView(Transaction tx)
-        {
-            PagerState newPagerState = CreatePagerState();
-
-            if (tx != null)
-            {
-                tx.AddPagerState(newPagerState);
-            }
-
-            var tmp = PagerState;
-            PagerState = newPagerState;
-            tmp.Release(); //replacing the pager state --> so one less reference for it
+            return newPagerState;
         }
 
         private bool TryAllocateMoreContinuousPages(long allocationSize)

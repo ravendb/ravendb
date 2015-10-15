@@ -52,7 +52,7 @@ namespace Voron.Impl.Scratch
         {
             _currentScratchNumber++;
             var scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
-            scratchPager.EnsureContinuous(null, 0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
+            scratchPager.EnsureContinuous(0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             _scratchBuffers.Add(_currentScratchNumber, scratchFile);
@@ -71,7 +71,7 @@ namespace Voron.Impl.Scratch
         {
             if (tx == null)
                 throw new ArgumentNullException("tx");
-            var size = Utils.NearestPowerOfTwo(numberOfPages);
+            var size = (int)Utils.NearestPowerOfTwo(numberOfPages);
 
             PageFromScratchBuffer result;
             if (_current.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))

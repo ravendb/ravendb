@@ -16,16 +16,20 @@ namespace Voron.Impl.Paging
         int PageSize { get; }
         int NodeMaxSize { get; }
         int PageMaxSpace { get; }
-
+        string DebugInfo { get; }
         byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
-        TreePage Read(long pageNumber, PagerState pagerState = null);
         void Sync();
-        void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages);
-        int WriteDirect(TreePage start, long pagePosition, int pagesToWrite);
+        PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages);
+        int WriteDirect(byte* p, long pagePosition, int pagesToWrite);
     }
 
-    public static class VirtualPagerExtensions
+    public static unsafe class VirtualPagerExtensions
     {
+        public static TreePage Read(this IVirtualPager pager, long pageNumber, PagerState pagerState = null)
+        {
+            return new TreePage(pager.AcquirePagePointer(pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
+        }
+
         public static bool WillRequireExtension(this IVirtualPager pager, long requestedPageNumber, int numberOfPages)
         {
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
@@ -35,9 +39,9 @@ namespace Voron.Impl.Paging
         {
             var startPage = pageNumber ?? page.PageNumber;
 
-            int toWrite = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
+            var toWrite = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            return pager.WriteDirect(page, startPage, toWrite);
+            return pager.WriteDirect(page.Base, startPage, toWrite);
         }
 
         public static int GetNumberOfOverflowPages(this IVirtualPager pager, int overflowSize)
@@ -45,11 +49,9 @@ namespace Voron.Impl.Paging
             overflowSize += Constants.PageHeaderSize;
             return (overflowSize/pager.PageSize) + (overflowSize%pager.PageSize == 0 ? 0 : 1);
         }
-
-
     }
 
-    public unsafe static class VirtualPagerWin32Extensions
+    public static unsafe class VirtualPagerWin32Extensions
     {
         private static bool IsWindows8OrNewer()
         {
@@ -64,22 +66,22 @@ namespace Voron.Impl.Paging
                 return; // not supported
 
             var pagerState = pager.PagerState;
-            var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
+            var entries =
+                stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
 
-            for (int i = 0; i < pagerState.AllocationInfos.Length; i++)
+            for (var i = 0; i < pagerState.AllocationInfos.Length; i++)
             {
                 entries[i].VirtualAddress = pagerState.AllocationInfos[i].BaseAddress;
-                entries[i].NumberOfBytes = (IntPtr)pagerState.AllocationInfos[i].Size;
+                entries[i].NumberOfBytes = (IntPtr) pagerState.AllocationInfos[i].Size;
             }
 
 
             if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
-                (UIntPtr)pagerState.AllocationInfos.Length, entries, 0) == false)
+                (UIntPtr) pagerState.AllocationInfos.Length, entries, 0) == false)
                 throw new Win32Exception();
-
         }
 
-        public static void MaybePrefetchMemory(this IVirtualPager pager,List<TreePage> sortedPages)
+        public static void MaybePrefetchMemory(this IVirtualPager pager, List<TreePage> sortedPages)
         {
             if (sortedPages.Count == 0)
                 return;
@@ -91,7 +93,7 @@ namespace Voron.Impl.Paging
 
             long lastPage = -1;
             const int numberOfPagesInBatch = 8;
-            int sizeInPages = numberOfPagesInBatch; // OS uses 32K when you touch a page, let us reuse this
+            var sizeInPages = numberOfPagesInBatch; // OS uses 32K when you touch a page, let us reuse this
             foreach (var page in sortedPages)
             {
                 if (lastPage == -1)
@@ -120,7 +122,7 @@ namespace Voron.Impl.Paging
 
                 list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
-                    NumberOfBytes = (IntPtr)(sizeInPages * pager.PageSize),
+                    NumberOfBytes = (IntPtr) (sizeInPages*pager.PageSize),
                     VirtualAddress = pager.AcquirePagePointer(lastPage)
                 });
                 lastPage = page.PageNumber;
@@ -132,14 +134,14 @@ namespace Voron.Impl.Paging
             }
             list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
             {
-                NumberOfBytes = (IntPtr)(sizeInPages * pager.PageSize),
+                NumberOfBytes = (IntPtr) (sizeInPages*pager.PageSize),
                 VirtualAddress = pager.AcquirePagePointer(lastPage)
             });
 
             fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = list.ToArray())
             {
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
-                    (UIntPtr)list.Count,
+                    (UIntPtr) list.Count,
                     entries, 0);
             }
         }

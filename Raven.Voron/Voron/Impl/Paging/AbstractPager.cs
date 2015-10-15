@@ -29,12 +29,18 @@ namespace Voron.Impl.Paging
             {
                 ThrowObjectDisposedIfNeeded();
                 
-                _source = GetSourceName();
+                _debugInfo = GetSourceName();
                 _pagerState = value;
             }
         }
 
-        private string _source;
+	    private string _debugInfo;
+
+        public string DebugInfo
+        {
+            get { return _debugInfo; }
+        }
+
         protected AbstractPager(int pageSize)
         {
             Debug.Assert((pageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
@@ -70,19 +76,6 @@ namespace Voron.Impl.Paging
 
         public long NumberOfAllocatedPages { get; protected set; }
 
-        public TreePage Read(long pageNumber, PagerState pagerState = null)
-        {
-            ThrowObjectDisposedIfNeeded();
-            
-            if (pageNumber + 1 > NumberOfAllocatedPages)
-            {
-                throw new InvalidOperationException("Cannot get page number " + pageNumber +
-                                                    " because number of allocated pages is " + NumberOfAllocatedPages);
-            }
-
-            return new TreePage(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
-        }
-
         protected abstract string GetSourceName();
 
         public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
@@ -90,12 +83,12 @@ namespace Voron.Impl.Paging
         public abstract void Sync();
 
 
-        public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
+        public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
             ThrowObjectDisposedIfNeeded();
 
             if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
-                return;
+                return null;
 
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
@@ -106,8 +99,7 @@ namespace Voron.Impl.Paging
                 allocationSize = GetNewLength(allocationSize);
             }
 
-            AllocateMorePages(tx, allocationSize);
-
+            return AllocateMorePages(allocationSize);
         }
 
 
@@ -135,6 +127,7 @@ namespace Voron.Impl.Paging
             Dispose();
         }
 
+        protected abstract PagerState AllocateMorePages(long newLength);
         
         public abstract void AllocateMorePages(Transaction tx, long newLength);
 
@@ -172,12 +165,12 @@ namespace Voron.Impl.Paging
             return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
-        public virtual int WriteDirect(TreePage start, long pagePosition, int pagesToWrite)
+        public int WriteDirect(byte* p, long pagePosition, int pagesToWrite)
         {
             ThrowObjectDisposedIfNeeded();
 
             int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, p, toCopy);
 
             return toCopy;
         }

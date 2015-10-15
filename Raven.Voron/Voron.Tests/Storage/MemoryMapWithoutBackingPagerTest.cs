@@ -89,7 +89,7 @@ namespace Voron.Tests.Storage
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
-            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier / Env.Options.PageSize));
+            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Env.Options.PageSize));
         }
 
         [Theory]
@@ -101,7 +101,7 @@ namespace Voron.Tests.Storage
         public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
         {
             _options.ManualFlushing = true;
-            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, growthMultiplier));
+            Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(0, growthMultiplier));
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -132,7 +132,7 @@ namespace Voron.Tests.Storage
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;
-                Env.Options.DataPager.EnsureContinuous(null, 0, (int)(numberOfPages));
+                Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
             }
         }
 
@@ -173,7 +173,7 @@ namespace Voron.Tests.Storage
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 2; allocateMorePagesCount++)
             {
                 pagerSize *= 2;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null,0, (int)pagerSize));
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(0, (int)pagerSize));
             }
 
             var totalAllocationSize = Env.Options.DataPager.PagerState.AllocationInfos.Sum(info => info.Size);
@@ -187,7 +187,7 @@ namespace Voron.Tests.Storage
                 adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
 
                 pagerSize *= 2;
-                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(null, 0, (int)(pagerSize / Env.Options.PageSize)));
+                Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Env.Options.PageSize)));
 
             }
             finally
