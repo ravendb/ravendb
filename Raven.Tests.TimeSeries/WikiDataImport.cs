@@ -48,11 +48,15 @@ namespace Raven.Tests.TimeSeries
 				{
 					continue;
 
-					storage.CreateType(new TimeSeriesType
+					using (var writer = storage.CreateWriter())
 					{
-						Type = "Wiki",
-						Fields = new[] {"Views", "Size"},
-					});
+						writer.CreateType(new TimeSeriesType
+						{
+							Type = "Wiki",
+							Fields = new[] { "Views", "Size" },
+						});
+						writer.Commit();
+					}
 				}
 
 				if (fileIndex > 100)

@@ -11,7 +11,11 @@ namespace Raven.Database.TimeSeries.Controllers
 		[RavenRoute("ts/{timeSeriesName}/stats")]
 		public HttpResponseMessage TimeSeriesStats()
 		{
-			return GetMessageWithObject(TimeSeries.CreateStats());
+			using (var reader = TimeSeries.CreateReader())
+			{
+				var stats = TimeSeries.CreateStats(reader);
+				return GetMessageWithObject(stats);
+			}
 		}
     }
 }

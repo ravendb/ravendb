@@ -38,11 +38,16 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type.Type) || type.Fields == null || type.Fields.Length < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			TimeSeries.CreateType(new TimeSeriesType
+			using (var writer = TimeSeries.CreateWriter())
 			{
-				Type = type.Type,
-				Fields = type.Fields,
-			});
+				writer.CreateType(new TimeSeriesType
+				{
+					Type = type.Type,
+					Fields = type.Fields,
+				});
+				writer.Commit();
+			}
+
 			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.Created);
@@ -55,7 +60,12 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			TimeSeries.DeleteType(type);
+			using (var writer = TimeSeries.CreateWriter())
+			{
+				writer.DeleteType(type);
+				writer.Commit();
+			}
+			
 			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
@@ -351,7 +361,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 			using (var writer = TimeSeries.CreateWriter())
 			{
-				writer.DeleteRange(range.Type, range.Key, range.Start, range.End);
+				writer.DeleteRange(range.Type, range.Key, range.Start.UtcTicks, range.End.UtcTicks);
 				writer.DeleteRangeInRollups(range.Type, range.Key, range.Start, range.End);
 				writer.Commit();
 

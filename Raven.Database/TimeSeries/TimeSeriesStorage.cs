@@ -13,6 +13,7 @@ using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Queries;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.TimeSeries.Notifications;
@@ -37,6 +38,11 @@ namespace Raven.Database.TimeSeries
 		private readonly StorageEnvironment storageEnvironment;
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
+
+		public ReplicationTask ReplicationTask { get; }
+		public int ReplicationTimeoutInMs { get; }
+
+		public event Action TimeSeriesUpdated = () => { };
 
 		internal const int AggregationPointStorageItemsLength = 6;
 
@@ -75,6 +81,8 @@ namespace Raven.Database.TimeSeries
 			TransportState = receivedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(TransportState);
 			ExtensionsState = new AtomicDictionary<object>();
+			ReplicationTask = new ReplicationTask(this);
+			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
 			Configuration = configuration;
 			Initialize();
@@ -87,7 +95,10 @@ namespace Raven.Database.TimeSeries
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var metadata = storageEnvironment.CreateTree(tx, "$metadata");
+				storageEnvironment.CreateTree(tx, TreeNames.OpenLog);
+				storageEnvironment.CreateTree(tx, TreeNames.CompressedLog);
+
+				var metadata = storageEnvironment.CreateTree(tx, TreeNames.Metadata);
 				var id = metadata.Read("id");
 				if (id == null) // new db
 				{
@@ -147,11 +158,13 @@ namespace Raven.Database.TimeSeries
 		{
 			private readonly TimeSeriesStorage storage;
 			private readonly Transaction tx;
+			private readonly Tree metadata;
 
 			public Reader(TimeSeriesStorage storage)
 			{
 				this.storage = storage;
 				tx = this.storage.storageEnvironment.NewTransaction(TransactionFlags.Read);
+				metadata = tx.ReadTree(TreeNames.Metadata);
 			}
 
 			public IEnumerable<AggregatedPoint> GetAggregatedPoints(string typeName, string key, AggregationDuration duration, DateTimeOffset start, DateTimeOffset end, int skip = 0)
@@ -229,7 +242,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					yield break;
 
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 
@@ -391,7 +404,7 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					yield break;
 
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					throw new InvalidOperationException("Type does not exist");
 				var buffer = new byte[type.Fields.Length * sizeof(double)];
@@ -432,7 +445,7 @@ namespace Raven.Database.TimeSeries
 
 			public TimeSeriesKeySummary GetKey(string typeName, string key)
 			{
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					return null;
 
@@ -456,7 +469,7 @@ namespace Raven.Database.TimeSeries
 
 			public IEnumerable<TimeSeriesKey> GetKeys(string typeName, int skip)
 			{
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					yield break;
 
@@ -486,7 +499,6 @@ namespace Raven.Database.TimeSeries
 
 			public IEnumerable<TimeSeriesType> GetTypes(int skip)
 			{
-				var metadata = tx.ReadTree("$metadata");
 				using (var it = metadata.Iterate())
 				{
 					it.RequiredPrefix = TypesPrefix;
@@ -504,6 +516,119 @@ namespace Raven.Database.TimeSeries
 					}
 				}
 			}
+
+			public long GetTypesCount()
+			{
+				var val = metadata.Read(StatsPrefix + "types-count");
+				if (val == null)
+					return 0;
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+
+			public long GetKeysCount()
+			{
+				var val = metadata.Read(StatsPrefix + "keys-count");
+				if (val == null)
+					return 0;
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+
+			public long GetPointsCount()
+			{
+				var val = metadata.Read(StatsPrefix + "points-count");
+				if (val == null)
+					return 0;
+				var count = val.Reader.ReadLittleEndianInt64();
+				return count;
+			}
+
+			/*[Conditional("DEBUG")]
+			public void CalculateKeysAndPointsCount()
+			{
+				using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					long keys = 0, points = 0;
+					using (var rootIt = tx.Root.Iterate())
+					{
+						rootIt.RequiredPrefix = SeriesTreePrefix;
+						if (rootIt.Seek(rootIt.RequiredPrefix))
+						{
+							do
+							{
+								var typeTreeName = rootIt.CurrentKey.ToString();
+								var type = GetTimeSeriesType(tx, typeTreeName.Replace(SeriesTreePrefix, ""));
+								var tree = tx.ReadTree(typeTreeName);
+								using (var it = tree.Iterate())
+								{
+									if (it.Seek(Slice.BeforeAllKeys))
+									{
+										do
+										{
+											keys++;
+											var fixedTree = tree.FixedTreeFor(it.CurrentKey.ToString(), (byte)(type.Fields.Length * sizeof(double)));
+											points += fixedTree.NumberOfEntries;
+										} while (it.MoveNext());
+									}
+								}
+							} while (rootIt.MoveNext());
+						}
+					}
+
+					var val = new byte[sizeof(long)];
+					EndianBitConverter.Little.CopyBytes(keys, val, 0);
+					var metadata = tx.ReadTree("$metadata");
+					metadata.Add(new Slice(StatsPrefix + "keys-count"), new Slice(val));
+					EndianBitConverter.Little.CopyBytes(points, val, 0);
+					metadata.Add(new Slice(StatsPrefix + "points-count"), new Slice(val));
+				}
+			}
+
+			/// <summary>
+			/// This intended to be here for testing and debugging. This code is not reachable in production, since we always cache the stats.
+			/// </summary>
+			private long CalculateTypesCount()
+			{
+				long count = 0;
+				using (var it = metadata.Iterate())
+				{
+					it.RequiredPrefix = TypesPrefix;
+					if (it.Seek(it.RequiredPrefix))
+					{
+						do
+						{
+							count++;
+						} while (it.MoveNext());
+					}
+				}
+
+				// var val = new byte[sizeof (long)];
+				// EndianBitConverter.Little.CopyBytes(count, val, 0);
+				// metadata.Add(new Slice(StatsPrefix + "types-count"), new Slice(val));
+
+				return count;
+			}*/
+
+			public TimeSeriesReplicationDocument GetReplicationData()
+			{
+				var readResult = metadata.Read("replication");
+				if (readResult == null)
+					return null;
+
+				var stream = readResult.Reader.AsStream();
+				stream.Position = 0;
+				using (var streamReader = new StreamReader(stream))
+				using (var jsonTextReader = new JsonTextReader(streamReader))
+				{
+					return new JsonSerializer().Deserialize<TimeSeriesReplicationDocument>(jsonTextReader);
+				}
+			}
+
+			public long GetLastEtag()
+			{
+				return new TimeSeriesLogStorage(tx).GetLastEtag();
+			}
 		}
 
 		public class Writer : IDisposable
@@ -514,13 +639,17 @@ namespace Raven.Database.TimeSeries
 			private Tree tree;
 			private readonly Dictionary<string, AggregationRange> rollupsToClear = new Dictionary<string, AggregationRange>();
 			private TimeSeriesType currentType;
-			private readonly Dictionary<byte, byte[]> valBuffers = new Dictionary<byte, byte[]>(); 
+			private readonly Dictionary<byte, byte[]> valBuffers = new Dictionary<byte, byte[]>();
+			private readonly TimeSeriesLogStorage logStorage;
+			private readonly Tree metadata;
 
 			public Writer(TimeSeriesStorage storage)
 			{
 				this.storage = storage;
 				currentType = new TimeSeriesType();
 				tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
+				logStorage = new TimeSeriesLogStorage(tx);
+				metadata = tx.ReadTree(TreeNames.Metadata);
 			}
 
 			public bool Append(string type, string key, DateTimeOffset time, params double[] values)
@@ -532,7 +661,7 @@ namespace Raven.Database.TimeSeries
 
 				if (currentType.Type != type)
 				{
-					currentType = storage.GetType(tx, type);
+					currentType = storage.GetTimeSeriesType(metadata, type);
 					if (currentType == null)
 						throw new InvalidOperationException("There is no type named: " + type);
 
@@ -575,14 +704,31 @@ namespace Raven.Database.TimeSeries
 				var fixedTree = tree.FixedTreeFor(key, bufferSize);
 				if (fixedTree.NumberOfEntries == 0)
 				{
-					storage.UpdateKeysCount(tx, 1);
+					UpdateKeysCount(1);
 				}
-				var newPointWasAppended = fixedTree.Add(time.UtcTicks, valBuffer);
+				var utcTicks = time.UtcTicks;
+				var newPointWasAppended = fixedTree.Add(utcTicks, valBuffer);
 				if (newPointWasAppended)
 				{
-					storage.UpdatePointsCount(tx, 1);
+					UpdatePointsCount(1);
 				}
+				logStorage.Append(type, key, utcTicks, values);
 				return newPointWasAppended;
+			}
+
+			private void UpdateKeysCount(long delta)
+			{
+				metadata.Increment(StatsPrefix + "keys-count", delta);
+			}
+
+			private void UpdatePointsCount(long delta)
+			{
+				metadata.Increment(StatsPrefix + "points-count", delta);
+			}
+
+			private void UpdateTypesCount(long delta)
+			{
+				metadata.Increment(StatsPrefix + "types-count", delta);
 			}
 
 			public void Dispose()
@@ -598,6 +744,8 @@ namespace Raven.Database.TimeSeries
 					DeleteRangeInRollups(rollupRange.Type, rollupRange.Key, rollupRange.Start, rollupRange.End);
 				}
 				tx.Commit();
+				storage.LastWrite = SystemTime.UtcNow;
+				storage.TimeSeriesUpdated();
 			}
 
 			public void DeleteRangeInRollups(string typeName, string key, DateTimeOffset start, DateTimeOffset end)
@@ -612,7 +760,7 @@ namespace Raven.Database.TimeSeries
 					if (it.Seek(it.RequiredPrefix) == false)
 						return;
 
-					var type = storage.GetType(tx, typeName);
+					var type = storage.GetTimeSeriesType(metadata, typeName);
 					if (type == null)
 						throw new InvalidOperationException("There is no type named: " + typeName);
 
@@ -652,7 +800,7 @@ namespace Raven.Database.TimeSeries
 
 			public long DeleteKey(string typeName, string key)
 			{
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
@@ -661,9 +809,12 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var numberOfEntriesRemoved = tree.DeleteFixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				storage.UpdatePointsCount(tx, -numberOfEntriesRemoved);
-				storage.UpdateKeysCount(tx, -1);
-				
+				UpdatePointsCount(-numberOfEntriesRemoved);
+				UpdateKeysCount(-1);
+
+				Debug.Assert(numberOfEntriesRemoved > 0, "It isn't possible that we have no points, as we check for it at the beginning of the method");
+				logStorage.DeleteKey(typeName, key);
+
 				return numberOfEntriesRemoved;
 			}
 
@@ -673,20 +824,24 @@ namespace Raven.Database.TimeSeries
 				if (tree == null)
 					return false;
 
-				var type = storage.GetType(tx, point.Type);
+				var type = storage.GetTimeSeriesType(metadata, point.Type);
 				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + point.Type);
 
 				var fixedTree = tree.FixedTreeFor(point.Key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.Delete(point.At.UtcTicks);
+				var atTicks = point.At.UtcTicks;
+				var result = fixedTree.Delete(atTicks);
 				if (result.NumberOfEntriesDeleted > 0)
 				{
-					storage.UpdatePointsCount(tx, -1);
+					UpdatePointsCount(-1);
 				}
 				if (result.TreeRemoved)
 				{
-					storage.UpdateKeysCount(tx, -1);
+					UpdateKeysCount(-1);
 				}
+
+				Debug.Assert(result.NumberOfEntriesDeleted > 0 || result.TreeRemoved == false, "It isn't possible that we remove a tree without removing a point");
+				logStorage.DeletePoint(point.Type, point.Key, atTicks);
 
 				return true;
 			}
@@ -720,9 +875,9 @@ namespace Raven.Database.TimeSeries
 				throw new NotImplementedException();
 			}
 
-			public void DeleteRange(string typeName, string key, DateTimeOffset start, DateTimeOffset end)
+			public void DeleteRange(string typeName, string key, long start, long end)
 			{
-				var type = storage.GetType(tx, typeName);
+				var type = storage.GetTimeSeriesType(metadata, typeName);
 				if (type == null)
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
@@ -731,10 +886,93 @@ namespace Raven.Database.TimeSeries
 					throw new InvalidOperationException("There is no type named: " + typeName);
 
 				var fixedTree = tree.FixedTreeFor(key, (byte)(type.Fields.Length * sizeof(double)));
-				var result = fixedTree.DeleteRange(start.UtcTicks, end.UtcTicks);
-				storage.UpdatePointsCount(tx, -result.NumberOfEntriesDeleted);
+				var result = fixedTree.DeleteRange(start, end);
+				if (result.NumberOfEntriesDeleted > 0)
+				{
+					UpdatePointsCount(-result.NumberOfEntriesDeleted);
+				}
 				if (result.TreeRemoved)
-					storage.UpdateKeysCount(tx, -1);
+				{
+					UpdateKeysCount(-1);
+				}
+
+				Debug.Assert(result.NumberOfEntriesDeleted > 0 || result.TreeRemoved == false, "It isn't possible that we remove a tree without removing a point");
+				logStorage.DeleteRange(typeName, key, start, end);
+			}
+
+			public void CreateType(TimeSeriesType type)
+			{
+				if (type == null || string.IsNullOrWhiteSpace(type.Type))
+					throw new InvalidOperationException("Type cannot be empty");
+
+				if (type.Fields.Length < 1)
+					throw new InvalidOperationException("Fields length should be equal or greater than 1");
+
+				if (type.Fields.Any(string.IsNullOrWhiteSpace))
+					throw new InvalidOperationException("Field name cannot be empty.");
+
+				using (var tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var existingType = storage.GetTimeSeriesType(metadata, type.Type);
+					if (existingType != null)
+					{
+						var tree = tx.ReadTree(SeriesTreePrefix + type.Type);
+						if (tree != null)
+						{
+							existingType.KeysCount = tree.State.EntriesCount;
+							if (existingType.KeysCount > 0)
+							{
+								throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwritten", type.Type));
+							}
+						}
+					}
+
+					using (var ms = new MemoryStream())
+					using (var writer = new StreamWriter(ms))
+					using (var jsonTextWriter = new JsonTextWriter(writer))
+					{
+						storage.JsonSerializer.Serialize(jsonTextWriter, type);
+						writer.Flush();
+						ms.Position = 0;
+						metadata.Add(TypesPrefix + type.Type, ms);
+						if (existingType == null) // A new type, not an overwrited type
+						{
+							UpdateTypesCount(1);
+						}
+					}
+				}
+			}
+
+			public void DeleteType(string type)
+			{
+				var existingType = storage.GetTimeSeriesType(metadata, type);
+				if (existingType == null)
+					throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
+
+				var tree = tx.ReadTree(SeriesTreePrefix + type);
+				if (tree != null)
+					existingType.KeysCount = tree.State.EntriesCount;
+				if (existingType.KeysCount > 0)
+					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has associated keys.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
+
+				metadata.Delete(TypesPrefix + type);
+				UpdateTypesCount(-1);
+			}
+
+			public void UpdateReplications(TimeSeriesReplicationDocument newReplicationDocument)
+			{
+				using (var memoryStream = new MemoryStream())
+				using (var streamWriter = new StreamWriter(memoryStream))
+				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+				{
+					storage.JsonSerializer.Serialize(jsonTextWriter, newReplicationDocument);
+					streamWriter.Flush();
+					memoryStream.Position = 0;
+
+					metadata.Add("replication", memoryStream);
+				}
+
+				storage.ReplicationTask.SignalUpdate();
 			}
 		}
 
@@ -829,15 +1067,15 @@ namespace Raven.Database.TimeSeries
 			};
 		}
 
-		public TimeSeriesStats CreateStats()
+		public TimeSeriesStats CreateStats(Reader reader)
 		{
 			var stats = new TimeSeriesStats
 			{
 				Name = Name,
 				Url = TimeSeriesUrl,
-				TypesCount = GetTypesCount(),
-				KeysCount = GetKeysCount(),
-				PointsCount = GetPointsCount(),
+				TypesCount = reader.GetTypesCount(),
+				KeysCount = reader.GetKeysCount(),
+				PointsCount = reader.GetPointsCount(),
 				TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
 				RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
 			};
@@ -854,75 +1092,8 @@ namespace Raven.Database.TimeSeries
 			get { return storageEnvironment; }
 		}
 
-		public void CreateType(TimeSeriesType type)
+		private TimeSeriesType GetTimeSeriesType(Tree metadata, string type)
 		{
-			if (type == null || string.IsNullOrWhiteSpace(type.Type))
-				throw new InvalidOperationException("Type cannot be empty");
-
-			if (type.Fields.Length < 1)
-				throw new InvalidOperationException("Fields length should be equal or greater than 1");
-
-			if (type.Fields.Any(string.IsNullOrWhiteSpace))
-				throw new InvalidOperationException("Field name cannot be empty.");
-
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var existingType = GetType(tx, type.Type);
-				if (existingType != null)
-				{
-					var tree = tx.ReadTree(SeriesTreePrefix + type.Type);
-					if (tree != null)
-					{
-						existingType.KeysCount = tree.State.EntriesCount;
-						if (existingType.KeysCount > 0)
-						{
-							throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwritten", type.Type));
-						}
-					}
-				}
-
-				var metadata = tx.ReadTree("$metadata");
-				using (var ms = new MemoryStream())
-				using (var writer = new StreamWriter(ms))
-				using (var jsonTextWriter = new JsonTextWriter(writer))
-				{
-					JsonSerializer.Serialize(jsonTextWriter, type);
-					writer.Flush();
-					ms.Position = 0;
-					metadata.Add(TypesPrefix + type.Type, ms);
-					if (existingType == null) // A new type, not an overwrited type
-					{
-						UpdateTypesCount(tx, 1);
-					}
-				}
-				tx.Commit();
-			}
-		}
-
-		public void DeleteType(string type)
-		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var existingType = GetType(tx, type);
-				if (existingType == null)
-					throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
-
-				var tree = tx.ReadTree(SeriesTreePrefix + type);
-				if (tree != null)
-					existingType.KeysCount = tree.State.EntriesCount;
-				if (existingType.KeysCount > 0)
-					throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has associated keys.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
-
-				var metadata = tx.ReadTree("$metadata");
-				metadata.Delete(TypesPrefix + type);
-				UpdateTypesCount(tx, -1);
-				tx.Commit();
-			}
-		}
-
-		public TimeSeriesType GetType(Transaction tx, string type)
-		{
-			var metadata = tx.ReadTree("$metadata");
 			var readResult = metadata.Read(TypesPrefix + type);
 			if (readResult == null)
 				return null;
@@ -943,131 +1114,11 @@ namespace Raven.Database.TimeSeries
 			}
 		}
 
-		private long GetTypesCount()
+		public static class TreeNames
 		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
-			{
-				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(StatsPrefix + "types-count");
-				if (val == null)
-					return CalculateTypesCount();
-				var count = val.Reader.ReadLittleEndianInt64();
-				return count;
-			}
-		}
-
-		public long GetKeysCount()
-		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
-			{
-				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(StatsPrefix + "keys-count");
-				if (val == null)
-					return 0;
-				var count = val.Reader.ReadLittleEndianInt64();
-				return count;
-			}
-		}
-
-		public long GetPointsCount()
-		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.Read))
-			{
-				var metadata = tx.ReadTree("$metadata");
-				var val = metadata.Read(StatsPrefix + "points-count");
-				if (val == null)
-					return 0;
-				var count = val.Reader.ReadLittleEndianInt64();
-				return count;
-			}
-		}
-
-		public void CalculateKeysAndPointsCount()
-		{
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				long keys = 0, points = 0;
-				using (var rootIt = tx.Root.Iterate())
-				{
-					rootIt.RequiredPrefix = SeriesTreePrefix;
-					if (rootIt.Seek(rootIt.RequiredPrefix))
-					{
-						do
-						{
-							var typeTreeName = rootIt.CurrentKey.ToString();
-							var type = GetType(tx, typeTreeName.Replace(SeriesTreePrefix, ""));
-							var tree = tx.ReadTree(typeTreeName);
-							using (var it = tree.Iterate())
-							{
-								if (it.Seek(Slice.BeforeAllKeys))
-								{
-									do
-									{
-										keys++;
-										var fixedTree = tree.FixedTreeFor(it.CurrentKey.ToString(), (byte)(type.Fields.Length * sizeof(double)));
-										points += fixedTree.NumberOfEntries;
-									} while (it.MoveNext());
-								}
-							}
-						} while (rootIt.MoveNext());
-					}
-				}
-
-				var val = new byte[sizeof(long)];
-				EndianBitConverter.Little.CopyBytes(keys, val, 0);
-				var metadata = tx.ReadTree("$metadata");
-				metadata.Add(new Slice(StatsPrefix + "keys-count"), new Slice(val));
-				EndianBitConverter.Little.CopyBytes(points, val, 0);
-				metadata.Add(new Slice(StatsPrefix + "points-count"), new Slice(val));
-			}
-		}
-
-		private void UpdateKeysCount(Transaction tx, long delta)
-		{
-			var metadata = tx.ReadTree("$metadata");
-			metadata.Increment(StatsPrefix + "keys-count", delta);
-		}
-
-		private void UpdatePointsCount(Transaction tx, long delta)
-		{
-			var metadata = tx.ReadTree("$metadata");
-			metadata.Increment(StatsPrefix + "points-count", delta);
-		}
-
-		private void UpdateTypesCount(Transaction tx, long delta)
-		{
-			var metadata = tx.ReadTree("$metadata");
-			metadata.Increment(StatsPrefix + "types-count", delta);
-		}
-
-		/// <summary>
-		/// This intended to be here for testing and debugging. This code is not reachable in production, since we always cache the stats.
-		/// </summary>
-		private long CalculateTypesCount()
-		{
-			long count = 0;
-
-			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var metadata = tx.ReadTree("$metadata");
-				using (var it = metadata.Iterate())
-				{
-					it.RequiredPrefix = TypesPrefix;
-					if (it.Seek(it.RequiredPrefix))
-					{
-						do
-						{
-							count++;
-						} while (it.MoveNext());
-					}
-				}
-
-				var val = new byte[sizeof (long)];
-				EndianBitConverter.Little.CopyBytes(count, val, 0);
-				metadata.Add(new Slice(StatsPrefix + "types-count"), new Slice(val));
-			}
-
-			return count;
+			public const string Metadata = "$metadata";
+			public const string CompressedLog = "CompressedLog";
+			public const string OpenLog = "OpenLog";
 		}
 	}
 }

@@ -17,24 +17,28 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
-				var data = new[]
+				using (var writer = tss.CreateWriter())
 				{
-					new {Key = "Time", At = start, Value = 10},
-					new {Key = "Money", At = start, Value = 54},
-					new {Key = "Is", At = start, Value = 1029},
-
-					new {Key = "Money", At = start.AddHours(1), Value = 546},
-					new {Key = "Is", At = start.AddHours(1), Value = 70},
-					new {Key = "Time", At = start.AddHours(1), Value = 19},
-
-					new {Key = "Is", At = start.AddHours(2), Value = 64},
-					new {Key = "Money", At = start.AddHours(2), Value = 130},
-					new {Key = "Time", At = start.AddHours(2), Value = 50},
-				};
+					writer.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
+					writer.Commit();
+                }
 
 				using (var writer = tss.CreateWriter())
 				{
+					var data = new[]
+					{
+						new {Key = "Time", At = start, Value = 10},
+						new {Key = "Money", At = start, Value = 54},
+						new {Key = "Is", At = start, Value = 1029},
+
+						new {Key = "Money", At = start.AddHours(1), Value = 546},
+						new {Key = "Is", At = start.AddHours(1), Value = 70},
+						new {Key = "Time", At = start.AddHours(1), Value = 19},
+
+						new {Key = "Is", At = start.AddHours(2), Value = 64},
+						new {Key = "Money", At = start.AddHours(2), Value = 130},
+						new {Key = "Time", At = start.AddHours(2), Value = 50},
+					};
 					foreach (var item in data)
 					{
 						writer.Append("3Value", item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
@@ -81,9 +85,9 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
 				using (var writer = tss.CreateWriter())
 				{
+					writer.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
 					for (int i = 0; i < 7; i++)
 					{
 						writer.Append("3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
