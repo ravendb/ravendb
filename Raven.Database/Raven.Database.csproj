@@ -561,12 +561,16 @@
     <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
     <Compile Include="TimeSeries\Controllers\BaseAdminTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesReplicationController.cs" />
+    <Compile Include="TimeSeries\ReplicationMessage.cs" />
+    <Compile Include="TimeSeries\ReplicationTask.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesChangesController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesOperationsController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesStatsController.cs" />
     <Compile Include="TimeSeries\Controllers\BaseTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesController.cs" />
     <Compile Include="TimeSeries\Notifications\NotificationPublisher.cs" />
+    <Compile Include="TimeSeries\TimeSeriesLogStorage.cs" />
     <Compile Include="TimeSeries\TimeSeriesMetricsManager.cs" />
     <Compile Include="TimeSeries\KeyValueStateMachine.cs" />
     <Compile Include="TimeSeries\AggregationRange.cs" />
