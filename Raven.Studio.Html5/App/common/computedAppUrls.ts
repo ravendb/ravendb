@@ -19,6 +19,7 @@ interface computedAppUrls {
     transformers: KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
+    exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;

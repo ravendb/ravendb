@@ -11,7 +11,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;

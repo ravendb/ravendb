@@ -13,18 +13,9 @@ namespace Raven.Abstractions.Counters
 {
     public class CounterReplicationDestination
     {
-        private string serverUrl;
+	    public string ServerUrl { get; set; }
 
-        public string ServerUrl
-        {
-            get { return serverUrl; }
-            set
-            {
-                serverUrl = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-            }
-        }
-
-        public string CounterStorageName { get; set; }
+	    public string CounterStorageName { get; set; }
 
         public string CounterStorageUrl
         {
@@ -33,7 +24,7 @@ namespace Raven.Abstractions.Counters
 				Debug.Assert(String.IsNullOrWhiteSpace(CounterStorageName) == false);
 				Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
 
-		        return string.Format("{0}/cs/{1}", ServerUrl, CounterStorageName);
+		        return string.Format("{0}cs/{1}", ServerUrl, CounterStorageName);
 	        }
         }
 
@@ -64,7 +55,7 @@ namespace Raven.Abstractions.Counters
 
 		protected bool Equals(CounterReplicationDestination other)
         {
-            return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
+            return string.Equals(ServerUrl, other.ServerUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(CounterStorageName, other.CounterStorageName);
         }
 
@@ -80,7 +71,7 @@ namespace Raven.Abstractions.Counters
         {
             unchecked
             {
-                var hashCode = (serverUrl != null ? serverUrl.GetHashCode() : 0);
+                var hashCode = (ServerUrl != null ? ServerUrl.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Domain != null ? Domain.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Password != null ? Password.GetHashCode() : 0);

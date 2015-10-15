@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.5</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.6</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
@@ -97,7 +97,6 @@
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounter.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\patch\patch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebug.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugChanges.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugConfig.ts" />
@@ -141,7 +140,6 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
-    <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />

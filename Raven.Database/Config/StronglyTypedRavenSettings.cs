@@ -564,6 +564,12 @@ namespace Raven.Database.Config
 		public class TimeSeriesConfiguration
 		{
 			public StringSetting DataDir { get; set; }
+
+			public TimeSpanSetting TombstoneRetentionTime { get; set; }
+
+			public IntegerSetting DeletedTombstonesInBatch { get; set; }
+
+			public IntegerSetting ReplicationLatencyInMs { get; set; }
 		}
 
 		public class EncryptionConfiguration

@@ -11,29 +11,11 @@ namespace Raven.Database.TimeSeries.Controllers
 {
 	public abstract class BaseTimeSeriesApiController : ResourceApiController<TimeSeriesStorage, TimeSeriesLandlord>
 	{
-		protected string TimeSeriesName
-		{
-			get
-			{
-				return ResourceName;
-			}
-		}
+		protected string TimeSeriesName => ResourceName;
 
-		protected TimeSeriesStorage TimeSeries
-		{
-			get
-			{
-				return Resource;
-			}
-		}
+		protected TimeSeriesStorage TimeSeries => Resource;
 
-		public override ResourceType ResourceType
-		{
-			get
-			{
-				return ResourceType.TimeSeries;
-			}
-		}
+		public override ResourceType ResourceType => ResourceType.TimeSeries;
 
 		public override void MarkRequestDuration(long duration)
 		{
