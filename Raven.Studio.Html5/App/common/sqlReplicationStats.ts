@@ -64,7 +64,7 @@ class sqlReplicationStats {
 
              if (!!generalMetrics) {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
-                     if (value.Type == "Historgram") {
+                     if (value.Type == "Histogram") {
                          value["Name"] = key;
                          value["Table"] = "";
                          value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
@@ -86,7 +86,7 @@ class sqlReplicationStats {
              if (!!tablesMetrics) {
                  $.map(tablesMetrics, (tablesMetricsData: dictionary<metricsDataDto>, tableMetricsKey: string) => {
                     $.map(tablesMetricsData, (value, key) => {
-                        if (value.Type == "Historgram") {
+                        if (value.Type == "Histogram") {
                             value["Name"] = key;
                             value["Table"] = tableMetricsKey ;
                             value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {

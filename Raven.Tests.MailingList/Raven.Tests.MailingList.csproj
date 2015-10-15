@@ -462,10 +462,12 @@
     <Compile Include="TypeConverter.cs" />
     <Compile Include="TypeNameHandlingWithCollectionsTest.cs" />
     <Compile Include="UintId.cs" />
+    <Compile Include="UnicodePoop\WriteAndReadUnicode.cs" />
     <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
+    <Compile Include="ValerioBorioni.cs" />
     <Compile Include="Vicente.cs" />
     <Compile Include="Victor.cs" />
     <Compile Include="Vitaliy.cs" />
@@ -531,6 +533,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Everett\DocumentWithBytes.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="UnicodePoop\activities-1958073.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />

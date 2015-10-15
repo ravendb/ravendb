@@ -103,11 +103,12 @@ namespace Raven.Client.Document
 			IEnumerable<object> results,
 			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
 		{
+			var copy = compiledReduceCache;
 			Func<IEnumerable<object>, IEnumerable> compile;
-			if (compiledReduceCache.TryGetValue(indexType, out compile) == false)
+			if (copy.TryGetValue(indexType, out compile) == false)
 			{
 				compile = generateTransformResults();
-				compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(compiledReduceCache)
+				compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(copy)
 				{
 					{indexType, compile}
 				};

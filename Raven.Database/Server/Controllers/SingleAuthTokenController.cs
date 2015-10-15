@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 
@@ -16,8 +17,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
-            bool shouldCheckIfMachineAdmin = false;
-
+            var shouldCheckIfMachineAdmin = false;
 
             if ((DatabaseName == "<system>" || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
             {
@@ -30,7 +30,6 @@ namespace Raven.Database.Server.Controllers
                         Reason = "User is null or not authenticated"
                     }, HttpStatusCode.Unauthorized);
                 }
-
             }
 
             var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);
@@ -38,7 +37,7 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(new
             {
                 Token = token
-            });
+            }).WithNoCache();
         }
     }
 }
@@ -59,8 +58,8 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 Token = token
-            });
-        }
+            }).WithNoCache();
+		}
     }
 }
 
@@ -79,7 +78,7 @@ namespace Raven.Database.Counters.Controllers
             return GetMessageWithObject(new
             {
                 Token = token
-            });
-        }
+            }).WithNoCache();
+		}
     }
 }

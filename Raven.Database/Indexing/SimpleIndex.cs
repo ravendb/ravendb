@@ -201,7 +201,7 @@ namespace Raven.Database.Indexing
 										logIndexing.WarnException(
 										string.Format(
 											"Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-											indexId, indexingResult.NewDocId),
+											PublicName, indexingResult.NewDocId),
 											exception);
 										context.AddError(
 											indexId,
@@ -252,7 +252,7 @@ namespace Raven.Database.Indexing
 					batchers.ApplyAndIgnoreAllErrors(
 						ex =>
 						{
-							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+							logIndexing.WarnException("Failed to notify index update trigger batcher about an error in " + PublicName, ex);
 							context.AddError(indexId, PublicName, null, ex, "AnErrorOccured Trigger");
 						},
 						x => x.AnErrorOccured(e));
@@ -263,7 +263,7 @@ namespace Raven.Database.Indexing
 					batchers.ApplyAndIgnoreAllErrors(
 						e =>
 						{
-							logIndexing.WarnException("Failed to dispose on index update trigger", e);
+							logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
 							context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
 						},
 						x => x.Dispose());
@@ -278,7 +278,7 @@ namespace Raven.Database.Indexing
 
 			performance.OnCompleted = () => BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
 
-			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
+			logIndexing.Debug("Indexed {0} documents for {1}", count, PublicName);
 
 			return performance;
 		}
@@ -425,7 +425,7 @@ namespace Raven.Database.Indexing
 			Write((writer, analyzer, stats) =>
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
-				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
+				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
 					.Where(x => x != null)
 					.ToList();
@@ -438,7 +438,7 @@ namespace Raven.Database.Indexing
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>
 					{
-						logIndexing.WarnException("Failed to dispose on index update trigger", e);
+						logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
 						context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
 					},
 					batcher => batcher.Dispose());

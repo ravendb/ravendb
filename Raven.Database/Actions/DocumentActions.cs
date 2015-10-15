@@ -436,8 +436,8 @@ namespace Raven.Database.Actions
                 while (true)
                 {
                     var documents = etag == null
-                                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
@@ -454,14 +454,14 @@ namespace Raven.Database.Actions
 
                         var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                        
+
                         document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
                         if (document == null)
                             continue;
-                        
+
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
-                        
+
                         bool canContinue = addDocument(document);
                         if (!canContinue)
                             break;
@@ -471,6 +471,11 @@ namespace Raven.Database.Actions
 
                     if (returnedDocs || docCount == 0)
                         break;
+
+                    // No document was found that matches the requested criteria
+                    // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                    if (lastDocumentReadEtag != null)
+                        etag = lastDocumentReadEtag;
 
                     start += docCount;
                 }

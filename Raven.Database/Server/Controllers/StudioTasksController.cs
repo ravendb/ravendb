@@ -98,7 +98,8 @@ namespace Raven.Database.Server.Controllers
             {
                 cfg.AllowDebuggerStatement();
                 cfg.MaxStatements(1000);
-            });
+				cfg.NullPropagation();
+			});
 
             engine.Execute(string.Format(@"
 var customFunctions = function() {{ 

@@ -270,6 +270,7 @@
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From06To07.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From05To06.cs" />
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
@@ -1171,10 +1172,8 @@
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
-    <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
-    <Compile Include="Util\Streams\BlockingStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
