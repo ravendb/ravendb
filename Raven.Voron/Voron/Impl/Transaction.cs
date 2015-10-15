@@ -344,21 +344,6 @@ namespace Voron.Impl
             get { return _trees.Values; }
 	    }
 
-		internal int GetNumberOfFreePages(TreeNodeHeader* node)
-		{
-			return GetNodeDataSize(node) / Constants.PageNumberSize;
-		}
-
-		private int GetNodeDataSize(TreeNodeHeader* node)
-		{
-			if (node->Flags == (TreeNodeFlags.PageRef)) // lots of data, enough to overflow!
-			{
-				var overflowPage = GetReadOnlyPage(node->PageNumber);
-				return overflowPage.OverflowSize;
-			}
-			return node->DataSize;
-		}
-
 		public void Commit()
 		{
             if (_disposed)
@@ -455,7 +440,7 @@ namespace Voron.Impl
 		}
 
 
-		private unsafe void FlushAllMultiValues()
+		private void FlushAllMultiValues()
 		{
 			if (_multiValueTrees == null)
 				return;
