@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -11,27 +11,32 @@ namespace Voron.Trees
 {
     using Sparrow;
     using Sparrow.Platform;
-    using System.Runtime.CompilerServices;
+	using System.Runtime.CompilerServices;
     using Voron.Util;
 
-    public unsafe class TreePage
+	public unsafe class TreePage
     {
         private readonly byte* _base;
-        private readonly TreePageHeader* _header;
+	    private readonly int _pageSize;
+	    private readonly string _source;
+	    private readonly TreePageHeader* _header;
 
-        public readonly string Source;
-        private readonly int _pageSize;
+	    public string Source
+	    {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _source; }
+	    }
 
-        public int LastMatch;
-        public int LastSearchPosition;
-        public bool Dirty;
+	    public int LastMatch;
+	    public int LastSearchPosition;
+	    public bool Dirty;
 
-        public TreePage(byte* b, string source, int pageSize)
+	    public TreePage(byte* b, string source, int pageSize)
         {
             _base = b;
-            _header = (TreePageHeader*)b;
-            Source = source;
-            _pageSize = pageSize;            
+	        _source = source;
+	        _pageSize = pageSize;
+	        _header = (TreePageHeader*)b;
         }
 
         
@@ -43,12 +48,12 @@ namespace Voron.Trees
             set { _header->PageNumber = value; } 
         }
 
-        public TreePageFlags Flags 
+	    public TreePageFlags TreeFlags 
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->Flags; }
+            get { return _header->TreeFlags; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { _header->Flags = value; }
+            set { _header->TreeFlags = value; }
         }
 
         public ushort Lower 
@@ -75,7 +80,7 @@ namespace Voron.Trees
             set { _header->OverflowSize = value; } 
         }
 
-        public int PageSize 
+		public int PageSize 
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _pageSize; } 
@@ -178,29 +183,29 @@ namespace Voron.Trees
             return nodeHeader;
         }
 
-        public bool IsLeaf
+	    public bool IsLeaf
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (_header->Flags & TreePageFlags.Leaf) == TreePageFlags.Leaf; }
+			get { return (_header->TreeFlags & TreePageFlags.Leaf) == TreePageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (_header->Flags & TreePageFlags.Branch) == TreePageFlags.Branch; }
+            get { return (_header->TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch; }
         }
 
-        public bool IsOverflow
-        {
+		public bool IsOverflow
+		{
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (_header->Flags & TreePageFlags.Overflow) == TreePageFlags.Overflow; }
-        }
+            get { return (_header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
+		}
 
-        public bool IsFixedSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (_header->Flags & TreePageFlags.FixedSize) == TreePageFlags.FixedSize; }
-        }
+		public bool IsFixedSize
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (_header->TreeFlags & TreePageFlags.FixedSize) == TreePageFlags.FixedSize; }
+		}
 
         public ushort FixedSize_NumberOfEntries
         {
@@ -210,13 +215,13 @@ namespace Voron.Trees
             set { _header->FixedSize_NumberOfEntries = value; }
         }
 
-        public ushort FixedSize_StartPosition
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->FixedSize_StartPosition; }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { _header->FixedSize_StartPosition = value; }
-        }
+		public ushort FixedSize_StartPosition
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _header->FixedSize_StartPosition; }
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			set { _header->FixedSize_StartPosition = value; }
+		}
 
         public ushort FixedSize_ValueSize
         {
@@ -251,54 +256,54 @@ namespace Voron.Trees
             Lower -= (ushort)Constants.NodeOffsetSize;
         }
 
-        public byte* AddPageRefNode(int index, Slice key, long pageNumber)
-        {
-            var node = CreateNode(index, key, TreeNodeFlags.PageRef, -1, 0);
-            node->PageNumber = pageNumber;
+		public byte* AddPageRefNode(int index, Slice key, long pageNumber)
+		{
+			var node = CreateNode(index, key, TreeNodeFlags.PageRef, -1, 0);
+			node->PageNumber = pageNumber;
 
-            return null; // nothing to write into page ref node
-        }
+			return null; // nothing to write into page ref node
+		}
 
-        public byte* AddDataNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
-        {
-            Debug.Assert(dataSize >= 0);
-            Debug.Assert(key.Options == SliceOptions.Key);
+		public byte* AddDataNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		{
+			Debug.Assert(dataSize >= 0);
+			Debug.Assert(key.Options == SliceOptions.Key);
 
-            var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize, previousNodeVersion);
-            node->DataSize = dataSize;
+			var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize, previousNodeVersion);
+			node->DataSize = dataSize;
 
-            return (byte*)node + Constants.NodeHeaderSize + key.Size;
-        }
+			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
 
-        public byte* AddMultiValueNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
-        {
-            Debug.Assert(dataSize == sizeof(TreeRootHeader));
-            Debug.Assert(key.Options == SliceOptions.Key);
+		public byte* AddMultiValueNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		{
+			Debug.Assert(dataSize == sizeof(TreeRootHeader));
+			Debug.Assert(key.Options == SliceOptions.Key);
 
-            var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
-            node->DataSize = dataSize;
+			var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
+			node->DataSize = dataSize;
 
-            return (byte*)node + Constants.NodeHeaderSize + key.Size;
-        }
+			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
 
-        public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
-        {
-            const int implicitRefIndex = 0;
+		public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
+		{
+			const int implicitRefIndex = 0;
 
-            var node = GetNode(implicitRefIndex);
+			var node = GetNode(implicitRefIndex);
 
-            node->KeySize = 0;
-            node->Flags = TreeNodeFlags.PageRef;
-            node->Version = 1;
-            node->PageNumber = implicitRefPageNumber;
-        }
+			node->KeySize = 0;
+			node->Flags = TreeNodeFlags.PageRef;
+			node->Version = 1;
+			node->PageNumber = implicitRefPageNumber;
+		}
 
         private TreeNodeHeader* CreateNode(int index, Slice key, TreeNodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
-            if (HasSpaceFor(key, len) == false)
-                throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
+	        if (HasSpaceFor(key, len) == false)
+		        throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
 
             // move higher pointers up one slot
             for (int i = NumberOfEntries; i > index; i--)
@@ -309,14 +314,14 @@ namespace Voron.Trees
             var nodeSize = SizeOf.NodeEntry(PageMaxSpace, key, len);
             var node = AllocateNewNode(index, nodeSize, previousNodeVersion);
 
-            node->KeySize = key.Size;
+	        node->KeySize = key.Size;
 
             if (key.Options == SliceOptions.Key && key.Size > 0)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
-            node->Flags = flags;
+	        node->Flags = flags;
 
-            return node;
+	        return node;
         }
 
         /// <summary>
@@ -325,43 +330,43 @@ namespace Voron.Trees
         /// </summary>
         internal void CopyNodeDataToEndOfPage(TreeNodeHeader* other, Slice key)
         {
-            var index = NumberOfEntries;
+			var index = NumberOfEntries;
 
-            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize));
+			Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize));
 
-            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
+			var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
 
-            Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
+			Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
 
-            var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
-            if (nodeVersion > 0)
-                nodeVersion -= 1;
+	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
+			if (nodeVersion > 0)
+				nodeVersion -= 1;
 
             var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
 
-            newNode->KeySize = key.Size;
+			newNode->KeySize = key.Size;
             newNode->Flags = other->Flags;
 
             if (key.Options == SliceOptions.Key && key.Size > 0)
-                key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+				key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
-            if (IsBranch || other->Flags == (TreeNodeFlags.PageRef))
-            {
-                newNode->PageNumber = other->PageNumber;
-                newNode->Flags = TreeNodeFlags.PageRef;
-                return;
-            }
-            newNode->DataSize = other->DataSize;
+	        if (IsBranch || other->Flags == (TreeNodeFlags.PageRef))
+	        {
+		        newNode->PageNumber = other->PageNumber;
+		        newNode->Flags = TreeNodeFlags.PageRef;
+		        return;
+	        }
+	        newNode->DataSize = other->DataSize;
             Memory.Copy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
 
-        private TreeNodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
+	    private TreeNodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
         {
-            int newSize = previousNodeVersion + 1;
-            if (newSize > ushort.MaxValue)
-                previousNodeVersion = 0;
+	        int newSize = previousNodeVersion + 1;
+	        if (newSize > ushort.MaxValue)
+				previousNodeVersion = 0;
 
             var newNodeOffset = (ushort)(_header->Upper - nodeSize);
             Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
@@ -369,9 +374,9 @@ namespace Voron.Trees
             _header->Upper = newNodeOffset;
             _header->Lower += (ushort)Constants.NodeOffsetSize;
 
-            var node = (TreeNodeHeader*)(_base + newNodeOffset);
+			var node = (TreeNodeHeader*)(_base + newNodeOffset);
             node->Flags = 0;
-            node->Version = ++previousNodeVersion;
+			node->Version = ++previousNodeVersion;
             return node;
         }
 
@@ -384,7 +389,7 @@ namespace Voron.Trees
         public int SizeUsed
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize - SizeLeft; }
+			get { return _pageSize - SizeLeft; }
         }
 
         public byte* Base
@@ -412,28 +417,28 @@ namespace Voron.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
-            {
-                var copy = tmp.GetTempPage();
-                copy.Flags = Flags;
+	        TemporaryPage tmp;
+	        using (tx.Environment.GetTemporaryPage(tx, out tmp))
+	        {
+		        var copy = tmp.GetTempPage();
+				copy.TreeFlags = TreeFlags;
 
-                var slice = CreateNewEmptyKey();
+		        var slice = CreateNewEmptyKey();
 
-                for (int j = 0; j < i; j++)
-                {
-                    var node = GetNode(j);
-                    SetNodeKey(node, ref slice);
+				for (int j = 0; j < i; j++)
+				{
+					var node = GetNode(j);
+					SetNodeKey(node, ref slice);
                     copy.CopyNodeDataToEndOfPage(node, slice);
-                }
+				}
 
                 Memory.Copy(_base + Constants.PageHeaderSize,
-                                     copy._base + Constants.PageHeaderSize,
+									 copy._base + Constants.PageHeaderSize,
                                      _pageSize - Constants.PageHeaderSize);
 
-                Upper = copy.Upper;
-                Lower = copy.Lower;
-            }
+		        Upper = copy.Upper;
+				Lower = copy.Lower;
+	        }
 
             if (LastSearchPosition > i)
                 LastSearchPosition = i;
@@ -447,9 +452,9 @@ namespace Voron.Trees
 
         public override string ToString()
         {
-            if ((Flags & TreePageFlags.FixedSize)==TreePageFlags.FixedSize)
-                return "#" + PageNumber + " (count: " + FixedSize_NumberOfEntries + ") " + Flags;
-            return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + Flags;
+            if ((TreeFlags & TreePageFlags.FixedSize)==TreePageFlags.FixedSize)
+                return "#" + PageNumber + " (count: " + FixedSize_NumberOfEntries + ") " + TreeFlags;
+            return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + TreeFlags;
         }
 
         public string Dump()
@@ -477,32 +482,32 @@ namespace Voron.Trees
             return true;
         }
 
-        private void Defrag(Transaction tx)
-        {
-            TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
-            {
-                var tempPage = tmp.GetTempPage();
+	    private void Defrag(Transaction tx)
+	    {
+		    TemporaryPage tmp;
+		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
+		    {
+			    var tempPage = tmp.GetTempPage();
                 Memory.Copy(tempPage.Base, Base, _pageSize);
 
-                var numberOfEntries = NumberOfEntries;
+			    var numberOfEntries = NumberOfEntries;
 
                 Upper = (ushort)_pageSize;
 
-                for (int i = 0; i < numberOfEntries; i++)
-                {
-                    var node = tempPage.GetNode(i);
-                    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
-                    size += size & 1;
+			    for (int i = 0; i < numberOfEntries; i++)
+			    {
+					var node = tempPage.GetNode(i);
+				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
+				    size += size & 1;
                     Memory.Copy(Base + Upper - size, (byte*)node, size);
                     Upper -= (ushort)size;
-                    KeysOffsets[i] = Upper;
-                }
-            }
-        }
+				    KeysOffsets[i] = Upper;
+			    }
+		    }
+	    }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool HasSpaceFor(int len)
+	    private bool HasSpaceFor(int len)
         {
             return len <= SizeLeft;
         }
@@ -522,16 +527,25 @@ namespace Voron.Trees
          [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetRequiredSpace(Slice key, int len)
         {
-            return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+	        return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
         }
 
-        public int PageMaxSpace
-        {
+	    public int PageMaxSpace
+	    {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _pageSize - Constants.PageHeaderSize; }
-        }
+	    }
 
-        public string this[int i]
+	    public PageFlags Flags
+	    {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->Flags; }
+	    
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->Flags = value; }
+	    }
+
+	    public string this[int i]
         {
             get { return GetNodeKey(i).ToString(); }
         }
@@ -543,15 +557,15 @@ namespace Voron.Trees
             Slice.SetInline(slice, node);
         }
 
-        public Slice GetNodeKey(int nodeNumber)
-        {
-            var node = GetNode(nodeNumber);
+		public Slice GetNodeKey(int nodeNumber)
+		{
+			var node = GetNode(nodeNumber);
 
-            return GetNodeKey(node);
-        }
+			return GetNodeKey(node);
+		}
 
         public Slice GetNodeKey(TreeNodeHeader* node)
-        {
+		{
             var keySize = node->KeySize;
             var key = new byte[keySize];
 
@@ -559,22 +573,22 @@ namespace Voron.Trees
                 Memory.CopyInline(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
             return new Slice(key);
-        }
+		}
 
-        public string DebugView()
-        {
-            var sb = new StringBuilder();
-            for (int i = 0; i < NumberOfEntries; i++)
-            {
-                sb.Append(i)
-                    .Append(": ")
-                    .Append(GetNodeKey(i))
-                    .Append(" - ")
-                    .Append(KeysOffsets[i])
-                    .AppendLine();
-            }
-            return sb.ToString();
-        }
+	    public string DebugView()
+	    {
+		    var sb = new StringBuilder();
+		    for (int i = 0; i < NumberOfEntries; i++)
+		    {
+				sb.Append(i)
+					.Append(": ")
+					.Append(GetNodeKey(i))
+					.Append(" - ")
+					.Append(KeysOffsets[i])
+					.AppendLine();
+		    }
+		    return sb.ToString();
+	    }
 
         [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, long root)
@@ -582,17 +596,17 @@ namespace Voron.Trees
             if (NumberOfEntries == 0)
                 return;
 
-            if (IsBranch && NumberOfEntries < 2)
-            {
-                throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
-            }
+			if (IsBranch && NumberOfEntries < 2)
+			{
+				throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
+			}
 
             var prev = GetNodeKey(0);
             var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)
             {
                 var node = GetNode(i);
-                var current = GetNodeKey(i);
+	            var current = GetNodeKey(i);
 
                 if (prev.Compare(current) >= 0)
                 {
@@ -652,10 +666,10 @@ namespace Voron.Trees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Slice CreateNewEmptyKey()
-        {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public Slice CreateNewEmptyKey()
+		{
             return new Slice(SliceOptions.Key);
-        }
+		}
     }
 }

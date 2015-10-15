@@ -264,7 +264,7 @@ namespace Voron.Impl.Journal
 		}
 
 
-		public TreePage ReadPage(Transaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
+		public Page ReadPage(Transaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
 		{
 			// read transactions have to read from journal snapshots
 			if (tx.Flags == TransactionFlags.Read)
@@ -636,7 +636,7 @@ namespace Voron.Impl.Journal
 					int index = 0;
 					foreach (var page in sortedPages)
 					{
-						written += _waj._dataPager.Write(page);
+						written += _waj._dataPager.WritePage(page);
 						index++;
 					}
 
@@ -651,7 +651,7 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void EnsureDataPagerSpacing(Transaction transaction, TreePage last, int numberOfPagesInLastPage,
+			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
 					bool alreadyInWriteTx)
 			{
 				if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage) == false)

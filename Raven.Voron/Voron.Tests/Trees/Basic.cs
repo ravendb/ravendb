@@ -20,7 +20,7 @@ namespace Voron.Tests.Trees
             List<long> allPages = null;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("a", new MemoryStream(buffer));
+                tx.Root.Add("a", new MemoryStream(buffer));
                 allPages = tx.Root.AllPages();
                 tx.Commit();
             }
@@ -38,7 +38,7 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("test", StreamFor("value"));
+                tx.Root.Add("test", StreamFor("value"));
             }
         }
 
@@ -47,9 +47,9 @@ namespace Voron.Tests.Trees
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("b", StreamFor("2"));
-                tx.Root.Add			("c", StreamFor("3"));
-                tx.Root.Add			("a", StreamFor("1"));
+                tx.Root.Add("b", StreamFor("2"));
+                tx.Root.Add("c", StreamFor("3"));
+                tx.Root.Add("a", StreamFor("1"));
                 var actual = ReadKey(tx, "a");
 
                 Assert.Equal("a", actual.Item1);
@@ -63,7 +63,7 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Slice key = "test";
-                tx.Root.Add			(key, StreamFor("value"));
+                tx.Root.Add(key, StreamFor("value"));
 
                 tx.Commit();
 
@@ -82,7 +82,7 @@ namespace Voron.Tests.Trees
                 for (int i = 0; i < 256; i++)
                 {
                     stream.Position = 0;
-                    tx.Root.Add			("test-" + i, stream);
+                    tx.Root.Add("test-" + i, stream);
 
                 }
 
@@ -107,7 +107,7 @@ namespace Voron.Tests.Trees
             {
                 for (int i = 0; i < count; i++)
                 {
-                    tx.Root.Add			("test-" + i.ToString("000"), StreamFor("val-" + i));
+                    tx.Root.Add("test-" + i.ToString("000"), StreamFor("val-" + i));
 
                 }
 
@@ -140,7 +140,7 @@ namespace Voron.Tests.Trees
                         {
 
                         }
-                        tx.Root.Add			("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
+                        tx.Root.Add("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
                     }
                 }
 

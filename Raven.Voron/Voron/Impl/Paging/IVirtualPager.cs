@@ -23,8 +23,13 @@ namespace Voron.Impl.Paging
         int WriteDirect(byte* p, long pagePosition, int pagesToWrite);
     }
 
-    public static unsafe class VirtualPagerExtensions
+    public static unsafe class VirtualPagerLegacyExtensions
     {
+        public static Page ReadPage(this IVirtualPager pager, long pageNumber, PagerState pagerState = null)
+        {
+            return new Page(pager.AcquirePagePointer(pageNumber, pagerState), pager);
+        }
+
         public static TreePage Read(this IVirtualPager pager, long pageNumber, PagerState pagerState = null)
         {
             return new TreePage(pager.AcquirePagePointer(pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
@@ -44,6 +49,16 @@ namespace Voron.Impl.Paging
             return pager.WriteDirect(page.Base, startPage, toWrite);
         }
 
+
+
+        public static int WritePage(this IVirtualPager pager, Page page, long? pageNumber = null)
+        {
+            var startPage = pageNumber ?? page.PageNumber;
+
+            var toWrite = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
+
+            return pager.WriteDirect(page.Pointer, startPage, toWrite);
+        }
         public static int GetNumberOfOverflowPages(this IVirtualPager pager, int overflowSize)
         {
             overflowSize += Constants.PageHeaderSize;

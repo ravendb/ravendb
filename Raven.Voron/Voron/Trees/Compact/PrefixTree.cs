@@ -38,12 +38,13 @@ namespace Voron.Trees.Compact
 
         public static PrefixTree Create(Transaction tx, TreeFlags flags = TreeFlags.None)
         {
-            var newRootPage = tx.AllocatePage(1, TreePageFlags.Leaf);
+            throw new NotImplementedException();
+            //var newRootPage = tx.AllocatePage(1, TreePageFlags.Leaf);
             
-            var tree = new PrefixTree(tx, newRootPage.PageNumber);
-            tree.State.RecordNewPage(newRootPage, 1);
+            //var tree = new PrefixTree(tx, newRootPage.PageNumber);
+            //tree.State.RecordNewPage(newRootPage, 1);
 
-            return tree;
+            //return tree;
         }
 
         public void Add(Slice key, Stream value, ushort? version = null)

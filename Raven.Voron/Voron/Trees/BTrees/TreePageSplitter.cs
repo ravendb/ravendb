@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -39,13 +39,13 @@ namespace Voron.Trees
             _nodeVersion = nodeVersion;
             _cursor = cursor;
             TreePage page = _cursor.Pages.First.Value;
-            _page = tx.ModifyPage(page.PageNumber, _tree, page);
+            _page = _tree.ModifyPage(page);
             _cursor.Pop();
         }
 
         public byte* Execute()
         {
-            TreePage rightPage = _tree.NewPage(_page.Flags, 1);
+            TreePage rightPage = _tree.NewPage(_page.TreeFlags, 1);
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
@@ -69,13 +69,14 @@ namespace Voron.Trees
                     // can cause a delete of a free space section resulting in a run of the tree rebalancer
                     // and here the parent page that exists in cursor can be outdated
 
-                    _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, null); // pass _null_ to make sure we'll get the most updated parent page
+                    // pass the page number instead of page instance to make sure we'll get the most updated parent page
+                    _parentPage = _tree.ModifyPage(_cursor.CurrentPage.PageNumber);
                     _parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
                     _parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
                 }
                 else
                 {
-                    _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
+                    _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
                 }
 
                 _cursor.Update(_cursor.Pages.First, _parentPage);
@@ -387,7 +388,7 @@ namespace Voron.Trees
             debugInfo.AppendFormat("splitIndex: {0}\r\n", splitIndex);
             debugInfo.AppendFormat("toRight: {0}\r\n", toRight);
 
-            debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.Flags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
+            debugInfo.AppendFormat("_page info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", _page.TreeFlags, _page.NumberOfEntries, _page.SizeLeft, _page.CalcSizeLeft());
 
             for (int i = 0; i < _page.NumberOfEntries; i++)
             {
@@ -397,7 +398,7 @@ namespace Voron.Trees
                     node->DataSize, node->Flags == TreeNodeFlags.Data ? "Size" : "Page");
             }
 
-            debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.Flags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
+            debugInfo.AppendFormat("rightPage info: flags - {0}, # of entries {1}, size left: {2}, calculated size left: {3}\r\n", rightPage.TreeFlags, rightPage.NumberOfEntries, rightPage.SizeLeft, rightPage.CalcSizeLeft());
 
             for (int i = 0; i < rightPage.NumberOfEntries; i++)
             {

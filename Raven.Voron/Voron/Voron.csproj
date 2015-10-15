@@ -67,6 +67,7 @@
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
     <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
+    <Compile Include="Page.cs" />
     <Compile Include="Trees\Compact\PrefixTree.cs" />
     <Compile Include="Trees\Compact\PrefixTreeFlags.cs" />
     <Compile Include="Trees\Compact\PrefixTreeMutableState.cs" />

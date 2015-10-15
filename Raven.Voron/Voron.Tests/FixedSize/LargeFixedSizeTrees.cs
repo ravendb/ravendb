@@ -142,7 +142,7 @@ namespace Voron.Tests.FixedSize
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
-        [InlineData(1024*256)]
+        [InlineData(1024 * 256)]
         public void CanDeleteRange(int count)
         {
             var bytes = new byte[48];

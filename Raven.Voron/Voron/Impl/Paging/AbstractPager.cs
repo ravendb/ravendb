@@ -59,14 +59,45 @@ namespace Voron.Impl.Paging
             PagerState.AddRef();
         }
 
-        public int PageSize { get; private set; }
-        public int PageMinSpace { get; private set; }
+        public int PageSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
-        public bool DeleteOnClose { get; set; }
+        public int PageMinSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
-        public int NodeMaxSize { get; private set; }
+        public bool DeleteOnClose
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set;
+        }
 
-        public int PageMaxSpace { get; private set; }
+        public int NodeMaxSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public int PageMaxSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 

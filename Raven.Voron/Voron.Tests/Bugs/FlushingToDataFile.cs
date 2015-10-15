@@ -35,14 +35,14 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("foo/0", new MemoryStream(value1));
+                tx.Root.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("foo/1", new MemoryStream(value1));
+                tx.Root.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
@@ -87,22 +87,22 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("foo/0", new MemoryStream(value1));
-                tx.Root.Add			("foo/1", new MemoryStream(value1));
+                tx.Root.Add("foo/0", new MemoryStream(value1));
+                tx.Root.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("foo/0", new MemoryStream(value1));
+                tx.Root.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.Root.Add			("foo/4", new MemoryStream(value1));
+                tx.Root.Add("foo/4", new MemoryStream(value1));
                 tx.Commit();
             }
 

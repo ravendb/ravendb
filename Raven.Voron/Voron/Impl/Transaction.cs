@@ -154,8 +154,8 @@ namespace Voron.Impl
 			
             _transactionHeaderPage = allocation;
 
-			UnmanagedMemory.Set(page.Base, 0, Environment.Options.PageSize);
-			_txHeader = (TransactionHeader*)page.Base;
+			UnmanagedMemory.Set(page.Pointer, 0, Environment.Options.PageSize);
+			_txHeader = (TransactionHeader*)page.Pointer;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
 			_txHeader->TransactionId = _id;
@@ -205,27 +205,19 @@ namespace Voron.Impl
 		    return null;
 		}
 
-		internal TreePage ModifyPage(long num, Tree tree, TreePage page)
+		internal Page ModifyPage(long num)
 		{
 			_env.AssertFlushingNotFailed();
 
-			page = page ?? GetReadOnlyPage(num);
-			if (page.Dirty)
-				return page;
-
-			if (_dirtyPages.Contains(num))
+            var currentPage = GetPage(num);
+            if (_dirtyPages.Contains(num))
 			{
-				page.Dirty = true;
-				return page;
+			    return currentPage;
 			}
 
-		    var newPage = AllocatePage(1, TreePageFlags.None, num); // allocate new page in a log file but with the same number
-
-			Memory.Copy(newPage.Base, page.Base, Environment.Options.PageSize);
-			newPage.LastSearchPosition = page.LastSearchPosition;
-			newPage.LastMatch = page.LastMatch;
-			tree.RecentlyFoundPages.Reset(num);
-
+		    var newPage =  AllocatePage(1, num); // allocate new page in a log file but with the same number
+            Memory.Copy(newPage.Pointer, currentPage.Pointer, Environment.Options.PageSize);
+		
 			return newPage;
 		}
 
@@ -245,11 +237,11 @@ namespace Voron.Impl
         private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
 	    private bool _disposed;
 
-	    public TreePage GetReadOnlyPage(long pageNumber)
+	    public Page GetPage(long pageNumber)
 	    {
 	        if (_disposed)
 	            throw new ObjectDisposedException("Transaction");
-			TreePage p;
+			Page p;
 
             PageFromScratchBuffer value;
             if ( _scratchPagesTable.TryGetValue(pageNumber, out value))
@@ -273,7 +265,7 @@ namespace Voron.Impl
             }
             else
             {
-  			    p =  _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.Read(pageNumber);
+  			    p =  _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.ReadPage(pageNumber);
             }
 
             Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
@@ -281,63 +273,64 @@ namespace Voron.Impl
 		    return p;
 		}
 
-		internal TreePage AllocatePage(int numberOfPages, TreePageFlags flags, long? pageNumber = null)
-		{
-            if (_disposed)
-                throw new ObjectDisposedException("Transaction");
+        public Page AllocatePage(int numberOfPages, long? pageNumber = null)
+	    {
+            if (pageNumber == null)
+            {
+                pageNumber = _freeSpaceHandling.TryAllocateFromFreeSpace(this, numberOfPages);
+                if (pageNumber == null) // allocate from end of file
+                {
+                    pageNumber = State.NextPageNumber;
+                    State.NextPageNumber += numberOfPages;
+                }
+            }
+            return AllocatePage(numberOfPages, pageNumber.Value);
+	    }
 
-			if (pageNumber == null)
-			{
-				pageNumber = _freeSpaceHandling.TryAllocateFromFreeSpace(this, numberOfPages);
-				if (pageNumber == null) // allocate from end of file
-				{
-					pageNumber = State.NextPageNumber;
-					State.NextPageNumber += numberOfPages;
-				}
-			}
+	    private Page AllocatePage(int numberOfPages, long pageNumber)
+	    {
+	        if (_disposed)
+	            throw new ObjectDisposedException("Transaction");
 
-			if (_env.Options.MaxStorageSize.HasValue) // check against quota
-			{
-				var maxAvailablePageNumber = _env.Options.MaxStorageSize / Environment.Options.PageSize;
+	        if (_env.Options.MaxStorageSize.HasValue) // check against quota
+	        {
+	            var maxAvailablePageNumber = _env.Options.MaxStorageSize/Environment.Options.PageSize;
 
-				if(pageNumber.Value > maxAvailablePageNumber)
-					throw new QuotaException(
-						string.Format(
-							"The maximum storage size quota ({0} bytes) has been reached. " +
-							"Currently configured storage quota is allowing to allocate the following maximum page number {1}, while the requested page number is {2}. " +
-							"To increase the quota, use the MaxStorageSize property on the storage environment options.",
-							_env.Options.MaxStorageSize, maxAvailablePageNumber, pageNumber.Value));
-			}
+	            if (pageNumber > maxAvailablePageNumber)
+	                throw new QuotaException(
+	                    string.Format(
+	                        "The maximum storage size quota ({0} bytes) has been reached. " +
+	                        "Currently configured storage quota is allowing to allocate the following maximum page number {1}, while the requested page number is {2}. " +
+	                        "To increase the quota, use the MaxStorageSize property on the storage environment options.",
+	                        _env.Options.MaxStorageSize, maxAvailablePageNumber, pageNumber));
+	        }
 
 
-			Debug.Assert(pageNumber < State.NextPageNumber);
+	        Debug.Assert(pageNumber < State.NextPageNumber);
 
-			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
-			_transactionPages.Add(pageFromScratchBuffer);
+	        var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+	        _transactionPages.Add(pageFromScratchBuffer);
 
-			var page = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-			page.PageNumber = pageNumber.Value;
+	        _allocatedPagesInTransaction++;
+	        if (numberOfPages > 1)
+	        {
+	            _overflowPagesInTransaction += (numberOfPages - 1);
+	        }
 
-			_allocatedPagesInTransaction++;
-			if (numberOfPages > 1)
-			{
-				_overflowPagesInTransaction += (numberOfPages - 1);
-			}
+	        _scratchPagesTable[pageNumber] = pageFromScratchBuffer;
 
-			_scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
+	        _dirtyPages.Add(pageNumber);
 
-			page.Lower = (ushort)Constants.PageHeaderSize;
-			page.Flags = flags;
-			page.Upper = (ushort)Environment.Options.PageSize;
-			page.Dirty = true;
+	        if (numberOfPages > 1)
+	            _dirtyOverflowPages.Add(pageNumber + 1, numberOfPages - 1);
 
-			_dirtyPages.Add(page.PageNumber);
+	        var newPage = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.ScratchFileNumber,
+	            pageFromScratchBuffer.PositionInScratchBuffer);
+	        newPage.PageNumber = pageNumber;
+	        newPage.Flags = PageFlags.Single;
+	        return newPage;
 
-			if (numberOfPages > 1)
-				_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
-
-			return page;
-		}
+	    }
 
 	    public IEnumerable<Tree> Trees
 	    {
@@ -615,4 +608,12 @@ namespace Voron.Impl
 			return this;
 		}
 	}
+
+    public static class TransactionLegacyExtensions
+    {
+        public static TreePage GetReadOnlyPage(this Transaction tx, long pageNumber)
+        {
+            return tx.GetPage(pageNumber).ToTreePage();
+        }
+    }
 }

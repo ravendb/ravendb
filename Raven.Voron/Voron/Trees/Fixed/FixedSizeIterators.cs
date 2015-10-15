@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Voron.Impl;
 using Voron.Impl.FileHeaders;
 
 namespace Voron.Trees.Fixed

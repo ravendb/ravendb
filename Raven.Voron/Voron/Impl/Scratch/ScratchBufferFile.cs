@@ -204,9 +204,9 @@ namespace Voron.Impl.Scratch
 			}
 		}
 
-		public TreePage ReadPage(long p, PagerState pagerState = null)
+        public Page ReadPage(long p, PagerState pagerState = null)
 		{
-			return _scratchPager.Read(p, pagerState);
+            return new Page(_scratchPager.AcquirePagePointer(p, pagerState), _scratchPager);
 		}
 
 		public byte* AcquirePagePointer(long p)
