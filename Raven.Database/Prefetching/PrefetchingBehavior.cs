@@ -38,7 +38,8 @@ namespace Raven.Database.Prefetching
 		private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
 		private int currentIndexingAge;
 		private string userDescription;
-
+		private int splitBatchesCount;
+		private const int MaxSplittedFutureBatches = 5;
 		public Action<int> FutureBatchCompleted = delegate { };
 
 		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
@@ -339,7 +340,9 @@ namespace Raven.Database.Prefetching
                     case TaskStatus.WaitingToRun:
                     case TaskStatus.Running:
                     case TaskStatus.WaitingForChildrenToComplete:
-                        if (allowWaiting == false)
+						//
+						Interlocked.CompareExchange(ref splitBatchesCount, 16, 0);
+						if (allowWaiting == false)
                             return false;
                         break;
                     case TaskStatus.RanToCompletion:
@@ -372,7 +375,7 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag, Etag untilEtag)
+		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag, Etag untilEtag, bool ignoreSizeCalculation = false, bool forceCreateNextBatch = false)
 		{
 			List<JsonDocument> jsonDocs = null;
 
@@ -382,20 +385,12 @@ namespace Raven.Database.Prefetching
 
 			context.TransactionalStorage.Batch(actions =>
 			{
-				//limit how much data we load from disk --> better adhere to memory limits
-				var totalSizeAllowedToLoadInBytes =
-					(context.Configuration.DynamicMemoryLimitForProcessing) -
-                    (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
-
-				// at any rate, we will load a min of 512Kb docs
-				var maxSize = Math.Max(
-					Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
-					1024 * 512);
+				var maxSize = GetDocumentsMaxSize(currentlyUsedBatchSizesInBytes, ignoreSizeCalculation);
 
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
 						etag,
-						autoTuner.NumberOfItemsToProcessInSingleBatch,
+						ignoreSizeCalculation == false ? autoTuner.NumberOfItemsToProcessInSingleBatch : int.MaxValue,
 						context.CancellationToken,
 						maxSize,
 						untilEtag,
@@ -410,11 +405,29 @@ namespace Raven.Database.Prefetching
 					.ToList();
 			});
 
-			if (untilEtag == null)
+			if (untilEtag == null || forceCreateNextBatch)
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
 			return jsonDocs;
+		}
+
+		private long? GetDocumentsMaxSize(long currentlyUsedBatchSizesInBytes, bool ignoreSizeCalculation = false)
+		{
+			if (ignoreSizeCalculation)
+				return null;
+
+			//limit how much data we load from disk --> better adhere to memory limits
+			var totalSizeAllowedToLoadInBytes =
+				(context.Configuration.DynamicMemoryLimitForProcessing) -
+				(prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
+
+			// at any rate, we will load a min of 512Kb docs
+			var maxSize = Math.Max(
+				Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
+				1024*512);
+
+			return maxSize;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
@@ -452,7 +465,7 @@ namespace Raven.Database.Prefetching
 
 			if (MemoryStatistics.IsLowMemory)
 				return;
-			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
+			if (futureIndexBatches.Count > 10) // we limit the number of future calls we do
 			{
 				int alreadyLoaded = futureIndexBatches.Values.Sum(x =>
 				{
@@ -461,7 +474,7 @@ namespace Raven.Database.Prefetching
 					return autoTuner.NumberOfItemsToProcessInSingleBatch / 4 * 3;
 				});
 
-				if (alreadyLoaded > autoTuner.NumberOfItemsToProcessInSingleBatch)
+				if (alreadyLoaded > autoTuner.NumberOfItemsToProcessInSingleBatch * 2)
 					return;
 			}
 
@@ -480,6 +493,50 @@ namespace Raven.Database.Prefetching
 			if (futureIndexBatches.ContainsKey(nextEtag)) // already loading this
 				return;
 
+			if (splitBatchesCount == 0)
+			{
+				AddFutureIndexBatch(nextEtag);
+				return;
+			}
+
+			if (splitBatchesCount < 0)
+				return;
+
+			Interlocked.Decrement(ref splitBatchesCount);
+
+			long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
+			context.TransactionalStorage.Batch(actions =>
+			{
+				var maxSize = GetDocumentsMaxSize(currentlyUsedBatchSizesInBytes);
+
+				var numberOfItemsToProcessInEachBatch = autoTuner.NumberOfItemsToProcessInSingleBatch/MaxSplittedFutureBatches;
+				var sizeToProcessInEachBatch = maxSize/MaxSplittedFutureBatches;
+
+				for (var i = 0; i < MaxSplittedFutureBatches; i++) {
+					var highestEtag = actions.Documents
+						.GetNextDocumentEtag(
+							nextEtag,
+							numberOfItemsToProcessInEachBatch,
+							context.CancellationToken,
+							sizeToProcessInEachBatch,
+							autoTuner.FetchingDocumentsFromDiskTimeout
+						);
+
+					//there are no more documents to index
+					if (highestEtag == null)
+						break;
+
+					AddFutureIndexBatch(nextEtag, highestEtag);
+
+					nextEtag = actions.Documents.GetBestNextDocumentEtag(highestEtag);
+					if (nextEtag == highestLoadedEtag)
+						break; // there is nothing newer to do
+				}
+			});
+		}
+
+		private void AddFutureIndexBatch(Etag nextEtag, Etag untilEtag = null, bool forceCreateNextBatch = false)
+		{
 			var futureBatchStat = new FutureBatchStats
 			{
 				Timestamp = SystemTime.UtcNow,
@@ -497,7 +554,7 @@ namespace Raven.Database.Prefetching
 					int localWork = 0;
 					while (context.RunIndexing)
 					{
-						jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), null);
+						jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), untilEtag, untilEtag != null, forceCreateNextBatch);
 						if (jsonDocuments.Count > 0)
 							break;
 
