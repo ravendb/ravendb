@@ -11,18 +11,18 @@ namespace Raven.Smuggler.Database.Impl.Streams
 {
 	public class DatabaseSmugglerStreamActionsBase : IDisposable
 	{
-		private readonly JsonTextWriter _writer;
+		protected JsonTextWriter Writer { get; private set; }
 
 		public DatabaseSmugglerStreamActionsBase(JsonTextWriter writer, string sectionName)
 		{
-			_writer = writer;
-			_writer.WritePropertyName(sectionName);
-			_writer.WriteStartArray();
+			Writer = writer;
+			Writer.WritePropertyName(sectionName);
+			Writer.WriteStartArray();
 		}
 
 		public void Dispose()
 		{
-			_writer.WriteEndArray();
+			Writer.WriteEndArray();
 		}
 	}
 }

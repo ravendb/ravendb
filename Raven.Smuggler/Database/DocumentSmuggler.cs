@@ -78,10 +78,7 @@ namespace Raven.Smuggler.Database
 									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
 										continue;
 
-									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
-										continue;
-
-									if (!string.IsNullOrEmpty(Options.TransformScript))
+									if (string.IsNullOrEmpty(Options.TransformScript) == false)
 										document = await TransformDocumentAsync(document).ConfigureAwait(false);
 
 									// If document is null after a transform we skip it. 
@@ -128,7 +125,7 @@ namespace Raven.Smuggler.Database
 							if (hasDocs)
 								continue;
 
-							if (Source.SupportsGettingStatistics)
+							if (Source.SupportsReadingDatabaseStatistics)
 							{
 								// The server can filter all the results. In this case, we need to try to go over with the next batch.
 								// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
@@ -148,7 +145,7 @@ namespace Raven.Smuggler.Database
 							}
 						}
 
-						if (Source.SupportsReadingSingleDocuments)
+						if (Source.SupportsReadingHiLoDocuments)
 						{
 							// Load HiLo documents for selected collections
 							foreach (var filter in Options.Filters)
@@ -159,7 +156,7 @@ namespace Raven.Smuggler.Database
 								foreach (var collectionName in filter.Values)
 								{
 									var doc = await Source
-														.ReadDocumentAsync("Raven/Hilo/" + collectionName)
+														.ReadDocumentAsync("Raven/HiLo/" + collectionName)
 														.ConfigureAwait(false);
 
 									if (doc == null)

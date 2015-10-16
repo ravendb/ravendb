@@ -50,7 +50,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public IDatabaseSmugglerTransformerActions TransformerActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerStreamTransformerActions(_writer);
 		}
 
 		public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()

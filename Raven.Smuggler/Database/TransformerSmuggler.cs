@@ -26,13 +26,14 @@ namespace Raven.Smuggler.Database
 			using (var actions = Destination.TransformerActions())
 			{
 				var count = 0;
-				var retries = DatabaseSmuggler.NumberOfRetries;
-				while (true)
+				var retries = Source.SupportsRetries ? DatabaseSmuggler.NumberOfRetries : 1;
+				var pageSize = Source.SupportsPaging ? Options.BatchSize : int.MaxValue;
+				do
 				{
 					List<TransformerDefinition> transformers;
 					try
 					{
-						transformers = await Source.ReadTransformersAsync(count, Options.BatchSize, Options).ConfigureAwait(false);
+						transformers = await Source.ReadTransformersAsync(count, pageSize, Options).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -73,7 +74,7 @@ namespace Raven.Smuggler.Database
 							Report.ShowProgress("Failed to export transformer {0}. Message: {1}", transformer, e.Message);
 						}
 					}
-				}
+				} while (Source.SupportsPaging || Source.SupportsRetries);
 			}
 		}
 	}

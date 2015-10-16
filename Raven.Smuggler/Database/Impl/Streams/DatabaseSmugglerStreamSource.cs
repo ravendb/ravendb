@@ -129,9 +129,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			throw new System.NotImplementedException();
 		}
 
-		public bool SupportsGettingStatistics { get; }
+		public bool SupportsReadingDatabaseStatistics { get; }
 
-		public bool SupportsReadingSingleDocuments { get; }
+		public bool SupportsReadingHiLoDocuments { get; }
 
 		public bool SupportsDocumentDeletions { get; }
 
@@ -153,7 +153,25 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, DatabaseSmugglerOptions options)
 		{
-			throw new System.NotImplementedException();
+			var results = new List<TransformerDefinition>();
+			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
+			{
+				_cancellationToken.ThrowIfCancellationRequested();
+
+				var transformer = RavenJToken.ReadFrom(_reader);
+				if (options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
+					continue;
+
+				var transformerName = transformer.Value<string>("name");
+				var definition = transformer.Value<RavenJObject>("definition");
+
+				var transformerDefinition = definition.JsonDeserialization<TransformerDefinition>();
+				transformerDefinition.Name = transformerName;
+
+				results.Add(transformerDefinition);
+			}
+
+			return new CompletedTask<List<TransformerDefinition>>(results);
 		}
 
 		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag)

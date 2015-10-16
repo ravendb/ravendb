@@ -9,17 +9,14 @@ namespace Raven.Smuggler.Database.Impl.Streams
 {
 	public class DatabaseSmugglerStreamDocumentActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerDocumentActions
 	{
-		private readonly JsonTextWriter _writer;
-
 		public DatabaseSmugglerStreamDocumentActions(JsonTextWriter writer)
 			: base(writer, "Docs")
 		{
-			_writer = writer;
 		}
 
 		public Task WriteDocumentAsync(RavenJObject document)
 		{
-			document.WriteTo(_writer);
+			document.WriteTo(Writer);
 			return new CompletedTask();
 		}
 	}

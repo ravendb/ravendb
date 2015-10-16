@@ -25,9 +25,9 @@ namespace Raven.Smuggler.Database
 
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
-		bool SupportsGettingStatistics { get; }
+		bool SupportsReadingDatabaseStatistics { get; }
 
-		bool SupportsReadingSingleDocuments { get; }
+		bool SupportsReadingHiLoDocuments { get; }
 
 		bool SupportsDocumentDeletions { get; }
 
