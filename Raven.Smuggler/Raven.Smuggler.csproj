@@ -91,8 +91,30 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Database\DatabaseSmugglerOptions.cs" />
+    <Compile Include="Database\DocumentDeletionsSmuggler.cs" />
+    <Compile Include="Database\DocumentSmuggler.cs" />
+    <Compile Include="Database\IDatabaseSmugglerDestination.cs" />
+    <Compile Include="Database\IDatabaseSmugglerDocumentActions.cs" />
+    <Compile Include="Database\IDatabaseSmugglerDocumentDeletionActions.cs" />
+    <Compile Include="Database\IDatabaseSmugglerIdentityActions.cs" />
+    <Compile Include="Database\IDatabaseSmugglerIndexActions.cs" />
+    <Compile Include="Database\IDatabaseSmugglerSource.cs" />
+    <Compile Include="Database\IDatabaseSmugglerTransformerActions.cs" />
+    <Compile Include="Database\IdentitySmuggler.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamActionsBase.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDestination.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamIndexActions.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamSource.cs" />
+    <Compile Include="Database\IndexSmuggler.cs" />
+    <Compile Include="Database\ReportActions.cs" />
+    <Compile Include="Database\SmugglerBase.cs" />
+    <Compile Include="Database\SmuggleType.cs" />
+    <Compile Include="Database\TransformerSmuggler.cs" />
     <Compile Include="Helpers\ConsoleHelper.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Database\DatabaseSmuggler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
