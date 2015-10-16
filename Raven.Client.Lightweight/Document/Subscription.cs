@@ -219,7 +219,7 @@ namespace Raven.Client.Document
 						queue.CompleteAdding();
 
 						if (processingTask != null)
-							await processingTask;
+							await processingTask.ConfigureAwait(false);
 
 						if (IsErroredBecauseOfSubscriber)
 							break;

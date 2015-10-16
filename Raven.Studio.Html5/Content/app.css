@@ -6921,6 +6921,7 @@ body {
   cursor: pointer;
   border-radius: 2px;
   box-shadow: 0 0 5px 2px silver;
+  border-left: solid 5px silver;
   min-width: 160px;
   min-height: 70px;
   display: inline-block;
@@ -7042,6 +7043,9 @@ body {
 #resources-page .resources-container .resource.selected {
   box-shadow: 0 0 20px 0 #f36523;
 }
+#resources-page .resources-container .resource.isLoaded {
+  border-left: solid 5px #38B44A;
+}
 #resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
@@ -7118,7 +7122,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-overflow: ellipsis;
   max-width: 90%;
 }
-.document-collections li:not(:first-child) {
+.document-collections.has-show-all-items li:not(:first-child) {
   padding-left: 15px;
 }
 #index-merge-suggestions .index-name {
@@ -7448,6 +7452,14 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #nprogress .peg {
   opacity: 0;
+}
+.collection-resize {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  width: 10px;
+  top: 0;
+  cursor: col-resize;
 }
 .documents-page {
   margin-top: 10px;
@@ -8196,10 +8208,15 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }*/
 #fileSystemFilesPage .files-select {
   text-align: center;
-  background-color: #ffffcc;
+  background-color: #ffc;
   margin-top: 5px;
   border: 1px solid;
-  border-radius: 25px;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#fileSystemFilesPage .files-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 #editFileContainer:focus {
   outline: 0;
@@ -8431,9 +8448,22 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }
 #resources-page .resources-container .resource.fs:hover {
   box-shadow: 0 0 5px 0 #ab26f3;
+  -webkit-box-shadow: 0 0 5px 0 #ab26f3;
+  -moz-box-shadow: 0 0 5px 0 #ab26f3;
 }
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
+  -webkit-box-shadow: 0 0 20px 0 #7109AA;
+  -moz-box-shadow: 0 0 20px 0 #7109AA;
+}
+#resources-page .resources-container .resource.cs a {
+  color: #0f6716;
+}
+#resources-page .resources-container .resource.cs:hover {
+  box-shadow: 0 0 5px 0 #1cc029;
+}
+#resources-page .resources-container .resource.cs.selected {
+  box-shadow: 0 0 20px 0 #0f6716;
 }
 .form-checkbox-control {
   width: 35px;
@@ -8464,6 +8494,12 @@ a.global_help_link:focus {
 .negative-margin {
   margin-top: -10px;
 }
+.padd-top-10 {
+  padding-top: 10px;
+}
+.padd-right-10 {
+  padding-right: 10px;
+}
 #indexingPerformance {
   background-color: white;
 }
@@ -8487,4 +8523,14 @@ a.global_help_link:focus {
 }
 #matchingDocumentsGrid {
   margin-bottom: -30px;
+}
+.experimental {
+  font-size: 9px;
+  font-weight: bold;
+  color: red;
+}
+.time-series-label {
+  width: 55px;
+  display: inline-block;
+  font-weight: bold;
 }
