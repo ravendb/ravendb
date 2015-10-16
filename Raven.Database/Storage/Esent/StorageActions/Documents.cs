@@ -252,7 +252,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
         {
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -375,7 +375,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 	        return stat;
 	    }
 
-	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (take <= 0)
 				yield break;
@@ -404,6 +404,38 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				yield return ReadCurrentDocument();
 				take--;
 			} while (Api.TryMoveNext(session, Documents) && take > 0);
+		}
+
+		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, TimeSpan? timeout = null)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+				return etag;
+
+			Stopwatch duration = null;
+			if (timeout != null)
+				duration = Stopwatch.StartNew();
+			Etag docEtag;
+			long totalSize = 0;
+
+			do
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+				totalSize += Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+
+				if (maxSize != null && totalSize > maxSize.Value)
+					break;
+
+				if (timeout != null)
+				{
+					if (duration.Elapsed > timeout.Value)
+						break;
+				}
+			} while (Api.TryMoveNext(session, Documents) && --take > 0);
+
+			return docEtag;
 		}
 
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)

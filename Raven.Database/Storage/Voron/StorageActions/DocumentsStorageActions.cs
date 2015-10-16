@@ -94,7 +94,57 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
+		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, TimeSpan? timeout = null)
+		{
+			if (take < 0)
+				throw new ArgumentException("must have zero or positive value", "take");
+
+			if (take == 0)
+				return etag;
+
+			if (string.IsNullOrEmpty(etag))
+				throw new ArgumentNullException("etag");
+
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+											  .Iterate(Snapshot, writeBatch.Value))
+			{
+				var slice = (Slice)etag.ToString();
+				if (iterator.Seek(slice) == false)
+					return etag;
+
+				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+				{
+					if (iterator.MoveNext() == false)
+						return etag;
+				}
+				Stopwatch duration = null;
+				if (timeout != null)
+					duration = Stopwatch.StartNew();
+				Etag docEtag;
+				long totalSize = 0;
+
+				do
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+					//TODO: How to calculate the total size of the skipped document?
+					if (maxSize.HasValue && totalSize >= maxSize)
+						break;
+
+					// We can skip many documents so the timeout should be at the start of the process to be executed.
+					if (timeout != null)
+					{
+						if (duration.Elapsed > timeout.Value)
+							break;
+					}
+				}
+				while (iterator.MoveNext() && --take > 0);
+
+				return docEtag;
+			}
+		}
+
+		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
         {
             if (take < 0)
                 throw new ArgumentException("must have zero or positive value", "take");

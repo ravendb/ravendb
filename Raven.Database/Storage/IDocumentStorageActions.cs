@@ -25,6 +25,7 @@ namespace Raven.Database.Storage
         IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
         IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
+		Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, TimeSpan? timeout = null);
 
 		long GetDocumentsCount();
 
