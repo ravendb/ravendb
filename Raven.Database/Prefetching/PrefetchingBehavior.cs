@@ -526,7 +526,7 @@ namespace Raven.Database.Prefetching
 					if (highestEtag == null)
 						break;
 
-					AddFutureIndexBatch(nextEtag, highestEtag);
+					AddFutureIndexBatch(nextEtag, highestEtag, i == MaxSplittedFutureBatches - 1);
 
 					nextEtag = actions.Documents.GetBestNextDocumentEtag(highestEtag);
 					if (nextEtag == highestLoadedEtag)
