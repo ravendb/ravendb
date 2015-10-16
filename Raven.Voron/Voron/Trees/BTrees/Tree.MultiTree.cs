@@ -41,7 +41,7 @@ namespace Voron.Trees
 		public void MultiAdd(Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
-			int maxNodeSize = Tx.DataPager.NodeMaxSize;
+			int maxNodeSize = Llt.DataPager.NodeMaxSize;
 			if (value.Size > maxNodeSize)
 				throw new ArgumentException(
 					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
@@ -56,7 +56,7 @@ namespace Voron.Trees
 			var page = FindPageFor(key, out node, out lazy);
 			if ((page == null || page.LastMatch != 0))
 			{
-				MultiAddOnNewValue(_tx, key, value, version, maxNodeSize);
+				MultiAddOnNewValue(key, value, version, maxNodeSize);
 				return;
 			}
 
@@ -66,7 +66,7 @@ namespace Voron.Trees
 			// already was turned into a multi tree, not much to do here
 			if (item->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
-				var existingTree = OpenMultiValueTree(_tx, key, item);
+				var existingTree = OpenMultiValueTree(key, item);
 				existingTree.DirectAdd(value, 0, version: version);
 				return;
 			}
@@ -79,10 +79,10 @@ namespace Voron.Trees
 			}
 			else
 			{
-				nestedPagePtr = TreeNodeHeader.DirectAccess(_tx, item);
+				nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
 			}
 
-			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item));
+			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item));
 
 			var existingItem = nestedPage.Search(value);
 			if (nestedPage.LastMatch != 0)
@@ -102,7 +102,7 @@ namespace Voron.Trees
 
             var valueToInsert = value;
 
-			if (nestedPage.HasSpaceFor(_tx, valueToInsert, 0))
+			if (nestedPage.HasSpaceFor(_llt, valueToInsert, 0))
 			{
 				// we are now working on top of the modified root page, we can just modify the memory directly
 				nestedPage.AddDataNode(nestedPage.LastSearchPosition, valueToInsert, 0, previousNodeRevision);
@@ -116,13 +116,13 @@ namespace Voron.Trees
 				// we can just expand the current value... no need to create a nested tree yet
                 var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
 
-                var currentDataSize = TreeNodeHeader.GetDataSize(_tx, item);
-                ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, currentDataSize);
+                var currentDataSize = TreeNodeHeader.GetDataSize(_llt, item);
+                ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, actualPageSize, currentDataSize);
 
 				return;
 			}
 			// we now have to convert this into a tree instance, instead of just a nested page
-			var tree = Create(_tx, TreeFlags.MultiValue);
+			var tree = Create(_llt, _tx, TreeFlags.MultiValue);
 			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
 			{
 				var existingValue = nestedPage.GetNodeKey(i);
@@ -134,11 +134,11 @@ namespace Voron.Trees
 			DirectAdd(key, sizeof (TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
 		}
 
-		private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
+		private void ExpandMultiTreeNestedPageSize(Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
 		{
 			Debug.Assert(newSize > currentSize);
 			TemporaryPage tmp;
-			using (tx.Environment.GetTemporaryPage(tx, out tmp))
+			using (_llt.Environment.GetTemporaryPage(_llt, out tmp))
 			{
 				var tempPagePointer = tmp.TempPagePointer;
                 Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
@@ -168,7 +168,7 @@ namespace Voron.Trees
 			}
 		}
 
-		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
+		private void MultiAddOnNewValue(Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
 			Slice valueToInsert = value;
 
@@ -178,9 +178,9 @@ namespace Voron.Trees
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
 				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-				var tree = Create(tx, TreeFlags.MultiValue);
+				var tree = Create(_llt, _tx, TreeFlags.MultiValue);
 				tree.DirectAdd(value, 0);
-				tx.AddMultiValueTree(this, key, tree);
+				_tx.AddMultiValueTree(this, key, tree);
 
 				DirectAdd(key, sizeof (TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
 				return;
@@ -220,7 +220,7 @@ namespace Voron.Trees
 
 			if (item->Flags == TreeNodeFlags.MultiValuePageRef) //multi-value tree exists
 			{
-				var tree = OpenMultiValueTree(_tx, key, item);
+				var tree = OpenMultiValueTree(key, item);
 
 				tree.Delete(value, version);
 
@@ -230,13 +230,13 @@ namespace Voron.Trees
 				if (tree.State.EntriesCount != 0) 
 					return;
 				_tx.TryRemoveMultiValueTree(this, key);
-				_tx.FreePage(tree.State.RootPageNumber);
+				_llt.FreePage(tree.State.RootPageNumber);
 
 				Delete(key);
 			}
 			else // we use a nested page here
 			{
-				var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item));
+				var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, item), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item));
 				var nestedItem = nestedPage.Search(value);
 				if (nestedPage.LastMatch != 0) // value not found
 					return;
@@ -249,10 +249,10 @@ namespace Voron.Trees
 				}
 				else
 				{
-					nestedPagePtr = TreeNodeHeader.DirectAccess(_tx, item);
+					nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
 				}
 
-				nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, item))
+				nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item))
 				{
 					LastSearchPosition = nestedPage.LastSearchPosition
 				};
@@ -283,12 +283,12 @@ namespace Voron.Trees
 
 			if (node->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
-				var tree = OpenMultiValueTree(_tx, key, node);
+				var tree = OpenMultiValueTree(key, node);
 
 				return tree.State.EntriesCount;
 			}
 
-			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, node));
+			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, node));
 
 			return nestedPage.NumberOfEntries;
 		}
@@ -311,31 +311,31 @@ namespace Voron.Trees
 
 			if (node->Flags == TreeNodeFlags.MultiValuePageRef)
 			{
-				var tree = OpenMultiValueTree(_tx, key, node);
+				var tree = OpenMultiValueTree(key, node);
 
 				return tree.Iterate();
 			}
 
-			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_tx, node));
+			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, node));
 				
 			return new TreePageIterator(nestedPage);
 		}
 
-		private Tree OpenMultiValueTree(Transaction tx, Slice key, TreeNodeHeader* item)
+		private Tree OpenMultiValueTree(Slice key, TreeNodeHeader* item)
 		{
 			Tree tree;
-			if (tx.TryGetMultiValueTree(this, key, out tree))
+			if (_tx.TryGetMultiValueTree(this, key, out tree))
 				return tree;
 
 			var childTreeHeader =
 				(TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
 
-			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
+			Debug.Assert(childTreeHeader->RootPageNumber < _llt.State.NextPageNumber);
 			Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
 			
-			tree = Open(tx, childTreeHeader);
+			tree = Open(_llt, _tx,childTreeHeader);
 
-			tx.AddMultiValueTree(this, key, tree);
+			_tx.AddMultiValueTree(this, key, tree);
 			return tree;
 		}
 

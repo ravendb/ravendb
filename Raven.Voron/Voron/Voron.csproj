@@ -81,8 +81,6 @@
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
     <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="MemorySlice.cs" />
-    <Compile Include="Debugging\DebugActionType.cs" />
-    <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Exceptions\DiskFullException.cs" />
@@ -132,10 +130,7 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
-    <Compile Include="Impl\SnapshotReader.cs" />
-    <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
-    <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
     <Compile Include="RecoveryErrorEventArgs.cs" />
     <Compile Include="StorageEnvironmentOptions.cs" />
@@ -157,7 +152,6 @@
     <Compile Include="Impl\Transaction.cs" />
     <Compile Include="Trees\BTrees\TreePageSplitter.cs" />
     <Compile Include="Trees\BTrees\Tree.cs" />
-    <Compile Include="Debugging\TreeDumper.cs" />
     <Compile Include="Impl\SizeOf.cs" />
     <Compile Include="Trees\BTrees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\BTrees\TreeMutableState.cs" />

@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -33,9 +35,9 @@ namespace Voron.Debugging
 			public readonly List<double> Densities = new List<double>();
 		}
 
-		private readonly Transaction _tx;
+		private readonly LowLevelTransaction _tx;
 
-		public StorageReportGenerator(Transaction tx)
+        public StorageReportGenerator(LowLevelTransaction tx)
 		{
 			_tx = tx;
 		}
@@ -102,87 +104,89 @@ namespace Voron.Debugging
 
 		private MultiValuesReport CreateMultiValuesReport(Tree tree)
 		{
-			var multiValues = new MultiValuesReport();
+            throw new NotImplementedException();
+            //var multiValues = new MultiValuesReport();
 
-			using (var multiTreeIterator = tree.Iterate())
-			{
-				if (multiTreeIterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var currentNode = multiTreeIterator.Current;
+            //using (var multiTreeIterator = tree.Iterate())
+            //{
+            //    if (multiTreeIterator.Seek(Slice.BeforeAllKeys))
+            //    {
+            //        do
+            //        {
+            //            var currentNode = multiTreeIterator.Current;
 
-						switch (currentNode->Flags)
-						{
-							case TreeNodeFlags.MultiValuePageRef:
-							{
-								var multiValueTreeHeader = (TreeRootHeader*) ((byte*) currentNode + currentNode->KeySize + Constants.NodeHeaderSize);
+            //            switch (currentNode->Flags)
+            //            {
+            //                case TreeNodeFlags.MultiValuePageRef:
+            //                {
+            //                    var multiValueTreeHeader = (TreeRootHeader*) ((byte*) currentNode + currentNode->KeySize + Constants.NodeHeaderSize);
 
-								Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
+            //                    Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
 
-								multiValues.EntriesCount += multiValueTreeHeader->EntriesCount;
-								multiValues.BranchPages += multiValueTreeHeader->BranchPages;
-								multiValues.LeafPages += multiValueTreeHeader->LeafPages;
-								multiValues.PageCount += multiValueTreeHeader->PageCount;
-								break;
-							}
-							case TreeNodeFlags.Data:
-							{
-								var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
+            //                    multiValues.EntriesCount += multiValueTreeHeader->EntriesCount;
+            //                    multiValues.BranchPages += multiValueTreeHeader->BranchPages;
+            //                    multiValues.LeafPages += multiValueTreeHeader->LeafPages;
+            //                    multiValues.PageCount += multiValueTreeHeader->PageCount;
+            //                    break;
+            //                }
+            //                case TreeNodeFlags.Data:
+            //                {
+            //                    var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
 
-								multiValues.EntriesCount += nestedPage.NumberOfEntries;
-								break;
-							}
-							case TreeNodeFlags.PageRef:
-							{
-								var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
-								var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
+            //                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+            //                    break;
+            //                }
+            //                case TreeNodeFlags.PageRef:
+            //                {
+            //                    var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
+            //                    var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
 
-								multiValues.EntriesCount += nestedPage.NumberOfEntries;
-								break;
-							}
-							default:
-								throw new InvalidEnumArgumentException("currentNode->TreeFlags", (int) currentNode->Flags, typeof (TreeNodeFlags));
-						}
-					} while (multiTreeIterator.MoveNext());
-				}
-			}
-			return multiValues;
+            //                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+            //                    break;
+            //                }
+            //                default:
+            //                    throw new InvalidEnumArgumentException("currentNode->TreeFlags", (int) currentNode->Flags, typeof (TreeNodeFlags));
+            //            }
+            //        } while (multiTreeIterator.MoveNext());
+            //    }
+            //}
+            //return multiValues;
 		}
 
 		private List<double> GetPageDensities(Tree tree)
 		{
-			var densities = new List<double>();
-			var allPages = tree.AllPages();
-			var pageSize = tree.Tx.Environment.Options.PageSize;
+            throw new NotImplementedException();
+        //    var densities = new List<double>();
+        //    var allPages = tree.AllPages();
+        //    var pageSize = tree.Llt.Environment.Options.PageSize;
 
-			for (var i = 0; i < allPages.Count; i++)
-			{
-				var page = _tx.GetReadOnlyPage(allPages[i]);
+        //    for (var i = 0; i < allPages.Count; i++)
+        //    {
+        //        var page = _tx.GetReadOnlyPage(allPages[i]);
 
-				if (page.IsOverflow)
-				{
-					var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+        //        if (page.IsOverflow)
+        //        {
+        //            var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-					densities.Add(((double)(page.OverflowSize + Constants.PageHeaderSize)) / (numberOfPages * pageSize));
+        //            densities.Add(((double)(page.OverflowSize + Constants.PageHeaderSize)) / (numberOfPages * pageSize));
 
-					i += (numberOfPages - 1);
-				}
-				else
-				{
-					if (page.IsFixedSize)
-					{
-						var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
-						densities.Add(((double) sizeUsed)/pageSize);
-					}
-					else
-					{
-						densities.Add(((double)page.SizeUsed) / pageSize);
-					}
-				}
-			}
-			return densities;
-		}
+        //            i += (numberOfPages - 1);
+        //        }
+        //        else
+        //        {
+        //            if (page.IsFixedSize)
+        //            {
+        //                var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
+        //                densities.Add(((double) sizeUsed)/pageSize);
+        //            }
+        //            else
+        //            {
+        //                densities.Add(((double)page.SizeUsed) / pageSize);
+        //            }
+        //        }
+        //    }
+        //    return densities;
+        }
 
 		private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
 		{

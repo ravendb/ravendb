@@ -32,58 +32,58 @@ namespace Voron.Trees
 			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + (Flags == (TreeNodeFlags.PageRef) ? 0 : DataSize);
 		}
 
-		public static byte* DirectAccess(Transaction tx, TreeNodeHeader* node)
+		public static byte* DirectAccess(LowLevelTransaction tx, TreeNodeHeader* node)
 		{
 			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
-				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+				var overFlowPage = tx.GetReadOnlyTreePage(node->PageNumber);
 				return overFlowPage.Base + Constants.PageHeaderSize;
 			}
 			return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
 		}
 
-        public static ValueReader Reader(Transaction tx, TreeNodeHeader* node)
+        public static ValueReader Reader(LowLevelTransaction tx, TreeNodeHeader* node)
 		{
 			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
-				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+				var overFlowPage = tx.GetPage(node->PageNumber);
 
-				Debug.Assert(overFlowPage.IsOverflow, "Requested oveflow page but got " + overFlowPage.TreeFlags);
+				Debug.Assert(overFlowPage.IsOverflow, "Requested oveflow page but got " + overFlowPage.Flags);
 				Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
 
-                return new ValueReader(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                return new ValueReader(overFlowPage.Pointer + Constants.PageHeaderSize, overFlowPage.OverflowSize);
 			}
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
 
-	    public static Slice GetData(Transaction tx, TreeNodeHeader* node)
+	    public static Slice GetData(LowLevelTransaction tx, TreeNodeHeader* node)
 	    {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
-                var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+                var overFlowPage = tx.GetPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                return new Slice(overFlowPage.Base + Constants.PageHeaderSize, (ushort)overFlowPage.OverflowSize);
+                return new Slice(overFlowPage.Pointer + Constants.PageHeaderSize, (ushort)overFlowPage.OverflowSize);
             }
             return new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize);
 	    }
 
 
-        public static void CopyTo(Transaction tx, TreeNodeHeader* node, byte* dest)
+        public static void CopyTo(LowLevelTransaction tx, TreeNodeHeader* node, byte* dest)
         {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
-                var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                Memory.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                var overFlowPage = tx.GetPage(node->PageNumber);
+                Memory.Copy(dest, overFlowPage.Pointer + Constants.PageHeaderSize, overFlowPage.OverflowSize);
             }
             Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-		public static int GetDataSize(Transaction tx, TreeNodeHeader* node)
+		public static int GetDataSize(LowLevelTransaction tx, TreeNodeHeader* node)
 		{
 			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
-				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+				var overFlowPage = tx.GetPage(node->PageNumber);
 				return overFlowPage.OverflowSize;
 			}
 			return node->DataSize;

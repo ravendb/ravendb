@@ -409,7 +409,7 @@ namespace Voron.Trees
             }
         }
 
-        public void Truncate(Transaction tx, int i)
+        public void Truncate(LowLevelTransaction tx, int i)
         {
             if (i >= NumberOfEntries)
                 return;
@@ -468,7 +468,7 @@ namespace Voron.Trees
             return sb.ToString();
         }
 
-        public bool HasSpaceFor(Transaction tx, int len)
+        public bool HasSpaceFor(LowLevelTransaction tx, int len)
         {
             if (len <= SizeLeft)
                 return true;
@@ -482,7 +482,7 @@ namespace Voron.Trees
             return true;
         }
 
-	    private void Defrag(Transaction tx)
+	    private void Defrag(LowLevelTransaction tx)
 	    {
 		    TemporaryPage tmp;
 		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
@@ -512,7 +512,7 @@ namespace Voron.Trees
             return len <= SizeLeft;
         }
 
-        public bool HasSpaceFor(Transaction tx, Slice key, int len)
+        public bool HasSpaceFor(LowLevelTransaction tx, Slice key, int len)
         {
             var requiredSpace = GetRequiredSpace(key, len);
             return HasSpaceFor(tx, requiredSpace);
@@ -591,7 +591,7 @@ namespace Voron.Trees
 	    }
 
         [Conditional("VALIDATE")]
-        public void DebugValidate(Transaction tx, long root)
+        public void DebugValidate(LowLevelTransaction tx, long root)
         {
             if (NumberOfEntries == 0)
                 return;
@@ -610,7 +610,7 @@ namespace Voron.Trees
 
                 if (prev.Compare(current) >= 0)
                 {
-                    DebugStuff.RenderAndShow(tx, root);
+                    DebugStuff.RenderAndShowTree(tx, root);
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
@@ -618,7 +618,7 @@ namespace Voron.Trees
                 {
                     if (pages.Add(node->PageNumber) == false)
                     {
-                        DebugStuff.RenderAndShow(tx, root);
+                        DebugStuff.RenderAndShowTree(tx, root);
                         throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
                     }
                 }
@@ -660,7 +660,7 @@ namespace Voron.Trees
             return sl;
         }
 
-        public void EnsureHasSpaceFor(Transaction tx, Slice key, int len)
+        public void EnsureHasSpaceFor(LowLevelTransaction tx, Slice key, int len)
         {
             if (HasSpaceFor(tx, key, len) == false)
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");

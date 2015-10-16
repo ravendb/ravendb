@@ -19,11 +19,11 @@ namespace Voron.Tests.Trees
                 tx.Root.Delete("3");
                 tx.Root.Add("6", new MemoryStream(new byte[1096]));
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
                 tx.Root.Delete("6");
                 tx.Root.Delete("4");
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 tx.Commit();
             }
@@ -39,14 +39,14 @@ namespace Voron.Tests.Trees
                 tx.Root.Add("3", new MemoryStream(new byte[1024]));
                 tx.Root.Add("4", new MemoryStream(new byte[64]));
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 tx.Root.Delete("2");
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 tx.Root.Delete("3");
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 tx.Commit();
             }
@@ -70,7 +70,7 @@ namespace Voron.Tests.Trees
                     tx.Root.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
                 }
 
-                DebugStuff.RenderAndShow(tx,1);
+                DebugStuff.RenderAndShowTree(tx,1);
 
 
                 for (int i = 79; i >= 0; --i)

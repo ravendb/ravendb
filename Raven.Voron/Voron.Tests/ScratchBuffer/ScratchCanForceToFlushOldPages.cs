@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ForScratchBuffer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,85 +9,85 @@ using Xunit;
 
 namespace Voron.Tests.ScratchBuffer
 {
-    public class ScratchCanForceToFlushOldPages: StorageTest
-    {
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            base.Configure(options);
-            options.ManualFlushing = true;
-        }
+	public class ScratchCanForceToFlushOldPages: StorageTest
+	{
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			base.Configure(options);
+			options.ManualFlushing = true;
+		}
 
-        [Fact]
-        public void CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch()
-        {
-            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(txw, "foo");
+		[Fact]
+		public void CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch()
+		{
+			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(txw, "foo");
 
-                tree.Add("bars/1", new string('a', 1000));
+				tree.Add("bars/1", new string('a', 1000));
 
-                txw.Commit();
+				txw.Commit();
 
-                DebugStuff.RenderAndShow(txw, 1);
-            }
+                DebugStuff.RenderAndShowTree(txw, 1);
+			}
 
-            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(txw, "bar");
+			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(txw, "bar");
 
-                txw.Commit();
-            }
+				txw.Commit();
+			}
 
-            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(txw, "foo");
+			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(txw, "foo");
 
-                tree.Add("bars/1", new string('b', 1000));
+				tree.Add("bars/1", new string('b', 1000));
 
-                txw.Commit();
+				txw.Commit();
 
-                DebugStuff.RenderAndShow(txw, 1);
-            }
+                DebugStuff.RenderAndShowTree(txw, 1);
+			}
 
-            var txr = Env.NewTransaction(TransactionFlags.Read);
-            {
-                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    var tree = Env.CreateTree(txw, "foo");
+			var txr = Env.NewTransaction(TransactionFlags.Read);
+			{
+				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = Env.CreateTree(txw, "foo");
 
-                    tree.Add("bars/1", new string('c', 1000));
+					tree.Add("bars/1", new string('c', 1000));
 
-                    txw.Commit();
+					txw.Commit();
 
-                    DebugStuff.RenderAndShow(txw, 1);
-                }
+                    DebugStuff.RenderAndShowTree(txw, 1);
+				}
 
-                Env.FlushLogToDataFile();
+				Env.FlushLogToDataFile();
 
-                txr.Dispose();
+				txr.Dispose();
 
-                using (var txr2 = Env.NewTransaction(TransactionFlags.Read))
-                {
-                    var allocated1 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
+				using (var txr2 = Env.NewTransaction(TransactionFlags.Read))
+				{
+					var allocated1 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
-                    Env.FlushLogToDataFile();
+					Env.FlushLogToDataFile();
 
-                    var allocated2 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
+					var allocated2 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
-                    Assert.Equal(allocated1, allocated2);
+					Assert.Equal(allocated1, allocated2);
 
-                    Env.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
+					Env.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
 
-                    var allocated3 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
+					var allocated3 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
-                    Assert.True(allocated3 < allocated2);
+					Assert.True(allocated3 < allocated2);
 
-                    var read = Env.CreateTree(txr2, "foo").Read("bars/1");
+					var read = Env.CreateTree(txr2, "foo").Read("bars/1");
 
-                    Assert.NotNull(read);
-                    Assert.Equal(new string('c', 1000), read.Reader.AsSlice().ToString());
-                }
-            }
-        } 
-    }
+					Assert.NotNull(read);
+					Assert.Equal(new string('c', 1000), read.Reader.AsSlice().ToString());
+				}
+			}
+		} 
+	}
 }

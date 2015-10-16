@@ -223,7 +223,7 @@ namespace Voron.Trees.Fixed
                         {
                             _parent._cursor.Push(_currentPage);
                             var childParentNumber = _parent.PageValueFor(_currentPage,_currentPage.LastSearchPosition);
-                            _currentPage = _parent._tx.GetReadOnlyPage(childParentNumber);
+                            _currentPage = _parent._tx.GetReadOnlyTreePage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;
                         }

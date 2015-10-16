@@ -322,8 +322,8 @@ namespace Voron.Impl.Backup
 
 							env.Options.DataPager.Sync();
 
-						    var root = Tree.Open(txw, &lastTxHeader->Root);
-						    var freeSpaceRoot = Tree.Open(txw, &lastTxHeader->FreeSpace);
+						    var root = Tree.Open(txw, null, &lastTxHeader->Root);
+						    var freeSpaceRoot = Tree.Open(txw, null, &lastTxHeader->FreeSpace);
                             freeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                             root.Name = Constants.RootTreeName;
 

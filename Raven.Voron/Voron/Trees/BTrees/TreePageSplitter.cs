@@ -17,11 +17,11 @@ namespace Voron.Trees
         private readonly ushort _nodeVersion;
         private readonly TreePage _page;
         private readonly long _pageNumber;
-        private readonly Transaction _tx;
+        private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
         private TreePage _parentPage;
 
-        public TreePageSplitter(Transaction tx,
+        public TreePageSplitter(LowLevelTransaction tx,
             Tree tree,
             Slice newKey,
             int len,
@@ -290,7 +290,7 @@ namespace Voron.Trees
             if (_cursor.CurrentPage.PageNumber == page.PageNumber)
             {
                 _cursor.Pop();
-                _cursor.Push(_tx.GetReadOnlyPage(pageRefNumber));
+                _cursor.Push(_tx.GetReadOnlyTreePage(pageRefNumber));
             }
 
             _tree.FreePage(page);

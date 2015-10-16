@@ -67,7 +67,7 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].PagerState;
         }
 
-        public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages)
+        public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages)
         {
             if (tx == null)
                 throw new ArgumentNullException("tx");
@@ -203,7 +203,7 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        private void ThrowScratchBufferTooBig(Transaction tx, int numberOfPages, long size, long oldestActiveTransaction,
+        private void ThrowScratchBufferTooBig(LowLevelTransaction tx, int numberOfPages, long size, long oldestActiveTransaction,
             long sizeAfterAllocation, Stopwatch sp)
         {
             var debugInfoBuilder = new StringBuilder();

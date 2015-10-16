@@ -11,11 +11,11 @@ namespace Voron.Trees
 {
     public unsafe class TreeRebalancer
     {
-        private readonly Transaction _tx;
+        private readonly LowLevelTransaction _tx;
 		private readonly Tree _tree;
 	    private readonly TreeCursor _cursor;
 
-        public TreeRebalancer(Transaction tx, Tree tree, TreeCursor cursor)
+        public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor)
         {
             _tx = tx;
 			_tree = tree;
@@ -335,7 +335,7 @@ namespace Voron.Trees
 			while (key.KeyLength == 0)
             {
                 Debug.Assert(page.IsBranch);
-                page = _tx.GetReadOnlyPage(node->PageNumber);
+                page = _tx.GetReadOnlyTreePage(node->PageNumber);
                 node = page.GetNode(0);
 				key = page.GetNodeKey(node);
             }

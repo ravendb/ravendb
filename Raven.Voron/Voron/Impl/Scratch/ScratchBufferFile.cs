@@ -65,7 +65,7 @@ namespace Voron.Impl.Scratch
 			return (_lastUsedPage + sizeToAllocate) * _scratchPager.PageSize;
 		}
 
-		public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages, int sizeToAllocate)
+		public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
 		{
 		    var pagerState = _scratchPager.EnsureContinuous(_lastUsedPage, sizeToAllocate);
             tx.AddPagerState(pagerState);
@@ -79,7 +79,7 @@ namespace Voron.Impl.Scratch
 			return result;
 		}
 
-		public bool HasDiscontinuousSpaceFor(Transaction tx, long size, int scratchFilesInUse)
+		public bool HasDiscontinuousSpaceFor(LowLevelTransaction tx, long size, int scratchFilesInUse)
 		{
 			long available = 0;
 
@@ -121,7 +121,7 @@ namespace Voron.Impl.Scratch
 			return available >= size;
 		}
 
-		public bool TryGettingFromAllocatedBuffer(Transaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
+		public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
 		{
 			result = null;
 

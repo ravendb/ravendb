@@ -264,7 +264,7 @@ namespace Voron.Impl.Journal
 		}
 
 
-		public Page ReadPage(Transaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
+		public Page ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
 		{
 			// read transactions have to read from journal snapshots
 			if (tx.Flags == TransactionFlags.Read)
@@ -347,7 +347,7 @@ namespace Voron.Impl.Journal
 			return _files.Select(x => x.GetSnapshot()).ToList();
 		}
 
-		public void Clear(Transaction tx)
+        public void Clear(LowLevelTransaction tx)
 		{
 			if (tx.Flags != TransactionFlags.ReadWrite)
 				throw new InvalidOperationException("Clearing of write ahead journal should be called only from a write transaction");
@@ -409,7 +409,7 @@ namespace Voron.Impl.Journal
 				});
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, LowLevelTransaction transaction = null, bool allowToFlushOverwrittenPages = false)
 			{
 				if (token.IsCancellationRequested)
 					return;
@@ -600,7 +600,7 @@ namespace Voron.Impl.Journal
 
             public Dictionary<long, int> writtenPages = new Dictionary<long, int>(NumericEqualityComparer.Instance);
 
-			private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
+            private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, LowLevelTransaction transaction, bool alreadyInWriteTx)
 			{
 				var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerStates = new Dictionary<int, PagerState>();
@@ -651,7 +651,7 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
+            private void EnsureDataPagerSpacing(LowLevelTransaction transaction, Page last, int numberOfPagesInLastPage,
 					bool alreadyInWriteTx)
 			{
 				if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage) == false)
@@ -674,7 +674,7 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
+			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw)
 			{
 				// we have to free pages of the unused journals before the remaining ones that are still in use
 				// to prevent reading from them by any read transaction (read transactions search journals from the newest
@@ -824,7 +824,7 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public void WriteToJournal(Transaction tx, int pageCount)
+		public void WriteToJournal(LowLevelTransaction tx, int pageCount)
 		{
 			var pages = CompressPages(tx, pageCount, _compressionPager);
 
@@ -841,7 +841,7 @@ namespace Voron.Impl.Journal
 				CurrentFile = null;
 		}
 
-		private IntPtr[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
+        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, IVirtualPager compressionPager)
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;

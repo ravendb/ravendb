@@ -29,7 +29,7 @@ namespace Voron
     {
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentSet<Transaction> _activeTransactions = new ConcurrentSet<Transaction>();
+        private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
 
         private readonly IVirtualPager _dataPager;
 
@@ -46,32 +46,13 @@ namespace Voron
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
-	    private DebugJournal _debugJournal;
 	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
 		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
 
-	    public TransactionMergingWriter Writer { get; private set; }
-
         public StorageEnvironmentState State { get; private set; }
 
-        public SnapshotReader CreateSnapshot()
-        {
-            return new SnapshotReader(NewTransaction(TransactionFlags.Read));
-        }
-
-#if DEBUG
-	    public StorageEnvironment(StorageEnvironmentOptions options,string debugJournalName)
-			: this(options)
-	    {
-			DebugJournal = new DebugJournal(debugJournalName,this);
-			
-			if(Writer != null)
-				Writer.Dispose();
-            Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, DebugJournal);
-	    }
-#endif
 
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -91,8 +72,6 @@ namespace Voron
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
-
-                Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token);
 
                 if (_options.ManualFlushing == false)
                     _flushingTask = FlushWritesToDataFileAsync();
@@ -133,8 +112,8 @@ namespace Voron
 
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Open(tx, header->TransactionId == 0 ? &entry.Root : &header->Root);
-                var freeSpace = Tree.Open(tx, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
+                var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                var freeSpace = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
 
                 tx.UpdateRootsIfNeeded(root, freeSpace);
                 tx.Commit();
@@ -151,8 +130,8 @@ namespace Voron
             };
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
-                var root = Tree.Create(tx);
-                var freeSpace = Tree.Create(tx);
+                var root = Tree.Create(tx, null);
+                var freeSpace = Tree.Create(tx, null);
 
                 // important to first create the two trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root, freeSpace);
@@ -206,37 +185,6 @@ namespace Voron
             get { return _journal; }
         }
 
-	    public bool IsDebugRecording
-	    {
-		    get
-		    {
-			    if (DebugJournal == null)
-				    return false;
-			    return DebugJournal.IsRecording;
-		    }
-		    set
-		    {
-			    if (DebugJournal != null)
-				    DebugJournal.IsRecording = value;
-		    }
-	    }
-
-	    public DebugJournal DebugJournal
-	    {
-		    get { return _debugJournal; }
-		    set
-		    {
-			    _debugJournal = value;
-
-			    if (Writer != null && value != null)
-			    {
-				    Writer.Dispose();
-                    Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, _debugJournal);
-			    }
-
-		    }
-	    }
-
 	    internal List<ActiveTransaction> ActiveTransactions
 	    {
 			get
@@ -248,94 +196,8 @@ namespace Voron
 				}).ToList();
 			}
 	    }
-
-	    public void DeleteTree(Transaction tx, string name)
-        {
-            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
-
-	        Tree tree = tx.ReadTree(name);
-	        if (tree == null)
-	            return;
-
-            foreach (var page in tree.AllPages())
-            {
-                tx.FreePage(page);
-            }
-
-            tx.Root.Delete((Slice) name);
-
-            tx.RemoveTree(name);
-        }
-
-	    public unsafe void RenameTree(Transaction tx, string fromName, string toName)
-	    {
-			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-				throw new ArgumentException("Cannot rename a new tree with a read only transaction");
-
-			if (toName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
-				toName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
-				throw new InvalidOperationException("Cannot create a tree with reserved name: " + toName);
-
-		    if (tx.ReadTree(toName) != null)
-			    throw new ArgumentException("Cannot rename a tree with the name of an existing tree: " + toName);
-
-		    Tree fromTree = tx.ReadTree(fromName);
-		    if (fromTree == null)
-			    throw new ArgumentException("Tree " + fromName + " does not exists");
-
-            Slice key = (Slice)toName;
-
-	        tx.Root.Delete((Slice)fromName);
-			var ptr = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
-		    fromTree.State.CopyTo((TreeRootHeader*) ptr);
-		    fromTree.Name = toName;
-		    fromTree.State.IsModified = true;
-		    
-			tx.RemoveTree(fromName);
-			tx.RemoveTree(toName);
-
-			tx.AddTree(toName, fromTree);
-
-			if (IsDebugRecording)
-                DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, (Slice)toName, fromName, Stream.Null);
-	    }
-
-        public unsafe Tree CreateTree(Transaction tx, string name)
-        {
-            Tree tree = tx.ReadTree(name);
-            if (tree != null)
-                return tree;
-
-            if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
-                return tx.Root;
-            if (name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
-                return tx.FreeSpaceRoot;
-
-            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new InvalidOperationException("No such tree: " + name + " and cannot create trees in read transactions");
-
-            Slice key = name;
-
-            tree = Tree.Create(tx);
-            tree.Name = name;
-            var space = tx.Root.DirectAdd(key, sizeof(TreeRootHeader));
-
-            tree.State.CopyTo((TreeRootHeader*)space);
-            tree.State.IsModified = true;
-            tx.AddTree(name, tree);
-
-			if(IsDebugRecording)
-				DebugJournal.RecordWriteAction(DebugActionType.CreateTree, tx, Slice.Empty,name,Stream.Null);
-
-            return tree;
-        }
-
         public void Dispose()
         {
-			if(DebugJournal != null)
-				DebugJournal.Dispose();
-
             _cancellationTokenSource.Cancel();
             _flushWriter.Set();
 
@@ -368,7 +230,6 @@ namespace Voron
                 var errors = new List<Exception>();
                 foreach (var disposable in new IDisposable[]
                 {
-                    Writer,
                     _headerAccessor,
                     _scratchBufferPool,
                     _options.OwnsPagers ? _options : null,
@@ -391,7 +252,7 @@ namespace Voron
             }
         }
 
-        public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
+        public LowLevelTransaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
 	        try
@@ -419,19 +280,13 @@ namespace Voron
 			        }
 		        }
 
-		        Transaction tx;
+		        LowLevelTransaction tx;
 
 		        _txCommit.EnterReadLock();
 		        try
 		        {
 			        long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-			        tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-
-			        if (IsDebugRecording)
-			        {
-				        RecordTransactionState(tx, DebugActionType.TransactionStart);
-				        tx.RecordTransactionState = RecordTransactionState;
-			        }
+			        tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling);
 		        }
 		        finally
 		        {
@@ -457,17 +312,13 @@ namespace Voron
             }
         }
 
-        private void RecordTransactionState(Transaction tx, DebugActionType state)
-        {
-            DebugJournal.RecordTransactionAction(tx, state);
-        }
 
         public long NextWriteTransactionId
 	    {
 		    get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
 	    }
 
-        private void TransactionAfterCommit(Transaction tx)
+        private void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (_activeTransactions.Contains(tx) == false)
 		        return;
@@ -499,7 +350,7 @@ namespace Voron
 			_flushWriter.Set();
         }
 
-        internal void TransactionCompleted(Transaction tx)
+        internal void TransactionCompleted(LowLevelTransaction tx)
         {
             if (_activeTransactions.TryRemove(tx) == false)
                 return;
@@ -510,76 +361,79 @@ namespace Voron
 			Monitor.Exit(_txWriter);
         }
 
-        public Dictionary<string, List<long>> AllPages(Transaction tx)
+        public Dictionary<string, List<long>> AllPages(LowLevelTransaction tx)
         {
-            var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
-				{
-					{"Root", tx.Root.AllPages()},
-					{"Free Space Overhead", tx.FreeSpaceRoot.AllPages()},
-					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
-				};
+            throw new NotImplementedException();
+            //var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
+            //    {
+            //        {"Root", tx.Root.AllPages()},
+            //        {"Free Space Overhead", tx.FreeSpaceRoot.AllPages()},
+            //        {"Free Pages", _freeSpaceHandling.AllPages(tx)}
+            //    };
 
-            foreach (var tree in tx.Trees)
-            {
-                if (tree == null)
-                    continue;
-                results.Add(tree.Name, tree.AllPages());
-            }
+            //foreach (var tree in tx.Trees)
+            //{
+            //    if (tree == null)
+            //        continue;
+            //    results.Add(tree.Name, tree.AllPages());
+            //}
 
-            return results;
+            //return results;
         }
 
-		public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+		public StorageReport GenerateReport(LowLevelTransaction tx, bool computeExactSizes = false)
 	    {
-			var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
-		    var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
+            throw new NotImplementedException();
+            //var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            //var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
 
-		    var trees = new List<Tree>();
-			using (var rootIterator = tx.Root.Iterate())
-			{
-				if (rootIterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
-						trees.Add(tree);
+            //var trees = new List<Tree>();
+            //using (var rootIterator = tx.Root.Iterate())
+            //{
+            //    if (rootIterator.Seek(Slice.BeforeAllKeys))
+            //    {
+            //        do
+            //        {
+            //            var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+            //            trees.Add(tree);
 
-					}
-					while (rootIterator.MoveNext());
-				}
-			}
+            //        }
+            //        while (rootIterator.MoveNext());
+            //    }
+            //}
 
-			var generator = new StorageReportGenerator(tx);
+            //var generator = new StorageReportGenerator(tx);
 
-		    return generator.Generate(new ReportInput
-		    {
-				NumberOfAllocatedPages = numberOfAllocatedPages,
-				NumberOfFreePages = numberOfFreePages,
-				NextPageNumber = NextPageNumber,
-				Journals = Journal.Files.ToList(),
-				Trees = trees,
-				IsLightReport = !computeExactSizes
-		    });
+            //return generator.Generate(new ReportInput
+            //{
+            //    NumberOfAllocatedPages = numberOfAllocatedPages,
+            //    NumberOfFreePages = numberOfFreePages,
+            //    NextPageNumber = NextPageNumber,
+            //    Journals = Journal.Files.ToList(),
+            //    Trees = trees,
+            //    IsLightReport = !computeExactSizes
+            //});
 	    }
 
 		public EnvironmentStats Stats()
 		{
-		    using (var tx = NewTransaction(TransactionFlags.Read))
-		    {
-                var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+            throw new NotImplementedException();
+            //using (var tx = NewTransaction(TransactionFlags.Read))
+            //{
+            //    var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
-                return new EnvironmentStats
-                {
-                    FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
-                    RootPages = tx.Root.State.PageCount,
-                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
-					AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
-                    NextWriteTransactionId = NextWriteTransactionId,
-                    ActiveTransactions = ActiveTransactions
-                };
+            //    return new EnvironmentStats
+            //    {
+            //        FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
+            //        RootPages = tx.Root.State.PageCount,
+            //        UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+            //        UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
+            //        AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
+            //        NextWriteTransactionId = NextWriteTransactionId,
+            //        ActiveTransactions = ActiveTransactions
+            //    };
 
-		    }
+            //}
 		}
 
 		[HandleProcessCorruptedStateExceptions]
@@ -612,9 +466,6 @@ namespace Voron
 					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					        // while there isn't any other activity going on.
 
-					        if (IsDebugRecording)
-						        _debugJournal.RecordFlushAction(DebugActionType.FlushStart, null);
-
 					        try
 					        {
 						        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
@@ -628,15 +479,12 @@ namespace Voron
 						        throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
 									new Win32Exception(sehException.HResult));
 					        }
-
-					        if (IsDebugRecording)
-						        _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, null);
 				        }
 			        }
 		        }, TaskCreationOptions.LongRunning);
         }
 
-		public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false)
+		public void FlushLogToDataFile(LowLevelTransaction tx = null, bool allowToFlushOverwrittenPages = false)
         {
 	        if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
@@ -644,19 +492,9 @@ namespace Voron
 	        ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
         }
 
-		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages)
+		internal void ForceLogFlushToDataFile(LowLevelTransaction tx, bool allowToFlushOverwrittenPages)
 	    {
-		    if (IsDebugRecording)
-		    {
-			    _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
-		    }
-
 		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
-
-		    if (IsDebugRecording)
-		    {
-			    _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, tx);
-		    }
 	    }
 
 	    internal void AssertFlushingNotFailed()
@@ -677,7 +515,7 @@ namespace Voron
 			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
 	    }
 
-	    internal IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
+	    internal IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
 	    {
 		    if (tx.Flags != TransactionFlags.ReadWrite)
 			    throw new ArgumentException("Temporary pages are only available for write transactions");

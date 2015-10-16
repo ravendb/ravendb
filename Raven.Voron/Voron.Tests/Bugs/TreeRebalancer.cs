@@ -135,7 +135,7 @@ namespace Voron.Tests.Bugs
                 tree.Add(eKey, new MemoryStream(new byte[800]));
                 tree.Add(fKey, new MemoryStream(new byte[10]));
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 // to expose the bug we need to delete the last item from the left most page
                 // tree rebalance will try to fix the first reference (the implicit ref page node) in the parent page which is almost full 
@@ -204,12 +204,12 @@ namespace Voron.Tests.Bugs
                 tree.Add(mKey, new MemoryStream(new byte[100]));
                 tree.Add(nKey, new MemoryStream(new byte[1000]));
 
-                DebugStuff.RenderAndShow(tx,1);
+                DebugStuff.RenderAndShowTree(tx,1);
 
 
                 tree.Delete(nKey);  // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
-                DebugStuff.RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShowTree(tx, 1);
 
                 tx.Commit();
 
