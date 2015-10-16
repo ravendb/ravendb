@@ -139,7 +139,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
 	        ManualResetEvent cleanupLock;
-			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad) == false)
+			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
 				throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
 
 	        if (ResourcesStoresCache.TryGetValue(tenantId, out database))
