@@ -265,8 +265,18 @@ namespace Rhino.Licensing
 						// we explicitly don't want bad things to happen if we can't do that
 						Logger.ErrorException("Could not setup node discovery", e);
 					}
-			        discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
-			        discoveryClient.PublishMyPresence();
+			        if (discoveryClient == null)
+			        {
+			            lock (this)
+			            {
+			                if (discoveryClient == null)
+			                {
+                                discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
+			                }
+			            }
+			        }
+                    discoveryClient.PublishMyPresence();
+
 			    }
 			    return;
 			}
