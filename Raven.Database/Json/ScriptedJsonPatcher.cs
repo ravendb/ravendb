@@ -186,7 +186,7 @@ namespace Raven.Database.Json
 
 			jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
 			{
-				if (database != null && database.Configuration.AllowScriptsToAdjustNumberOfSteps)
+				if (database != null && database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps)
 				{
 					scope.MaxSteps += number;
 					jintEngine.Options.MaxStatements(totalScriptSteps + number);

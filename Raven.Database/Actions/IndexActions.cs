@@ -512,7 +512,7 @@ namespace Raven.Database.Actions
 				{
 					try
 					{
-						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
+						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
 					}
 					catch (Exception e)
 					{
@@ -587,7 +587,7 @@ namespace Raven.Database.Actions
                 {
                     op.Init();
                     if (op.Header.TotalResults == 0 ||
-                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+                        (op.Header.TotalResults > Database.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch))
                     {
                         // we don't apply this optimization if the total number of results 
 						// to index is more than the max numbers to index in a single batch. 
@@ -691,8 +691,8 @@ namespace Raven.Database.Actions
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					index,
                      WorkContext,
-                     Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-                     Database.Configuration.RunInMemory,
+                     Path.Combine(Database.Configuration.Core.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
+                     Database.Configuration.Core.RunInMemory,
                      field);
 
                 Database.IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);

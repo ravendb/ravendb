@@ -169,9 +169,9 @@ namespace Raven.Bundles.LiveTest
 					if (configuration == null)
 						continue;
 
-					IOExtensions.DeleteDirectory(configuration.DataDirectory);
-					if (configuration.IndexStoragePath != null)
-						IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+					IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
+					if (configuration.Core.IndexStoragePath != null)
+						IOExtensions.DeleteDirectory(configuration.Core.IndexStoragePath);
 					if (configuration.Storage.Voron.JournalsStoragePath != null)
 						IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
 				}

@@ -125,14 +125,13 @@ namespace Owin
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
-			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
-            cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+			cfg.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)] = new SemaphoreSlim(options.SystemDatabase.Configuration.Server.MaxConcurrentRequestsForDatabaseDuringLoad);
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 			cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 
-			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
+			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.Server.MaxConcurrentRequests));
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());

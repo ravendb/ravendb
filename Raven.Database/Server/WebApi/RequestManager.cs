@@ -302,7 +302,7 @@ namespace Raven.Database.Server.WebApi
 		public void AddAccessControlHeaders(RavenBaseApiController controller, HttpResponseMessage msg)
 		{
 
-			var accessControlAllowOrigin = landlord.SystemConfiguration.AccessControlAllowOrigin;
+			var accessControlAllowOrigin = landlord.SystemConfiguration.Server.AccessControlAllowOrigin;
 			if (accessControlAllowOrigin.Count == 0)
 				return;
 
@@ -320,9 +320,9 @@ namespace Raven.Database.Server.WebApi
 				return;
 
 			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
-			controller.AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
-			controller.AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
+			controller.AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.Server.AccessControlMaxAge, msg);
+			controller.AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.Server.AccessControlAllowMethods, msg);
+			if (string.IsNullOrEmpty(landlord.SystemConfiguration.Server.AccessControlRequestHeaders))
 			{
 
 				// allow whatever headers are being requested
@@ -332,7 +332,7 @@ namespace Raven.Database.Server.WebApi
 			}
 			else
 			{
-				controller.AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.AccessControlRequestHeaders, msg);
+				controller.AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.Server.AccessControlRequestHeaders, msg);
 			}
 		}
 
@@ -673,7 +673,7 @@ namespace Raven.Database.Server.WebApi
 				{
 					// intentionally inside the loop, so we get better concurrency overall
 					// since shutting down a database can take a while
-					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
+					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
 				}
 
 				FacetedQueryRunner.IntArraysPool.Instance.RunIdleOperations();

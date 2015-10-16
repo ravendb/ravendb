@@ -169,15 +169,18 @@ namespace Raven.Tests.Common
         {
             var previousServer = servers[index];
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
             var serverConfiguration = new RavenConfiguration
             {
                 Settings = { { "Raven/ActiveBundles", "replication" } },
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-				DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory,
-				Port = previousServer.SystemDatabase.Configuration.Port,
+				Core =
+				{
+					RunInMemory = previousServer.SystemDatabase.Configuration.Core.RunInMemory,
+                    DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
+                    Port = previousServer.SystemDatabase.Configuration.Core.Port,
+                },
                 DefaultStorageTypeName = GetDefaultStorageType()
             };
 
@@ -201,9 +204,9 @@ namespace Raven.Tests.Common
 
             var previousServer = servers[index];
             previousServer.Dispose();
-			IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.DataDirectory);
+			IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.Core.DataDirectory);
 
-			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication, databaseName: databaseName);
+			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Core.Port, enableAuthentication, databaseName: databaseName);
         }
 
 		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null)
@@ -242,7 +245,7 @@ namespace Raven.Tests.Common
                 var replicationDestination = new ReplicationDestination
                 {
                     Url = destination is EmbeddableDocumentStore ?
-                            "http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Port :
+                            "http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Core.Port :
                             destination.Url.Replace("localhost", "ipv4.fiddler"),
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,

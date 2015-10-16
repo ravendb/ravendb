@@ -68,7 +68,7 @@ namespace Raven.Database.Actions
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
             {
-                configuration.DataDirectory = restoreRequest.DatabaseLocation;
+                configuration.Core.DataDirectory = restoreRequest.DatabaseLocation;
             }
 
             using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }, () => { }))

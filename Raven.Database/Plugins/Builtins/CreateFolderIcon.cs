@@ -17,11 +17,11 @@ namespace Raven.Database.Plugins.Builtins
 
 		public void Execute(DocumentDatabase database)
 		{
-			if (database.Configuration.RunInMemory)
+			if (database.Configuration.Core.RunInMemory)
 				return;
 			try
 			{
-				var dataDirectory = Path.GetFullPath(database.Configuration.DataDirectory);
+				var dataDirectory = Path.GetFullPath(database.Configuration.Core.DataDirectory);
 				SetIconForFolder(dataDirectory);
 
 				var tenantsPath = Directory.GetParent(dataDirectory);

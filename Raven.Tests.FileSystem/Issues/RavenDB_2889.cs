@@ -28,7 +28,7 @@ namespace Raven.Tests.FileSystem.Issues
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
 				try
 				{

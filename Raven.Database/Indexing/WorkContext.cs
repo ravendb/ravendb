@@ -122,8 +122,8 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
-				var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
+				var currentNumberOfParallelTasks = Configuration.Core.MaxNumberOfParallelProcessingTasks *BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
+				var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.Core.MaxNumberOfParallelProcessingTasks);
 				return Math.Max(numberOfParallelTasks, 1);
 			}
 		}
@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 
 		public int NumberOfItemsToExecuteReduceInSingleStep
 		{
-			get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
+			get { return Configuration.Core.NumberOfItemsToExecuteReduceInSingleStep; }
 		}
 
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)

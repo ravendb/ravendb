@@ -61,7 +61,7 @@ namespace Raven.Tests.MailingList.PhilJones
 			[Fact]
 			public void ravendb_fails_to_map()
 			{
-				using (var documentStore = new EmbeddableDocumentStore { Configuration = { RunInMemory = true, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true } })
+				using (var documentStore = new EmbeddableDocumentStore { Configuration = { Core = { RunInMemory = true }, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true } })
 				{
 					documentStore.Conventions.DefaultQueryingConsistency = Raven.Client.Document.ConsistencyOptions.QueryYourWrites;
 					documentStore.Initialize();

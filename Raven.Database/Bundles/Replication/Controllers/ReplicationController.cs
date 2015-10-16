@@ -414,7 +414,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				var maxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
 				var availableMemory = MemoryStatistics.AvailableMemoryInMb;
-				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
+				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < 
+								Database.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes * 2;
 				if (lowMemory)
 				{
 				    int size;

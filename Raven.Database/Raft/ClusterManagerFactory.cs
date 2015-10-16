@@ -54,9 +54,9 @@ namespace Raven.Database.Raft
 			var nodeConnectionInfo = CreateSelfConnection(systemDatabase);
 
 			StorageEnvironmentOptions options;
-			if (configuration.RunInMemory == false)
+			if (configuration.Core.RunInMemory == false)
 			{
-				var directoryPath = Path.Combine(configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
+				var directoryPath = Path.Combine(configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
 				if (Directory.Exists(directoryPath) == false)
 					Directory.CreateDirectory(directoryPath);
 

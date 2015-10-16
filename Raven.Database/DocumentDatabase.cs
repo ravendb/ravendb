@@ -846,10 +846,10 @@ namespace Raven.Database
 		/// </remarks>
 		public long GetIndexStorageSizeOnDisk()
 		{
-			if (Configuration.RunInMemory)
+			if (Configuration.Core.RunInMemory)
 				return 0;
 
-			string[] indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
+			string[] indexes = Directory.GetFiles(Configuration.Core.IndexStoragePath, "*.*", SearchOption.AllDirectories);
 			long totalIndexSize = indexes.Sum(file =>
 			{
 				try
@@ -880,7 +880,7 @@ namespace Raven.Database
 		/// </remarks>
 		public long GetTotalSizeOnDisk()
 		{
-			if (Configuration.RunInMemory)
+			if (Configuration.Core.RunInMemory)
 				return 0;
 
 			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk().AllocatedSizeInBytes;
@@ -897,7 +897,7 @@ namespace Raven.Database
 		/// </remarks>
 		public DatabaseSizeInformation GetTransactionalStorageSizeOnDisk()
 		{
-			return Configuration.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
+			return Configuration.Core.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
 		}
 
 		public void RunIdleOperations()
@@ -946,11 +946,11 @@ namespace Raven.Database
 
 			workContext.StartWork();
 
-			MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+			MappingThreadPool = new RavenThreadPool(Configuration.Core.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
 					{
 						new Action(()=> indexingExecuter.Execute())
 					});
-			ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+			ReducingThreadPool = new RavenThreadPool(Configuration.Core.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
 					{
 						new Action(()=>ReducingExecuter.Execute())
 					});
@@ -1281,7 +1281,7 @@ namespace Raven.Database
 
 		    public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()
 			{
-				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
+				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.Core.DataDirectory, database.Extensions);
 		        return database.IndexDefinitionStorage.Initialize();
 			}
 

@@ -22,12 +22,12 @@ namespace Raven.Database.Indexing
 
 		protected override int InitialNumberOfItems
 		{
-			get { return context.Configuration.InitialNumberOfItemsToReduceInSingleBatch; }
+			get { return context.Configuration.Core.InitialNumberOfItemsToReduceInSingleBatch; }
 		}
 
 		protected override int MaxNumberOfItems
 		{
-			get { return context.Configuration.MaxNumberOfItemsToReduceInSingleBatch; }
+			get { return context.Configuration.Core.MaxNumberOfItemsToReduceInSingleBatch; }
 		}
 
 		protected override int CurrentNumberOfItems

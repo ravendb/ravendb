@@ -120,12 +120,12 @@ namespace Raven.Database.Indexing
                 this.indexDefinitionStorage = indexDefinitionStorage;
                 this.configuration = configuration;
                 this.documentDatabase = documentDatabase;
-                path = configuration.IndexStoragePath;
+                path = configuration.Core.IndexStoragePath;
 
-                if (System.IO.Directory.Exists(path) == false && configuration.RunInMemory == false)
+                if (System.IO.Directory.Exists(path) == false && configuration.Core.RunInMemory == false)
                     System.IO.Directory.CreateDirectory(path);
 
-                if (configuration.RunInMemory == false)
+                if (configuration.Core.RunInMemory == false)
                 {
                     var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
 
@@ -136,7 +136,7 @@ namespace Raven.Database.Indexing
                         // to be reset. This is because to get better perf, we don't flush the files to disk,
                         // so in the case of a power outage, we can't be sure that there wasn't still stuff in
                         // the OS buffer that wasn't written yet.
-                        configuration.ResetIndexOnUncleanShutdown = true;
+                        configuration.Indexing.ResetIndexOnUncleanShutdown = true;
                     }
 
                     // The delete on close ensures that the only way this file will exists is if there was
@@ -365,7 +365,7 @@ namespace Raven.Database.Indexing
                 var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
                 IOExtensions.DeleteDirectory(indexFullPath);
 
-                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+                var suggestionsForIndex = Path.Combine(configuration.Core.IndexStoragePath, "Raven-Suggestions", indexName);
                 IOExtensions.DeleteDirectory(suggestionsForIndex);
 
             }
@@ -400,7 +400,7 @@ namespace Raven.Database.Indexing
 
         private void LoadExistingSuggestionsExtentions(string indexName, Index indexImplementation)
         {
-            var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+            var suggestionsForIndex = Path.Combine(configuration.Core.IndexStoragePath, "Raven-Suggestions", indexName);
             if (!System.IO.Directory.Exists(suggestionsForIndex))
                 return;
 
@@ -430,7 +430,7 @@ namespace Raven.Database.Indexing
                         var extension = new SuggestionQueryIndexExtension(
                             indexImplementation,
                             documentDatabase.WorkContext,
-                            Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key),
+                            Path.Combine(configuration.Core.IndexStoragePath, "Raven-Suggestions", indexName, key),
                             searcher.IndexReader.Directory() is RAMDirectory,
                             field);
                         indexImplementation.SetExtension(key, extension);
@@ -488,11 +488,11 @@ namespace Raven.Database.Indexing
         protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true, bool forceFullExistingIndexCheck = false)
         {
             Lucene.Net.Store.Directory directory;
-            if (configuration.RunInMemory ||
+            if (configuration.Core.RunInMemory ||
                 (indexDefinition.IsMapReduce == false &&  // there is no point in creating map/reduce indexes in memory, we write the intermediate results to disk anyway
                  indexDefinitionStorage.IsNewThisSession(indexDefinition) &&
                  indexDefinition.DisableInMemoryIndexing == false &&
-                 configuration.DisableInMemoryIndexing == false &&
+                 configuration.Indexing.DisableInMemoryIndexing == false &&
                  forceFullExistingIndexCheck == false))
             {
                 directory = new RAMDirectory();
@@ -528,7 +528,7 @@ namespace Raven.Database.Indexing
                         }
                         if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
                         {
-                            if (configuration.ResetIndexOnUncleanShutdown)
+                            if (configuration.Indexing.ResetIndexOnUncleanShutdown)
                                 throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
 
                             CheckIndexAndTryToFix(directory, indexDefinition);
@@ -1497,7 +1497,7 @@ namespace Raven.Database.Indexing
 
         private void UpdateIndexMappingFile()
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
 
             var sb = new StringBuilder();

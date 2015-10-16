@@ -304,7 +304,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								    }
 							    }
 
-							    var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							    var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.Core.DataDirectory, "PeriodicExport-Temp");
 							    if (Directory.Exists(backupPath) == false) 
 								    Directory.CreateDirectory(backupPath);
 

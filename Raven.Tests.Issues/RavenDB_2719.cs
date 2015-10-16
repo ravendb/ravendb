@@ -65,7 +65,7 @@ namespace Raven.Tests.Issues
 						Students = new List<User>()
 					};
 
-					for (int i = 0; i < store.DocumentDatabase.Configuration.MaxMapReduceIndexOutputsPerDocument; i++)
+					for (int i = 0; i < store.DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument; i++)
 					{
 						school.Students.Add(new User()
 						{

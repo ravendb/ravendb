@@ -39,8 +39,11 @@ namespace Raven.Tests.Issues
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,				
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 				DefaultStorageTypeName = storageName,
 				Settings =
 				{
@@ -89,7 +92,12 @@ namespace Raven.Tests.Issues
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
-			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
+			using (var db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+            }, null))
 			{				
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
@@ -124,7 +132,10 @@ namespace Raven.Tests.Issues
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
 				DefaultStorageTypeName = storageName,
-				DataDirectory = DataDir,
+				Core =
+				{
+				    DataDirectory = DataDir
+				},
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}, null))
 			{
@@ -160,7 +171,7 @@ namespace Raven.Tests.Issues
 					sb.ToString());
 			}
 
-			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
+			using (var db = new DocumentDatabase(new RavenConfiguration { Core = { DataDirectory = DataDir }}, null))
 			{
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;

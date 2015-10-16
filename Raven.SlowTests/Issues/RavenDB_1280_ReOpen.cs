@@ -21,8 +21,8 @@ namespace Raven.SlowTests.Issues
     {
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.MaxNumberOfItemsToProcessInSingleBatch = 50;
-            configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
+            configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 50;
+            configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 50;
         }
 
         [Theory]

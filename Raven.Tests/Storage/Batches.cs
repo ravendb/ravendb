@@ -31,7 +31,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var dd = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = NewDataPath("DataDirectory"),
+				Core = {
+                    DataDirectory = NewDataPath("DataDirectory")
+                },
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			}, null))
 			{

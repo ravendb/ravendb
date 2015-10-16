@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
         {
             using (var store = NewDocumentStore())
             {
-                store.Configuration.RunInMemory = true;
+                store.Configuration.Core.RunInMemory = true;
                 store.Initialize();
 
 

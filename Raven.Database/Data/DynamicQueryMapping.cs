@@ -328,9 +328,9 @@ namespace Raven.Database.Data
 			string groupBy = null;
 
 			if (database.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
-				database.Configuration.RunInMemory == false)
+				database.Configuration.Core.RunInMemory == false)
 			{
-				indexName = IndexingUtil.FixupIndexName(indexName, database.Configuration.DataDirectory);
+				indexName = IndexingUtil.FixupIndexName(indexName, database.Configuration.Core.DataDirectory);
 			}
 
 			var permanentIndexName = indexName.Length == 0

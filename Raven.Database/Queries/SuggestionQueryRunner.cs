@@ -34,7 +34,7 @@ namespace Raven.Database.Queries
 			if (string.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
 			if (string.IsNullOrWhiteSpace(suggestionQuery.Field)) throw new ArgumentNullException("suggestionQuery.Field");
 
-			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions, database.Configuration.MaxPageSize);
+			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions, database.Configuration.Core.MaxPageSize);
 
 			if (suggestionQuery.MaxSuggestions <= 0) suggestionQuery.MaxSuggestions = SuggestionQuery.DefaultMaxSuggestions;
 			if (suggestionQuery.Accuracy.HasValue && (suggestionQuery.Accuracy.Value <= 0f || suggestionQuery.Accuracy.Value > 1f))
@@ -67,7 +67,7 @@ namespace Raven.Database.Queries
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					indexInstance,
 					database.WorkContext,
-					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
+					Path.Combine(database.Configuration.Core.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
 					indexReader.Directory() is RAMDirectory,
 					suggestionQuery.Field);
 

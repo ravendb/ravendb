@@ -49,9 +49,9 @@ namespace Raven.Database.Plugins.Builtins
 
 			options.DatabaseLandlord.ForAllDatabases(database =>
 			{
-				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });				
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });				
 				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
-				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = database.Name, ResourceType = ResourceType.Database });
+				pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = database.Name, ResourceType = ResourceType.Database });
 			});
 
 			options.FileSystemLandlord.ForAllFileSystems(filesystem =>

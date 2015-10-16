@@ -36,8 +36,11 @@ namespace Raven.Tests.Storage
 
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			}, null);
 			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
@@ -66,7 +69,12 @@ namespace Raven.Tests.Storage
 				Defrag = true
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+			db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 
 			var document = db.Documents.Get("ayende");
 			Assert.NotNull(document);
@@ -93,7 +101,12 @@ namespace Raven.Tests.Storage
 				DatabaseLocation = DataDir
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+			db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
@@ -136,7 +149,12 @@ namespace Raven.Tests.Storage
 				Defrag = true
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+			db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+            }, null);
 
 			queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
@@ -214,7 +232,12 @@ namespace Raven.Tests.Storage
 				Defrag = true
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+			db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+            }, null);
 			docId = string.Format("ayende{0}", count++.ToString("D4"));
 			db.Documents.Put(docId, null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();

@@ -52,11 +52,11 @@ namespace Raven.Database.Server.Tenancy
 			this.systemDatabase = systemDatabase;
 	    }
 
-		public int MaxSecondsForTaskToWaitForDatabaseToLoad
+		public TimeSpan MaxTimeForTaskToWaitForDatabaseToLoad
 		{
 			get
 			{
-				return systemConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+				return systemConfiguration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 			}
 		}
 
@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Tenancy
 	        var nextPageStart = 0;
             var resources = systemDatabase.Documents
                 .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
-                systemDatabase.Configuration.MaxPageSize, CancellationToken.None, ref nextPageStart);
+                systemDatabase.Configuration.Core.MaxPageSize, CancellationToken.None, ref nextPageStart);
 
             var reourcesNames = resources
                 .Select(database =>

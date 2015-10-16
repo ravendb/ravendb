@@ -31,8 +31,11 @@ namespace Raven.Tests.Issues
 				DataDirectory = dataDirectory,
 				Configuration =
 				{
-					Port = 8079,
-					Settings = new NameValueCollection
+                    Core =
+                    {
+                        Port = 8079
+                    },
+                    Settings = new NameValueCollection
 					{
 						{"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} 
 					}
@@ -70,11 +73,14 @@ namespace Raven.Tests.Issues
 				DataDirectory = dataDirectory,
 				Configuration =
 				{
-					Port = 8079
-				}
+                    Core =
+                    {
+                        Port = 8079
+                    }
+                }
 			})
 			{
-				embeddedStore.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
+				embeddedStore.Configuration.Core.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
 				embeddedStore.Initialize();
 				embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
 				embeddedStore.ExecuteIndex(new Index());
@@ -104,8 +110,11 @@ namespace Raven.Tests.Issues
 				DataDirectory = dataDirectory,
 				Configuration =
 				{
-					CompiledIndexCacheDirectory = compiledIndexCacheDirectory,
-					Port = 8079
+					Core =
+                    {
+                        Port = 8079,
+                        CompiledIndexCacheDirectory = compiledIndexCacheDirectory,
+                    }
 				}
 
 			})

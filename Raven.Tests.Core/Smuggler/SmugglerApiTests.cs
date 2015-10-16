@@ -47,7 +47,10 @@ namespace Raven.Tests.Core.Smuggler
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration()
             {
-                Port = Port1,
+                Core =
+                {
+                    Port = Port1
+                },
                 ServerName = ServerName1
             })
             {
@@ -76,7 +79,10 @@ namespace Raven.Tests.Core.Smuggler
 
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
-                        Port = Port2,
+                        Core =
+                        {
+                            Port = Port2
+                        },
                         ServerName = ServerName2
                     })
                     {
@@ -120,7 +126,10 @@ namespace Raven.Tests.Core.Smuggler
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration
             {
-                Port = Port1,
+                Core =
+                {
+                    Port = Port1
+                },
                 ServerName = ServerName1
             })
             {
@@ -163,7 +172,10 @@ namespace Raven.Tests.Core.Smuggler
 
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
-                        Port = Port2,
+                        Core =
+                        {
+                            Port = Port2,
+                        },
                         ServerName = ServerName2
                     })
                     {

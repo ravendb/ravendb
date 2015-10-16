@@ -797,7 +797,7 @@ namespace Raven.Database.Queries
 					var values = new List<FacetValue>();
 					List<string> allTerms;
 
-					int maxResults = Math.Min(PageSize ?? facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
+					int maxResults = Math.Min(PageSize ?? facet.MaxResults ?? Database.Configuration.Core.MaxPageSize, Database.Configuration.Core.MaxPageSize);
 					var groups = facetsByName.GetOrDefault(facet.DisplayName);
 
 					if (groups == null)

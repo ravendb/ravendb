@@ -16,15 +16,15 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("raven/{*id}")]
 		public HttpResponseMessage RavenUiGet(string id = null)
 		{
-			if (string.IsNullOrEmpty(Database.Configuration.RedirectStudioUrl) == false)
+			if (string.IsNullOrEmpty(Database.Configuration.Server.RedirectStudioUrl) == false)
 			{
 				var result = InnerRequest.CreateResponse(HttpStatusCode.Found);
-				result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, Database.Configuration.RedirectStudioUrl));
+				result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, Database.Configuration.Server.RedirectStudioUrl));
 				return result;
 			}
 
 			var docPath = GetRequestUrl().Replace("/raven/", "");
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, docPath);
+			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.Core.WebDir, "Raven.Database.Server.WebUI", null, docPath);
 		}
 
 		[HttpGet]
@@ -32,10 +32,10 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("studio/{*path}")]
 		public HttpResponseMessage GetStudioFile(string path = null)
 		{
-			if (string.IsNullOrEmpty(Database.Configuration.RedirectStudioUrl) == false)
+			if (string.IsNullOrEmpty(Database.Configuration.Server.RedirectStudioUrl) == false)
 			{
 				var result = InnerRequest.CreateResponse(HttpStatusCode.Found);
-				result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, Database.Configuration.RedirectStudioUrl));
+				result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, Database.Configuration.Server.RedirectStudioUrl));
 				return result;
 			}
 

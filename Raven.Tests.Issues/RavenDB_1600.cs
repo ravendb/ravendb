@@ -51,7 +51,10 @@ namespace Raven.Tests.Issues
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				Core =
+                {
+                    DataDirectory = DataDir
+                },
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			}, null))
 			{
@@ -91,7 +94,10 @@ namespace Raven.Tests.Issues
 
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				Core =
+				{
+                    DataDirectory = DataDir,
+                }, 
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}, null))
 			{

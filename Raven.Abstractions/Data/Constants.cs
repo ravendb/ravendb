@@ -86,37 +86,14 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
-		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
-
-		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
-
-		public const string LowMemoryLimitForLinuxDetectionInMB = "Raven/LowMemoryLimitForLinuxDetectionInMB";
-        public const string RunInMemory = "Raven/RunInMemory";
-
-	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
+        public const string RunInMemory = "Raven/RunInMemory"; //TODO arek - remove that
 
 		// Server
-		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
-
-		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
-
-	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
-
-        public const string MaxSecondsForTaskToWaitForDatabaseToLoad = "Raven/MaxSecondsForTaskToWaitForDatabaseToLoad";
-
 	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 
 	    public const string RavenServerBuild = "Raven-Server-Build";
 
-		// Indexing
-		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
-
-		public const int DefaultPrefetchingDurationLimit = 5000;
-
-		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
-
-		public const int BulkImportDefaultTimeoutInMs = 60000;
 
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 
@@ -179,10 +156,6 @@ namespace Raven.Abstractions.Data
 		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
 		//Replications
-	    public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
-
-	    public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
-
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
@@ -269,9 +242,6 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
-
-		// Queries
-		public const string MaxClauseCount = "Raven/MaxClauseCount";
 
 		// General
 		public static class Database
@@ -445,8 +415,6 @@ namespace Raven.Abstractions.Data
 				public const string DatabaseMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
 			} 
 		}
-
-		public const string AllowScriptsToAdjustNumberOfSteps = "Raven/AllowScriptsToAdjustNumberOfSteps";
 
 	    public class Indexing
 	    {

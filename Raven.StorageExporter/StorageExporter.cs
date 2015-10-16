@@ -25,7 +25,7 @@ namespace Raven.StorageExporter
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
             var ravenConfiguration = new RavenConfiguration();
-            ravenConfiguration.DataDirectory = databaseBaseDirectory;
+            ravenConfiguration.Core.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
             CreateTransactionalStorage(ravenConfiguration);
             BatchSize = batchSize;
@@ -184,7 +184,7 @@ namespace Raven.StorageExporter
 
 		private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
         {
-            if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
+            if (String.IsNullOrEmpty(ravenConfiguration.Core.DataDirectory) == false && Directory.Exists(ravenConfiguration.Core.DataDirectory))
             {
 
                 try
@@ -206,13 +206,13 @@ namespace Raven.StorageExporter
                 }
                 return;
             }
-            ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.DataDirectory));
+            ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.Core.DataDirectory));
         }
 
         public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
         {
             storage = null;
-            if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+            if (File.Exists(Path.Combine(ravenConfiguration.Core.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
 
             if (storage != null)

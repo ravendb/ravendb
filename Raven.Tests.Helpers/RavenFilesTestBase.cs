@@ -82,9 +82,12 @@ namespace Raven.Tests.Helpers
 
             var ravenConfiguration = new RavenConfiguration
             {
-                Port = port,
-                DataDirectory = directory,
-                RunInMemory = runInMemory,
+				Core =
+				{
+				    RunInMemory = runInMemory,
+                    DataDirectory = directory,
+                    Port = port,
+                },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif                
@@ -211,12 +214,12 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            return servers.First(x => x.SystemDatabase.Configuration.Port == Ports[index]).Server.GetRavenFileSystemInternal(fileSystemName).Result;
+            return servers.First(x => x.SystemDatabase.Configuration.Core.Port == Ports[index]).Server.GetRavenFileSystemInternal(fileSystemName).Result;
         }
 
         protected RavenDbServer GetServer(int index = 0)
         {
-            return servers.First(x => x.SystemDatabase.Configuration.Port == Ports[index]);
+            return servers.First(x => x.SystemDatabase.Configuration.Core.Port == Ports[index]);
         }
 
         protected static string GetServerUrl(bool fiddler, string serverUrl)

@@ -14,7 +14,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("plugins/status")]
 		public HttpResponseMessage PlugingsStatusGet()
 		{
-			var dir = DatabasesLandlord.SystemDatabase.Configuration.PluginsDirectory;
+			var dir = DatabasesLandlord.SystemDatabase.Configuration.Core.PluginsDirectory;
 			if (Directory.Exists(dir) == false)
 				return GetMessageWithObject(new PluginsStatus());
 

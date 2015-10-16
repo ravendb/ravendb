@@ -253,7 +253,7 @@ namespace Raven.Database.Counters.Controllers
 			var docKey = Constants.Counter.Prefix + id;
 			SystemDatabase.Documents.Delete(docKey, null, null);
 
-			if (isHardDeleteNeeded && configuration.RunInMemory == false)
+			if (isHardDeleteNeeded && configuration.Core.RunInMemory == false)
 			{
 				IOExtensions.DeleteDirectory(configuration.Counter.DataDirectory);
 			}
@@ -323,7 +323,7 @@ namespace Raven.Database.Counters.Controllers
 				});
 			}
 
-			var backupOperation = new BackupOperation(Counters, DatabasesLandlord.SystemDatabase.Configuration.DataDirectory,
+			var backupOperation = new BackupOperation(Counters, DatabasesLandlord.SystemDatabase.Configuration.Core.DataDirectory,
 				backupRequest.BackupLocation, Counters.Environment, incrementalBackup, backupRequest.CounterStorageDocument);
 
 #pragma warning disable 4014

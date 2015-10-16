@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 			DocumentStore docStore;
 			using (var store = new EmbeddableDocumentStore { UseEmbeddedHttpServer = true, RunInMemory = true })
 			{
-				store.Configuration.Port = 8079;
+				store.Configuration.Core.Port = 8079;
 
 				store.Initialize();
 

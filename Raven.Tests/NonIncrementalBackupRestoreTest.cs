@@ -43,8 +43,11 @@ namespace Raven.Tests
 	        db = new DocumentDatabase(new RavenConfiguration
 	        {
                 DefaultStorageTypeName = storageName,
-	            DataDirectory = DataDir,
-                RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DataDir
+                },
 	            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 	            Settings =
 	            {
@@ -72,8 +75,11 @@ namespace Raven.Tests
             MaintenanceActions.Restore(new RavenConfiguration
             {
                 DefaultStorageTypeName = storageName,
-                DataDirectory = DataDir,
-                RunInMemory = false,
+                Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DataDir
+				},
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
@@ -88,7 +94,12 @@ namespace Raven.Tests
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+            db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 
             var fetchedData = db.Documents.Get("Foo");
             Assert.NotNull(fetchedData);
@@ -118,9 +129,12 @@ namespace Raven.Tests
             Assert.Throws<IOException>(() => 
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    DefaultStorageTypeName = storageName,
-                    DataDirectory = DataDir,
-                    RunInMemory = false,
+                    DefaultStorageTypeName = storageName, 
+					Core =
+					{
+					    RunInMemory = false,
+                        DataDirectory = DataDir
+					},
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                     Settings =
                     {
@@ -158,8 +172,11 @@ namespace Raven.Tests
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
                     DefaultStorageTypeName = storageName,
-                    DataDirectory = DataDir,
-                    RunInMemory = false,
+					Core =
+					{
+					    RunInMemory = false,
+                        DataDirectory = DataDir,
+					},
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                     Settings =
                     {
@@ -173,7 +190,12 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+            db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 
             var fetchedData = db.Documents.Get("Foo");
             Assert.NotNull(fetchedData);
@@ -210,8 +232,11 @@ namespace Raven.Tests
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
                     DefaultStorageTypeName = storageName,
-                    DataDirectory = DataDir,
-                    RunInMemory = false,
+					Core =
+					{
+					    RunInMemory = false,
+                        DataDirectory = DataDir,
+					},
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                     Settings =
                     {
@@ -225,7 +250,12 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+            db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                },
+            }, null);
 
             var fetchedData = db.Documents.Get("Foo");
             Assert.NotNull(fetchedData);

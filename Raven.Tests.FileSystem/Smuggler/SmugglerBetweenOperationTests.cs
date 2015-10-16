@@ -113,7 +113,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 using (var store = NewStore())
                 {
                     var server = GetServer();
-                    dataDirectory = server.Configuration.DataDirectory;
+                    dataDirectory = server.Configuration.Core.DataDirectory;
 
                     var smugglerApi = new SmugglerFilesApi();
 
@@ -163,7 +163,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                 var alreadyReset = false;
 	            var port = 8070;
-	            var forwarder = new ProxyServer(ref port, server.Configuration.Port)
+	            var forwarder = new ProxyServer(ref port, server.Configuration.Core.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {

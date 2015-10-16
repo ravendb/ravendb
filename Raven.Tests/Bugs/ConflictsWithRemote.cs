@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
             configuration.DefaultStorageTypeName = "voron";
-            configuration.RunInMemory = false;
+            configuration.Core.RunInMemory = false;
         }
 
 

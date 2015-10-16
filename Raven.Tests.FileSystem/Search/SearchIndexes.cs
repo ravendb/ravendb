@@ -195,7 +195,7 @@ namespace Raven.Tests.FileSystem.Indexing
 	        string dataDirectoryPath = NewDataPath("WillReindexAfterNoIndexes");
             using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
-                dataDirectoryPath = server.Configuration.DataDirectory;
+                dataDirectoryPath = server.Configuration.Core.DataDirectory;
 
                 var store = server.FilesStore;
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);

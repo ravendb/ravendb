@@ -32,9 +32,9 @@ namespace Raven.Database.Impl
 		{
 			var result = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
 			{
-				{"physicalMemoryLimitPercentage", configuration.MemoryCacheLimitPercentage.ToString()},
-				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")},
-				{"cacheMemoryLimitMegabytes", configuration.MemoryCacheLimitMegabytes.ToString()}
+				{"physicalMemoryLimitPercentage", configuration.Memory.MemoryCacheLimitPercentage.ToString()},
+				{"pollingInterval",  configuration.Memory.MemoryCacheLimitCheckInterval.AsTimeSpan.ToString(@"hh\:mm\:ss")},
+				{"cacheMemoryLimitMegabytes", configuration.Memory.MemoryCacheLimit.Megabytes.ToString()}
 			});
 			log.Info(@"MemoryCache Settings:
   PhysicalMemoryLimit = {0}
@@ -134,7 +134,7 @@ namespace Raven.Database.Impl
 					Size = size
 				}, new CacheItemPolicy
 				{
-					SlidingExpiration = configuration.MemoryCacheExpiration,
+					SlidingExpiration = configuration.Memory.MemoryCacheExpiration.AsTimeSpan,
 				});
 			}
 			catch (OverflowException)

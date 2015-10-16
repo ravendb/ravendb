@@ -42,9 +42,9 @@ namespace Raven.Database.Server.Controllers
 			bool namesOnly;
 			RavenJArray transformers;
 			if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-				transformers = Database.Transformers.GetTransformerNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				transformers = Database.Transformers.GetTransformerNames(GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 			else
-				transformers = Database.Transformers.GetTransformers(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				transformers = Database.Transformers.GetTransformers(GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
 			return GetMessageWithObject(transformers);
 		}

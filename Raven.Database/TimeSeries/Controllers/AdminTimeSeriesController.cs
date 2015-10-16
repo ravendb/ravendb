@@ -148,7 +148,7 @@ namespace Raven.Database.TimeSeries.Controllers
 			var docKey = Constants.TimeSeries.Prefix + id;
 			SystemDatabase.Documents.Delete(docKey, null, null);
 
-			if (isHardDeleteNeeded && configuration.RunInMemory == false)
+			if (isHardDeleteNeeded && configuration.Core.RunInMemory == false)
 			{
 				IOExtensions.DeleteDirectory(configuration.TimeSeries.DataDirectory);
 			}

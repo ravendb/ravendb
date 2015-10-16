@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get()
         {
             var etag = GetEtagFromQueryString();
-            var pageSize = GetPageSize(FileSystem.Configuration.MaxPageSize);
+            var pageSize = GetPageSize(FileSystem.Configuration.Core.MaxPageSize);
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {

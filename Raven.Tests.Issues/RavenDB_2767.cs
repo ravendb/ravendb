@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 				};
 			}).ToArray());
 
-			last = EtagUtil.Increment(last, store.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
+			last = EtagUtil.Increment(last, store.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch);
 
 			prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
 			{

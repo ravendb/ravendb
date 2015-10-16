@@ -100,9 +100,9 @@ namespace Raven.Database.Server.Tenancy
 				config.Settings[securedSetting.Key] = securedSetting.Value;
 			}
 
-			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
 			//config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-			config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+			config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
 
 			config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 			config.TimeSeriesName = tenantId;
@@ -149,8 +149,8 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("TimeSeries '" + tenantId + "' is currently locked and cannot be accessed");
 
 			ManualResetEvent cleanupLock;
-			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
-				throw new InvalidOperationException(string.Format("TimeSeries '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
+			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
+				throw new InvalidOperationException(string.Format("TimeSeries '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
 
 			if (ResourcesStoresCache.TryGetValue(tenantId, out timeSeries))
 			{

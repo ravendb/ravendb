@@ -49,7 +49,7 @@ namespace Raven.Tests.Server.Runner.Controllers
 
 			configuration.PostInit();
 
-			MaybeRemoveServer(configuration.Port);
+			MaybeRemoveServer(configuration.Core.Port);
 			var server = CreateNewServer(configuration, deleteData);
 
 			if (serverConfiguration.UseCommercialLicense)
@@ -102,25 +102,25 @@ namespace Raven.Tests.Server.Runner.Controllers
 
 		private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
 		{
-			var port = configuration.Port.ToString(CultureInfo.InvariantCulture);
+			var port = configuration.Core.Port.ToString(CultureInfo.InvariantCulture);
 
-			configuration.DataDirectory = Path.Combine(Context.DataDir, port, "System");
+			configuration.Core.DataDirectory = Path.Combine(Context.DataDir, port, "System");
 			configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
-			configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
+			configuration.Server.AccessControlAllowOrigin = new HashSet<string> { "*" };
 
-			if (configuration.RunInMemory == false && deleteData)
+			if (configuration.Core.RunInMemory == false && deleteData)
 			{
                 var pathToDelete = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Context.DataDir, port);
 				Context.DeleteDirectory(pathToDelete);
 			}
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Core.Port);
 			var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
 
 			server.Initialize();
-			Context.Servers.Add(configuration.Port, server);
+			Context.Servers.Add(configuration.Core.Port, server);
 
-			Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Port, configuration.RunInMemory);
+			Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Core.Port, configuration.Core.RunInMemory);
 
 			return server;
 		}

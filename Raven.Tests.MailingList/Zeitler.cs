@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 		}
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.RunInMemory = false;
+			configuration.Core.RunInMemory = false;
 		}
 		[Fact]
 		public void AddTest()

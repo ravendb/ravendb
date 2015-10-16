@@ -67,7 +67,7 @@ namespace Raven.Database.Counters
 			Name = storageName;
 			ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
 
-			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
+			var options = configuration.Core.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.Counter.DataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);

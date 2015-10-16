@@ -14,7 +14,7 @@ namespace Raven.Tests.Bugs
 	{
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
-			ravenConfiguration.RunInMemory = false;
+			ravenConfiguration.Core.RunInMemory = false;
 		}
 
 		[Fact]

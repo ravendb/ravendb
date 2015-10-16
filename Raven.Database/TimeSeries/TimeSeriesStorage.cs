@@ -73,7 +73,7 @@ namespace Raven.Database.TimeSeries
 
 			metricsTimeSeries = new TimeSeriesMetricsManager();
 
-			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
+			var options = configuration.Core.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
 
 			JsonSerializer = new JsonSerializer();

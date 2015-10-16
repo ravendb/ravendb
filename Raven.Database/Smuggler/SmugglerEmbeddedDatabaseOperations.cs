@@ -202,7 +202,7 @@ namespace Raven.Database.Smuggler
 		public void Configure(SmugglerDatabaseOptions databaseOptions)
 		{
 			var current = databaseOptions.BatchSize;
-			var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.MaxNumberOfItemsToProcessInSingleBatch;
+			var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch;
 
 			databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
 		}

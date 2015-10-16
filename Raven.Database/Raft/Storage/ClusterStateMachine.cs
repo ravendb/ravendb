@@ -117,14 +117,14 @@ namespace Raven.Database.Raft.Storage
 		{
 			get
 			{
-				return database.Configuration.RunInMemory == false;
+				return database.Configuration.Core.RunInMemory == false;
 			}
 		}
 
 		public void CreateSnapshot(long index, long term, ManualResetEventSlim allowFurtherModifications)
 		{
 			//TODO: consider move this code to separate class - as RAFT usages will grow we might endup with lots of documents to export
-			var directoryPath = Path.Combine(database.Configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft", "Snapshot");
+			var directoryPath = Path.Combine(database.Configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft", "Snapshot");
 			if (Directory.Exists(directoryPath) == false)
 				Directory.CreateDirectory(directoryPath);
 			var filePath = Path.Combine(directoryPath, string.Format("Full-{0:D19}-{1:D19}.Snapshot", index, term));
@@ -160,7 +160,7 @@ namespace Raven.Database.Raft.Storage
 
 		public ISnapshotWriter GetSnapshotWriter()
 		{
-			return new SnapshotWriter(database.Configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory);
+			return new SnapshotWriter(database.Configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory);
 		}
 
 		public class SnapshotWriter : ISnapshotWriter

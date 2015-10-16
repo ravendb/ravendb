@@ -29,7 +29,7 @@ namespace Raven.Tests.Triggers
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				RunInMemory = true,
+				Core = { RunInMemory = true },
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoReadsOnCapitalNamesTrigger),
 					typeof(HiddenDocumentsTrigger),

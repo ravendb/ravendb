@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = new EmbeddableDocumentStore())
 			{				
-				store.Configuration.RunInMemory = true;
+				store.Configuration.Core.RunInMemory = true;
 				store.Configuration.Settings[Constants.ActiveBundles] = "Versioning";
 				store.Configuration.DefaultStorageTypeName = "voron";
 				store.Initialize();

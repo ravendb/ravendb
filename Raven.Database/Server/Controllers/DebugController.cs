@@ -552,7 +552,7 @@ namespace Raven.Database.Server.Controllers
 					op == "from"
 					? accessor.Indexing.GetDocumentsReferencesFrom(id)
 					: accessor.Indexing.GetDocumentsReferencing(id);
-				results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+				results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.Core.MaxPageSize)).ToList();
 			});
 
 			return GetMessageWithObject(new
@@ -633,7 +633,7 @@ namespace Raven.Database.Server.Controllers
 			List<ListItem> listItems = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+				listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.Core.MaxPageSize)).ToList();
 			});
 
 			if (listItems == null)

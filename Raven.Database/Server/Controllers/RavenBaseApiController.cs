@@ -564,7 +564,7 @@ namespace Raven.Database.Server.Controllers
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
 
-		    filePath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, docPath);
+		    filePath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, docPath);
 		    if (File.Exists(filePath))
 		        return WriteFile(filePath);
 
@@ -580,7 +580,7 @@ namespace Raven.Database.Server.Controllers
 					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
 
 			    if (File.Exists(fullZipPath) == false)
-			        fullZipPath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, zipPath + ".zip");
+			        fullZipPath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, zipPath + ".zip");
 
 				if (File.Exists(fullZipPath))
 				{

@@ -92,14 +92,14 @@ namespace Raven.Client.Embedded
 
 	    private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
 	    {
-		    if (System.IO.Directory.Exists(configuration.DataDirectory))
+		    if (System.IO.Directory.Exists(configuration.Core.DataDirectory))
 				return;
 
-			var directory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(configuration.WorkingDirectory, "~\\Data");
+			var directory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(configuration.Core.WorkingDirectory, "~\\Data");
 			if (System.IO.Directory.Exists(directory) == false)
 				return;
 			
-		    configuration.DataDirectory = "~\\Data";
+		    configuration.Core.DataDirectory = "~\\Data";
 	    }
 
 	    private IDocumentStore Inner
@@ -207,8 +207,8 @@ namespace Raven.Client.Embedded
 
 	    public string DataDirectory
 	    {
-		    get { return Configuration.DataDirectory; }
-			set { Configuration.DataDirectory = value; }
+		    get { return Configuration.Core.DataDirectory; }
+			set { Configuration.Core.DataDirectory = value; }
 	    }
 	    public string Url
         {
@@ -411,8 +411,8 @@ namespace Raven.Client.Embedded
 
 		public bool RunInMemory
 		{
-			get { return Configuration.RunInMemory; }
-			set { Configuration.RunInMemory = value; }
+			get { return Configuration.Core.RunInMemory; }
+			set { Configuration.Core.RunInMemory = value; }
 		}
 
         public IDocumentStore RegisterListener(IDocumentStoreListener listener)

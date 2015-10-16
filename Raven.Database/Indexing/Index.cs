@@ -725,7 +725,7 @@ namespace Raven.Database.Indexing
 		        IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
 		            ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
 		            : null;
-		        indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+		        indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.Indexing.MaxWritesBeforeRecreate, indexReaderWarmer);
 		    }
 		    catch (Exception e)
 		    {
@@ -736,7 +736,7 @@ namespace Raven.Database.Indexing
 
 		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
 		{
-			if (context.Configuration.RunInMemory ||
+			if (context.Configuration.Core.RunInMemory ||
 				context.IndexDefinitionStorage == null) // may happen during index startup
 				return;
 
@@ -745,9 +745,9 @@ namespace Raven.Database.Indexing
 				return;
 
 			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
-			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
+			var toobig = dir.SizeInBytes() >= context.Configuration.Indexing.NewIndexInMemoryMaxSize.Bytes;
 
-			var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.NewIndexInMemoryMaxTime;
+			var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.Indexing.NewIndexInMemoryMaxTime.AsTimeSpan;
 
 			if (forceWriteToDisk || toobig || !stale || tooOld)
 			{
@@ -846,7 +846,7 @@ namespace Raven.Database.Indexing
 					stats.IndexingErrors++;
 				};
 
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch,
 				beforeMoveNext: () => Interlocked.Increment(ref stats.IndexingAttempts),
 				cancelMoveNext: () => Interlocked.Decrement(ref stats.IndexingAttempts),
 				onError: onErrorFunc)
@@ -859,7 +859,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch,
                 beforeMoveNext: () => Interlocked.Increment(ref stats.ReduceAttempts),
 				cancelMoveNext: () => Interlocked.Decrement(ref stats.ReduceAttempts),
 				onError: (exception, o) =>
@@ -889,7 +889,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch,
                 onError: (exception, o) =>
 				{
 					var keys = TryGetDocKeys(input, o);
@@ -1289,7 +1289,7 @@ namespace Raven.Database.Indexing
 						}
 						else
 						{
-							maxNumberOfIndexOutputs = parent.IsMapReduce ? parent.context.Configuration.MaxMapReduceIndexOutputsPerDocument : parent.context.Configuration.MaxSimpleIndexOutputsPerDocument;
+							maxNumberOfIndexOutputs = parent.IsMapReduce ? parent.context.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument : parent.context.Configuration.Indexing.MaxSimpleIndexOutputsPerDocument;
 
 							if (maxNumberOfIndexOutputs == -1) // configuration was set to disable output count check, probably because there exist fanout indexes
 								maxNumberOfIndexOutputs = 50;
@@ -1957,7 +1957,7 @@ namespace Raven.Database.Indexing
 		    }
 
 		    var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ??
-										(IsMapReduce ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument);
+										(IsMapReduce ? context.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument : context.Configuration.Indexing.MaxSimpleIndexOutputsPerDocument);
 
 			if (maxNumberOfIndexOutputs == -1)
 				return true;

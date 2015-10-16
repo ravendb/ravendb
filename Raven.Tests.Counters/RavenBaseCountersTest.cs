@@ -87,7 +87,7 @@ namespace Raven.Tests.Counters
 			try
 			{
 				foreach(var server in servers)
-					IOExtensions.DeleteDirectory(server.Configuration.DataDirectory); //for failover tests that have runInMemory = false
+					IOExtensions.DeleteDirectory(server.Configuration.Core.DataDirectory); //for failover tests that have runInMemory = false
 				IOExtensions.DeleteDirectory("Counters");
 				base.Dispose();
 			}

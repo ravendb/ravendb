@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			
-			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetPageSize(Database.Configuration.MaxPageSize));
+			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetPageSize(Database.Configuration.Core.MaxPageSize));
 
 			if (MatchEtag(result.Etag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);

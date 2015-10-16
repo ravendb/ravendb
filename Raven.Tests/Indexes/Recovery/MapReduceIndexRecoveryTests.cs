@@ -18,7 +18,7 @@ namespace Raven.Tests.Indexes.Recovery
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.NumberOfItemsToExecuteReduceInSingleStep = 10;		    
+			configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = 10;		    
 		}
 
 		[Fact]
@@ -35,7 +35,7 @@ namespace Raven.Tests.Indexes.Recovery
 				{
 					index.Execute(store);
 
-                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
                                              server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName).IndexId.ToString(CultureInfo.InvariantCulture));
 
 					using (var session = store.OpenSession())

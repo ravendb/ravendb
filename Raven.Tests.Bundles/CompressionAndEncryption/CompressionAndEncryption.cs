@@ -26,10 +26,12 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
 			path = Path.Combine(path, "TestDb").Substring(6);
 			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			settings = new Raven.Database.Config.RavenConfiguration
-			{
-				Port = 8079,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				DataDirectory = path,
+			{				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				Core =
+                {
+                    DataDirectory = path,
+                    Port = 8079,
+                },
 				Settings =
 					{
 						{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},

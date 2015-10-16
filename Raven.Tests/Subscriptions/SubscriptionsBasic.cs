@@ -638,7 +638,7 @@ namespace Raven.Tests.Subscriptions
 				
 				store = new DocumentStore()
 				{
-					Url = "http://localhost:" + server.Configuration.Port,
+					Url = "http://localhost:" + server.Configuration.Core.Port,
 					DefaultDatabase = "RavenDB_2627"
 				}.Initialize();
 

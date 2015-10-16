@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 			{
 				const int reduceOptimizationLimit = 4;
 
-				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
+				documentStore.Configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
 
 				new Countries_ByAbbreviationAndName().Execute(documentStore);
 
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 			{
 				const int reduceOptimizationLimit = 4;
 
-				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
+				documentStore.Configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
 
 				new Countries_ByAbbreviationAndName().Execute(documentStore);
 
@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
 			{
 				const int reduceOptimizationLimit = 4;
 
-				documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
+				documentStore.Configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = reduceOptimizationLimit;
 
 				new Countries_ByAbbreviationAndName().Execute(documentStore);
 
@@ -189,9 +189,9 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Configuration.MaxNumberOfItemsToProcessInSingleBatch = 50;
-				documentStore.Configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
-                documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = 50;
+				documentStore.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 50;
+				documentStore.Configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 50;
+                documentStore.Configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = 50;
 
 				new Countries_ByAbbreviationAndName().Execute(documentStore);
 

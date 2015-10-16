@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues.Prefetcher
 		{
 			var configuration = new InMemoryRavenConfiguration
 			{
-				RunInMemory = true
+				Core = { RunInMemory = true }
 			};
 
 			configuration.Initialize();

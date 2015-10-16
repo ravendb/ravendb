@@ -89,8 +89,8 @@ namespace Raven.Server
 
 		public bool RunInMemory
 	    {
-	        get { return configuration.RunInMemory; }
-            set { configuration.RunInMemory = value; }
+	        get { return configuration.Core.RunInMemory; }
+            set { configuration.Core.RunInMemory = value; }
 	    }
 
 		public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
@@ -100,9 +100,7 @@ namespace Raven.Server
 				// we ignore either all or none at the moment
 				ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
 			}
-			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
-
-			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+			BooleanQuery.MaxClauseCount = configuration.Queries.MaxClauseCount;
 
 			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
 			options = owinHttpServer.Options;

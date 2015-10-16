@@ -61,7 +61,7 @@ namespace Raven.Tests.Counters
 			{
 				using (var counterStore = new CounterStore
 				{
-					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Core.Port),
 					Name = DefaultCounterStorageName					
 				})
 				{
@@ -73,7 +73,7 @@ namespace Raven.Tests.Counters
 
 				using (var counterStore = new CounterStore
 				{
-					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Core.Port),
 					Name = DefaultCounterStorageName
 				})
 				{

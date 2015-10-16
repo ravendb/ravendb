@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 		{
             configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.RunInMemory = false;
+            configuration.Core.RunInMemory = false;
 		}
 
 		public class Users_ByName : AbstractIndexCreationTask<User> 
@@ -122,7 +122,7 @@ namespace Raven.Tests.Issues
 
 				Assert.DoesNotContain("error", output.ToString().ToLower());
 
-				using (var db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null))
+				using (var db = new DocumentDatabase(new RavenConfiguration { Core = { DataDirectory = DataDir }}, null))
 				{
 					var indexStats = db.Statistics.Indexes;
 

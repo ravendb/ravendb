@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.MaxClauseCount = MaxClauseCountInTest + 1;
+			configuration.Queries.MaxClauseCount = MaxClauseCountInTest + 1;
 		}
 
 		[Fact]
