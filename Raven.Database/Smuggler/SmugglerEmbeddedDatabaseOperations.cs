@@ -178,7 +178,7 @@ namespace Raven.Database.Smuggler
 
 		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(scriptedJsonPatcher.Transform(transformScript, document));
+			return new CompletedTask<RavenJObject>(scriptedJsonPatcher.Transform(document));
 		}
 
 		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)

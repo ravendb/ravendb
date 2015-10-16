@@ -240,7 +240,7 @@ namespace Raven.Smuggler
 
 		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
+			return new CompletedTask<RavenJObject>(jintHelper.Transform(document));
 		}
 
 		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)

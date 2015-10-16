@@ -415,6 +415,7 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Replication\SideBySideReplicationInfo.cs" />
     <Compile Include="ServerSmugglerRequest.cs" />
+    <Compile Include="Smuggler\DatabaseSmugglerOptions.cs" />
     <Compile Include="Smuggler\Data\CounterOperationState.cs" />
     <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />

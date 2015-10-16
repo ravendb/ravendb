@@ -7,9 +7,13 @@ using System;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Smuggler;
+using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database
 {
@@ -17,10 +21,14 @@ namespace Raven.Smuggler.Database
 	{
 		private readonly LastEtagsInfo _maxEtags;
 
+		private readonly SmugglerJintHelper _patcher;
+
 		public DocumentSmuggler(DatabaseSmugglerOptions options, ReportActions report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
 			: base(options, report, source, destination)
 		{
 			_maxEtags = maxEtags;
+			_patcher = new SmugglerJintHelper();
+			_patcher.Initialize(options);
 		}
 
 		public override async Task SmuggleAsync(OperationState state)
@@ -36,36 +44,64 @@ namespace Raven.Smuggler.Database
 				var reachedMaxEtag = false;
 				Report.ShowProgress("Exporting Documents");
 
-				while (true)
+				do
 				{
 					var hasDocs = false;
 					try
 					{
 						var maxRecords = Options.Limit - totalCount;
+						// TODO [ppekrol] Handle Limit better
 						if (maxRecords > 0 && reachedMaxEtag == false)
 						{
-							var amountToFetchFromServer = Math.Min(Options.BatchSize, maxRecords);
-							using (var documents = await Source.ReadDocumentsAsync(lastEtag, amountToFetchFromServer).ConfigureAwait(false))
+							var pageSize = Source.SupportsPaging ? Math.Min(Options.BatchSize, maxRecords) : int.MaxValue;
+
+							using (var documents = await Source.ReadDocumentsAsync(lastEtag, pageSize).ConfigureAwait(false))
 							{
 								while (await documents.MoveNextAsync().ConfigureAwait(false))
 								{
 									hasDocs = true;
 									var document = documents.Current;
 
-									var tempLastEtag = document.Etag;
+									var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
 									if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
 									{
 										reachedMaxEtag = true;
 										break;
 									}
+
 									lastEtag = tempLastEtag;
 
-									if (!Options.MatchFilters(document))
+									if (Options.MatchFilters(document) == false)
 										continue;
 
 									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
 										continue;
+
+									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+										continue;
+
+									if (!string.IsNullOrEmpty(Options.TransformScript))
+										document = await TransformDocumentAsync(document).ConfigureAwait(false);
+
+									// If document is null after a transform we skip it. 
+									if (document == null)
+										continue;
+
+									var metadata = document["@metadata"] as RavenJObject;
+									if (metadata != null)
+									{
+										if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+											continue;
+
+										if (Options.StripReplicationInformation)
+											document["@metadata"] = SmugglerHelper.StripReplicationInformationFromMetadata(metadata);
+
+										if (Options.ShouldDisableVersioningBundle)
+											document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+
+										document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+									}
 
 									try
 									{
@@ -101,7 +137,7 @@ namespace Raven.Smuggler.Database
 								var lastEtagComparable = new ComparableByteArray(lastEtag);
 								if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 								{
-									lastEtag = EtagUtil.Increment(lastEtag, amountToFetchFromServer);
+									lastEtag = EtagUtil.Increment(lastEtag, pageSize);
 									if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
 									{
 										lastEtag = databaseStatistics.LastDocEtag;
@@ -129,7 +165,6 @@ namespace Raven.Smuggler.Database
 									if (doc == null)
 										continue;
 
-									doc.Metadata["@id"] = doc.Key;
 									await actions.WriteDocumentAsync(doc).ConfigureAwait(false);
 									totalCount++;
 								}
@@ -148,8 +183,13 @@ namespace Raven.Smuggler.Database
 							LastEtag = lastEtag,
 						};
 					}
-				}
+				} while (Source.SupportsPaging);
 			}
+		}
+
+		private Task<RavenJObject> TransformDocumentAsync(RavenJObject document)
+		{
+			return new CompletedTask<RavenJObject>(_patcher.Transform(document));
 		}
 	}
 }

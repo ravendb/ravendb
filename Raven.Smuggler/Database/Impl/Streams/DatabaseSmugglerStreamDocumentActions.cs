@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database.Impl.Streams
 {
@@ -16,10 +17,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			_writer = writer;
 		}
 
-		public Task WriteDocumentAsync(JsonDocument document)
+		public Task WriteDocumentAsync(RavenJObject document)
 		{
-			var documentAsJson = document.ToJson();
-			documentAsJson.WriteTo(_writer);
+			document.WriteTo(_writer);
 			return new CompletedTask();
 		}
 	}

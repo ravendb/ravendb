@@ -28,7 +28,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public void Initialize()
 		{
-			_gZipStream = new GZipStream(_stream, CompressionMode.Compress);
+			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
 			_streamWriter = new StreamWriter(_gZipStream);
 			_writer = new JsonTextWriter(_streamWriter)
 			{
@@ -67,9 +67,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		{
 			_writer.WriteEndObject();
 
-			_gZipStream?.Dispose();
-
 			_streamWriter?.Dispose();
+
+			_gZipStream?.Dispose();
 		}
 	}
 }

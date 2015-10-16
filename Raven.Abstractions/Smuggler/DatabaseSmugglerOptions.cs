@@ -4,11 +4,11 @@ using System.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
-using Raven.Abstractions.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Database
+namespace Raven.Abstractions.Smuggler
 {
 	public class DatabaseSmugglerOptions
 	{
@@ -18,6 +18,7 @@ namespace Raven.Smuggler.Database
 			ConfigureDefaultFilters();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Transformers;
 			ShouldExcludeExpired = false;
+			Limit = int.MaxValue;
 		}
 		private void ConfigureDefaultFilters()
 		{
@@ -40,9 +41,9 @@ namespace Raven.Smuggler.Database
 
 		public bool ShouldExcludeExpired { get; set; }
 
-		public virtual bool ExcludeExpired(JsonDocument document, DateTime now)
+		public virtual bool ExcludeExpired(RavenJObject document, DateTime now)
 		{
-			var metadata = document.Metadata;
+			var metadata = document.Value<RavenJObject>("@metadata");
 
 			const string RavenExpirationDate = "Raven-Expiration-Date";
 
@@ -70,15 +71,23 @@ namespace Raven.Smuggler.Database
 
 		public List<FilterSetting> Filters { get; set; }
 
-		public virtual bool MatchFilters(JsonDocument document)
-		{
-			var json = document.ToJson();
+		public string TransformScript { get; set; }
 
+		public bool SkipConflicted { get; set; }
+
+		public bool StripReplicationInformation { get; set; }
+
+		public bool ShouldDisableVersioningBundle { get; set; }
+
+		public int MaxStepsForTransformScript { get; set; }
+
+		public virtual bool MatchFilters(RavenJObject document)
+		{
 			foreach (var filter in Filters)
 			{
 				bool anyRecords = false;
 				bool matchedFilter = false;
-				foreach (var tuple in json.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
+				foreach (var tuple in document.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
 				{
 					if (tuple == null || tuple.Item1 == null)
 						continue;

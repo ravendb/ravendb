@@ -7,6 +7,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
@@ -120,6 +120,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Monitor", "Raven.Monitor\Raven.Monitor.csproj", "{775CC9C6-BD75-459C-B266-CA1CD389F1A4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Traffic", "Tools\Raven.Traffic\Raven.Traffic.csproj", "{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Abstractions.Database", "Raven.Abstractions.Database\Raven.Abstractions.Database.csproj", "{AE07B425-0EF2-4710-B747-67B8EC20FCB7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -385,6 +387,12 @@ Global
 		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Profiling|Any CPU.Build.0 = Release|Any CPU
 		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE07B425-0EF2-4710-B747-67B8EC20FCB7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

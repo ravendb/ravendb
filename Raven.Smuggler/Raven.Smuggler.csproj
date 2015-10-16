@@ -79,6 +79,10 @@
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
@@ -91,7 +95,6 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="Database\DatabaseSmugglerOptions.cs" />
     <Compile Include="Database\DocumentDeletionsSmuggler.cs" />
     <Compile Include="Database\DocumentSmuggler.cs" />
     <Compile Include="Database\IDatabaseSmugglerDestination.cs" />

@@ -74,5 +74,17 @@ namespace Raven.Abstractions.Smuggler
 
 			return true;
 		}
+
+		public static RavenJToken StripReplicationInformationFromMetadata(RavenJObject metadata)
+		{
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+			return metadata;
+		}
 	}
 }

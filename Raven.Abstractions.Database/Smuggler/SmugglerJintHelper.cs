@@ -4,13 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+
 using Jint;
 using Jint.Native;
+
+using Raven.Abstractions.Database.Json;
 using Raven.Abstractions.Smuggler;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Smuggler
+namespace Raven.Abstractions.Database.Smuggler
 {
 	public class SmugglerJintHelper
 	{
@@ -25,7 +27,6 @@ namespace Raven.Database.Smuggler
 			{
 				cfg.AllowDebuggerStatement(false);
 				cfg.MaxStatements(databaseOptions.MaxStepsForTransformScript);
-				cfg.NullPropagation();
 			});
 
 			jint.Execute(string.Format(@"
@@ -34,24 +35,7 @@ namespace Raven.Database.Smuggler
 					}};", databaseOptions.TransformScript));
 		}
 
-		public void Initialize(DatabaseSmugglerOptions options)
-		{
-			if (string.IsNullOrEmpty(options?.TransformScript))
-				return;
-
-			jint = new Engine(cfg =>
-			{
-				cfg.AllowDebuggerStatement(false);
-				cfg.MaxStatements(options.MaxStepsForTransformScript);
-			});
-
-			jint.Execute(string.Format(@"
-					function Transform(docInner){{
-						return ({0}).apply(this, [docInner]);
-					}};", options.TransformScript));
-		}
-
-		public RavenJObject Transform(RavenJObject input)
+		public RavenJObject Transform(string transformScript, RavenJObject input)
 		{
 			if (jint == null)
 				throw new InvalidOperationException("Jint must be initialized.");

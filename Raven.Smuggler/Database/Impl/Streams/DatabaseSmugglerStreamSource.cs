@@ -36,7 +36,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		private JsonTextReader _reader;
 
-		public DatabaseSmugglerStreamSource(System.IO.Stream stream, CancellationToken cancellationToken)
+		public DatabaseSmugglerStreamSource(Stream stream, CancellationToken cancellationToken)
 		{
 			_stream = stream;
 			_cancellationToken = cancellationToken;
@@ -96,23 +96,10 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				if (options.OperateOnTypes.HasFlag(ItemType.RemoveAnalyzers))
 					definition.Remove("Analyzers");
 
-				try
-				{
-					var indexDefinition = definition.JsonDeserialization<IndexDefinition>();
-					indexDefinition.Name = indexName;
+				var indexDefinition = definition.JsonDeserialization<IndexDefinition>();
+				indexDefinition.Name = indexName;
 
-					results.Add(indexDefinition);
-				}
-				catch (Exception)
-				{
-					if (options.IgnoreErrorsAndContinue)
-					{
-						// TODO [ppekrol] Report
-						continue;
-					}
-
-					throw;
-				}
+				results.Add(indexDefinition);
 			}
 
 			return new CompletedTask<List<IndexDefinition>>(results);
@@ -127,12 +114,12 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			});
 		}
 
-		public Task<IAsyncEnumerator<JsonDocument>> ReadDocumentsAsync(Etag fromEtag, int pageSize)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize)
 		{
-			throw new System.NotImplementedException();
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, _cancellationToken));
 		}
 
-		public Task<JsonDocument> ReadDocumentAsync(string key)
+		public Task<RavenJObject> ReadDocumentAsync(string key)
 		{
 			throw new System.NotImplementedException();
 		}
@@ -226,5 +213,48 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 			_sizeStream?.Dispose();
 		}
+	}
+
+	public class YieldJsonResults<T> : IAsyncEnumerator<RavenJObject>
+	{
+		private readonly Etag _fromEtag;
+
+		private readonly JsonTextReader _reader;
+
+		private readonly CancellationToken _cancellationToken;
+
+		public YieldJsonResults(Etag fromEtag, JsonTextReader reader, CancellationToken cancellationToken)
+		{
+			_fromEtag = fromEtag;
+			_reader = reader;
+			_cancellationToken = cancellationToken;
+		}
+
+		public void Dispose()
+		{
+			Current = null;
+		}
+
+		public Task<bool> MoveNextAsync()
+		{
+			Current = null;
+
+			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
+			{
+				_cancellationToken.ThrowIfCancellationRequested();
+
+				var document = (RavenJObject)RavenJToken.ReadFrom(_reader);
+				var etag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+				if (EtagUtil.IsGreaterThan(_fromEtag, etag))
+					continue;
+
+				Current = document;
+				return new CompletedTask<bool>(true);
+			}
+
+			return new CompletedTask<bool>(false);
+		}
+
+		public RavenJObject Current { get; private set; }
 	}
 }
