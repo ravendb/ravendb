@@ -433,46 +433,55 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		/// <summary>
-		///   Filter matches to be inside the specified radius
-		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude)
+        /// <summary>
+        ///   Filter matches to be inside the specified radius
+        /// </summary>
+        /// <param name = "radius">The radius.</param>
+        /// <param name = "latitude">The latitude.</param>
+        /// <param name = "longitude">The longitude.</param>
+        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is.</param>
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent)
 		{
-			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
 			return this;
 		}
 
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent)
 		{
-			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
 			return this;
 		}
 
-		/// <summary>
-		///   Filter matches to be inside the specified radius
-		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
-		/// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        /// <summary>
+        ///   Filter matches to be inside the specified radius
+        /// </summary>
+        /// <param name = "radius">The radius.</param>
+        /// <param name = "latitude">The latitude.</param>
+        /// <param name = "longitude">The longitude.</param>
+        /// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
+        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is</param>
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
 		{
-			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
 			return this;
 		}
 
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
 		{
-			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude,distErrorPercent, radiusUnits);
 			return this;
 		}
 
-		IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+		public IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent = 0.025)
 		{
-			GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
+			return this;
+		}
+
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent)
+		{
+			GenerateSpatialQueryData(fieldName, shapeWKT, rel,distErrorPercent);
 			return this;
 		}
 
@@ -502,7 +511,7 @@ namespace Raven.Client.Document
 			return (TSelf)this;
 		}
 
-		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
+		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
 		{
 			var wkt = criteria.Shape as string;
 			if (wkt == null && criteria.Shape != null)
@@ -525,7 +534,7 @@ namespace Raven.Client.Document
 			spatialFieldName = fieldName;
 			queryShape = new WktSanitizer().Sanitize(wkt);
 			spatialRelation = criteria.Relation;
-			this.distanceErrorPct = distanceErrorPct;
+			this.distanceErrorPct = criteria.DistanceErrorPct;
 			return (TSelf)this;
 		}
 

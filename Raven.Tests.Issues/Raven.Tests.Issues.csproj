@@ -139,6 +139,7 @@
     <Compile Include="RavenDB-3609.cs" />
     <Compile Include="RavenDB-3726.cs" />
     <Compile Include="RavenDB-3763.cs" />
+    <Compile Include="RavenDB-3818.cs" />
     <Compile Include="RavenDB_3488.cs" />
     <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />

@@ -1,4 +1,6 @@
-﻿namespace Raven.Abstractions.Indexing
+﻿using Mono.CSharp;
+
+namespace Raven.Abstractions.Indexing
 {
 	public class SpatialOptions
 	{
@@ -26,6 +28,7 @@
 		public double MaxX { get; set; }
 		public double MinY { get; set; }
 		public double MaxY { get; set; }
+		//public double DistErrorPrct { get; set; }
 
 		/// <summary>
 		/// Circle radius units, only used for geography  indexes
