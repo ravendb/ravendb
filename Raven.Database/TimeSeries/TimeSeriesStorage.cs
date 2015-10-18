@@ -39,8 +39,8 @@ namespace Raven.Database.TimeSeries
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly TimeSeriesMetricsManager metricsTimeSeries;
 
-		public ReplicationTask ReplicationTask { get; }
-		public int ReplicationTimeoutInMs { get; }
+		public ReplicationTask ReplicationTask { get; set; }
+		public int ReplicationTimeoutInMs { get; set; }
 
 		public event Action TimeSeriesUpdated = () => { };
 
