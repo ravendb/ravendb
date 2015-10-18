@@ -94,7 +94,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, TimeSpan? timeout = null)
+		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null)
 		{
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
@@ -117,26 +117,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					if (iterator.MoveNext() == false)
 						return etag;
 				}
-				Stopwatch duration = null;
-				if (timeout != null)
-					duration = Stopwatch.StartNew();
+				
 				Etag docEtag;
 				long totalSize = 0;
 
 				do
 				{
 					cancellationToken.ThrowIfCancellationRequested();
-					docEtag = Etag.Parse(iterator.CurrentKey.ToString());
-					//TODO: How to calculate the total size of the skipped document?
+					int _;
+					docEtag = Etag.Parse(iterator.CurrentKey.CreateReader().ReadBytes(16,out _));
+					var docKey = GetKeyFromCurrent(iterator);
+					var readResult = tableStorage.Documents.Read(Snapshot, docKey, null);
+					totalSize += readResult.Reader.Length;
 					if (maxSize.HasValue && totalSize >= maxSize)
 						break;
 
-					// We can skip many documents so the timeout should be at the start of the process to be executed.
-					if (timeout != null)
-					{
-						if (duration.Elapsed > timeout.Value)
-							break;
-					}
 				}
 				while (iterator.MoveNext() && --take > 0);
 

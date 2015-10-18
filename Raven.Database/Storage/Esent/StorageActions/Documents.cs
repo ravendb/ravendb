@@ -406,16 +406,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Documents) && take > 0);
 		}
 
-		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, TimeSpan? timeout = null)
+		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
 				return etag;
 
-			Stopwatch duration = null;
-			if (timeout != null)
-				duration = Stopwatch.StartNew();
 			Etag docEtag;
 			long totalSize = 0;
 
@@ -428,11 +425,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				if (maxSize != null && totalSize > maxSize.Value)
 					break;
 
-				if (timeout != null)
-				{
-					if (duration.Elapsed > timeout.Value)
-						break;
-				}
 			} while (Api.TryMoveNext(session, Documents) && --take > 0);
 
 			return docEtag;

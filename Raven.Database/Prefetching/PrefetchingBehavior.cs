@@ -518,8 +518,7 @@ namespace Raven.Database.Prefetching
 							nextEtag,
 							numberOfItemsToProcessInEachBatch,
 							context.CancellationToken,
-							sizeToProcessInEachBatch,
-							autoTuner.FetchingDocumentsFromDiskTimeout
+							sizeToProcessInEachBatch
 						);
 
 					//there are no more documents to index
