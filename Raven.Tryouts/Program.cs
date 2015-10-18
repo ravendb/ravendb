@@ -1,59 +1,80 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Raven.Abstractions.Util;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Database.Storage.Voron.Impl;
-using Raven.Tests.MailingList;
+using Raven.Database.Extensions;
 
-namespace ConsoleApplication4
+namespace Raven.Tryouts
 {
-    class Program
-    {
-        public class Item
-        {
-            public int Number;
-        }
-        private static void Main(string[] args)
-        {
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "r1"
-            }.Initialize())
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(state =>
-                    {
-                        while (true)
-                        {
-                            using (var session = store.OpenSession())
-                            {
-                                session.Load<dynamic>("users/1");
-                            }
-                        }
-                    });
-                }
+	static class Program
+	{
+		static void Main(string[] args)
+		{
+			IOExtensions.DeleteDirectory("\\FooBar");
+			using (var store = new EmbeddableDocumentStore
+			{
+				DataDirectory = "\\FooBar"
+			})
+			{
+				store.Initialize();
 
-                Console.ReadLine();
-            }
-        }
+				ThreadPool.SetMinThreads(25, 25);
 
-    }
+				using (var bulk = store.BulkInsert())
+				{
+					for (int i = 1; i < 10001; i++)
+					{
+						Console.WriteLine(i);
+						bulk.Store(new { Foo = i }, "foobar/" + i);
+					}
+				}
 
-    public class Company
-    {
-        public string Id { get; set; }
-        public string ExternalId { get; set; }
-        public string Name { get; set; }
+				Console.WriteLine("Warming up, jit, etc.");
+				for (int i = 0; i < 5; i++)
+				{
+					MeasureRunSync(store);
+				}
 
-        public string Phone { get; set; }
-        public string Fax { get; set; }
-    }
+				Console.WriteLine("Start loading test");
+				long total = 0;
+				int counter = 0;
+				Parallel.For(0, 1, _ =>
+				{
+					for (int i = 0; i < 15; i++)
+					{
+						Interlocked.Increment(ref counter);
+						Interlocked.Add(ref total, MeasureRunSync(store));
+					}
+
+				});
+
+				Console.WriteLine("average : " + (total / (decimal)counter));
+			}
+		}
+
+		private static long MeasureRunSync(EmbeddableDocumentStore store)
+		{
+			var rand = new Random(123);
+			var sw = Stopwatch.StartNew();
+			for (int i = 0; i < 100; i++)
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int j = 0; j < 15; j++)
+					{
+						var index = rand.Next(1, 10000);
+						var doc = session.Load<dynamic>("foobar/" + index);
+						if (doc.Foo != index)
+							throw new Exception("Got bad data -> got " + doc.Foo + ", but should be " + index);
+					}
+				}
+			}
+			sw.Stop();
+			Console.WriteLine(sw.ElapsedMilliseconds);
+			return sw.ElapsedMilliseconds;
+		}
+	}
 }

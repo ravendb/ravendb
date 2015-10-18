@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -38,6 +39,7 @@ namespace Raven.Client.Document
 		protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 
+		private static readonly ConcurrentDictionary<string,Type> typeResolutionCache = new ConcurrentDictionary<string, Type>(); 
 		private static int counter;
 
 		private readonly int hash = Interlocked.Increment(ref counter);
@@ -514,7 +516,8 @@ more responsive application.
 					var documentType = Conventions.GetClrType(id, documentFound, metadata);
 					if (documentType != null)
 					{
-						var type = Type.GetType(documentType);
+						//offsetting cost of resolving assemblies from Costura
+						var type = typeResolutionCache.GetOrAdd(documentType, Type.GetType(documentType));
 						if (type != null)
 							entity = documentFound.Deserialize(type, Conventions);
 					}
