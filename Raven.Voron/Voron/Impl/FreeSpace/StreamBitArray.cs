@@ -156,22 +156,33 @@ namespace Voron.Impl.FreeSpace
         {
             var ms = new MemoryStream(260);
 
-            var tmpBuffer = new byte[(_inner.Length + 1) * sizeof(int)];
-            unsafe
-            {
-                fixed (int* src = _inner)
-                fixed (byte* dest = tmpBuffer)                
-                {
-                    *(int*)dest = SetCount;
-                    Memory.Copy(dest + sizeof(int), (byte*)src, tmpBuffer.Length - 1);
-                }
-            }
+            var tmpBuffer = ToBuffer();
 
             Debug.Assert(BitConverter.ToInt32(tmpBuffer,0) == SetCount); 
 
             ms.Write(tmpBuffer, 0, tmpBuffer.Length);
             ms.Position = 0;
             return ms;
+        }
+
+        private unsafe byte[] ToBuffer()
+        {
+            var tmpBuffer = new byte[(_inner.Length + 1)*sizeof (int)];
+            unsafe
+            {
+                fixed (int* src = _inner)
+                fixed (byte* dest = tmpBuffer)
+                {
+                    *(int*) dest = SetCount;
+                    Memory.Copy(dest + sizeof (int), (byte*) src, tmpBuffer.Length - 1);
+                }
+            }
+            return tmpBuffer;
+        }
+
+        public Slice ToSlice()
+        {
+            return new Slice(ToBuffer());
         }
     }
 }

@@ -133,7 +133,7 @@ namespace Voron.Debugging
             //                {
             //                    var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
 
-            //                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+            //                    multiValues.EntriesCount += nestedPage.EntriesCount;
             //                    break;
             //                }
             //                case TreeNodeFlags.PageRef:
@@ -141,7 +141,7 @@ namespace Voron.Debugging
             //                    var overFlowPage = _tx.GetReadOnlyPage(currentNode->PageNumber);
             //                    var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
 
-            //                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+            //                    multiValues.EntriesCount += nestedPage.EntriesCount;
             //                    break;
             //                }
             //                default:

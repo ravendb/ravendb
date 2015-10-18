@@ -610,8 +610,7 @@ namespace Voron.Impl
             if (_lowLevelTransaction.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot rename a new tree with a read only transaction");
 
-            if (toName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
-                toName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+            if (toName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
                 throw new InvalidOperationException("Cannot create a tree with reserved name: " + toName);
 
             if (ReadTree(toName) != null)

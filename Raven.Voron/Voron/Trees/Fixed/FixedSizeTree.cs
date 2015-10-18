@@ -127,7 +127,7 @@ namespace Voron.Trees.Fixed
                 return page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
             }
             var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-            headerToWrite->NumberOfEntries++;
+            headerToWrite->EntriesCount++;
 
             if (page.LastMatch > 0)
                 page.LastSearchPosition++; // after the last one
@@ -349,7 +349,7 @@ namespace Voron.Trees.Fixed
                     var allocatePage = _parent.NewPage(TreePageFlags.Leaf, 1);
 
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-                    largeHeader->NumberOfEntries = newEntriesCount;
+                    largeHeader->EntriesCount = newEntriesCount;
                     largeHeader->ValueSize = _valSize;
                     largeHeader->Depth = 1;
                     largeHeader->Flags = FixedSizeTreeHeader.OptionFlags.Large;
@@ -645,7 +645,7 @@ namespace Voron.Trees.Fixed
 
                 entriesDeleted += nextPage.FixedSize_NumberOfEntries;
                 largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-                largeHeader->NumberOfEntries -= nextPage.FixedSize_NumberOfEntries;
+                largeHeader->EntriesCount -= nextPage.FixedSize_NumberOfEntries;
 
 
                 var treeDeleted = RemoveEntirePage(nextPage, largeHeader); // this will rebalance the tree if needed
@@ -679,7 +679,7 @@ namespace Voron.Trees.Fixed
 
                 rangeRemoved = RemoveRangeFromPage(page, end, largeHeader);
                 if (_flags == FixedSizeTreeHeader.OptionFlags.Large)// we might have converted to embedded, in which case we can't use it
-                    largeHeader->NumberOfEntries -= rangeRemoved;
+                    largeHeader->EntriesCount -= rangeRemoved;
                 entriesDeleted += rangeRemoved;
             }
             if (_flags == FixedSizeTreeHeader.OptionFlags.Embedded)
@@ -774,7 +774,7 @@ namespace Voron.Trees.Fixed
             page = _parent.ModifyPage(page);
 
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-            largeHeader->NumberOfEntries--;
+            largeHeader->EntriesCount--;
 
             RemoveEntryFromPage(page, page.LastSearchPosition);
 
@@ -1082,7 +1082,7 @@ namespace Voron.Trees.Fixed
             return null;
         }
 
-        public long NumberOfEntries
+        public long EntriesCount
         {
             get
             {
@@ -1096,7 +1096,7 @@ namespace Voron.Trees.Fixed
                     case FixedSizeTreeHeader.OptionFlags.Embedded:
                         return ((FixedSizeTreeHeader.Embedded*)header)->NumberOfEntries;
                     case FixedSizeTreeHeader.OptionFlags.Large:
-                        return ((FixedSizeTreeHeader.Large*)header)->NumberOfEntries;
+                        return ((FixedSizeTreeHeader.Large*)header)->EntriesCount;
                     default:
                         return 0;
                 }

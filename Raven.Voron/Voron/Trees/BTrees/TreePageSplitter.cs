@@ -63,21 +63,7 @@ namespace Voron.Trees
             {
                 // we already popped the page, so the current one on the stack is the parent of the page
 
-                if (_tree.Name == Constants.FreeSpaceTreeName)
-                {
-                    // a special case for FreeSpaceTree because the allocation of a new page called above
-                    // can cause a delete of a free space section resulting in a run of the tree rebalancer
-                    // and here the parent page that exists in cursor can be outdated
-
-                    // pass the page number instead of page instance to make sure we'll get the most updated parent page
-                    _parentPage = _tree.ModifyPage(_cursor.CurrentPage.PageNumber);
-                    _parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
-                    _parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
-                }
-                else
-                {
-                    _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-                }
+                _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
                 _cursor.Update(_cursor.Pages.First, _parentPage);
             }
@@ -85,15 +71,6 @@ namespace Voron.Trees
             if (_page.IsLeaf)
             {
                 _tree.ClearRecentFoundPages();
-            }
-
-            if (_tree.Name == Constants.FreeSpaceTreeName)
-            {
-                // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
-                // because the allocation of a new page called above could remove some sections
-                // from the page that is being split
-
-                _page.NodePositionFor(_newKey);
             }
 
             if (_page.LastSearchPosition >= _page.NumberOfEntries)

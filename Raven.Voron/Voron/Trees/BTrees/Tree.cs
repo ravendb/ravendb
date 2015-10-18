@@ -866,7 +866,7 @@ namespace Voron.Trees
         public long DeleteFixedTreeFor(string key, byte valSize = 0)
         {
             var fixedSizeTree = FixedTreeFor(key, valSize);
-            var numberOfEntries = fixedSizeTree.NumberOfEntries;
+            var numberOfEntries = fixedSizeTree.EntriesCount;
 
             foreach (var page in fixedSizeTree.AllPages())
             {

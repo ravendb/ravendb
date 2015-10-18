@@ -22,10 +22,13 @@ namespace Voron.Tryout
         public static int Main()
         {
             var sp = Stopwatch.StartNew();
-            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(@"\\10.0.0.10\Documents\main");
-            using (var se = new StorageEnvironment(storageEnvironmentOptions))
+            using (var se = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
-
+                using (var tx = se.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    tx.RootObjects.Add("test", "val");
+                    tx.Commit();
+                }
             }
             Console.WriteLine(sp.Elapsed);
             return 0;
