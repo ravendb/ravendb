@@ -35,17 +35,10 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             RavenJObject config = null;
 
-            Storage.Batch(accessor => 
-            { 
-                if ( accessor.ConfigExists(name))
-                    config = accessor.GetConfig(name); 
-            });
+            Storage.Batch(accessor => { config = accessor.GetConfig(name); });
 
-            HttpResponseMessage response = config != null ? GetMessageWithObject(config) 
-                                                          : GetEmptyMessage(HttpStatusCode.NotFound);
-
-            return response.WithNoCache();
-		}
+            return GetMessageWithObject(config).WithNoCache();
+        }
 
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/config/non-generated")]

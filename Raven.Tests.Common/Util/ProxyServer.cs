@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -99,7 +100,7 @@ namespace Raven.Tests.Common.Util
                     }
 
                     d.Write(buffer, 0, read);
-                    if (IsEndOfChunkEncoding(buffer, 0, read))
+                    if (IsEndOfChunkEncoding(buffer, 0, read) || IsEmptyResponse(buffer, 0, read))
                     {
                         break;
                     }
@@ -110,8 +111,13 @@ namespace Raven.Tests.Common.Util
             }
 
         }
+        private bool IsEmptyResponse(byte[] buffer, int i, int read)
+		{
+			var payload = Encoding.UTF8.GetString(buffer, 0, read);
+			return payload.Contains("HTTP/1.1") && payload.Contains("Content-Length: 0");
+		}
 
-        private static bool IsEndOfChunkEncoding(byte[] buffer, int offset, int count)
+    private static bool IsEndOfChunkEncoding(byte[] buffer, int offset, int count)
         {
             // end of chunk encoding:
             // 0x30, 0x0d, 0x0a, 0x0d, 0x0a

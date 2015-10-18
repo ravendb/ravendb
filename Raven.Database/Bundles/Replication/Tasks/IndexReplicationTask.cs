@@ -195,6 +195,11 @@ namespace Raven.Bundles.Replication.Tasks
 					    });
 					break;
 				case IndexChangeTypes.IndexRemoved:
+                    //If we don't have any destination to replicate to (we are probably slave node)
+                    //we shouldn't keep a tombstone since we are not going to remove it anytime
+                    //and keeping it prevents us from getting that index created again.
+			        if (!replication.GetReplicationDestinations().Any())
+			            return;
 					var metadata = new RavenJObject
 					{
 						{Constants.RavenIndexDeleteMarker, true},
