@@ -689,7 +689,7 @@ namespace Raven.Client.Indexes
 					else
 					{
 						right = convention.SaveEnumsAsIntegers
-                                    ? Expression.Constant((int)constantExpression.Value)
+                                    ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
 									: Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
 					}
