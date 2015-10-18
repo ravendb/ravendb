@@ -15,36 +15,22 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				new EntitySpatialIndex().Execute(documentStore);
-			
-				var entity = new Entity
+				using (var session = documentStore.OpenSession())
 				{
-					Geolocation = new Geolocation() {Lon = 12.559509, Lat = 55.673981}, // POINT(12.559509 55.673981)
-					Id = "fooid"
-				};
-
-				using (var session = documentStore.OpenAsyncSession())
-				{
-					session.StoreAsync(entity).Wait();
-					session.SaveChangesAsync().Wait();
-
-					WaitForIndexing(documentStore);
-
-                    RavenQueryStatistics stats;
 
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
-				    var nearbyPoints1 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>().Statistics(out stats)
+				    var nearbyPoints1 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>()
 				        .Customize(x =>
 				            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.025));
 					
-                    var queryUrl1 = nearbyPoints1.GetIndexQuery().GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
+                    var queryUrl1 = nearbyPoints1.GetIndexQuery(false).GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
                     Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.025"));
 
-                    var nearbyPoints2 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>().Statistics(out stats)
+                    var nearbyPoints2 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>()
 				        .Customize(x =>
 				            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.01));
-                    var queryUrl2 = nearbyPoints2.GetIndexQuery().GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
-                    Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.01"));
+                    var queryUrl2 = nearbyPoints2.GetIndexQuery(false).GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
+                    Assert.NotNull(queryUrl2.Contains("distErrorPercent=0.01"));
                 }
 			}
 		}
