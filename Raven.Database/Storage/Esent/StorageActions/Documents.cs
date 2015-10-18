@@ -406,28 +406,41 @@ namespace Raven.Database.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, Documents) && take > 0);
 		}
 
-		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null)
+		public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
 				return etag;
 
-			Etag docEtag;
-			long totalSize = 0;
-
-			do
+			if (TryMoveTableRecords(Documents, take, false))
 			{
-				cancellationToken.ThrowIfCancellationRequested();
-				docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-				totalSize += Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+				//skipping failed, will try to move one by one
+				Api.JetSetCurrentIndex(session, Documents, "by_etag");
+				Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+					return etag;
 
-				if (maxSize != null && totalSize > maxSize.Value)
-					break;
+				bool needPrev;
+				do
+				{
+					needPrev = false;
+					if (take <= 0)
+						break;
+					take--;
+					cancellationToken.ThrowIfCancellationRequested();
 
-			} while (Api.TryMoveNext(session, Documents) && --take > 0);
+					needPrev = true;
+				} while (Api.TryMoveNext(session, Documents));
 
-			return docEtag;
+				if (needPrev)
+				{
+					if (Api.TryMovePrevious(session, Documents) == false)
+						return etag;
+				}
+			}
+
+			return Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 		}
 
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)

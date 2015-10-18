@@ -94,7 +94,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public Etag GetNextDocumentEtag(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null)
+		public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
 		{
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
@@ -118,24 +118,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						return etag;
 				}
 				
-				Etag docEtag;
+				ValueReader etagReader;
 				long totalSize = 0;
 
 				do
 				{
 					cancellationToken.ThrowIfCancellationRequested();
-					int _;
-					docEtag = Etag.Parse(iterator.CurrentKey.CreateReader().ReadBytes(16,out _));
-					var docKey = GetKeyFromCurrent(iterator);
+					etagReader = iterator.CurrentKey.CreateReader();
+					/*var docKey = GetKeyFromCurrent(iterator);
 					var readResult = tableStorage.Documents.Read(Snapshot, docKey, null);
 					totalSize += readResult.Reader.Length;
 					if (maxSize.HasValue && totalSize >= maxSize)
-						break;
-
+						break;*/
 				}
 				while (iterator.MoveNext() && --take > 0);
 
-				return docEtag;
+				return Etag.Parse(etagReader.ReadBytes(16, out take));
 			}
 		}
 
