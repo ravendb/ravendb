@@ -8,44 +8,45 @@ namespace Raven.Client.Spatial
 {
 	public class SpatialCriteriaFactory
 	{
-		public SpatialCriteria RelatesToShape(object shape, SpatialRelation relation)
+		public SpatialCriteria RelatesToShape(object shape, SpatialRelation relation, double distErrorPercent = 0.025)
 		{
 			return new SpatialCriteria
 				   {
 					   Relation = relation,
-					   Shape = shape
+					   Shape = shape,
+					   DistanceErrorPct = distErrorPercent
 				   };
 		}
 
-		public SpatialCriteria Intersects(object shape)
+		public SpatialCriteria Intersects(object shape, double distErrorPercent = 0.025)
 		{
-			return RelatesToShape(shape, SpatialRelation.Intersects);
+			return RelatesToShape(shape, SpatialRelation.Intersects, distErrorPercent);
 		}
 
-		public SpatialCriteria Contains(object shape)
+		public SpatialCriteria Contains(object shape, double distErrorPercent = 0.025)
 		{
-			return RelatesToShape(shape, SpatialRelation.Contains);
+			return RelatesToShape(shape, SpatialRelation.Contains, distErrorPercent);
 		}
 
-		public SpatialCriteria Disjoint(object shape)
+		public SpatialCriteria Disjoint(object shape, double distErrorPercent = 0.025)
 		{
-			return RelatesToShape(shape, SpatialRelation.Disjoint);
+			return RelatesToShape(shape, SpatialRelation.Disjoint, distErrorPercent);
 		}
 
-		public SpatialCriteria Within(object shape)
+		public SpatialCriteria Within(object shape, double distErrorPercent = 0.025)
 		{
-			return RelatesToShape(shape, SpatialRelation.Within);
+			return RelatesToShape(shape, SpatialRelation.Within, distErrorPercent);
 		}
 
 		[Obsolete("Order of parameters in this method is inconsistent with the rest of the API (x = longitude, y = latitude). Please use 'WithinRadius'.")]
-		public SpatialCriteria WithinRadiusOf(double radius, double x, double y)
+		public SpatialCriteria WithinRadiusOf(double radius, double x, double y, double distErrorPercent = 0.025)
 		{
-			return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(y, x, radius), SpatialRelation.Within);
+			return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(y, x, radius), SpatialRelation.Within, distErrorPercent);
 		}
 
-		public SpatialCriteria WithinRadius(double radius, double latitude, double longitude)
+		public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, double distErrorPercent=0.025)
 		{
-			return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within);
+			return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within,distErrorPercent);
 		}
 	}
 }

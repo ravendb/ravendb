@@ -164,7 +164,8 @@ namespace Raven.Client
 		/// <param name="fieldName">Spatial field name.</param>
 		/// <param name="shapeWKT">WKT formatted shape</param>
 		/// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
+		/// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent=0.025);
 
 		/// <summary>
 		///     If set to true, this property will send multiple index entries from the same document (assuming the index project
@@ -319,7 +320,8 @@ namespace Raven.Client
 		/// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
 		/// <param name="latitude">Latitude poiting to a circle center.</param>
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
-		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
+		/// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent = 0.025);
 
 		/// <summary>
 		///     Filter matches to be inside the specified radius
@@ -328,7 +330,8 @@ namespace Raven.Client
 		/// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
 		/// <param name="latitude">Latitude poiting to a circle center.</param>
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
-		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+		/// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent=0.025);
 
 		/// <summary>
 		///     Filter matches to be inside the specified radius
@@ -337,7 +340,8 @@ namespace Raven.Client
 		/// <param name="latitude">Latitude poiting to a circle center.</param>
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
 		/// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+		/// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
 
 		/// <summary>
 		///     Filter matches to be inside the specified radius
@@ -347,7 +351,8 @@ namespace Raven.Client
 		/// <param name="latitude">Latitude poiting to a circle center.</param>
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
 		/// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+		/// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent=0.025);
 
 	    /// <summary>
 	    /// When using spatial queries, instruct the query to sort by the distance from the origin point

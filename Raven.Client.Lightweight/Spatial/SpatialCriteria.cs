@@ -6,5 +6,6 @@ namespace Raven.Client.Spatial
 	{
 		public SpatialRelation Relation { get; set; }
 		public object Shape { get; set; }
+		public double DistanceErrorPct { get; set; }
 	}
 }
