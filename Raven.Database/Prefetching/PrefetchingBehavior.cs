@@ -35,6 +35,9 @@ namespace Raven.Database.Prefetching
 
 		private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
 
+		private int numberOfTimesWaitedHadToWaitForIO = 0;
+		private int splitPrefetchingCount = 0;
+
 		private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
 		private int currentIndexingAge;
 		private string userDescription;
@@ -200,7 +203,6 @@ namespace Raven.Database.Prefetching
 						// and next time you'll call, we'll have something ready
 						if (result.Count > 0)
 						{
-							MaybeAddFutureBatch(result);
 							return result;
 						}
 						// if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
@@ -228,6 +230,9 @@ namespace Raven.Database.Prefetching
 		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
 		{
 			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
+			// if we are forced to load from disk in a sync fashion, let us start the process
+			// of making sure that we don't need to do this next time by starting an async load
+			MaybeAddFutureBatch(jsonDocs);
 
 			using (prefetchingQueue.EnterWriteLock())
 			{
@@ -339,6 +344,11 @@ namespace Raven.Database.Prefetching
 					case TaskStatus.WaitingToRun:
 					case TaskStatus.Running:
 					case TaskStatus.WaitingForChildrenToComplete:
+						if (splitPrefetchingCount <= 0)
+						{
+							var numOfIOWaits = Interlocked.Increment(ref numberOfTimesWaitedHadToWaitForIO);
+							Interlocked.Exchange(ref splitPrefetchingCount, numOfIOWaits*8);
+						}
 						if (allowWaiting == false)
 							return false;
 						break;
@@ -410,10 +420,6 @@ namespace Raven.Database.Prefetching
 					.ToList();
 			});
 
-			if (untilEtag == null)
-			{
-				MaybeAddFutureBatch(jsonDocs);
-			}
 			return jsonDocs;
 		}
 
@@ -480,6 +486,44 @@ namespace Raven.Database.Prefetching
 			if (futureIndexBatches.ContainsKey(nextEtag)) // already loading this
 				return;
 
+			var currentSplitCount = Interlocked.Decrement(ref splitPrefetchingCount);
+			if (currentSplitCount < 0)
+			{
+				// it is fine if we lose this, because another thread will fix up this 
+				// value before we get integer underflow
+				Interlocked.CompareExchange(ref splitPrefetchingCount, 0, currentSplitCount);
+			}
+			if (currentSplitCount <= 0)
+			{
+				AddFutureBatch(nextEtag, null);
+				return;
+			}
+
+			context.TransactionalStorage.Batch(accessor =>
+			{
+				int numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount/2);
+				var numOfDocsToTakeInEachSplit = Math.Max(
+					autoTuner.NumberOfItemsToProcessInSingleBatch / numberOfSplitTasks, 
+					context.Configuration.InitialNumberOfItemsToProcessInSingleBatch);
+				
+				for (int i = 0; i < numberOfSplitTasks; i++)
+				{
+					var lastEtagInBatch = accessor.Documents.GetEtagAfterSkip(nextEtag,
+						numOfDocsToTakeInEachSplit, context.CancellationToken,
+						autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes / numberOfSplitTasks);
+
+					if (lastEtagInBatch == null || lastEtagInBatch == nextEtag)
+						break;
+
+					AddFutureBatch(nextEtag, lastEtagInBatch);
+					nextEtag = accessor.Documents.GetBestNextDocumentEtag(lastEtagInBatch);
+				}	
+			});
+
+		}
+
+		private void AddFutureBatch(Etag nextEtag, Etag untilEtag)
+		{
 			var futureBatchStat = new FutureBatchStats
 			{
 				Timestamp = SystemTime.UtcNow,
@@ -497,7 +541,7 @@ namespace Raven.Database.Prefetching
 					int localWork = 0;
 					while (context.RunIndexing)
 					{
-						jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), null);
+						jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), untilEtag);
 						if (jsonDocuments.Count > 0)
 							break;
 
