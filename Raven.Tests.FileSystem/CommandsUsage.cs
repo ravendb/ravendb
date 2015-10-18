@@ -14,6 +14,7 @@ using Raven.Json.Linq;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
+using Raven.Abstractions.Util;
 
 namespace Raven.Tests.FileSystem
 {
@@ -647,8 +648,8 @@ namespace Raven.Tests.FileSystem
 
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
+            Assert.Throws<InvalidOperationException>(()=>AsyncHelpers.RunSync(() => adminClient.CreateFileSystemAsync(fileSystemSpec)));
 
-            Assert.Throws<InvalidOperationException>(() => adminClient.CreateFileSystemAsync(fileSystemSpec).Wait());
         }
 
         [Fact]
