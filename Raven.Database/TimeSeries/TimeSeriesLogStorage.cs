@@ -24,7 +24,7 @@ namespace Raven.Database.TimeSeries
 		public long GetLastEtag()
 		{
 			var lastKey = openLog.LastKeyOrDefault();
-			var etag = lastKey?.CreateReader().ReadBigEndianInt64() ?? 0;
+			var etag = (lastKey!=null)?lastKey.CreateReader().ReadBigEndianInt64() : 0;
 			return etag;
 		}
 
