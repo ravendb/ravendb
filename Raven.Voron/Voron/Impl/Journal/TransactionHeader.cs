@@ -37,18 +37,15 @@ namespace Voron.Impl.Journal
 		public TreeRootHeader Root;
 
         [FieldOffset(106)]
-        public TreeRootHeader FreeSpace;
-
-        [FieldOffset(168)]
         public TransactionMarker TxMarker;
 
-		[FieldOffset(169)]
+		[FieldOffset(107)]
 		public bool Compressed;
 
-		[FieldOffset(170)]
+		[FieldOffset(108)]
 		public int CompressedSize;
 
-		[FieldOffset(174)]
+		[FieldOffset(112)]
 		public int UncompressedSize;
 
 	}

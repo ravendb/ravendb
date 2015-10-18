@@ -172,7 +172,6 @@ namespace Voron.Impl.Backup
 							UnmanagedMemory.Set(txPage, 0, env.Options.PageSize);
 							var txHeader = (TransactionHeader*)txPage;
 							txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
-							txHeader->FreeSpace = lastTransaction.FreeSpace;
 							txHeader->Root = lastTransaction.Root;
 							txHeader->OverflowPageCount = overflowPages;
 							txHeader->PageCount = totalNumberOfPages - overflowPages;

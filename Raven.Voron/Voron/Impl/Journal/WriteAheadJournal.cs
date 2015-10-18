@@ -743,7 +743,6 @@ namespace Voron.Impl.Journal
 					header->Journal.LastSyncedTransactionId = _lastSyncedTransactionId;
 
 					header->Root = lastReadTxHeader.Root;
-					header->FreeSpace = lastReadTxHeader.FreeSpace;
 
 					_waj._updateLogInfo(header);
 				});

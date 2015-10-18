@@ -22,7 +22,7 @@ namespace Voron.Impl
         private readonly IVirtualPager _dataPager;
         private readonly StorageEnvironment _env;
         private readonly long _id;
-        private Tree _root, _freeSpace;
+        private Tree _root;
 
         internal Action<LowLevelTransaction> AfterCommit = delegate { };
         public bool FlushedToJournal { get; private set; }
@@ -125,17 +125,15 @@ namespace Voron.Impl
             InitializeRoots();
             InitTransactionHeader();
         }
-        internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
+        internal void UpdateRootsIfNeeded(Tree root)
         {
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-            if (State.Root != null || State.FreeSpaceRoot != null)
+            if (State.Root != null)
                 return;
 
             State.Root = root.State;
-            State.FreeSpaceRoot = freeSpace.State;
 
             _root = root;
-            _freeSpace = freeSpace;
         }
 
         private void InitializeRoots()
@@ -144,11 +142,6 @@ namespace Voron.Impl
             {
                 _state.Root.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
                 _root = new Tree(this, null, _state.Root) { Name = Constants.RootTreeName };
-            }
-            if (_state.FreeSpaceRoot != null)
-            {
-                _state.FreeSpaceRoot.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
-                _freeSpace = new Tree(this, null, _state.FreeSpaceRoot) { Name = Constants.FreeSpaceTreeName };
             }
         }
 
@@ -411,20 +404,11 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
-            State.Root.InWriteTransaction = false;
-            State.FreeSpaceRoot.InWriteTransaction = false;
-
-#if DEBUG
-            if (State.Root != null && State.FreeSpaceRoot != null)
-            {
-                Debug.Assert(State.Root.RootPageNumber != State.FreeSpaceRoot.RootPageNumber);
-            }
-#endif
+     
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _txHeader->PageCount = _allocatedPagesInTransaction;
             _txHeader->OverflowPageCount = _overflowPagesInTransaction;
             _state.Root.CopyTo(&_txHeader->Root);
-            _state.FreeSpaceRoot.CopyTo(&_txHeader->FreeSpace);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 

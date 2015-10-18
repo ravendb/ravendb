@@ -323,11 +323,9 @@ namespace Voron.Impl.Backup
 							env.Options.DataPager.Sync();
 
 						    var root = Tree.Open(txw, null, &lastTxHeader->Root);
-						    var freeSpaceRoot = Tree.Open(txw, null, &lastTxHeader->FreeSpace);
-                            freeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                             root.Name = Constants.RootTreeName;
 
-                            txw.UpdateRootsIfNeeded(root, freeSpaceRoot);
+                            txw.UpdateRootsIfNeeded(root);
 
 							txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
 
@@ -344,7 +342,6 @@ namespace Voron.Impl.Backup
 								header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
 
 								header->Root = lastTxHeader->Root;
-								header->FreeSpace = lastTxHeader->FreeSpace;
 
 								header->Journal.CurrentJournal = journalNumber + 1;
 								header->Journal.JournalFilesCount = 0;

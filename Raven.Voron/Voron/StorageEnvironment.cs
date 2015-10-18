@@ -102,7 +102,7 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
-            State = new StorageEnvironmentState(null, null, nextPageNumber)
+            State = new StorageEnvironmentState(null, nextPageNumber)
             {
                 NextPageNumber = nextPageNumber,
                 Options = Options
@@ -113,9 +113,8 @@ namespace Voron
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
-                var freeSpace = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
 
-                tx.UpdateRootsIfNeeded(root, freeSpace);
+                tx.UpdateRootsIfNeeded(root);
                 tx.Commit();
 
 			}
@@ -124,17 +123,16 @@ namespace Voron
         private void CreateNewDatabase()
         {
             const int initialNextPageNumber = 0;
-            State = new StorageEnvironmentState(null, null, initialNextPageNumber)
+            State = new StorageEnvironmentState(null, initialNextPageNumber)
             {
                 Options = Options
             };
             using (var tx = NewTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, null);
-                var freeSpace = Tree.Create(tx, null);
 
-                // important to first create the two trees, then set them on the env
-                tx.UpdateRootsIfNeeded(root, freeSpace);
+                // important to first create the root trees, then set them on the env
+                tx.UpdateRootsIfNeeded(root);
                 
                 tx.Commit();
 
