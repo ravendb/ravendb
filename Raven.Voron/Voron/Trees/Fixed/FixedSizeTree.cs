@@ -255,8 +255,7 @@ namespace Voron.Trees.Fixed
 
                     var dataStart = (long*)(newPage.Base + newPage.FixedSize_StartPosition);
                     dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
-                    dataStart[1] = PageValueFor(page,
-                        page.FixedSize_NumberOfEntries - 1);
+                    dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
                     newPage.FixedSize_NumberOfEntries++;
                     page.FixedSize_NumberOfEntries--;
@@ -718,6 +717,10 @@ namespace Voron.Trees.Fixed
             var endPos = page.LastSearchPosition;
             if (page.LastMatch < 0)
                 endPos--;
+	        if (endPos == -1)
+	        {
+		        return 0;
+	        }
             if (startPos == endPos)
             {
                 var key = KeyFor(page, startPos);
@@ -725,13 +728,30 @@ namespace Voron.Trees.Fixed
                     return 0;
             }
 
-            var entriesDeleted = (endPos - startPos + 1);
-            UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos * _entrySize),
-                page.Base + page.FixedSize_StartPosition + ((endPos + 1) * _entrySize),
-                ((page.FixedSize_NumberOfEntries - endPos - 1) * _entrySize)
-                );
-            page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
-            if (page.FixedSize_NumberOfEntries == 0)
+			var entriesDeleted = (endPos - startPos + 1);
+			if (startPos == 0)
+	        {
+				// if this is the very first item in the page, we can just change the start position
+				page.FixedSize_StartPosition += (ushort)(_entrySize * entriesDeleted);
+			}
+	        else
+	        {
+		        UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos*_entrySize),
+			        page.Base + page.FixedSize_StartPosition + ((endPos + 1)*_entrySize),
+			        ((page.FixedSize_NumberOfEntries - endPos - 1)*_entrySize)
+			        );
+	        }
+	        page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
+
+	        if (startPos == 0 && _cursor.Count > 0)
+	        {
+		        var parentPage = _cursor.Peek();
+		        parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+		        var p = (long*) (parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize*parentPage.LastSearchPosition));
+		        p[0] = KeyFor(page, 0);
+	        }
+
+	        if (page.FixedSize_NumberOfEntries == 0)
             {
                 if (RemoveEntirePage(page, largeHeader))
                     return entriesDeleted;
@@ -877,8 +897,8 @@ namespace Voron.Trees.Fixed
             if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
             {
                 // we can just collapse this to the parent
-                var parentRef = (long*)parentPage.Base + parentPage.FixedSize_StartPosition +
-                                (BranchEntrySize * parentPage.LastSearchPosition);
+	            var parentRef = (long*) (parentPage.Base + parentPage.FixedSize_StartPosition +
+	                                     (BranchEntrySize*parentPage.LastSearchPosition));
                 // write the page value to the parent
                 parentRef[0] = PageValueFor(page, 0);
                 // then delete the page
