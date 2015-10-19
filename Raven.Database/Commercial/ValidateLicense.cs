@@ -189,6 +189,13 @@ namespace Raven.Database.Commercial
 			var value = GetLicenseText(config);
 
 			var fullPath = GetLicensePath(config).ToFullPath();
+
+		    if (IsSameLicense(value, fullPath))
+		        return licenseValidator != null;
+
+		    if (licenseValidator != null)
+		        licenseValidator.Dispose();
+
 			if (string.IsNullOrEmpty(value) == false)
 			{
 				licenseValidator = new StringLicenseValidator(publicKey, value);
@@ -217,7 +224,20 @@ namespace Raven.Database.Commercial
 			return true;
 		}
 
-		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+	    private bool IsSameLicense(string value, string fullPath)
+	    {
+	        var stringLicenseValidator = licenseValidator as StringLicenseValidator;
+	        if (stringLicenseValidator != null)
+	            return stringLicenseValidator.SameLicense(value);
+
+	        var validator = licenseValidator as LicenseValidator;
+	        if (validator != null)
+	            return validator.SameFile(fullPath);
+
+	        return false;
+	    }
+
+	    private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
 			string version;
 			var errorMessage = string.Empty;
