@@ -18,7 +18,7 @@ namespace Rhino.Licensing
 	/// <summary>
 	/// Base license validator.
 	/// </summary>
-	public abstract class AbstractLicenseValidator
+	public abstract class AbstractLicenseValidator : IDisposable
 	{
 		/// <summary>
 		/// License validator logger
@@ -663,5 +663,10 @@ namespace Rhino.Licensing
 
 			}
 		}
+
+	    public void Dispose()
+        {
+            discoveryHost.Dispose();
+        }
 	}
 }
