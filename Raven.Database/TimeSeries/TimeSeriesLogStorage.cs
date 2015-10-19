@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.TimeSeries;
-using Raven.Imports.Newtonsoft.Json;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -165,7 +162,7 @@ namespace Raven.Database.TimeSeries
 				switch (readByte)
 				{
 					case LogTypes.Append:
-						ReplicationAppendPoint(reader, writer);
+						throw new NotImplementedException();
 						break;
 					case LogTypes.DeleteKey:
 						throw new NotImplementedException();
@@ -186,11 +183,6 @@ namespace Raven.Database.TimeSeries
 						throw new ArgumentOutOfRangeException();
 				}
 			}
-		}
-
-		private void ReplicationAppendPoint(BinaryReader reader, TimeSeriesStorage.Writer writer)
-		{
-			writer.DoAppendPoint();
 		}
 
 		public string ReadType(BinaryReader reader)
