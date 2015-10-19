@@ -7,13 +7,17 @@
 using System.IO;
 using System.IO.Compression;
 
+using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Smuggler.Database.Impl.Streams
 {
 	public class DatabaseSmugglerStreamDestination : IDatabaseSmugglerDestination
 	{
-		private readonly Stream _stream;
+		protected Stream _stream;
+
+		private readonly bool _leaveOpen;
 
 		private GZipStream _gZipStream;
 
@@ -21,12 +25,13 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		private JsonTextWriter _writer;
 
-		public DatabaseSmugglerStreamDestination(Stream stream)
+		public DatabaseSmugglerStreamDestination(Stream stream, bool leaveOpen = true)
 		{
 			_stream = stream;
+			_leaveOpen = leaveOpen;
 		}
 
-		public void Initialize()
+		public virtual void Initialize(DatabaseSmugglerOptions options)
 		{
 			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
 			_streamWriter = new StreamWriter(_gZipStream);
@@ -63,6 +68,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new DatabaseSmugglerStreamIdentityActions(_writer);
 		}
 
+		public virtual OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)
+		{
+			return state;
+		}
+
 		public void Dispose()
 		{
 			_writer.WriteEndObject();
@@ -70,6 +80,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			_streamWriter?.Dispose();
 
 			_gZipStream?.Dispose();
+
+			if (_leaveOpen == false)
+				_stream.Dispose();
 		}
 	}
 }

@@ -19,17 +19,12 @@ namespace Raven.Abstractions.Smuggler
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Transformers;
 			ShouldExcludeExpired = false;
 			Limit = int.MaxValue;
+			StartDocsDeletionEtag = StartDocsEtag = Etag.Empty;
 		}
-		private void ConfigureDefaultFilters()
-		{
-			// filter out encryption verification key document to enable import to encrypted db from encrypted db.
-			Filters.Add(new FilterSetting
-			{
-				Path = "@metadata.@id",
-				ShouldMatch = false,
-				Values = { Constants.InResourceKeyVerificationDocumentName }
-			});
-		}
+
+		public Etag StartDocsEtag { get; set; }
+
+		public Etag StartDocsDeletionEtag { get; set; }
 
 		public ItemType OperateOnTypes { get; set; }
 
@@ -40,34 +35,6 @@ namespace Raven.Abstractions.Smuggler
 		public int Limit { get; set; }
 
 		public bool ShouldExcludeExpired { get; set; }
-
-		public virtual bool ExcludeExpired(RavenJObject document, DateTime now)
-		{
-			var metadata = document.Value<RavenJObject>("@metadata");
-
-			const string RavenExpirationDate = "Raven-Expiration-Date";
-
-			// check for expired documents and exclude them if expired
-			if (metadata == null)
-			{
-				return false;
-			}
-			var property = metadata[RavenExpirationDate];
-			if (property == null)
-				return false;
-
-			DateTime dateTime;
-			try
-			{
-				dateTime = property.Value<DateTime>();
-			}
-			catch (FormatException)
-			{
-				return false;
-			}
-
-			return dateTime < now;
-		}
 
 		public List<FilterSetting> Filters { get; set; }
 
@@ -80,6 +47,8 @@ namespace Raven.Abstractions.Smuggler
 		public bool ShouldDisableVersioningBundle { get; set; }
 
 		public int MaxStepsForTransformScript { get; set; }
+
+		public bool Incremental { get; set; }
 
 		public virtual bool MatchFilters(RavenJObject document)
 		{
@@ -108,6 +77,45 @@ namespace Raven.Abstractions.Smuggler
 					return false;
 			}
 			return true;
+		}
+
+		private void ConfigureDefaultFilters()
+		{
+			// filter out encryption verification key document to enable import to encrypted db from encrypted db.
+			Filters.Add(new FilterSetting
+			{
+				Path = "@metadata.@id",
+				ShouldMatch = false,
+				Values = { Constants.InResourceKeyVerificationDocumentName }
+			});
+		}
+
+		public virtual bool ExcludeExpired(RavenJObject document, DateTime now)
+		{
+			var metadata = document.Value<RavenJObject>("@metadata");
+
+			const string RavenExpirationDate = "Raven-Expiration-Date";
+
+			// check for expired documents and exclude them if expired
+			if (metadata == null)
+			{
+				return false;
+			}
+			var property = metadata[RavenExpirationDate];
+			if (property == null)
+				return false;
+
+			DateTime dateTime;
+			try
+			{
+				dateTime = property.Value<DateTime>();
+			}
+			catch (FormatException)
+			{
+				return false;
+			}
+
+			return dateTime < now;
 		}
 	}
 }

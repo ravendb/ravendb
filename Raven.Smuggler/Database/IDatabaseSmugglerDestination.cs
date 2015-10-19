@@ -1,10 +1,13 @@
 using System;
 
+using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler.Data;
+
 namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerDestination : IDisposable
 	{
-		void Initialize();
+		void Initialize(DatabaseSmugglerOptions options);
 
 		IDatabaseSmugglerIndexActions IndexActions();
 
@@ -15,5 +18,7 @@ namespace Raven.Smuggler.Database
 		IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions();
 
 		IDatabaseSmugglerIdentityActions IdentityActions();
+
+		OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state);
 	}
 }

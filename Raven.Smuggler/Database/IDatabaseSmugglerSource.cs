@@ -13,7 +13,9 @@ namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerSource : IDisposable
 	{
-		void Initialize();
+		IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
+
+		void Initialize(DatabaseSmugglerOptions options);
 
 		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, DatabaseSmugglerOptions options);
 

@@ -78,7 +78,7 @@ namespace Raven.Smuggler.Database
 					break;
 				} while (Source.SupportsRetries);
 
-				Report.ShowProgress("---IDENTITY---{0}Read: {1}{0}Filtered:{2}{0}Wrote:{3}", Environment.NewLine, readCount, readCount - filteredCount, writeCount);
+				Report.ShowProgress("IDENTITY. Read: {0}. Filtered: {1}. Wrote: {2}", readCount, readCount - filteredCount, writeCount);
 			}
 		}
 

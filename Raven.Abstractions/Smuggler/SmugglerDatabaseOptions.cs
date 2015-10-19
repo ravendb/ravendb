@@ -218,8 +218,6 @@ namespace Raven.Abstractions.Smuggler
         public bool SkipConflicted { get; set; }
     }
 
- 
-
 	[Flags]
 	public enum ItemType
 	{

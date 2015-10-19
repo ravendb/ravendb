@@ -105,6 +105,8 @@
     <Compile Include="Database\IDatabaseSmugglerSource.cs" />
     <Compile Include="Database\IDatabaseSmugglerTransformerActions.cs" />
     <Compile Include="Database\IdentitySmuggler.cs" />
+    <Compile Include="Database\Impl\Files\DatabaseSmugglerFileDestination.cs" />
+    <Compile Include="Database\Impl\Files\DatabaseSmugglerFileSource.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
