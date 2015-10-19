@@ -417,8 +417,10 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-                            var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
+						    var multiLoadResult = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false));
+						    var items = multiLoadResult
 								.Results
+                                .Where(x=>x != null)
 								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
 								.Select(JsonExtensions.ToJObject)
 								.Select(
