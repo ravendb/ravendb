@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 						RavenJObject.FromObject(new { Functions =
 @"exports.a = function(value) { return  b(value); };
 exports.b = function(v) { return c(v); }
-exports.c = function(v) { return v.noSuch.noSuch; }
+exports.c = function(v) { throw 'oops'; }
 "
 						}),
 						new RavenJObject());
@@ -59,17 +59,17 @@ exports.c = function(v) { return v.noSuch.noSuch; }
 						Script = @"var s = 1234; 
 a(s);"
 					}));
-					Assert.Equal("Unable to execute JavaScript: " + Environment.NewLine +
-						"var s = 1234; " + Environment.NewLine +
-						"a(s);" + Environment.NewLine + 
-						"Error: " + Environment.NewLine + 
-						"TypeError: noSuch is undefined" + Environment.NewLine + 
-						"Stacktrace:" + Environment.NewLine + 
-						"c@customFunctions.js:3" + Environment.NewLine + 
-						"b@customFunctions.js:2" + Environment.NewLine +
-						"a@customFunctions.js:1" + Environment.NewLine +
-						"apply@main.js:2" + Environment.NewLine +
-						"anonymous function@main.js:1", e.Message);
+					Assert.Equal(@"Unable to execute JavaScript: 
+var s = 1234; 
+a(s);
+Error: 
+oops
+Stacktrace:
+c@customFunctions.js:3
+b@customFunctions.js:2
+a@customFunctions.js:1
+apply@main.js:2
+anonymous function@main.js:1", e.Message);
 				}
 			}
 		}

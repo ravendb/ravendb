@@ -119,8 +119,18 @@ namespace Raven.Tests.Issues.Prefetcher
 			AddDocumentResult result = null;
 			prefetcher.TransactionalStorage.Batch(accessor => result = accessor.Documents.AddDocument("keys/2", null, document.DataAsJson, document.Metadata));
 
-			documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(document.Etag, 200);
-			Assert.Equal(100, documents.Count);
+            documents.Clear();
+		        var etag = document.Etag;
+            while (true)
+		    {
+		        var tmp = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 200);
+		        if (tmp.Count == 0)
+		            break;
+		        etag = tmp.Last().Etag;
+                documents.AddRange(tmp);
+		    }
+
+		    Assert.Equal(100, documents.Count);
 
 			var keys = documents
 				.GroupBy(x => x.Key)
