@@ -101,10 +101,11 @@ namespace Raven.Database.Server.WebApi.Filters
 
             Stopwatch sp = ctx.Request.Properties["timer"] as Stopwatch;
 
-			SerializeError(ctx, new
+            var elapsedMilliseconds = sp == null ? -1 : sp.ElapsedMilliseconds;
+            SerializeError(ctx, new
 			{
 				Url = ctx.Request.RequestUri.PathAndQuery,
-                Error = string.Format("Request was canceled by the server due to timeout after {0}ms", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
+                Error = string.Format("Request was canceled by the server due to timeout after {0}ms", elapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
 				e.Message
 			});
 		}
