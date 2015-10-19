@@ -64,7 +64,7 @@ namespace Raven.Database.Commercial
 
 		public void Execute(InMemoryRavenConfiguration config)
 		{
-			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3));			
+			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));			
 
 			ExecuteInternal(config);
 		}
