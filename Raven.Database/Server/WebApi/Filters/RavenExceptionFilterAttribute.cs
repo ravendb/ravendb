@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -33,7 +35,8 @@ namespace Raven.Database.Server.WebApi.Filters
 				{typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
 				{typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
 				{typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)},
-				{typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)}
+				{typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)},
+                {typeof (OperationCanceledException), (ctx, e) => HandleOperationCanceledException(ctx, e as OperationCanceledException)}
 			};
 
 		public override void OnException(HttpActionExecutedContext ctx)
@@ -88,6 +91,24 @@ namespace Raven.Database.Server.WebApi.Filters
 				Error = e.ToString(),
 			});
 		}
+
+        private static void HandleOperationCanceledException(HttpActionExecutedContext ctx, OperationCanceledException e)
+		{
+			ctx.Response = new HttpResponseMessage
+			{
+				StatusCode = HttpStatusCode.RequestTimeout
+			};
+
+            Stopwatch sp = ctx.Request.Properties["timer"] as Stopwatch;
+
+			SerializeError(ctx, new
+			{
+				Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = string.Format("Request was canceled by the server due to timeout after {0}ms", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
+				e.Message
+			});
+		}
+
 
 		private static void HandleTooManyClausesException(HttpActionExecutedContext ctx, BooleanQuery.TooManyClauses e)
 		{

@@ -18,6 +18,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
@@ -361,12 +362,12 @@ namespace Raven.Database.Common
 			}
 
 			var sp = Stopwatch.StartNew();
-
+		    controllerContext.Request.Properties["timer"] = sp;
 			var result = await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 			sp.Stop();
 			AddRavenHeader(result, sp);
 
-			return result;
+		    return result;
 		}
 
 		protected string GetResourceNameUrlKey(ResourceType resourceType)
