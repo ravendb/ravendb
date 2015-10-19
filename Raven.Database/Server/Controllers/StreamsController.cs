@@ -1,19 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -22,10 +29,6 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
-using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -55,10 +58,13 @@ namespace Raven.Database.Server.Controllers
 
             var skipAfter = GetQueryStringValue("skipAfter");
 
+			
+			var headers = CurrentOperationContext.Headers.Value;
+			var user = CurrentOperationContext.User.Value;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new PushStreamContent((stream, content, transportContext) =>
-                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, headers, user))
                 {
                     Headers =
                     {
@@ -68,8 +74,17 @@ namespace Raven.Database.Server.Controllers
             };
         }
 
-        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
+			Lazy<NameValueCollection> headers, IPrincipal user)
         {
+			var old = CurrentOperationContext.Headers.Value;
+			var oldUser = CurrentOperationContext.User.Value;
+			try
+			{
+				CurrentOperationContext.Headers.Value = headers;
+				CurrentOperationContext.User.Value = user;
+
+
             var bufferStream = new BufferedStream(stream, 1024 * 64);
             using (var cts = new CancellationTokenSource())
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
@@ -115,6 +130,12 @@ namespace Raven.Database.Server.Controllers
                 writer.Flush();
                 bufferStream.Flush();
             }
+        }
+			finally
+			{
+				CurrentOperationContext.Headers.Value = old;
+				CurrentOperationContext.User.Value = oldUser;
+			}
         }
 
         [HttpHead]
@@ -280,6 +301,8 @@ namespace Raven.Database.Server.Controllers
             private readonly IStorageActionsAccessor accessor;
             private readonly CancellationTimeout _timeout;
             private readonly Action<string> outputContentTypeSetter;
+	        private Lazy<NameValueCollection> headers;
+	        private IPrincipal user;
 		    private readonly Func<RavenJObject, RavenJObject> modifyDocument;
 
             [CLSCompliant(false)]
@@ -288,6 +311,8 @@ namespace Raven.Database.Server.Controllers
                 Action<string> contentTypeSetter,
                 Func<RavenJObject,RavenJObject> modifyDocument = null)
             {
+		        headers = CurrentOperationContext.Headers.Value;
+		        user = CurrentOperationContext.User.Value;
                 this.req = req;
                 this.queryOp = queryOp;
                 this.accessor = accessor;
@@ -298,6 +323,12 @@ namespace Raven.Database.Server.Controllers
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
+	            var old = CurrentOperationContext.Headers.Value;
+	            var oldUser = CurrentOperationContext.User.Value;
+	            try
+	            {
+		            CurrentOperationContext.User.Value = user;
+		            CurrentOperationContext.Headers.Value = headers;
                 var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
                 using (var bufferedStream = new BufferedStream(stream, bufferSize))
                 using (queryOp)
@@ -328,6 +359,12 @@ namespace Raven.Database.Server.Controllers
                     }
                 }
                 return Task.FromResult(true);
+            }
+	            finally
+	            {
+		            CurrentOperationContext.Headers.Value = old;
+		            CurrentOperationContext.User.Value = oldUser;
+	            }
             }
 
             protected override bool TryComputeLength(out long length)
