@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
@@ -56,53 +57,60 @@ namespace Raven.Smuggler.Database
 
 				var state = GetOperationState(_options, _source, _destination);
 
-				var maxEtags = await _source
-					.FetchCurrentMaxEtagsAsync()
+				var sources = _source.SupportsMultipleSources
+					? _source.Sources
+					: new List<IDatabaseSmugglerSource> { _source };
+
+				foreach (var source in sources)
+					await ProcessSourceAsync(source, state).ConfigureAwait(false);
+			}
+		}
+
+		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, OperationState state)
+		{
+			var maxEtags = await source
+						.FetchCurrentMaxEtagsAsync()
+						.ConfigureAwait(false);
+
+			while (true)
+			{
+				var type = await source
+					.GetNextSmuggleTypeAsync()
 					.ConfigureAwait(false);
 
-				foreach (var source in _source.Sources)
+				switch (type)
 				{
-					while (true)
-					{
-						var type = await source
-							.GetNextSmuggleTypeAsync()
+					case SmuggleType.None:
+						return;
+					case SmuggleType.Index:
+						await new IndexSmuggler(_options, _report, source, _destination)
+							.SmuggleAsync(state)
 							.ConfigureAwait(false);
-
-						switch (type)
-						{
-							case SmuggleType.None:
-								return;
-							case SmuggleType.Index:
-								await new IndexSmuggler(_options, _report, source, _destination)
-									.SmuggleAsync(state)
-									.ConfigureAwait(false);
-								continue;
-							case SmuggleType.Document:
-								await new DocumentSmuggler(_options, _report, source, _destination, maxEtags)
-									.SmuggleAsync(state)
-									.ConfigureAwait(false);
-								continue;
-							case SmuggleType.Transformer:
-								await new TransformerSmuggler(_options, _report, source, _destination)
-									.SmuggleAsync(state)
-									.ConfigureAwait(false);
-								continue;
-							case SmuggleType.DocumentDeletion:
-								await new DocumentDeletionsSmuggler(_options, _report, source, _destination, maxEtags)
-									.SmuggleAsync(state)
-									.ConfigureAwait(false);
-								continue;
-							case SmuggleType.Identity:
-								await new IdentitySmuggler(_options, _report, source, _destination)
-									.SmuggleAsync(state)
-									.ConfigureAwait(false);
-								continue;
-							case SmuggleType.Attachment:
-							case SmuggleType.AttachmentDeletion:
-							default:
-								throw new NotSupportedException(type.ToString());
-						}
-					}
+						continue;
+					case SmuggleType.Document:
+						await new DocumentSmuggler(_options, _report, source, _destination, maxEtags)
+							.SmuggleAsync(state)
+							.ConfigureAwait(false);
+						continue;
+					case SmuggleType.Transformer:
+						await new TransformerSmuggler(_options, _report, source, _destination)
+							.SmuggleAsync(state)
+							.ConfigureAwait(false);
+						continue;
+					case SmuggleType.DocumentDeletion:
+						await new DocumentDeletionsSmuggler(_options, _report, source, _destination, maxEtags)
+							.SmuggleAsync(state)
+							.ConfigureAwait(false);
+						continue;
+					case SmuggleType.Identity:
+						await new IdentitySmuggler(_options, _report, source, _destination)
+							.SmuggleAsync(state)
+							.ConfigureAwait(false);
+						continue;
+					case SmuggleType.Attachment:
+					case SmuggleType.AttachmentDeletion:
+					default:
+						throw new NotSupportedException(type.ToString());
 				}
 			}
 		}

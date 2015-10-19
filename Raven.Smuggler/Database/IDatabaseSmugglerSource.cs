@@ -13,6 +13,8 @@ namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerSource : IDisposable
 	{
+		bool SupportsMultipleSources { get; }
+
 		IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
 
 		void Initialize(DatabaseSmugglerOptions options);

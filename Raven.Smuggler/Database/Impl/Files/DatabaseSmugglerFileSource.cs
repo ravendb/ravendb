@@ -28,6 +28,8 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		private readonly List<IDatabaseSmugglerSource> _sources;
 
+		public bool SupportsMultipleSources => true;
+
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => _sources;
 
 		public DatabaseSmugglerFileSource(string path, CancellationToken cancellationToken)
@@ -75,11 +77,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync()
 		{
-			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
-			{
-				LastDocsEtag = new Etag(UuidType.Documents, long.MaxValue, long.MaxValue),
-				LastDocDeleteEtag = new Etag(UuidType.Documents, long.MaxValue, long.MaxValue)
-			});
+			throw new NotSupportedException();
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize)

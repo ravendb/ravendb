@@ -42,7 +42,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			_cancellationToken = cancellationToken;
 		}
 
-		public IReadOnlyList<IDatabaseSmugglerSource> Sources => new List<IDatabaseSmugglerSource> { this };
+		public bool SupportsMultipleSources => false;
+
+		public IReadOnlyList<IDatabaseSmugglerSource> Sources => null;
 
 		public void Initialize(DatabaseSmugglerOptions options)
 		{
