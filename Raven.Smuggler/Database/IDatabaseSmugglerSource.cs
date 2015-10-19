@@ -13,13 +13,15 @@ namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerSource : IDisposable
 	{
+		string DisplayName { get; }
+
 		bool SupportsMultipleSources { get; }
 
 		IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
 
 		void Initialize(DatabaseSmugglerOptions options);
 
-		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, DatabaseSmugglerOptions options);
+		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize);
 
 		Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync();
 
@@ -39,11 +41,11 @@ namespace Raven.Smuggler.Database
 
 		bool SupportsRetries { get; }
 
-		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, DatabaseSmugglerOptions options);
+		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize);
 
 		Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag);
 
-		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(DatabaseSmugglerOptions options);
+		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync();
 
 		Task<SmuggleType> GetNextSmuggleTypeAsync();
 	}

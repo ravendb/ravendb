@@ -79,17 +79,6 @@ namespace Raven.Abstractions.Smuggler
 			return true;
 		}
 
-		private void ConfigureDefaultFilters()
-		{
-			// filter out encryption verification key document to enable import to encrypted db from encrypted db.
-			Filters.Add(new FilterSetting
-			{
-				Path = "@metadata.@id",
-				ShouldMatch = false,
-				Values = { Constants.InResourceKeyVerificationDocumentName }
-			});
-		}
-
 		public virtual bool ExcludeExpired(RavenJObject document, DateTime now)
 		{
 			var metadata = document.Value<RavenJObject>("@metadata");
@@ -116,6 +105,38 @@ namespace Raven.Abstractions.Smuggler
 			}
 
 			return dateTime < now;
+		}
+
+		public DatabaseSmugglerOptions Clone()
+		{
+			return new DatabaseSmugglerOptions
+			{
+				IgnoreErrorsAndContinue = IgnoreErrorsAndContinue,
+				OperateOnTypes = OperateOnTypes,
+				BatchSize = BatchSize,
+				Incremental = Incremental,
+				Limit = Limit,
+				Filters = Filters,
+				MaxStepsForTransformScript = MaxStepsForTransformScript,
+				ShouldDisableVersioningBundle = ShouldDisableVersioningBundle,
+				ShouldExcludeExpired = ShouldExcludeExpired,
+				SkipConflicted = SkipConflicted,
+				StartDocsDeletionEtag = StartDocsDeletionEtag,
+				StartDocsEtag = StartDocsEtag,
+				StripReplicationInformation = StripReplicationInformation,
+				TransformScript = TransformScript
+			};
+		}
+
+		private void ConfigureDefaultFilters()
+		{
+			// filter out encryption verification key document to enable import to encrypted db from encrypted db.
+			Filters.Add(new FilterSetting
+			{
+				Path = "@metadata.@id",
+				ShouldMatch = false,
+				Values = { Constants.InResourceKeyVerificationDocumentName }
+			});
 		}
 	}
 }

@@ -33,7 +33,7 @@ namespace Raven.Smuggler.Database
 					List<IndexDefinition> indexes;
 					try
 					{
-						indexes = await Source.ReadIndexesAsync(count, pageSize, Options).ConfigureAwait(false);
+						indexes = await Source.ReadIndexesAsync(count, pageSize).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{

@@ -19,6 +19,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Impl.Files;
 using Raven.Smuggler.Database.Impl.Streams;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
 
 using Xunit;
 
@@ -92,6 +93,58 @@ namespace Raven.Tests.Issues
 				Assert.Equal(1059, destination.WroteDocuments);
 				Assert.Equal(0, destination.WroteDocumentDeletions);
 				Assert.Equal(1, destination.WroteIdentities);
+				Assert.Equal(4, destination.WroteIndexes);
+				Assert.Equal(1, destination.WroteTransformers);
+			}
+		}
+
+		[Fact]
+		public async Task NorthwindFileReadIncrementalTest()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				DeployNorthwind(store);
+
+				WaitForIndexing(store);
+
+				var input = NewDataPath(forceCreateDir: true);
+
+				var oldSmuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { Incremental = true });
+				await oldSmuggler
+					.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
+					{
+						From = new RavenConnectionStringOptions
+						{
+							DefaultDatabase = store.DefaultDatabase,
+							Url = store.Url
+						},
+						ToFile = input
+					});
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Person { Name = "John Doe" });
+					session.SaveChanges();
+				}
+
+				await oldSmuggler
+					.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
+					{
+						From = new RavenConnectionStringOptions
+						{
+							DefaultDatabase = store.DefaultDatabase,
+							Url = store.Url
+						},
+						ToFile = input
+					});
+
+				var destination = new DatabaseSmugglerCountingDestination();
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input, CancellationToken.None), destination);
+				await smuggler.ExecuteAsync();
+
+				Assert.Equal(1061, destination.WroteDocuments);
+				Assert.Equal(0, destination.WroteDocumentDeletions);
+				Assert.Equal(2, destination.WroteIdentities);
 				Assert.Equal(4, destination.WroteIndexes);
 				Assert.Equal(1, destination.WroteTransformers);
 			}

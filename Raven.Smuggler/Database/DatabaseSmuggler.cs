@@ -61,6 +61,8 @@ namespace Raven.Smuggler.Database
 					? _source.Sources
 					: new List<IDatabaseSmugglerSource> { _source };
 
+				Report.ShowProgress("Found {0} sources.", sources.Count);
+
 				foreach (var source in sources)
 					await ProcessSourceAsync(source, state).ConfigureAwait(false);
 			}
@@ -68,6 +70,9 @@ namespace Raven.Smuggler.Database
 
 		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, OperationState state)
 		{
+			if (string.IsNullOrEmpty(source.DisplayName) == false)
+				Report.ShowProgress("Processing source: {0}", source.DisplayName);
+
 			var maxEtags = await source
 						.FetchCurrentMaxEtagsAsync()
 						.ConfigureAwait(false);

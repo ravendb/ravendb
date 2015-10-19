@@ -28,6 +28,14 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		private readonly List<IDatabaseSmugglerSource> _sources;
 
+		public string DisplayName
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+		}
+
 		public bool SupportsMultipleSources => true;
 
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => _sources;
@@ -61,16 +69,19 @@ namespace Raven.Smuggler.Database.Impl.Files
 			if (files.Length == 0)
 				return;
 
+			var optionsWithoutIndexesAndTransformers = options.Clone();
+			optionsWithoutIndexesAndTransformers.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
+
 			for (var i = 0; i < files.Length - 1; i++)
 			{
 				var path = Path.Combine(_path, files[i]);
-				_sources.Add(CreateSource(options, path, _cancellationToken));
+				_sources.Add(CreateSource(optionsWithoutIndexesAndTransformers, path, _cancellationToken));
 			}
 
 			_sources.Add(CreateSource(options, Path.Combine(_path, files.Last()), _cancellationToken));
 		}
 
-		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, DatabaseSmugglerOptions options)
+		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize)
 		{
 			throw new NotSupportedException();
 		}
@@ -105,7 +116,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		public bool SupportsRetries => false;
 
-		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, DatabaseSmugglerOptions options)
+		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize)
 		{
 			throw new NotSupportedException();
 		}
@@ -115,7 +126,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 			throw new NotSupportedException();
 		}
 
-		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(DatabaseSmugglerOptions options)
+		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync()
 		{
 			throw new NotSupportedException();
 		}
@@ -127,7 +138,11 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		private static IDatabaseSmugglerSource CreateSource(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
 		{
-			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path), cancellationToken);
+			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path), cancellationToken)
+			{
+				DisplayName = Path.GetFileName(path)
+			};
+
 			source.Initialize(options);
 
 			return source;

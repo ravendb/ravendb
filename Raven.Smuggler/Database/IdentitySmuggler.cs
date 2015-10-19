@@ -32,7 +32,7 @@ namespace Raven.Smuggler.Database
 					List<KeyValuePair<string, long>> identities;
 					try
 					{
-						identities = await Source.ReadIdentitiesAsync(Options).ConfigureAwait(false);
+						identities = await Source.ReadIdentitiesAsync().ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{

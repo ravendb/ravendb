@@ -36,11 +36,15 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		private JsonTextReader _reader;
 
+		private DatabaseSmugglerOptions _options;
+
 		public DatabaseSmugglerStreamSource(Stream stream, CancellationToken cancellationToken)
 		{
 			_stream = stream;
 			_cancellationToken = cancellationToken;
 		}
+
+		public string DisplayName { get; set; }
 
 		public bool SupportsMultipleSources => false;
 
@@ -48,6 +52,8 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public void Initialize(DatabaseSmugglerOptions options)
 		{
+			_options = options;
+
 			try
 			{
 				_stream.Position = 0;
@@ -77,7 +83,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				throw new InvalidDataException("StartObject was expected");
 		}
 
-		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, DatabaseSmugglerOptions options)
+		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize)
 		{
 			var results = new List<IndexDefinition>();
 
@@ -86,7 +92,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				_cancellationToken.ThrowIfCancellationRequested();
 
 				var index = (RavenJObject)RavenJToken.ReadFrom(_reader);
-				if (options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
+				if (_options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
 					continue;
 
 				var indexName = index.Value<string>("name");
@@ -97,7 +103,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				if (definition.Value<bool>("IsCompiled"))
 					continue; // can't import compiled indexes
 
-				if (options.OperateOnTypes.HasFlag(ItemType.RemoveAnalyzers))
+				if (_options.OperateOnTypes.HasFlag(ItemType.RemoveAnalyzers))
 					definition.Remove("Analyzers");
 
 				var indexDefinition = definition.JsonDeserialization<IndexDefinition>();
@@ -125,37 +131,25 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task<RavenJObject> ReadDocumentAsync(string key)
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync()
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
-		public bool SupportsReadingDatabaseStatistics { get; }
+		public bool SupportsReadingDatabaseStatistics => false;
 
-		public bool SupportsReadingHiLoDocuments { get; }
+		public bool SupportsReadingHiLoDocuments => false;
 
-		public bool SupportsDocumentDeletions { get; }
+		public bool SupportsDocumentDeletions => false;
 
-		public bool SupportsPaging
-		{
-			get
-			{
-				return false;
-			}
-		}
+		public bool SupportsPaging => false;
 
-		public bool SupportsRetries
-		{
-			get
-			{
-				return false;
-			}
-		}
+		public bool SupportsRetries => false;
 
-		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, DatabaseSmugglerOptions options)
+		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize)
 		{
 			var results = new List<TransformerDefinition>();
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
@@ -163,7 +157,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				_cancellationToken.ThrowIfCancellationRequested();
 
 				var transformer = RavenJToken.ReadFrom(_reader);
-				if (options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
+				if (_options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
 					continue;
 
 				var transformerName = transformer.Value<string>("name");
@@ -180,10 +174,10 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag)
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
-		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(DatabaseSmugglerOptions options)
+		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync()
 		{
 			var results = new List<KeyValuePair<string, long>>();
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)

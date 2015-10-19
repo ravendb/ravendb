@@ -33,7 +33,7 @@ namespace Raven.Smuggler.Database
 					List<TransformerDefinition> transformers;
 					try
 					{
-						transformers = await Source.ReadTransformersAsync(count, pageSize, Options).ConfigureAwait(false);
+						transformers = await Source.ReadTransformersAsync(count, pageSize).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
