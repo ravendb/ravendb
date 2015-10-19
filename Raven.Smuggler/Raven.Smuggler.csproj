@@ -108,6 +108,7 @@
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
+    <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamIdentityActions.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamIndexActions.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamSource.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamTransformerActions.cs" />

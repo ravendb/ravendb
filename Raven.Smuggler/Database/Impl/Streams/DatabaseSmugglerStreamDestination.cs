@@ -60,7 +60,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public IDatabaseSmugglerIdentityActions IdentityActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerStreamIdentityActions(_writer);
 		}
 
 		public void Dispose()

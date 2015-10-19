@@ -181,7 +181,20 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(DatabaseSmugglerOptions options)
 		{
-			throw new System.NotImplementedException();
+			var results = new List<KeyValuePair<string, long>>();
+			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
+			{
+				_cancellationToken.ThrowIfCancellationRequested();
+
+				var identity = RavenJToken.ReadFrom(_reader);
+
+				var name = identity.Value<string>("Key");
+				var value = identity.Value<long>("Value");
+
+				results.Add(new KeyValuePair<string, long>(name, value));
+			}
+
+			return new CompletedTask<List<KeyValuePair<string, long>>>(results);
 		}
 
 		public Task<SmuggleType> GetNextSmuggleTypeAsync()

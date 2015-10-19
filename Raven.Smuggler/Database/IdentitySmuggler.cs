@@ -25,8 +25,9 @@ namespace Raven.Smuggler.Database
 		{
 			using (var actions = Destination.IdentityActions())
 			{
-				var retries = DatabaseSmuggler.NumberOfRetries;
-				while (true)
+				int readCount = 0, filteredCount = 0, writeCount = 0;
+				var retries = Source.SupportsRetries ? DatabaseSmuggler.NumberOfRetries : 1;
+				do
 				{
 					List<KeyValuePair<string, long>> identities;
 					try
@@ -48,9 +49,13 @@ namespace Raven.Smuggler.Database
 						continue;
 					}
 
+					readCount += identities.Count;
+
 					Report.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
 
 					var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, Options.OperateOnTypes)).ToList();
+
+					filteredCount += filteredIdentities.Count;
 
 					Report.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
 
@@ -59,6 +64,7 @@ namespace Raven.Smuggler.Database
 						try
 						{
 							await actions.WriteIdentityAsync(identity.Key, identity.Value).ConfigureAwait(false);
+							writeCount++;
 						}
 						catch (Exception e)
 						{
@@ -68,7 +74,11 @@ namespace Raven.Smuggler.Database
 							Report.ShowProgress("Failed to export identity {0}. Message: {1}", identity, e.Message);
 						}
 					}
-				}
+
+					break;
+				} while (Source.SupportsRetries);
+
+				Report.ShowProgress("---IDENTITY---{0}Read: {1}{0}Filtered:{2}{0}Wrote:{3}", Environment.NewLine, readCount, readCount - filteredCount, writeCount);
 			}
 		}
 
