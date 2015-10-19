@@ -9,7 +9,7 @@ namespace Raven.Client.TimeSeries.Changes
 		/// <summary>
 		/// Subscribe to changes for specified type and key only.
 		/// </summary>
-		IObservableWithTask<KeyChangeNotification> ForKey(string type, string key);
+		IObservableWithTask<TimeSeriesChangeNotification> ForKey(string type, string key);
 
 		/// <summary>
 		/// Subscribe to all bulk operation changes that belong to a operation with given Id.

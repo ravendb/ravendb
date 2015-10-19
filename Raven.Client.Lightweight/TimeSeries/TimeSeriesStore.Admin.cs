@@ -23,7 +23,7 @@ namespace Raven.Client.TimeSeries
 			internal TimeSeriesStoreAdminOperations(TimeSeriesStore parent)
 			{
 				this.parent = parent;
-			}
+            }
 
 			/// <summary>
 			/// Create new time series on the server.

@@ -42,7 +42,7 @@ namespace Raven.Tests.TimeSeries
 				await storeA.CreateTypeAsync("SmartWatch", new [] { "Heartrate", "Geo Latitude", "Geo Longitude" });
 				await storeA.AppendAsync("SmartWatch", "Watch-123456", DateTimeOffset.UtcNow, new [] { 111d, 222d, 333d });
 
-				Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "TimeSeries"));
+				await storeA.WaitForReplicationAsync();
 			}
 		}
 

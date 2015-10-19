@@ -65,6 +65,8 @@ namespace Raven.Client.TimeSeries
 
 		Task SaveReplicationsAsync(TimeSeriesReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken));
 
+		Task<int> WaitForReplicationAsync(CancellationToken token = default(CancellationToken));
+
 		Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken));
 
 		void Initialize(bool ensureDefaultTimeSeriesExists = false);
