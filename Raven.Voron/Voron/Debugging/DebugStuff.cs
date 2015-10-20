@@ -258,8 +258,8 @@ namespace Voron.Debugging
 		private unsafe static void RenderFixedSizeTreePage(Transaction tx, Page page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
 		{
 			sw.WriteLine(
-				"<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
-				page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text);
+				"<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
+				page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text, page.Source);
 
 			for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
 			{

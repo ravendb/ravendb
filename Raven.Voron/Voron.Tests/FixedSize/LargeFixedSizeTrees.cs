@@ -374,14 +374,23 @@ namespace Voron.Tests.FixedSize
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
-                }
-            }
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				}
+			}
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
-                    Assert.Equal(status[i], fst.Contains(i));
+	                try
+	                {
+						Assert.Equal(status[i], fst.Contains(i));
+					}
+					catch (Exception)
+	                {
+		                Console.WriteLine(i + " is part of the tree? " + fst.Contains(i));
+						fst.DebugRenderAndShow();
+		                throw;
+	                }
                 }
             }
         }
@@ -391,6 +400,7 @@ namespace Voron.Tests.FixedSize
         [InlineDataWithRandomSeed(10000)]
         [InlineDataWithRandomSeed(75000)]
         [InlineDataWithRandomSeed(300000)]
+        [InlineData(75000, 437300828)] // A bug reproduced by this, do not remove
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];

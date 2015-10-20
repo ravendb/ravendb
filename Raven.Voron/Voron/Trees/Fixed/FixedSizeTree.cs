@@ -194,7 +194,20 @@ namespace Voron.Trees.Fixed
                 page = _tx.GetReadOnlyPage(childPageNumber);
             }
 
-            BinarySearch(page, key);
+#if DEBUG
+			if (page.LastMatch == 0 && _cursor.Count > 0)
+	        {
+		        var firstKey = KeyFor(page, 0);
+		        var parentPage = _cursor.Peek();
+		        var separatorKey = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition)[0];
+		        if (separatorKey != firstKey && (separatorKey != long.MinValue || parentPage.LastSearchPosition != 0))
+		        {
+			        throw new InvalidOperationException(string.Format("Separator key ({0}) must be the same as the first key ({1}) in the page", separatorKey, firstKey));
+		        }
+	        }
+#endif
+
+			BinarySearch(page, key);
             return page;
         }
 
@@ -212,7 +225,8 @@ namespace Voron.Trees.Fixed
                     (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largePtr->RootPageNumber = parentPage.PageNumber;
                 largePtr->Depth++;
-				var dataStart = SetSeparatorKeyAtPosition(parentPage, long.MinValue);
+				var dataStart = GetSeparatorKeyAtPosition(parentPage);
+                dataStart[0] = long.MinValue;
                 dataStart[1] = page.PageNumber;
             }
 
@@ -258,7 +272,8 @@ namespace Voron.Trees.Fixed
                 {
 					// here we steal the last entry from the current page so we maintain the implicit null left entry
 
-					var dataStart = SetSeparatorKeyAtPosition(newPage, KeyFor(page, page.FixedSize_NumberOfEntries - 1));
+					var dataStart = GetSeparatorKeyAtPosition(newPage);
+                    dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
                     dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
                     newPage.FixedSize_NumberOfEntries++;
@@ -745,13 +760,6 @@ namespace Voron.Trees.Fixed
 	        }
 	        page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
 
-	        if (startPos == 0 && _cursor.Count > 0)
-	        {
-		        var parentPage = _cursor.Peek();
-		        parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
-				SetSeparatorKeyAtPosition(parentPage, KeyFor(page, 0), parentPage.LastSearchPosition);
-	        }
-
 	        if (page.FixedSize_NumberOfEntries == 0)
             {
                 if (RemoveEntirePage(page, largeHeader))
@@ -759,7 +767,14 @@ namespace Voron.Trees.Fixed
             }
             else
             {
-                while (page != null)
+				if (startPos == 0 && _cursor.Count > 0)
+				{
+					var parentPage = _cursor.Peek();
+					parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+					SetSeparatorKeyAtPosition(parentPage, KeyFor(page, 0), parentPage.LastSearchPosition);
+				}
+
+				while (page != null)
                 {
                     page = RebalancePage(page, largeHeader);
                 }
@@ -767,10 +782,17 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private long* SetSeparatorKeyAtPosition(Page page, long key, int position = 0)
+	    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    private long* GetSeparatorKeyAtPosition(Page page, int position = 0)
 	    {
 			var dataStart = (long*)(page.Base + page.FixedSize_StartPosition + (BranchEntrySize * position));
+		    return dataStart;
+	    }
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private long* SetSeparatorKeyAtPosition(Page page, long key, int position = 0)
+	    {
+			var dataStart = GetSeparatorKeyAtPosition(page, position);
 			dataStart[0] = key;
 			return dataStart;
 		}
@@ -972,6 +994,7 @@ namespace Voron.Trees.Fixed
             {
                 var siblingNum = PageValueFor(parentPage, parentPage.LastSearchPosition - 1);
                 var siblingPage = _tx.GetReadOnlyPage(siblingNum);
+	            siblingPage = _tx.ModifyPage(siblingPage.PageNumber, _parent, siblingPage);
                 if (siblingPage.Flags != page.Flags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
