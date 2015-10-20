@@ -104,33 +104,21 @@ namespace Raven.Client.Shard
 			return indexName;
 		}
 
-		protected Dictionary<string, SaveChangesData> GetChangesToSavePerShard(SaveChangesData data)
-		{
-			var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
+	    protected Dictionary<string, SaveChangesData> CreateSaveChangesBatchPerShardFromDeferredCommands()
+	    {
+	        var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
 
-			foreach (var deferredCommands in deferredCommandsByShard)
-			{
-				var saveChangesData = saveChangesPerShard.GetOrAdd(deferredCommands.Key);
-				saveChangesData.DeferredCommandsCount += deferredCommands.Value.Count;
-				saveChangesData.Commands.AddRange(deferredCommands.Value);
-			}
-			deferredCommandsByShard.Clear();
+	        foreach (var deferredCommands in deferredCommandsByShard)
+	        {
+	            var saveChangesData = saveChangesPerShard.GetOrAdd(deferredCommands.Key);
+	            saveChangesData.DeferredCommandsCount += deferredCommands.Value.Count;
+	            saveChangesData.Commands.AddRange(deferredCommands.Value);
+	        }
+	        deferredCommandsByShard.Clear();
+	        return saveChangesPerShard;
+	    }
 
-			for (int index = 0; index < data.Entities.Count; index++)
-			{
-				var entity = data.Entities[index];
-				var metadata = GetMetadataFor(entity);
-				var shardId = metadata.Value<string>(Constants.RavenShardId);
-			    if (shardId == null)
-			        throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
-				var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
-				shardSaveChangesData.Entities.Add(entity);
-				shardSaveChangesData.Commands.Add(data.Commands[index]);
-			}
-			return saveChangesPerShard;
-		}
-
-		#endregion
+	    #endregion
 
 		#region InMemoryDocumentSessionOperations implementation
 

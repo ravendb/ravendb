@@ -400,7 +400,7 @@ namespace Raven.Database.Indexing
 
 					transactionalStorage.Batch(actions =>
 					{
-						var getItemsToReduceParams = new GetItemsToReduceParams(index: index.IndexId, reduceKeys: localKeys, level: 0, loadData: false, itemsToDelete: itemsToDelete)
+						var getItemsToReduceParams = new GetItemsToReduceParams(index: index.IndexId, reduceKeys: new HashSet<string>(localKeys), level: 0, loadData: false, itemsToDelete: itemsToDelete)
 						{
 							Take = int.MaxValue // just get all, we do the rate limit when we load the number of keys to reduce, anyway
 						};

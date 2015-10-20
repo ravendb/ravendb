@@ -780,7 +780,26 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		void ISyncAdvancedSessionOperation.Refresh<T>(T entity)
+        protected Dictionary<string, SaveChangesData> GetChangesToSavePerShard(SaveChangesData data)
+        {
+            var saveChangesPerShard = CreateSaveChangesBatchPerShardFromDeferredCommands();
+
+            for (int index = 0; index < data.Entities.Count; index++)
+            {
+                var entity = data.Entities[index];
+                var metadata = GetMetadataFor(entity);
+                var shardId = metadata.Value<string>(Constants.RavenShardId);
+                if (shardId == null)
+                    throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
+                var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
+                shardSaveChangesData.Entities.Add(entity);
+                shardSaveChangesData.Commands.Add(data.Commands[index]);
+            }
+            return saveChangesPerShard;
+        }
+
+
+        void ISyncAdvancedSessionOperation.Refresh<T>(T entity)
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
