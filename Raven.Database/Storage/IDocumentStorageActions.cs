@@ -13,6 +13,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using metrics.Core;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
@@ -22,8 +23,16 @@ namespace Raven.Database.Storage
 	public interface IDocumentStorageActions 
 	{
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-        IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
-        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
+        IEnumerable<JsonDocument> GetDocumentsAfter(
+			Etag etag, int take, 
+			CancellationToken cancellationToken, 
+			long? maxSize = null, 
+			Etag untilEtag = null, 
+			TimeSpan? timeout = null, 
+			Action<Etag> lastProcessedDocument = null,
+			Reference<bool> earlyExit = null);
+        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+			Reference<bool> earlyExit = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
 		Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken);
 

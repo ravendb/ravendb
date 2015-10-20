@@ -252,9 +252,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
-        {
-            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+			Reference<bool> earlyExit = null)
+		{
+			if (earlyExit != null)
+				earlyExit.Value = false;
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
                 yield break;
@@ -278,8 +281,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 // We can skip many documents so the timeout should be at the start of the process to be executed.
                 if (timeout != null)
                 {
-                    if (duration.Elapsed > timeout.Value)
-                        break;
+	                if (duration.Elapsed > timeout.Value)
+	                {
+		                if (earlyExit != null)
+			                earlyExit.Value = true;
+		                break;
+	                }
                 }                
 
                 if (untilEtag != null && fetchedDocumentCount > 0)
@@ -309,8 +316,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
-                    break;  
-            } 
+				{
+					if (earlyExit != null)
+						earlyExit.Value = true;
+					break;
+				}
+			} 
             while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
 
             // We notify the last that we considered.
@@ -318,9 +329,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null,
+			Reference<bool> earlyExit = null)
 		{
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
 		}
 
 		public Etag GetBestNextDocumentEtag(Etag etag)
