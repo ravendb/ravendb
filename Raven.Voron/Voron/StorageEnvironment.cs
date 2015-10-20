@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -22,6 +23,7 @@ using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Trees;
 using Voron.Util;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -50,6 +52,7 @@ namespace Voron
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
 		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
+        public Guid DbId { get; set; }
 
         public StorageEnvironmentState State { get; private set; }
 
@@ -110,11 +113,38 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
 
                 tx.UpdateRootsIfNeeded(root);
+
+                var treesTx = new Transaction(tx);
+
+                var metadataTree = treesTx.ReadTree(Constants.MetadataTreeName);
+                if (metadataTree == null)
+                    throw new InvalidDataException("Could not find metadata tree in database, possible mismatch / corruption?");
+
+                var dbId = metadataTree.Read("db-id");
+                if(dbId == null)
+                    throw new InvalidDataException("Could not find db id in metadata tree, possible mismatch / corruption?");
+
+                int used;
+                DbId = new Guid(dbId.Reader.ReadBytes(16, out used));
+
+                var schemaVersion = metadataTree.Read("schema-version");
+                if (schemaVersion == null)
+                    throw new InvalidDataException("Could not find schema version in metadata tree, possible mismatch / corruption?");
+
+                var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                if (Options.SchemaVersion != 0 &&
+                    schemaVersionVal != Options.SchemaVersion)
+                {
+                    throw new VersionNotFoundException("The schema version of this database is expected to be " +
+                                                       Options.SchemaVersion + " but is actually " + schemaVersionVal +
+                                                       ". You need to upgrade the schema.");
+                }
+
                 tx.Commit();
 
 			}
@@ -127,18 +157,26 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, null);
 
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
-                
-                tx.Commit();
 
-				//since this transaction is never shipped, this is the first previous transaction
-				//when applying shipped logs
+                var treesTx = new Transaction(tx);
+
+                DbId = Guid.NewGuid();
+
+                var metadataTree = treesTx.CreateTree(Constants.MetadataTreeName);
+                metadataTree.Add("db-id", DbId.ToByteArray());
+                metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
+
+                treesTx.CommitTrees();
+
+                tx.Commit();
 			}
+
         }
 
         public IFreeSpaceHandling FreeSpaceHandling
@@ -250,12 +288,22 @@ namespace Voron
             }
         }
 
-        public LowLevelTransaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
+        public Transaction ReadTransaction()
+        {
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read));
+        }
+
+        public Transaction WriteTransaction(TimeSpan? timeout = null)
+        {
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, timeout));
+        }
+
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
 	        try
 	        {
-		        if (flags == (TransactionFlags.ReadWrite))
+		        if (flags == TransactionFlags.ReadWrite)
 		        {
 			        var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
 					Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
@@ -416,7 +464,7 @@ namespace Voron
 		public EnvironmentStats Stats()
 		{
             throw new NotImplementedException();
-            //using (var tx = NewTransaction(TransactionFlags.Read))
+            //using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
             //{
             //    var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 

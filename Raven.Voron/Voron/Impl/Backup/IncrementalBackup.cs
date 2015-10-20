@@ -53,7 +53,7 @@ namespace Voron.Impl.Backup
 				using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen:true))
 				{
 					IncrementalBackupInfo backupInfo;
-					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+					using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
 					{
 						backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
@@ -66,7 +66,7 @@ namespace Voron.Impl.Backup
 						// txw.Commit(); intentionally not committing
 					}
 
-					using (env.NewTransaction(TransactionFlags.Read))
+					using (env.NewLowLevelTransaction(TransactionFlags.Read))
 					{
 						if (backupStarted != null)
 							backupStarted();// we let call know that we have started the backup 
@@ -220,7 +220,7 @@ namespace Voron.Impl.Backup
 		{
 			using (env.Journal.Applicator.TakeFlushingLock())
 			{
-				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
 				{
 					using (env.Options.AllowManualFlushing())
 					{

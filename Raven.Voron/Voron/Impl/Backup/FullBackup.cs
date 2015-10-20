@@ -47,9 +47,9 @@ namespace Voron.Impl.Backup
 						var usedJournals = new List<JournalFile>();
 						long lastWrittenLogPage = -1;
 						long lastWrittenLogFile = -1;
-						using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+						using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
 						{
-							txr = env.NewTransaction(TransactionFlags.Read); // now have snapshot view
+							txr = env.NewLowLevelTransaction(TransactionFlags.Read); // now have snapshot view
 							allocatedPages = dataPager.NumberOfAllocatedPages;
 
 							Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);

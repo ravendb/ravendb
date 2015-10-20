@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -76,6 +76,9 @@ namespace Voron
                 _pageSize = value;
             }
         }
+
+        // if set to a non zero value, will check that the expected schema is there
+        public int SchemaVersion { get; set; }
 
         public long MaxScratchBufferSize { get; set; }
 
@@ -441,7 +444,7 @@ namespace Voron
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
 
                 if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
+                     return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
 
 
                 return new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize,

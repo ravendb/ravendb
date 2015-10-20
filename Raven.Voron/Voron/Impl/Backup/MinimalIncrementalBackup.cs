@@ -29,7 +29,7 @@ namespace Voron.Impl.Backup
 				long lastWrittenLogPage = -1;
 				long lastWrittenLogFile = -1;
 
-				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
 				{
 					backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 

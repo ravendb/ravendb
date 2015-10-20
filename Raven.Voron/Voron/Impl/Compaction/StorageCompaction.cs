@@ -57,7 +57,7 @@ namespace Voron.Impl.Compaction
 		private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport = null)
 		{
             throw new NotImplementedException();
-            //using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
+            //using (var txr = existingEnv.NewLowLevelTransaction(TransactionFlags.Read))
             //using (var rootIterator = txr.Root.Iterate())
             //{
             //    if (rootIterator.Seek(Slice.BeforeAllKeys) == false)
@@ -78,7 +78,7 @@ namespace Voron.Impl.Compaction
             //            if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
             //                continue;
 
-            //            using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+            //            using (var txw = compactedEnv.NewLowLevelTransaction(TransactionFlags.ReadWrite))
             //            {
             //                compactedEnv.CreateTree(txw, treeName);
             //                txw.Commit();
@@ -90,7 +90,7 @@ namespace Voron.Impl.Compaction
             //            {
             //                var transactionSize = 0L;
 
-            //                using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+            //                using (var txw = compactedEnv.NewLowLevelTransaction(TransactionFlags.ReadWrite))
             //                {
             //                    var newTree = txw.ReadTree(treeName);
 
