@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -227,11 +228,13 @@ namespace Raven.Database.Server.WebApi
 							}
 							else
 							{
+                                IncreamentRequestNumberAndLog(controller, controllerContext);
 								response = await action().ConfigureAwait(false);
 							}
 						}
 						else
 						{
+                            IncreamentRequestNumberAndLog(controller, controllerContext);
 							response = await action().ConfigureAwait(false);
 						}
 					}
@@ -269,7 +272,24 @@ namespace Raven.Database.Server.WebApi
 			return response;
 		}
 
-		/// <summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void IncreamentRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
+        {
+            var curReq = Interlocked.Increment(ref reqNum);
+            controllerContext.Request.Properties["requestNum"] = curReq;
+
+            if (Logger.IsDebugEnabled == true)
+            {
+                Logger.Debug(string.Format(CultureInfo.InvariantCulture,
+                    "Receive Request #{0,4:#,0}: {1,-7} - {2} - {3}",
+                    curReq,
+                    controller.InnerRequest.Method.Method,
+                    controller.ResourceName,
+                    controller.InnerRequest.RequestUri));
+            }
+        }
+
+	    /// <summary>
 		/// If set all client request to the server will be rejected with 
 		/// the http 503 response.
 		/// And no replication can be done from this database.
@@ -422,7 +442,7 @@ namespace Raven.Database.Server.WebApi
 
 			MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
-			var curReq = Interlocked.Increment(ref reqNum);
+            long curReq = controller.InnerRequest.Properties["requestNum"] as long? ?? 0;
 
 			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
 
