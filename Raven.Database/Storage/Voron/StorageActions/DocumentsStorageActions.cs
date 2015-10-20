@@ -230,11 +230,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
 					{
-						if (earlyExit != null)
+						if (untilEtag != null && earlyExit != null)
 							earlyExit.Value = true;
 						break;
 					}
-				} while (iterator.MoveNext() && fetchedDocumentCount < take);
+
+					if (fetchedDocumentCount >= take)
+					{
+						if (untilEtag != null && earlyExit != null)
+							earlyExit.Value = true;
+						break;
+					}
+				} while (iterator.MoveNext());
 			}
 
 			// We notify the last that we considered.

@@ -321,8 +321,15 @@ namespace Raven.Database.Storage.Esent.StorageActions
 						earlyExit.Value = true;
 					break;
 				}
+
+	            if (fetchedDocumentCount >= take)
+	            {
+					if (earlyExit != null)
+						earlyExit.Value = true;
+					break;
+				}
 			} 
-            while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
+            while (Api.TryMoveNext(session, Documents));
 
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
