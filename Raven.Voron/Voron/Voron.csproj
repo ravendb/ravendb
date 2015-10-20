@@ -80,7 +80,6 @@
     <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
     <Compile Include="Impl\StorageEnvironmentState.cs" />
-    <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Exceptions\DiskFullException.cs" />
