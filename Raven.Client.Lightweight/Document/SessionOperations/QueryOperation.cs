@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
@@ -84,9 +82,8 @@ namespace Raven.Client.Document.SessionOperations
 				return;
 
 			var value = match.Groups[1].Value;
-			throw new InvalidOperationException(
-				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" +
-			Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
+
+            throw new InvalidOperationException("Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" + Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
 		}
 
 		private void StartTiming()
@@ -96,9 +93,11 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogQuery()
 		{
-			log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
-										  indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
-		}
+            if (log.IsDebugEnabled)
+            {
+                log.Debug("Executing query '{0}' on index '{1}' in '{2}'", indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
+            }
+        }
 
 		public IDisposable EnterQueryContext()
 		{
@@ -243,40 +242,46 @@ namespace Raven.Client.Document.SessionOperations
 				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
 				{
 					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
-									  sp.ElapsedMilliseconds));
+					throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.", sp.ElapsedMilliseconds));
 				}
-				log.Debug(
-						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
-				return false;
+
+                if ( log.IsDebugEnabled )
+                {
+                    log.Debug("Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                            indexQuery.Query,
+                            indexName,
+                            sessionOperations.StoreIdentifier,
+                            result.IndexEtag);
+                }
+                return false;
 			}
 			if (waitForNonStaleResults && result.IsStale)
 			{
 				if (sp.Elapsed > timeout)
 				{
 					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-									  sp.ElapsedMilliseconds));
+
+					throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
 				}
-				log.Debug(
-						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
-				return false;
+
+                if ( log.IsDebugEnabled )
+                {
+                    log.Debug("Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                            indexQuery.Query,
+                            indexName,
+                            sessionOperations.StoreIdentifier,
+                            result.IndexEtag);
+                }
+                return false;
 			}
 			currentQueryResults = result;
 			currentQueryResults.EnsureSnapshot();
-			log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
-											  result.TotalResults, result.IsStale ? "stale " : "");
-			return true;
+
+            if ( log.IsDebugEnabled )
+            {
+                log.Debug("Query returned {0}/{1} {2}results", result.Results.Count, result.TotalResults, result.IsStale ? "stale " : "");
+            }
+            return true;
 		}
 	}
 }
