@@ -206,8 +206,7 @@ namespace Voron.Trees.Fixed
                     (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largePtr->RootPageNumber = parentPage.PageNumber;
                 largePtr->Depth++;
-                var dataStart = (long*)(parentPage.Base + parentPage.FixedSize_StartPosition);
-                dataStart[0] = long.MinValue;
+				var dataStart = SetSeparatorKeyAtPosition(parentPage, long.MinValue);
                 dataStart[1] = page.PageNumber;
             }
 
@@ -251,10 +250,9 @@ namespace Voron.Trees.Fixed
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
                 {
-                    // here we steal the last entry from the current page so we maintain the implicit null left entry
+					// here we steal the last entry from the current page so we maintain the implicit null left entry
 
-                    var dataStart = (long*)(newPage.Base + newPage.FixedSize_StartPosition);
-                    dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
+					var dataStart = SetSeparatorKeyAtPosition(newPage, KeyFor(page, page.FixedSize_NumberOfEntries - 1));
                     dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
                     newPage.FixedSize_NumberOfEntries++;
@@ -285,9 +283,8 @@ namespace Voron.Trees.Fixed
 
         private void AddLeafKey(Page page, int position, long key)
         {
-            var newEntryPos = page.Base + page.FixedSize_StartPosition + ((position) * BranchEntrySize);
+	        SetSeparatorKeyAtPosition(page, key, position);
             page.FixedSize_NumberOfEntries++;
-            ((long*)newEntryPos)[0] = key;
         }
 
         private void AddSeparatorToParentPage(Page parentPage, int position, long key, long pageNum)
@@ -303,7 +300,7 @@ namespace Voron.Trees.Fixed
             }
 
             var entriesToMove = parentPage.FixedSize_NumberOfEntries - (position);
-            var newEntryPos = parentPage.Base + parentPage.FixedSize_StartPosition + ((position) * BranchEntrySize);
+            var newEntryPos = parentPage.Base + parentPage.FixedSize_StartPosition + (position * BranchEntrySize);
             if (entriesToMove > 0)
             {
                 UnmanagedMemory.Move(newEntryPos + BranchEntrySize,
@@ -747,8 +744,7 @@ namespace Voron.Trees.Fixed
 	        {
 		        var parentPage = _cursor.Peek();
 		        parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
-		        var p = (long*) (parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize*parentPage.LastSearchPosition));
-		        p[0] = KeyFor(page, 0);
+				SetSeparatorKeyAtPosition(parentPage, KeyFor(page, 0), parentPage.LastSearchPosition);
 	        }
 
 	        if (page.FixedSize_NumberOfEntries == 0)
@@ -766,7 +762,15 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-        private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    private long* SetSeparatorKeyAtPosition(Page page, long key, int position = 0)
+	    {
+			var dataStart = (long*)(page.Base + page.FixedSize_StartPosition + (BranchEntrySize * position));
+			dataStart[0] = key;
+			return dataStart;
+		}
+
+		private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
         {
             _tx.FreePage(page.PageNumber);
             if (_cursor.Count == 0) //remove the root page
@@ -884,7 +888,7 @@ namespace Voron.Trees.Fixed
                     // remove the first value
                     parentPage.FixedSize_StartPosition += BranchEntrySize;
                     // set the next value (now the first), to be smaller than everything
-                    ((long*)(parentPage.Base + parentPage.FixedSize_StartPosition))[0] = long.MinValue;
+					SetSeparatorKeyAtPosition(parentPage, long.MinValue);
                 }
                 else
                 {
@@ -896,11 +900,9 @@ namespace Voron.Trees.Fixed
 
             if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
             {
-                // we can just collapse this to the parent
-	            var parentRef = (long*) (parentPage.Base + parentPage.FixedSize_StartPosition +
-	                                     (BranchEntrySize*parentPage.LastSearchPosition));
+				// we can just collapse this to the parent
                 // write the page value to the parent
-                parentRef[0] = PageValueFor(page, 0);
+				SetSeparatorKeyAtPosition(parentPage, PageValueFor(page, 0), parentPage.LastSearchPosition);
                 // then delete the page
                 _tx.FreePage(page.PageNumber);
                 return parentPage;
@@ -955,13 +957,9 @@ namespace Voron.Trees.Fixed
                 siblingPage.FixedSize_NumberOfEntries -= (ushort)entriesToTake;
                 siblingPage.FixedSize_StartPosition += (ushort)(sizeOfEntryInPage * entriesToTake);
 
-                // now update the new separator in the parent
-
-                var newSeperator = KeyFor(siblingPage, 0);
-
-                var siblingPosInParent =
-                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (BranchEntrySize));
-                siblingPosInParent[0] = newSeperator;
+                // now update the new separator in the sibling position in the parent
+                var newSeparator = KeyFor(siblingPage, 0);
+				SetSeparatorKeyAtPosition(parentPage, newSeparator, 1);
 
                 return parentPage;
             }
@@ -1005,13 +1003,9 @@ namespace Voron.Trees.Fixed
                 page.FixedSize_NumberOfEntries += (ushort)entriesToTake;
                 siblingPage.FixedSize_NumberOfEntries -= (ushort)entriesToTake;
 
-                // now update the new separator in the parent
-
-                var newSeperator = KeyFor(page, 0);
-
-                var siblingPosInParent =
-                    (long*)(parentPage.Base + parentPage.FixedSize_StartPosition + (parentPage.LastSearchPosition * BranchEntrySize));
-                siblingPosInParent[0] = newSeperator;
+				// now update the new separator in the parent
+				var newSeparator = KeyFor(page, 0);
+				SetSeparatorKeyAtPosition(parentPage, newSeparator, parentPage.LastSearchPosition);
 
                 return parentPage;
             }
