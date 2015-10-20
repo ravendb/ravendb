@@ -12,6 +12,8 @@ namespace Raven.Abstractions.Smuggler
 {
 	public class DatabaseSmugglerOptions
 	{
+		private int _batchSize;
+
 		public DatabaseSmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
@@ -20,6 +22,7 @@ namespace Raven.Abstractions.Smuggler
 			ShouldExcludeExpired = false;
 			Limit = int.MaxValue;
 			StartDocsDeletionEtag = StartDocsEtag = Etag.Empty;
+			BatchSize = 16 * 1024;
 		}
 
 		public Etag StartDocsEtag { get; set; }
@@ -28,7 +31,16 @@ namespace Raven.Abstractions.Smuggler
 
 		public ItemType OperateOnTypes { get; set; }
 
-		public int BatchSize { get; set; }
+		public int BatchSize
+		{
+			get { return _batchSize; }
+			set
+			{
+				if (value < 1)
+					throw new InvalidOperationException("Batch size cannot be zero or a negative number");
+				_batchSize = value;
+			}
+		}
 
 		public bool IgnoreErrorsAndContinue { get; set; }
 

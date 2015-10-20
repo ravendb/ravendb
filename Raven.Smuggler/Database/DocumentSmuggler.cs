@@ -170,6 +170,7 @@ namespace Raven.Smuggler.Database
 
 						Report.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 						state.LastDocsEtag = lastEtag;
+						return;
 					}
 					catch (Exception e)
 					{

@@ -17,6 +17,7 @@ using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Impl.Files;
+using Raven.Smuggler.Database.Impl.Remote;
 using Raven.Smuggler.Database.Impl.Streams;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
@@ -88,6 +89,27 @@ namespace Raven.Tests.Issues
 
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input, CancellationToken.None), destination);
+				await smuggler.ExecuteAsync();
+
+				Assert.Equal(1059, destination.WroteDocuments);
+				Assert.Equal(0, destination.WroteDocumentDeletions);
+				Assert.Equal(1, destination.WroteIdentities);
+				Assert.Equal(4, destination.WroteIndexes);
+				Assert.Equal(1, destination.WroteTransformers);
+			}
+		}
+
+		[Fact]
+		public async Task NorthwindRemoteReadBasicTest()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				DeployNorthwind(store);
+
+				WaitForIndexing(store);
+
+				var destination = new DatabaseSmugglerCountingDestination();
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteSource(store, CancellationToken.None), destination);
 				await smuggler.ExecuteAsync();
 
 				Assert.Equal(1059, destination.WroteDocuments);

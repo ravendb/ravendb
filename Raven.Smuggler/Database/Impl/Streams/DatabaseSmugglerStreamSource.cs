@@ -119,8 +119,8 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		{
 			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
 			{
-				LastDocsEtag = new Etag(UuidType.Documents, long.MaxValue, long.MaxValue),
-				LastDocDeleteEtag = new Etag(UuidType.Documents, long.MaxValue, long.MaxValue)
+				LastDocDeleteEtag = null,
+				LastDocsEtag = null
 			});
 		}
 
