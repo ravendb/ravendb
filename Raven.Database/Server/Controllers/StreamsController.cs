@@ -97,6 +97,14 @@ namespace Raven.Database.Server.Controllers
                 Action<JsonDocument> addDocument = doc =>
                 {
                     timeout.Delay();
+                    if (doc == null)
+                    {
+                        // we only have this heartbit when the streaming has gone on for a long time
+                        // and we haven't send anything to the user in a while (because of filtering, skipping, etc).
+                        writer.WriteRaw(Environment.NewLine);
+                        writer.Flush();
+                        return;
+                    }
                     doc.ToJson().WriteTo(writer);
                     writer.WriteRaw(Environment.NewLine);
                 };

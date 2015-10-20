@@ -191,14 +191,18 @@ namespace Raven.Bundles.Replication.Tasks
 					            {
                                     accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
                                 }
-					        }					        
+					        }
+                            else
+                            {
+                                Log.Error("Failed to parse index version of index {0}",eventArgs.Name);
+                            }					        
 					    });
 					break;
 				case IndexChangeTypes.IndexRemoved:
                     //If we don't have any destination to replicate to (we are probably slave node)
                     //we shouldn't keep a tombstone since we are not going to remove it anytime
                     //and keeping it prevents us from getting that index created again.
-			        if (!replication.GetReplicationDestinations().Any())
+			        if (replication.GetReplicationDestinations().Length == 0)
 			            return;
 					var metadata = new RavenJObject
 					{
@@ -265,7 +269,9 @@ namespace Raven.Bundles.Replication.Tasks
 				try
 				{
 					int value;
-					if (database.IndexStorage.HasIndex(tombstone.Key)) //if in the meantime the index was recreated under the same name
+                    //In case the index was recreated under the same name we will increase the destination count for this tombstone 
+                    //As if we sent the delete request but without actually sending the request, ending with a NOOP and deleting the index tombstone.
+					if (database.IndexStorage.HasIndex(tombstone.Key)) 
 					{
 						replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
 						replicatedIndexTombstones[tombstone.Key] = value + 1;

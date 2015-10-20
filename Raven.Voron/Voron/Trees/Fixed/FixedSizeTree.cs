@@ -51,10 +51,16 @@ namespace Voron.Trees.Fixed
 
         public long[] Debug(Page p)
         {
+            var entrySize = _entrySize;
+            return Debug(p, entrySize);
+        }
+
+        public static long[] Debug(Page p, int entrySize)
+        {
             if (p == null)
                 return null;
             return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
-                p.IsLeaf ? _entrySize : BranchEntrySize);
+                p.IsLeaf ? entrySize : BranchEntrySize);
         }
 
         public Slice Name
@@ -62,7 +68,7 @@ namespace Voron.Trees.Fixed
             get { return _treeName; }
         }
 
-        public long[] Debug(byte* p, int entries, int size)
+        public static long[] Debug(byte* p, int entries, int size)
         {
             var a = new long[entries];
             for (int i = 0; i < entries; i++)
@@ -617,7 +623,7 @@ namespace Voron.Trees.Fixed
              */
             long entriesDeleted = 0;
             Page page;
-            FixedSizeTreeHeader.Large* largeHeader;
+            var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             while (true)
             {
                 page = FindPageFor(start);
@@ -640,7 +646,6 @@ namespace Voron.Trees.Fixed
                     break; // we can't delete the entire page, special case handling follows
 
                 entriesDeleted += nextPage.FixedSize_NumberOfEntries;
-                largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largeHeader->NumberOfEntries -= nextPage.FixedSize_NumberOfEntries;
 
 
@@ -651,7 +656,6 @@ namespace Voron.Trees.Fixed
             // we now know that the tree contains a maximum of 2 pages with the range
             // now remove the start range from the start page, we do this twice to cover the case 
             // where the start & end are on separate pages
-            largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             int rangeRemoved = 1;
             while (rangeRemoved > 0 &&
                 _flags == FixedSizeTreeHeader.OptionFlags.Large // we may revert to embedded by the deletions, or remove entirely
@@ -709,6 +713,7 @@ namespace Voron.Trees.Fixed
 
         private int RemoveRangeFromPage(Page page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
         {
+            page = _tx.ModifyPage(page.PageNumber, _parent, page);
             var startPos = page.LastSearchPosition;
             BinarySearch(page, rangeEnd);
             var endPos = page.LastSearchPosition;
