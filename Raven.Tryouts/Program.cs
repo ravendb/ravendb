@@ -25,7 +25,7 @@ namespace Raven.Tryouts
 
 				using (var bulk = store.BulkInsert())
 				{
-					for (int i = 1; i < 10001; i++)
+					for (int i = 1; i < 1001; i++)
 					{
 						Console.WriteLine(i);
 						bulk.Store(new { Foo = i }, "foobar/" + i);
@@ -48,9 +48,7 @@ namespace Raven.Tryouts
 						Interlocked.Increment(ref counter);
 						Interlocked.Add(ref total, MeasureRunSync(store));
 					}
-
 				});
-
 				Console.WriteLine("average : " + (total / (decimal)counter));
 			}
 		}
@@ -65,9 +63,10 @@ namespace Raven.Tryouts
 				{
 					for (int j = 0; j < 15; j++)
 					{
-						var index = rand.Next(1, 10000);
-						var doc = session.Load<dynamic>("foobar/" + index);
-						if (doc.Foo != index)
+						var index = rand.Next(1, 1000);
+						var id = index % 2 == 0 ? "foobar/" + index : "foobar/A";
+                        var doc = session.Load<dynamic>(id);
+						if (doc != null && doc.Foo != index)
 							throw new Exception("Got bad data -> got " + doc.Foo + ", but should be " + index);
 					}
 				}
