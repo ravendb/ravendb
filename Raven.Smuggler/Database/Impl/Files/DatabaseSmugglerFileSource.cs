@@ -53,11 +53,11 @@ namespace Raven.Smuggler.Database.Impl.Files
 				source.Dispose();
 		}
 
-		public void Initialize(DatabaseSmugglerOptions options)
+		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			if (File.Exists(_path))
 			{
-				_sources.Add(CreateSource(options, _path, _cancellationToken));
+				_sources.Add(await CreateSourceAsync(options, _path, cancellationToken).ConfigureAwait(false));
 				return;
 			}
 
@@ -75,33 +75,33 @@ namespace Raven.Smuggler.Database.Impl.Files
 			for (var i = 0; i < files.Length - 1; i++)
 			{
 				var path = Path.Combine(_path, files[i]);
-				_sources.Add(CreateSource(optionsWithoutIndexesAndTransformers, path, _cancellationToken));
+				_sources.Add(await CreateSourceAsync(optionsWithoutIndexesAndTransformers, path, cancellationToken).ConfigureAwait(false));
 			}
 
-			_sources.Add(CreateSource(options, Path.Combine(_path, files.Last()), _cancellationToken));
+			_sources.Add(await CreateSourceAsync(options, Path.Combine(_path, files.Last()), cancellationToken).ConfigureAwait(false));
 		}
 
-		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize)
+		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync()
+		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<RavenJObject> ReadDocumentAsync(string key)
+		public Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<DatabaseStatistics> GetStatisticsAsync()
+		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
@@ -116,34 +116,36 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		public bool SupportsRetries => false;
 
-		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize)
+		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag)
+		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync()
+		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<SmuggleType> GetNextSmuggleTypeAsync()
+		public Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		private static IDatabaseSmugglerSource CreateSource(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
+		private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
 		{
-			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path), cancellationToken)
+			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path))
 			{
 				DisplayName = Path.GetFileName(path)
 			};
 
-			source.Initialize(options);
+			await source
+				.InitializeAsync(options, cancellationToken)
+				.ConfigureAwait(false);
 
 			return source;
 		}

@@ -6,6 +6,8 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -32,7 +34,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 			_path = path;
 		}
 
-		public override void Initialize(DatabaseSmugglerOptions options)
+		public override async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			var filePath = _path;
 			if (options.Incremental)
@@ -62,7 +64,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 			_stream = File.Create(filePath);
 
-			base.Initialize(options);
+			await base.InitializeAsync(options, cancellationToken).ConfigureAwait(false);
 		}
 
 		public override OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)

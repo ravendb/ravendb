@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -13,7 +14,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		{
 		}
 
-		public Task WriteIdentityAsync(string name, long value)
+		public Task WriteIdentityAsync(string name, long value, CancellationToken cancellationToken)
 		{
 			new RavenJObject
 			{

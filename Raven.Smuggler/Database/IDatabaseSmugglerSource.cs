@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -19,17 +20,17 @@ namespace Raven.Smuggler.Database
 
 		IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
 
-		void Initialize(DatabaseSmugglerOptions options);
+		Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
-		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize);
+		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken);
 
-		Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync();
+		Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
 
-		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize);
+		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken);
 
-		Task<RavenJObject> ReadDocumentAsync(string key);
+		Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken);
 
-		Task<DatabaseStatistics> GetStatisticsAsync();
+		Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken);
 
 		bool SupportsReadingDatabaseStatistics { get; }
 
@@ -41,12 +42,12 @@ namespace Raven.Smuggler.Database
 
 		bool SupportsRetries { get; }
 
-		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize);
+		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, CancellationToken cancellationToken);
 
-		Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag);
+		Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
 
-		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync();
+		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken);
 
-		Task<SmuggleType> GetNextSmuggleTypeAsync();
+		Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken);
 	}
 }

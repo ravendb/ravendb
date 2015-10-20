@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
@@ -7,7 +9,7 @@ namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerDestination : IDisposable
 	{
-		void Initialize(DatabaseSmugglerOptions options);
+		Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
 		IDatabaseSmugglerIndexActions IndexActions();
 

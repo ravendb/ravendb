@@ -107,7 +107,13 @@
     <Compile Include="Database\IdentitySmuggler.cs" />
     <Compile Include="Database\Impl\Files\DatabaseSmugglerFileDestination.cs" />
     <Compile Include="Database\Impl\Files\DatabaseSmugglerFileSource.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDestination.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDocumentActions.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDocumentDeletionActions.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteIdentityActions.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteIndexActions.cs" />
     <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteSource.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteTransformerActions.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamDocumentActions.cs" />

@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -14,7 +15,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		{
 		}
 
-		public Task WriteDocumentAsync(RavenJObject document)
+		public Task WriteDocumentAsync(RavenJObject document, CancellationToken cancellationToken)
 		{
 			document.WriteTo(Writer);
 			return new CompletedTask();

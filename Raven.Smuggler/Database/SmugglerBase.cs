@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
@@ -23,6 +24,6 @@ namespace Raven.Smuggler.Database
 			Destination = destination;
 		}
 
-		public abstract Task SmuggleAsync(OperationState state);
+		public abstract Task SmuggleAsync(OperationState state, CancellationToken cancellationToken);
 	}
 }

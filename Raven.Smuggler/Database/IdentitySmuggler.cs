@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Exceptions;
@@ -21,7 +22,7 @@ namespace Raven.Smuggler.Database
 		{
 		}
 
-		public override async Task SmuggleAsync(OperationState state)
+		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.IdentityActions())
 			{
@@ -32,7 +33,7 @@ namespace Raven.Smuggler.Database
 					List<KeyValuePair<string, long>> identities;
 					try
 					{
-						identities = await Source.ReadIdentitiesAsync().ConfigureAwait(false);
+						identities = await Source.ReadIdentitiesAsync(cancellationToken).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -63,7 +64,7 @@ namespace Raven.Smuggler.Database
 					{
 						try
 						{
-							await actions.WriteIdentityAsync(identity.Key, identity.Value).ConfigureAwait(false);
+							await actions.WriteIdentityAsync(identity.Key, identity.Value, cancellationToken).ConfigureAwait(false);
 							writeCount++;
 						}
 						catch (Exception e)

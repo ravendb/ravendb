@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
@@ -20,7 +21,7 @@ namespace Raven.Smuggler.Database
 			_maxEtags = maxEtags;
 		}
 
-		public override async Task SmuggleAsync(OperationState state)
+		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.DocumentDeletionActions())
 			{
@@ -28,13 +29,13 @@ namespace Raven.Smuggler.Database
 					return;
 
 				var enumerator = await Source
-					.ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, _maxEtags.LastDocDeleteEtag.IncrementBy(1))
+					.ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, _maxEtags.LastDocDeleteEtag.IncrementBy(1), cancellationToken)
 					.ConfigureAwait(false);
 
 				while (await enumerator.MoveNextAsync().ConfigureAwait(false))
 				{
 					await actions
-						.WriteDocumentDeletionAsync(enumerator.Current)
+						.WriteDocumentDeletionAsync(enumerator.Current, cancellationToken)
 						.ConfigureAwait(false);
 				}
 			}

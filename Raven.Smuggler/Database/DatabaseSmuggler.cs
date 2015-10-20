@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
@@ -44,16 +45,21 @@ namespace Raven.Smuggler.Database
 
 		public void Execute()
 		{
-			AsyncHelpers.RunSync(ExecuteAsync);
+			AsyncHelpers.RunSync(() => ExecuteAsync(CancellationToken.None));
 		}
 
-		public async Task ExecuteAsync()
+		public async Task ExecuteAsync(CancellationToken cancellationToken = default(CancellationToken))
 		{
 			using (_source)
 			using (_destination)
 			{
-				_source.Initialize(_options);
-				_destination.Initialize(_options);
+				await _source
+					.InitializeAsync(_options, cancellationToken)
+					.ConfigureAwait(false);
+
+				await _destination
+					.InitializeAsync(_options, cancellationToken)
+					.ConfigureAwait(false);
 
 				var state = GetOperationState(_options, _source, _destination);
 
@@ -64,23 +70,23 @@ namespace Raven.Smuggler.Database
 				Report.ShowProgress("Found {0} sources.", sources.Count);
 
 				foreach (var source in sources)
-					await ProcessSourceAsync(source, state).ConfigureAwait(false);
+					await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
 			}
 		}
 
-		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, OperationState state)
+		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, OperationState state, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrEmpty(source.DisplayName) == false)
 				Report.ShowProgress("Processing source: {0}", source.DisplayName);
 
 			var maxEtags = await source
-						.FetchCurrentMaxEtagsAsync()
+						.FetchCurrentMaxEtagsAsync(cancellationToken)
 						.ConfigureAwait(false);
 
 			while (true)
 			{
 				var type = await source
-					.GetNextSmuggleTypeAsync()
+					.GetNextSmuggleTypeAsync(cancellationToken)
 					.ConfigureAwait(false);
 
 				switch (type)
@@ -89,27 +95,27 @@ namespace Raven.Smuggler.Database
 						return;
 					case SmuggleType.Index:
 						await new IndexSmuggler(_options, _report, source, _destination)
-							.SmuggleAsync(state)
+							.SmuggleAsync(state, cancellationToken)
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.Document:
 						await new DocumentSmuggler(_options, _report, source, _destination, maxEtags)
-							.SmuggleAsync(state)
+							.SmuggleAsync(state, cancellationToken)
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.Transformer:
 						await new TransformerSmuggler(_options, _report, source, _destination)
-							.SmuggleAsync(state)
+							.SmuggleAsync(state, cancellationToken)
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.DocumentDeletion:
 						await new DocumentDeletionsSmuggler(_options, _report, source, _destination, maxEtags)
-							.SmuggleAsync(state)
+							.SmuggleAsync(state, cancellationToken)
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.Identity:
 						await new IdentitySmuggler(_options, _report, source, _destination)
-							.SmuggleAsync(state)
+							.SmuggleAsync(state, cancellationToken)
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.Attachment:

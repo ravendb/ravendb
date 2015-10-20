@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Exceptions;
@@ -21,7 +22,7 @@ namespace Raven.Smuggler.Database
 		{
 		}
 
-		public override async Task SmuggleAsync(OperationState state)
+		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.IndexActions())
 			{
@@ -33,7 +34,7 @@ namespace Raven.Smuggler.Database
 					List<IndexDefinition> indexes;
 					try
 					{
-						indexes = await Source.ReadIndexesAsync(count, pageSize).ConfigureAwait(false);
+						indexes = await Source.ReadIndexesAsync(count, pageSize, cancellationToken).ConfigureAwait(false);
 					}
 					catch (Exception e)
 					{
@@ -64,7 +65,7 @@ namespace Raven.Smuggler.Database
 						try
 						{
 							if (Options.OperateOnTypes.HasFlag(ItemType.Indexes))
-								await actions.WriteIndexAsync(index).ConfigureAwait(false);
+								await actions.WriteIndexAsync(index, cancellationToken).ConfigureAwait(false);
 						}
 						catch (Exception e)
 						{

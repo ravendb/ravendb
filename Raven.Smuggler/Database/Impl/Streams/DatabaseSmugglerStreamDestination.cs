@@ -6,9 +6,12 @@
 
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Smuggler.Database.Impl.Streams
@@ -31,7 +34,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			_leaveOpen = leaveOpen;
 		}
 
-		public virtual void Initialize(DatabaseSmugglerOptions options)
+		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
 			_streamWriter = new StreamWriter(_gZipStream);
@@ -41,6 +44,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			};
 
 			_writer.WriteStartObject();
+			return new CompletedTask();
 		}
 
 		public IDatabaseSmugglerIndexActions IndexActions()

@@ -28,8 +28,6 @@ namespace Raven.Smuggler.Database.Impl.Streams
 	{
 		private readonly Stream _stream;
 
-		private readonly CancellationToken _cancellationToken;
-
 		private CountingStream _sizeStream;
 
 		private StreamReader _streamReader;
@@ -38,10 +36,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		private DatabaseSmugglerOptions _options;
 
-		public DatabaseSmugglerStreamSource(Stream stream, CancellationToken cancellationToken)
+		public DatabaseSmugglerStreamSource(Stream stream)
 		{
 			_stream = stream;
-			_cancellationToken = cancellationToken;
 		}
 
 		public string DisplayName { get; set; }
@@ -50,7 +47,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => null;
 
-		public void Initialize(DatabaseSmugglerOptions options)
+		public Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			_options = options;
 
@@ -77,19 +74,21 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			}
 
 			if (_reader.Read() == false)
-				return;
+				return new CompletedTask();
 
 			if (_reader.TokenType != JsonToken.StartObject)
 				throw new InvalidDataException("StartObject was expected");
+
+			return new CompletedTask();
 		}
 
-		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize)
+		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken)
 		{
 			var results = new List<IndexDefinition>();
 
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
 			{
-				_cancellationToken.ThrowIfCancellationRequested();
+				cancellationToken.ThrowIfCancellationRequested();
 
 				var index = (RavenJObject)RavenJToken.ReadFrom(_reader);
 				if (_options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
@@ -115,7 +114,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new CompletedTask<List<IndexDefinition>>(results);
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync()
+		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
 			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
 			{
@@ -124,17 +123,17 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			});
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
 		{
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, _cancellationToken));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, cancellationToken));
 		}
 
-		public Task<RavenJObject> ReadDocumentAsync(string key)
+		public Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<DatabaseStatistics> GetStatisticsAsync()
+		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
@@ -149,12 +148,12 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public bool SupportsRetries => false;
 
-		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize)
+		public Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, CancellationToken cancellationToken)
 		{
 			var results = new List<TransformerDefinition>();
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
 			{
-				_cancellationToken.ThrowIfCancellationRequested();
+				cancellationToken.ThrowIfCancellationRequested();
 
 				var transformer = RavenJToken.ReadFrom(_reader);
 				if (_options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
@@ -172,17 +171,17 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new CompletedTask<List<TransformerDefinition>>(results);
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag)
+		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync()
+		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
 		{
 			var results = new List<KeyValuePair<string, long>>();
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
 			{
-				_cancellationToken.ThrowIfCancellationRequested();
+				cancellationToken.ThrowIfCancellationRequested();
 
 				var identity = RavenJToken.ReadFrom(_reader);
 
@@ -195,11 +194,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new CompletedTask<List<KeyValuePair<string, long>>>(results);
 		}
 
-		public Task<SmuggleType> GetNextSmuggleTypeAsync()
+		public Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken)
 		{
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndObject)
 			{
-				_cancellationToken.ThrowIfCancellationRequested();
+				cancellationToken.ThrowIfCancellationRequested();
 
 				if (_reader.TokenType != JsonToken.PropertyName)
 					throw new InvalidDataException("PropertyName was expected");

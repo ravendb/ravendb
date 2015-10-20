@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
 						});
 
 					var destination = new DatabaseSmugglerCountingDestination();
-					var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerStreamSource(input, CancellationToken.None), destination);
+					var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerStreamSource(input), destination);
 					await smuggler.ExecuteAsync();
 
 					Assert.Equal(1059, destination.WroteDocuments);
@@ -109,7 +109,7 @@ namespace Raven.Tests.Issues
 				WaitForIndexing(store);
 
 				var destination = new DatabaseSmugglerCountingDestination();
-				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteSource(store, CancellationToken.None), destination);
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteSource(store), destination);
 				await smuggler.ExecuteAsync();
 
 				Assert.Equal(1059, destination.WroteDocuments);
@@ -207,8 +207,9 @@ namespace Raven.Tests.Issues
 			{
 			}
 
-			public void Initialize(DatabaseSmugglerOptions options)
+			public Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 			{
+				return new CompletedTask();
 			}
 
 			public IDatabaseSmugglerIndexActions IndexActions()
@@ -243,7 +244,7 @@ namespace Raven.Tests.Issues
 
 			private class DatabaseSmugglerCountingIndexActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIndexActions
 			{
-				public Task WriteIndexAsync(IndexDefinition index)
+				public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
 				{
 					Count++;
 					return new CompletedTask();
@@ -252,7 +253,7 @@ namespace Raven.Tests.Issues
 
 			private class DatabaseSmugglerCountingIdentityActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIdentityActions
 			{
-				public Task WriteIdentityAsync(string name, long value)
+				public Task WriteIdentityAsync(string name, long value, CancellationToken cancellationToken)
 				{
 					Count++;
 					return new CompletedTask();
@@ -261,7 +262,7 @@ namespace Raven.Tests.Issues
 
 			private class DatabaseSmugglerCountingDocumentDeletionActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerDocumentDeletionActions
 			{
-				public Task WriteDocumentDeletionAsync(string key)
+				public Task WriteDocumentDeletionAsync(string key, CancellationToken cancellationToken)
 				{
 					Count++;
 					return new CompletedTask();
@@ -270,7 +271,7 @@ namespace Raven.Tests.Issues
 
 			private class DatabaseSmugglerCountingTransformerActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerTransformerActions
 			{
-				public Task WriteTransformerAsync(TransformerDefinition transformer)
+				public Task WriteTransformerAsync(TransformerDefinition transformer, CancellationToken cancellationToken)
 				{
 					Count++;
 					return new CompletedTask();
@@ -279,7 +280,7 @@ namespace Raven.Tests.Issues
 
 			private class DatabaseSmugglerCountingDocumentActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerDocumentActions
 			{
-				public Task WriteDocumentAsync(RavenJObject document)
+				public Task WriteDocumentAsync(RavenJObject document, CancellationToken cancellationToken)
 				{
 					Count++;
 					return new CompletedTask();
@@ -296,6 +297,4 @@ namespace Raven.Tests.Issues
 			}
 		}
 	}
-
-
 }

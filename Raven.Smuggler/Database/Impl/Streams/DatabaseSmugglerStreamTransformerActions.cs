@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Indexing;
@@ -19,7 +20,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		{
 		}
 
-		public Task WriteTransformerAsync(TransformerDefinition transformer)
+		public Task WriteTransformerAsync(TransformerDefinition transformer, CancellationToken cancellationToken)
 		{
 			var transformerJson = RavenJObject.FromObject(transformer);
 			transformerJson.WriteTo(Writer);

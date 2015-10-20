@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
@@ -31,7 +32,7 @@ namespace Raven.Smuggler.Database
 			_patcher.Initialize(options);
 		}
 
-		public override async Task SmuggleAsync(OperationState state)
+		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.DocumentActions())
 			{
@@ -55,7 +56,7 @@ namespace Raven.Smuggler.Database
 						{
 							var pageSize = Source.SupportsPaging ? Math.Min(Options.BatchSize, maxRecords) : int.MaxValue;
 
-							using (var documents = await Source.ReadDocumentsAsync(lastEtag, pageSize).ConfigureAwait(false))
+							using (var documents = await Source.ReadDocumentsAsync(lastEtag, pageSize, cancellationToken).ConfigureAwait(false))
 							{
 								while (await documents.MoveNextAsync().ConfigureAwait(false))
 								{
@@ -102,7 +103,7 @@ namespace Raven.Smuggler.Database
 
 									try
 									{
-										await actions.WriteDocumentAsync(document).ConfigureAwait(false);
+										await actions.WriteDocumentAsync(document, cancellationToken).ConfigureAwait(false);
 									}
 									catch (Exception e)
 									{
@@ -130,7 +131,7 @@ namespace Raven.Smuggler.Database
 								// The server can filter all the results. In this case, we need to try to go over with the next batch.
 								// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 								// (This code provides support for legacy RavenDB version: 1.0)
-								var databaseStatistics = await Source.GetStatisticsAsync().ConfigureAwait(false);
+								var databaseStatistics = await Source.GetStatisticsAsync(cancellationToken).ConfigureAwait(false);
 								var lastEtagComparable = new ComparableByteArray(lastEtag);
 								if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 								{
@@ -156,13 +157,13 @@ namespace Raven.Smuggler.Database
 								foreach (var collectionName in filter.Values)
 								{
 									var doc = await Source
-														.ReadDocumentAsync("Raven/HiLo/" + collectionName)
+														.ReadDocumentAsync("Raven/HiLo/" + collectionName, cancellationToken)
 														.ConfigureAwait(false);
 
 									if (doc == null)
 										continue;
 
-									await actions.WriteDocumentAsync(doc).ConfigureAwait(false);
+									await actions.WriteDocumentAsync(doc, cancellationToken).ConfigureAwait(false);
 									totalCount++;
 								}
 							}

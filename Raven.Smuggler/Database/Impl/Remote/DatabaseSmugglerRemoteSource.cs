@@ -26,8 +26,6 @@ namespace Raven.Smuggler.Database.Impl.Remote
 	{
 		private readonly DocumentStore _store;
 
-		private readonly CancellationToken _cancellationToken;
-
 		private DatabaseSmugglerOptions _options;
 
 		private readonly List<SmuggleType> _types = new List<SmuggleType>
@@ -41,10 +39,9 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		private int _typeIndex;
 
-		public DatabaseSmugglerRemoteSource(DocumentStore store, CancellationToken cancellationToken)
+		public DatabaseSmugglerRemoteSource(DocumentStore store)
 		{
 			_store = store;
-			_cancellationToken = cancellationToken;
 		}
 
 		public void Dispose()
@@ -57,12 +54,12 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => null;
 
-		public void Initialize(DatabaseSmugglerOptions options)
+		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			_options = options;
 
 			InitializeStore();
-			InitializeBatchSize();
+			await InitializeBatchSizeAsync().ConfigureAwait(false);
 		}
 
 		private void InitializeStore()
@@ -70,7 +67,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			_store.Initialize(ensureDatabaseExists: false);
 		}
 
-		private void InitializeBatchSize()
+		private async Task InitializeBatchSizeAsync()
 		{
 			if (_store.HasJsonRequestFactory == false)
 				return;
@@ -80,7 +77,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			{
 				using (var request = _store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, _store.DatabaseCommands.PrimaryCredentials, _store.Conventions)))
 				{
-					var configuration = (RavenJObject)request.ReadResponseJson();
+					var configuration = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
 					if (maxNumberOfItemsToProcessInSingleBatch <= 0)
@@ -99,17 +96,17 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			}
 		}
 
-		public async Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize)
+		public async Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken)
 		{
 			var indexes = await _store
 				.AsyncDatabaseCommands
-				.GetIndexesAsync(start, pageSize, _cancellationToken)
+				.GetIndexesAsync(start, pageSize, cancellationToken)
 				.ConfigureAwait(false);
 
 			return indexes.ToList();
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync()
+		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
 			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
 			{
@@ -118,29 +115,29 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			});
 		}
 
-		public async Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize)
+		public async Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
 		{
 			return await _store
 				.AsyncDatabaseCommands
-				.StreamDocsAsync(fromEtag, pageSize: pageSize, token: _cancellationToken)
+				.StreamDocsAsync(fromEtag, pageSize: pageSize, token: cancellationToken)
 				.ConfigureAwait(false);
 
 			//TODO [ppekrol] legacy support
 		}
 
-		public async Task<RavenJObject> ReadDocumentAsync(string key)
+		public async Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
 		{
 			var document = await _store
 				.AsyncDatabaseCommands
-				.GetAsync(key, _cancellationToken)
+				.GetAsync(key, cancellationToken)
 				.ConfigureAwait(false);
 
 			return document.ToJson();
 		}
 
-		public Task<DatabaseStatistics> GetStatisticsAsync()
+		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
 		{
-			return _store.AsyncDatabaseCommands.GetStatisticsAsync(_cancellationToken);
+			return _store.AsyncDatabaseCommands.GetStatisticsAsync(cancellationToken);
 		}
 
 		public bool SupportsReadingDatabaseStatistics => true;
@@ -153,22 +150,22 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public bool SupportsRetries => true;
 
-		public async Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize)
+		public async Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, CancellationToken cancellationToken)
 		{
 			var transformers = await _store
 				.AsyncDatabaseCommands
-				.GetTransformersAsync(start, batchSize, _cancellationToken)
+				.GetTransformersAsync(start, batchSize, cancellationToken)
 				.ConfigureAwait(false);
 
 			return transformers.ToList();
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag)
+		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public async Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync()
+		public async Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
 		{
 			// TODO [ppekrol] legacy support
 
@@ -195,7 +192,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return identities;
 		}
 
-		public Task<SmuggleType> GetNextSmuggleTypeAsync()
+		public Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken)
 		{
 			return new CompletedTask<SmuggleType>(_types[_typeIndex++]);
 		}
