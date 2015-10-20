@@ -1,19 +1,11 @@
 ﻿using System;
-using System.Threading;
-using Voron.Tests.Backups;
-using System.IO;
-using Voron.Platform.Posix;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
-using Voron.Tests.ScratchBuffer;
-using Voron.Impl.Paging;
-using Voron.Tests.Journal;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Voron.Platform.Posix;
 using Voron.Tests;
 using Xunit;
-using System.Threading.Tasks;
-using Voron.Tests.Bugs;
-using Voron.Tests.Storage;
 
 namespace Voron.Tryout
 {
@@ -24,10 +16,15 @@ namespace Voron.Tryout
             var sp = Stopwatch.StartNew();
             using (var se = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
-                using (var tx = se.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = se.WriteTransaction())
                 {
-                    tx.RootObjects.Add("test", "val");
+                    tx.CreateTree("test").Add("test", "val");
                     tx.Commit();
+                }
+
+                using (var tx = se.ReadTransaction())
+                {
+                    Console.WriteLine(tx.ReadTree("test").Read("test").Reader.ToString());
                 }
             }
             Console.WriteLine(sp.Elapsed);
@@ -102,10 +99,7 @@ namespace Voron.Tryout
 
         static void TestEdgeCases()
         {
-            using (var test = new EdgeCases())
-            {
-                test.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull();
-            }
+         
             Console.WriteLine("done..");
         }
 
@@ -132,10 +126,7 @@ namespace Voron.Tryout
 
         static void ScratchBufferGrowthTest()
         {
-            using (var test = new MutipleScratchBuffersUsage())
-            {
-                test.CanAddContinuallyGrowingValue();
-            }
+           
             Console.WriteLine("done..");
         }
 

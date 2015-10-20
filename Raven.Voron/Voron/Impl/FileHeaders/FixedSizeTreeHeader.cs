@@ -20,32 +20,35 @@ namespace Voron.Impl.FileHeaders
 		public struct Embedded
 		{
 			[FieldOffset(0)]
-			public byte ValueSize;
+			public ushort ValueSize;
 
 			[FieldOffset(1)]
 			public OptionFlags Flags;
 
 			[FieldOffset(2)]
-			public byte NumberOfEntries;
+			public ushort NumberOfEntries;
 		}
 
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Large
 		{
 			[FieldOffset(0)]
-			public byte ValueSize;
-
-			[FieldOffset(1)]
-			public OptionFlags Flags;
+			public ushort ValueSize;
 
 			[FieldOffset(2)]
+			public OptionFlags Flags;
+
+			[FieldOffset(3)]
 			public long EntriesCount;
 
-			[FieldOffset(10)]
+			[FieldOffset(11)]
 			public long RootPageNumber;
 
-            [FieldOffset(18)]
+            [FieldOffset(19)]
             public int Depth;
+
+            [FieldOffset(23)]
+            public long PageCount;
         }
 	}
 }

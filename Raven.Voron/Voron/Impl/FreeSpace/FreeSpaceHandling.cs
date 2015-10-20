@@ -5,9 +5,9 @@ namespace Voron.Impl.FreeSpace
 {
 	public class FreeSpaceHandling : IFreeSpaceHandling
 	{
-        // 128 bytes, 8 bits per byte = 1,024 - each section 4 MB in size for 4KB pages
-        private const byte SectionSizeInBytes = 128;
-        internal const int NumberOfPagesInSection = SectionSizeInBytes * 8; 
+        private const ushort SectionSizeInBytes = 256 + 4 /*count*/;
+        // 256 bytes, 8 bits per byte = 2,048 - each section 8 MB in size for 4KB pages
+        internal const int NumberOfPagesInSection = 2048; 
 
 	    private readonly static Slice FreeSpaceKey = "$free-space";
 
@@ -308,5 +308,11 @@ namespace Voron.Impl.FreeSpace
             sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
             freeSpaceTree.Add(section, sba.ToSlice());
         }
-	}
+
+	    public long GetFreePagesOverhead(LowLevelTransaction tx)
+	    {
+            var freeSpaceTree = new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, SectionSizeInBytes);
+	        return freeSpaceTree.FreeSpaceOverHead;
+	    }
+    }
 }

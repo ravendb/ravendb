@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="MultiTreeSize.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,35 +9,49 @@ using Xunit;
 
 namespace Voron.Tests
 {
-    public class MultiTreeSize : StorageTest
-    {
-        [Fact]
-        public void Single_AddMulti_WillUseOnePage()
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+	public class MultiTreeSize : StorageTest
+	{
+		[Fact]
+		public void Single_AddMulti_WillUseOnePage()
+		{
+			using (var tx = Env.WriteTransaction())
+			{
+			    tx.CreateTree("foo");
+			    tx.Commit();
+			}
+            var usedDataFileSizeInBytes = Env.Stats().UsedDataFileSizeInBytes;
+
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.MultiAdd("ChildTreeKey", "test");
+                var tree = tx.CreateTree("foo");
+                tree.MultiAdd("ChildTreeKey", "test");
                 tx.Commit();
             }
 
-            Assert.Equal(Env.Options.PageSize,
-                Env.Stats().UsedDataFileSizeInBytes
-            );
-        }
+		    Assert.Equal(0,usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
+		}
 
-        [Fact]
-        public void TwoSmall_AddMulti_WillUseOnePage()
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		[Fact]
+		public void TwoSmall_AddMulti_WillUseOnePage()
+		{
+			using (var tx = Env.WriteTransaction())
+			{
+                tx.CreateTree("foo");
+				tx.Commit();
+			}
+
+            var usedDataFileSizeInBytes = Env.Stats().UsedDataFileSizeInBytes;
+
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.MultiAdd("ChildTreeKey", "test1");
-                tx.Root.MultiAdd("ChildTreeKey", "test2");
+                var tree = tx.CreateTree("foo");
+                tree.MultiAdd("ChildTreeKey", "test1");
+                tree.MultiAdd("ChildTreeKey", "test2");
                 tx.Commit();
             }
 
-            Assert.Equal(Env.Options.PageSize,
-                Env.Stats().UsedDataFileSizeInBytes
-            );
+            Assert.Equal(0, usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
+
         }
     }
 }

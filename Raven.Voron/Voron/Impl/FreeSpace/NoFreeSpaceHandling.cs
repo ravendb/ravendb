@@ -18,5 +18,10 @@ namespace Voron.Impl.FreeSpace
         {
             
         }
+
+        public long GetFreePagesOverhead(LowLevelTransaction tx)
+        {
+            return -1;
+        }
     }
 }

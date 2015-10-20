@@ -22,6 +22,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Trees;
+using Voron.Trees.Fixed;
 using Voron.Util;
 using Voron.Util.Conversion;
 
@@ -463,24 +464,23 @@ namespace Voron
 
 		public EnvironmentStats Stats()
 		{
-            throw new NotImplementedException();
-            //using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
-            //{
-            //    var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+            using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
+            {
+                var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+                
+                return new EnvironmentStats
+                {
+                    FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
+                    RootPages = tx.RootObjects.State.PageCount,
+                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
+                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
+                    NextWriteTransactionId = NextWriteTransactionId,
+                    ActiveTransactions = ActiveTransactions
+                };
 
-            //    return new EnvironmentStats
-            //    {
-            //        FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
-            //        RootPages = tx.Root.State.PageCount,
-            //        UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-            //        UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
-            //        AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
-            //        NextWriteTransactionId = NextWriteTransactionId,
-            //        ActiveTransactions = ActiveTransactions
-            //    };
-
-            //}
-		}
+            }
+        }
 
 		[HandleProcessCorruptedStateExceptions]
         private Task FlushWritesToDataFileAsync()
