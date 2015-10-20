@@ -514,7 +514,6 @@ more responsive application.
 					var documentType = Conventions.GetClrType(id, documentFound, metadata);
 					if (documentType != null)
 					{
-						//offsetting cost of resolving assemblies from Costura
 						var type = Type.GetType(documentType);
 						if (type != null)
 							entity = documentFound.Deserialize(type, Conventions);
