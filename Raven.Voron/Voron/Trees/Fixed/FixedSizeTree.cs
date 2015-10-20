@@ -51,10 +51,16 @@ namespace Voron.Trees.Fixed
 
         public long[] Debug(TreePage p)
         {
+            var entrySize = _entrySize;
+            return Debug(p, entrySize);
+        }
+
+        public static long[] Debug(TreePage p, int entrySize)
+        {
             if (p == null)
                 return null;
             return Debug(p.Base + p.FixedSize_StartPosition, p.FixedSize_NumberOfEntries,
-                p.IsLeaf ? _entrySize : BranchEntrySize);
+                p.IsLeaf ? entrySize : BranchEntrySize);
         }
 
         public Slice Name
@@ -62,7 +68,7 @@ namespace Voron.Trees.Fixed
             get { return _treeName; }
         }
 
-        public long[] Debug(byte* p, int entries, int size)
+        public static long[] Debug(byte* p, int entries, int size)
         {
             var a = new long[entries];
             for (int i = 0; i < entries; i++)
