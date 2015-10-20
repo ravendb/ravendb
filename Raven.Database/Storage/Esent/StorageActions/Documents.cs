@@ -317,14 +317,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 if (maxSize != null && totalSize > maxSize.Value)
 				{
-					if (earlyExit != null)
+					if (untilEtag != null && earlyExit != null)
 						earlyExit.Value = true;
 					break;
 				}
 
 	            if (fetchedDocumentCount >= take)
 	            {
-					if (earlyExit != null)
+					if (untilEtag !=null && earlyExit != null)
 						earlyExit.Value = true;
 					break;
 				}
