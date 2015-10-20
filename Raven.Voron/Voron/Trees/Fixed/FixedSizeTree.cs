@@ -713,6 +713,8 @@ namespace Voron.Trees.Fixed
 
         private int RemoveRangeFromPage(TreePage page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
         {
+            page = _parent.ModifyPage(page);
+
             var startPos = page.LastSearchPosition;
             BinarySearch(page, rangeEnd);
             var endPos = page.LastSearchPosition;
