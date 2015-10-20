@@ -17,24 +17,28 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
-				var data = new[]
+				using (var writer = tss.CreateWriter())
 				{
-					new {Key = "Time", At = start, Value = 10},
-					new {Key = "Money", At = start, Value = 54},
-					new {Key = "Is", At = start, Value = 1029},
-
-					new {Key = "Money", At = start.AddHours(1), Value = 546},
-					new {Key = "Is", At = start.AddHours(1), Value = 70},
-					new {Key = "Time", At = start.AddHours(1), Value = 19},
-
-					new {Key = "Is", At = start.AddHours(2), Value = 64},
-					new {Key = "Money", At = start.AddHours(2), Value = 130},
-					new {Key = "Time", At = start.AddHours(2), Value = 50},
-				};
+					writer.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
+					writer.Commit();
+                }
 
 				using (var writer = tss.CreateWriter())
 				{
+					var data = new[]
+					{
+						new {Key = "Time", At = start, Value = 10},
+						new {Key = "Money", At = start, Value = 54},
+						new {Key = "Is", At = start, Value = 1029},
+
+						new {Key = "Money", At = start.AddHours(1), Value = 546},
+						new {Key = "Is", At = start.AddHours(1), Value = 70},
+						new {Key = "Time", At = start.AddHours(1), Value = 19},
+
+						new {Key = "Is", At = start.AddHours(2), Value = 64},
+						new {Key = "Money", At = start.AddHours(2), Value = 130},
+						new {Key = "Time", At = start.AddHours(2), Value = 50},
+					};
 					foreach (var item in data)
 					{
 						writer.Append("3Value", item.Key, item.At, item.Value, StringToIndex(item.Key), item.At.Ticks);
@@ -81,9 +85,9 @@ namespace Raven.Tests.TimeSeries
 
 			using (var tss = GetStorage())
 			{
-				tss.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
 				using (var writer = tss.CreateWriter())
 				{
+					writer.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
 					for (int i = 0; i < 7; i++)
 					{
 						writer.Append("3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);
@@ -95,27 +99,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Money",
-							Start = start.AddDays(-1),
-							End = start.AddMonths(1),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", AggregationDuration.Hours(3), start.AddMonths(-1), start.AddDays(1)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddDays(-1), start.AddMonths(1)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -215,27 +200,8 @@ namespace Raven.Tests.TimeSeries
 
 				using (var r = tss.CreateReader())
 				{
-					var result = r.QueryRollup(
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Time",
-							Start = start.AddMonths(-1),
-							End = start.AddDays(1),
-							Duration = PeriodDuration.Hours(3),
-						},
-						new TimeSeriesRollupQuery
-						{
-							Type = "3Val",
-							Key = "Money",
-							Start = start.AddMonths(-2).AddDays(-1),
-							End = start.AddMonths(2),
-							Duration = PeriodDuration.Hours(2),
-						}).ToArray();
-
-					Assert.Equal(2, result.Length);
-					var time = result[0].ToArray();
-					var money = result[1].ToArray();
+					var time = r.GetAggregatedPoints("3Val", "Time", AggregationDuration.Hours(3), start.AddMonths(-1), start.AddDays(1)).ToArray();
+					var money = r.GetAggregatedPoints("3Val", "Money", AggregationDuration.Hours(2), start.AddMonths(-2).AddDays(-1), start.AddMonths(2)).ToArray();
 
 					Assert.Equal(256, time.Length);
 					for (int i = 0; i < 256; i++)
@@ -325,7 +291,7 @@ namespace Raven.Tests.TimeSeries
 #if DEBUG
 						Assert.Equal("Money", money[i].DebugKey);
 #endif
-						Assert.Equal(PeriodDuration.Hours(2), money[i].Duration);
+						Assert.Equal(AggregationDuration.Hours(2), money[i].Duration);
 						Assert.Equal(start.AddMonths(-2).AddDays(-1).AddHours(2 * i), money[i].StartAt);
 
 						if ((i >= 409 && i <= 410) || 

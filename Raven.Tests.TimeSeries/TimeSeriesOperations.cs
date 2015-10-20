@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.TimeSeries;
+using Raven.Database.TimeSeries;
 using Raven.Tests.Common;
 using Xunit;
 
@@ -282,7 +283,7 @@ namespace Raven.Tests.TimeSeries
 		[Fact]
 		public async Task GetKeys()
 		{
-			var start = DateTimeOffset.Now;
+			var start = new DateTimeOffset(2015, 10, 7, 15, 0, 0, TimeSpan.Zero);
 
 			using (var store = NewRemoteTimeSeriesStore())
 			{
@@ -314,6 +315,10 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal(4, time.PointsCount);
 				var points = await store.Advanced.GetPoints(fourValues.Type, time.Key);
 				Assert.Equal(points.Length, time.PointsCount);
+				var aggregatedPoints = await store.Advanced.GetAggregatedPoints(fourValues.Type, time.Key, AggregationDuration.Hours(2), start.AddHours(-1), start.AddHours(3));
+				Assert.Equal(aggregatedPoints.Length, 2);
+				Assert.Equal(aggregatedPoints[0].Values[0].Volume, 1);
+				Assert.Equal(aggregatedPoints[1].Values[0].Volume, 2);
 
 				var simple = types[1];
 				Assert.Equal("Simple", simple.Type);
@@ -329,7 +334,7 @@ namespace Raven.Tests.TimeSeries
 				Assert.Equal("Simple", money.Type.Type);
 				Assert.Equal("Money", money.Key);
 				Assert.Equal(1, money.PointsCount);
-				points = await store.Advanced.GetPoints(fourValues.Type, money.Key, 1, int.MaxValue, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, cancellationToken);
+				points = await store.Advanced.GetPoints(fourValues.Type, money.Key, start: DateTimeOffset.MinValue, end: DateTimeOffset.MaxValue, skip: 1, take: int.MaxValue, token: cancellationToken);
 				Assert.Equal(points.Length, money.PointsCount - 1);
 
 				var stats = await store.GetStatsAsync(cancellationToken);

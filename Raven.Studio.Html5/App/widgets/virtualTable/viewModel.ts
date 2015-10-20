@@ -65,6 +65,8 @@ class ctor {
         noResultsMessage: string;
         isAnyAutoSelected: KnockoutObservable<boolean>;
         isAllAutoSelected: KnockoutObservable<boolean>;
+        viewType: viewType;
+        isCounterAllGroupsGroup: KnockoutObservable<boolean>;
     }
 
     activate(settings: any) {
@@ -87,7 +89,9 @@ class ctor {
             rowsAreLoading: ko.observable<boolean>(false),
             noResultsMessage: "No records found.",
             isAnyAutoSelected: ko.observable<boolean>(false),
-            isAllAutoSelected: ko.observable<boolean>(false)
+            isAllAutoSelected: ko.observable<boolean>(false),
+            viewType: viewType.Documents,
+            isCounterAllGroupsGroup: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -316,7 +320,7 @@ class ctor {
             
 	        var editUrl: string;
 			if (rowData instanceof counterSummary) {
-				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["GroupName"], rowData["Name"]);
+				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group Name"], rowData["Counter Name"]);
             } else if (rowData instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
 			} else {
@@ -334,7 +338,7 @@ class ctor {
 
 			var editUrl: string;
 			if (selectedItem instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["GroupName"], selectedItem["Name"]);
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group Name"], selectedItem["Counter Name"]);
             } else if (selectedItem instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
             } else {
@@ -376,7 +380,7 @@ class ctor {
         return null;
     }
 
-	isCounterView(): boolean {
+	/*isCounterView(): boolean {
 		var item = this.items.getItem(0);
 		return item instanceof counterSummary;
 	}
@@ -384,7 +388,7 @@ class ctor {
 	isTimeSeriesView(): boolean {
 		var item = this.items.getItem(0);
 		return item instanceof timeSeriesKey;
-	}
+    }*/
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
         var customColumns = this.settings.customColumns();
@@ -695,7 +699,7 @@ class ctor {
 		if (this.settings.selectedIndices().length > 0) {
             ko.postbox.publish("ResetCounter", this.settings.selectedIndices()[0]);
         }
-	}
+    }
 
     copySelectedDocs() {
         this.showCopyDocDialog(false);
@@ -770,6 +774,10 @@ class ctor {
         } else {
             return "#";
         }
+    }
+
+    selectGroup(groupName: string) {
+        ko.postbox.publish("SelectGroup", groupName);
     }
 
     getColumnsNames() {

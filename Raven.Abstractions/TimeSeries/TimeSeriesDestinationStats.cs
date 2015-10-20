@@ -10,6 +10,8 @@ namespace Raven.Abstractions.TimeSeries
 
 		public DateTime? LastHeartbeatReceived { get; set; }
 
+        public long LastReplicatedEtag { get; set; }
+
 		public DateTime? LastReplicatedLastModified { get; set; }
 
 		public DateTime? LastSuccessTimestamp { get; set; }

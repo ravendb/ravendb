@@ -270,18 +270,20 @@ namespace Raven.Tests.Replication
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
 				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
-				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+				var expectedTransformerNames = new List<string>()
 						{ userTransformer.TransformerName, 
 							anotherTransformer.TransformerName, 
 							yetAnotherTransformer.TransformerName };
-
-				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
+                expectedTransformerNames.Sort();
+                var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+                transformerNamesAtDestination1.Sort();
+                transformerNamesAtDestination2.Sort();
+                transformerNamesAtDestination3.Sort();
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3);
 			}
 		}
 
@@ -372,28 +374,31 @@ namespace Raven.Tests.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(anotherTransformer.TransformerName, anotherTransformer.CreateTransformerDefinition());
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
 
-				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+				var expectedTransformerNames = new List<string>()
 						{ userTransformer.TransformerName, 
 							anotherTransformer.TransformerName, 
 							yetAnotherTransformer.TransformerName };
-				
-				// ReSharper disable once AccessToDisposedClosure
-				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+                expectedTransformerNames.Sort();
 
-				var replicationRequestUrl = $"{source.Url}/databases/testDB/replication/replicate-transformers?op=replicate-all";
+                // ReSharper disable once AccessToDisposedClosure
+                SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url
 				});
 				replicationRequest.ExecuteRequest();
 
-				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-	
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name).ToList());
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name).ToList());
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name).ToList());
+				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+                transformerNamesAtDestination1.Sort();
+                transformerNamesAtDestination2.Sort();
+                transformerNamesAtDestination3.Sort();
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3);
 			}
 		}
 
@@ -434,7 +439,7 @@ namespace Raven.Tests.Replication
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => store == destination2, destination1, destination2, destination3);
 
-				var replicationRequestUrl = $"{source.Url}/databases/testDB/replication/replicate-transformers?op=replicate-all";
+				var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
 				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
 				{
 					Url = source.Url

@@ -31,9 +31,9 @@ namespace Raven.Tests.TimeSeries
 			// DefaultTimeSeriesName += Guid.NewGuid();
 		}
 
-		protected ITimeSeriesStore NewRemoteTimeSeriesStore(RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
+		protected ITimeSeriesStore NewRemoteTimeSeriesStore(int port = 8079, RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
 		{
-			ravenDbServer = GetNewServer(requestedStorage: "voron", databaseName: DefaultTimeSeriesName + "Database");
+			ravenDbServer = GetNewServer(requestedStorage: "voron", databaseName: DefaultTimeSeriesName + "Database", port: port);
 
 			var timeSeriesStore = new TimeSeriesStore
 			{

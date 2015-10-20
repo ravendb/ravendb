@@ -94,9 +94,9 @@
     <Compile Include="TimeSeriesChangeTests.cs" />
     <Compile Include="TimeSeriesStatsTests.cs" />
     <Compile Include="RavenBaseTimeSeriesTest.cs" />
-    <Compile Include="RollupsRanges.cs" />
+    <Compile Include="AggregationPoints.cs" />
     <Compile Include="SmugglerTests.cs" />
-    <Compile Include="TimeSeriesRollupsOutOfRange.cs" />
+    <Compile Include="AggregationPointsOutOfRange.cs" />
     <Compile Include="TimeSeriesTest.cs" />
     <Compile Include="TimeSeriesValueLengthTests.cs" />
     <Compile Include="TimeSeriesTests.cs" />

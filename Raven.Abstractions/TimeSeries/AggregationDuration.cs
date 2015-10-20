@@ -1,53 +1,52 @@
 ﻿using System;
-using Voron.Util;
 
-namespace Raven.Database.TimeSeries
+namespace Raven.Abstractions.TimeSeries
 {
-	public class PeriodDuration
+	public class AggregationDuration
 	{
-		public PeriodDuration(PeriodType type, int duration)
+		public AggregationDuration(AggregationDurationType type, int duration)
 		{
 			Type = type;
 			Duration = duration;
 		}
 
-		public PeriodType Type { get; private set; }
+		public AggregationDurationType Type { get; private set; }
 		
 		public int Duration { get; private set; }
 
-		public static PeriodDuration Seconds(int duration)
+		public static AggregationDuration Seconds(int duration)
 		{
-			return new PeriodDuration(PeriodType.Seconds, duration);
+			return new AggregationDuration(AggregationDurationType.Seconds, duration);
 		}
 
-		public static PeriodDuration Minutes(int duration)
+		public static AggregationDuration Minutes(int duration)
 		{
-			return new PeriodDuration(PeriodType.Minutes, duration);
+			return new AggregationDuration(AggregationDurationType.Minutes, duration);
 		}
 
-		public static PeriodDuration Hours(int duration)
+		public static AggregationDuration Hours(int duration)
 		{
-			return new PeriodDuration(PeriodType.Hours, duration);
+			return new AggregationDuration(AggregationDurationType.Hours, duration);
 		}
 
-		public static PeriodDuration Days(int duration)
+		public static AggregationDuration Days(int duration)
 		{
-			return new PeriodDuration(PeriodType.Days, duration);
+			return new AggregationDuration(AggregationDurationType.Days, duration);
 		}
 
-		public static PeriodDuration Months(int duration)
+		public static AggregationDuration Months(int duration)
 		{
-			return new PeriodDuration(PeriodType.Months, duration);
+			return new AggregationDuration(AggregationDurationType.Months, duration);
 		}
 
-		public static PeriodDuration Years(int duration)
+		public static AggregationDuration Years(int duration)
 		{
-			return new PeriodDuration(PeriodType.Years, duration);
+			return new AggregationDuration(AggregationDurationType.Years, duration);
 		}
 
 		public override bool Equals(object obj)
 		{
-			var other = obj as PeriodDuration;
+			var other = obj as AggregationDuration;
 			if (other == null)
 				return false;
 
@@ -66,17 +65,17 @@ namespace Raven.Database.TimeSeries
 		{
 			switch (Type)
 			{
-				case PeriodType.Seconds:
+				case AggregationDurationType.Seconds:
 					return start.AddSeconds(Duration);
-				case PeriodType.Minutes:
+				case AggregationDurationType.Minutes:
 					return start.AddMinutes(Duration);
-				case PeriodType.Hours:
+				case AggregationDurationType.Hours:
 					return start.AddHours(Duration);
-				case PeriodType.Days:
+				case AggregationDurationType.Days:
 					return start.AddDays(Duration);
-				case PeriodType.Months:
+				case AggregationDurationType.Months:
 					return start.AddMonths(Duration);
-				case PeriodType.Years:
+				case AggregationDurationType.Years:
 					return start.AddYears(Duration);
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -88,16 +87,16 @@ namespace Raven.Database.TimeSeries
 			pointAt = pointAt.ToUniversalTime();
 			switch (Type)
 			{
-				case PeriodType.Seconds:
+				case AggregationDurationType.Seconds:
 					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute, pointAt.Second / Duration * Duration, TimeSpan.Zero);
-				case PeriodType.Minutes:
+				case AggregationDurationType.Minutes:
 					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour, pointAt.Minute / Duration * Duration, 0, TimeSpan.Zero);
-				case PeriodType.Hours:
+				case AggregationDurationType.Hours:
 					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, pointAt.Hour / Duration * Duration, 0, 0, TimeSpan.Zero);
-				case PeriodType.Days:
+				case AggregationDurationType.Days:
 					return new DateTimeOffset(pointAt.Year, pointAt.Month, pointAt.Day, 0, 0, 0, TimeSpan.Zero);
-				case PeriodType.Months:
-				case PeriodType.Years:
+				case AggregationDurationType.Months:
+				case AggregationDurationType.Years:
 				default:
 					throw new ArgumentOutOfRangeException();
 			}

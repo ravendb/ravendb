@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -37,11 +38,16 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type.Type) || type.Fields == null || type.Fields.Length < 1)
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			TimeSeries.CreateType(new TimeSeriesType
+			using (var writer = TimeSeries.CreateWriter())
 			{
-				Type = type.Type,
-				Fields = type.Fields,
-			});
+				writer.CreateType(new TimeSeriesType
+				{
+					Type = type.Type,
+					Fields = type.Fields,
+				});
+				writer.Commit();
+			}
+
 			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.Created);
@@ -54,7 +60,12 @@ namespace Raven.Database.TimeSeries.Controllers
 			if (string.IsNullOrEmpty(type))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			TimeSeries.DeleteType(type);
+			using (var writer = TimeSeries.CreateWriter())
+			{
+				writer.DeleteType(type);
+				writer.Commit();
+			}
+			
 			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
@@ -350,7 +361,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 			using (var writer = TimeSeries.CreateWriter())
 			{
-				writer.DeleteRange(range.Type, range.Key, range.Start, range.End);
+				writer.DeleteRange(range.Type, range.Key, range.Start.UtcTicks, range.End.UtcTicks);
 				writer.DeleteRangeInRollups(range.Type, range.Key, range.Start, range.End);
 				writer.Commit();
 
@@ -406,7 +417,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
 		[RavenRoute("ts/{timeSeriesName}/points/{type}")]
 		[HttpGet]
-		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null)
+		public HttpResponseMessage GetPoints(string type, string key, int skip = 0, int take = 20, string start = null, string end = null)
 		{
 			if (skip < 0)
 				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
@@ -416,8 +427,37 @@ namespace Raven.Database.TimeSeries.Controllers
 			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
 			using (var reader = TimeSeries.CreateReader())
 			{
-				var points = reader.GetPoints(type, key, start ?? DateTimeOffset.MinValue, end ?? DateTimeOffset.MaxValue, skip).Take(take);
+				var points = reader.GetPoints(type, key, ParseDateTimeOffset(start) ?? DateTimeOffset.MinValue, ParseDateTimeOffset(end) ?? DateTimeOffset.MaxValue, skip).Take(take);
 				return GetMessageWithObject(points);
+			}
+		}
+
+		private DateTimeOffset? ParseDateTimeOffset(string date)
+		{
+			if (date == null)
+				return null;
+
+			DateTimeOffset result;
+			if (DateTimeOffset.TryParseExact(date, new [] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.FFFFFFFK", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.FFFFFFFzzz" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+				return result;
+
+			return null;
+		}
+
+		[RavenRoute("ts/{timeSeriesName}/aggregated-points/{type}")]
+		[HttpGet]
+		public HttpResponseMessage GetAggregatedPoints(string type, string key, AggregationDurationType durationType, int duration, int skip = 0, int take = 20, string start = null, string end = null)
+		{
+			if (skip < 0)
+				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
+			if (take <= 0)
+				return GetMessageWithString("Take must be non-negative number", HttpStatusCode.BadRequest);
+
+			TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
+			using (var reader = TimeSeries.CreateReader())
+			{
+				var aggregatedPoints = reader.GetAggregatedPoints(type, key, new AggregationDuration(durationType, duration), ParseDateTimeOffset(start) ?? DateTimeOffset.MinValue, ParseDateTimeOffset(end) ?? DateTimeOffset.MaxValue, skip).Take(take);
+				return GetMessageWithObject(aggregatedPoints);
 			}
 		}
 	}

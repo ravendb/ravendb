@@ -656,6 +656,7 @@ namespace Raven.Tests.Subscriptions
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
+					TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
 					BatchOptions = new SubscriptionBatchOptions()
 					{
 						MaxDocCount = 1
@@ -747,7 +748,7 @@ namespace Raven.Tests.Subscriptions
 		}
 
 		[Fact]
-		public void ShouldAllowToOpenSubscriptionIfClientDidntSentAliveNotificationOnTime()
+		public void ShouldAllowToOpenSubscriptionIfClientDidntSentAliveNotificationOnTimeAndExceededACKTimeout()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -761,9 +762,19 @@ namespace Raven.Tests.Subscriptions
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
-					ClientAliveNotificationInterval = TimeSpan.FromSeconds(2)
+					ClientAliveNotificationInterval = TimeSpan.FromSeconds(2),
+					BatchOptions =
+					{
+						AcknowledgmentTimeout = TimeSpan.FromSeconds(2)
+					}
 				});
 				store.Changes().WaitForAllPendingSubscriptions();
+
+				subscription.BeforeAcknowledgment += () =>
+				{
+					Thread.Sleep(TimeSpan.FromSeconds(2));
+					return true;
+				}; // to force ACK timeout
 
 				subscription.AfterAcknowledgment += etag => Thread.Sleep(TimeSpan.FromSeconds(20)); // to prevent the client from sending client-alive notification
 
@@ -777,7 +788,7 @@ namespace Raven.Tests.Subscriptions
 
 				Thread.Sleep(TimeSpan.FromSeconds(10));
 				
-				// first open subscription didn't send the client-alive notification in time, so the server should allow to open it for this subscription
+				// first open subscription didn't send the client-alive notification in time and exceeded ACK timeout, so the server should allow to open it for this subscription
 				var newSubscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
 				var docs2 = new BlockingCollection<RavenJObject>();
@@ -975,7 +986,10 @@ namespace Raven.Tests.Subscriptions
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
+				{
+					TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
+				});
 				store.Changes().WaitForAllPendingSubscriptions();
 
 				using (var session = store.OpenSession())
@@ -989,6 +1003,7 @@ namespace Raven.Tests.Subscriptions
 				var subscribe = subscription.Subscribe(docs.Add);
 
 				RavenJObject doc;
+
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 
@@ -1101,6 +1116,44 @@ namespace Raven.Tests.Subscriptions
 				Assert.Equal("users/3", user.Id);
 				Assert.True(items2.TryTake(out user, waitForDocTimeout));
 				Assert.Equal("users/4", user.Id);
+			}
+		}
+
+		[Fact]
+		public void ShouldNotBeAbleToOpenSubscriptionWhileItIsStillBeingProcessedAndAckTimeoutWasNotReachedYet()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>() {});
+
+				using (var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+				{
+					ClientAliveNotificationInterval = TimeSpan.FromMilliseconds(10), // very short client-alive notification
+					BatchOptions =
+					{
+						AcknowledgmentTimeout = TimeSpan.FromHours(1) // very long ACK timeout
+					}
+				}))
+				{
+					var items = new BlockingCollection<User>();
+					subscription.Subscribe(x =>
+					{
+						items.Add(x);
+						Thread.Sleep(TimeSpan.FromSeconds(20));
+					});
+
+					store.Changes().WaitForAllPendingSubscriptions();
+
+					using (var s = store.OpenSession())
+					{
+						s.Store(new User());
+						s.SaveChanges();
+					}
+
+					Thread.Sleep(2000);
+
+					Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()));
+				}
 			}
 		}
 	}

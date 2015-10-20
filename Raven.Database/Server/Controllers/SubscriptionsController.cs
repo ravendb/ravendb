@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 				}
 			}
 
-			Database.Subscriptions.ReleaseSubscription(id);
+			Database.Subscriptions.ReleaseSubscription(id, force);
 
 			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
 			{
@@ -206,8 +206,17 @@ namespace Raven.Database.Server.Controllers
 
                     Func<JsonDocument, bool> addDocument = doc =>
                     {
-	                    processedDocuments++;
                         timeout.Delay();
+                        if (doc == null)
+                        {
+                            // we only have this heartbeat when the streaming has gone on for a long time
+                            // and we haven't send anything to the user in a while (because of filtering, skipping, etc).
+                            writer.WriteRaw(Environment.NewLine);
+                            writer.Flush();
+                            return true;
+                        }
+	                    processedDocuments++;
+                        
 
                         // We cant continue because we have already maxed out the batch bytes size.
                         if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
