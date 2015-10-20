@@ -393,8 +393,12 @@ namespace Raven.Database.Prefetching
 					case TaskStatus.Canceled:
 					case TaskStatus.Faulted:
 						//remove canceled or faulted tasks from the future index batches
-						FutureIndexBatch _;
-						futureIndexBatches.TryRemove(nextDocEtag, out _);
+						FutureIndexBatch failed;
+				        if (futureIndexBatches.TryRemove(nextDocEtag, out failed))
+				        {
+				            log.WarnException("When trying to get future batch for etag " + nextDocEtag + " we got an error, will try again",
+                                failed.Task.Exception);
+				        }
 						return false;
                     case null:
 						return false;
