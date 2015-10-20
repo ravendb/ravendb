@@ -126,26 +126,6 @@ namespace Voron.Tests
 			GC.WaitForPendingFinalizers();
 		}
 
-		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
-		{
-            throw new NotImplementedException();
-			//Lazy<TreeCursor> lazy;
-		 //   TreeNodeHeader* node;
-			//var p = tx.Root.FindPageFor(key, out node, out lazy);
-			
-
-			//if (node == null)
-			//	return null;
-
-			//var item1 = p.GetNodeKey(node).ToSlice();
-
-			//if (item1.Compare(key) != 0)
-			//	return null;
-			//return Tuple.Create(item1,
-			//	new Slice((byte*) node + node->KeySize + Constants.NodeHeaderSize,
-			//		(ushort) node->DataSize));
-		}
-
 		protected IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
 		{
 			var results = new List<string>();

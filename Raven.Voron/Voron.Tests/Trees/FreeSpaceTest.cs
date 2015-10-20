@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,33 +16,36 @@ namespace Voron.Tests.Trees
             var buffer = new byte[512];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 25; i++)
                 {
-                    tx.Root.Add			(i.ToString("0000"), new MemoryStream(buffer));
+                    tree.Add(i.ToString("0000"), new MemoryStream(buffer));
                 }
 
                 tx.Commit();
             }
             var before = Env.Stats();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.ReadTree("foo");
                 for (int i = 0; i < 25; i++)
                 {
-                    tx.Root.Delete(i.ToString("0000"));
+                    tree.Delete(i.ToString("0000"));
                 }
 
                 tx.Commit();
             }
 
             var old = Env.NextPageNumber;
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.ReadTree("foo");
                 for (int i = 0; i < 25; i++)
                 {
-                    tx.Root.Add			(i.ToString("0000"), new MemoryStream(buffer));
+                    tree.Add(i.ToString("0000"), new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -58,16 +61,16 @@ namespace Voron.Tests.Trees
         [Fact]
         public void ShouldReturnProperPageFromSecondSection()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.FreeSpaceHandling.FreePage(tx, FreeSpaceHandling.NumberOfPagesInSection + 1);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, FreeSpaceHandling.NumberOfPagesInSection + 1);
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection + 1, Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx, 1));
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection + 1, Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1));
             }
         }
 
@@ -79,9 +82,9 @@ namespace Voron.Tests.Trees
             var random = new Random(3);
             var freedPages = new HashSet<long>();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.State.NextPageNumber = maxPageNumber + 1;
+                tx.LowLevelTransaction.State.NextPageNumber = maxPageNumber + 1;
 
                 tx.Commit();
             }
@@ -94,9 +97,9 @@ namespace Voron.Tests.Trees
                     pageToFree = random.Next(0, maxPageNumber);
                 } while (freedPages.Add(pageToFree) == false);
 
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    Env.FreeSpaceHandling.FreePage(tx, pageToFree);
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
 
                     tx.Commit();
                 }
@@ -110,9 +113,9 @@ namespace Voron.Tests.Trees
 
             for (int i = 0; i < minNumberOfFreePages; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    var page = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx, 1);
+                    var page = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1);
 
                     Assert.NotNull(page);
                     Assert.True(freedPages.Remove(page.Value));
@@ -130,9 +133,9 @@ namespace Voron.Tests.Trees
             var random = new Random(2);
             var freedPages = new HashSet<long>();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.State.NextPageNumber = maxPageNumber + 1;
+                tx.LowLevelTransaction.State.NextPageNumber = maxPageNumber + 1;
 
                 tx.Commit();
             }
@@ -145,9 +148,9 @@ namespace Voron.Tests.Trees
                     pageToFree = random.Next(0, maxPageNumber);
                 } while (freedPages.Add(pageToFree) == false);
 
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    Env.FreeSpaceHandling.FreePage(tx, pageToFree);
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
 
                     tx.Commit();
                 }
@@ -157,9 +160,9 @@ namespace Voron.Tests.Trees
 
             do
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    var page = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx, 1);
+                    var page = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1);
 
                     if (page == null)
                     {
@@ -184,46 +187,51 @@ namespace Voron.Tests.Trees
             var random = new Random();
             var freedPages = new HashSet<long>();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.State.NextPageNumber = maxPageNumber + 1;
+                tx.LowLevelTransaction.State.NextPageNumber = maxPageNumber + 1;
 
                 tx.Commit();
             }
 
             for (int i = 0; i < numberOfFreedPages; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
+                    var allPages = Env.AllPages(tx.LowLevelTransaction);
                     long pageToFree;
 
                     do
                     {
                         pageToFree = random.Next(0, maxPageNumber);
+                        var skip = false;
+                        foreach (var pages in allPages)
+                        {
+                            if (pages.Value.Contains(pageToFree))
+                            {
+                                skip = true;
+                                break;
+                            }
+                        }
 
-                        if (tx.Root.AllPages().Contains(pageToFree))
-                            continue;
-
-                        if (tx.FreeSpaceRoot.AllPages().Contains(pageToFree))
-                            continue;
-
+                        if (skip) continue;
                         if (freedPages.Add(pageToFree))
                             break;
 
                     } while (true);
 
-                    Env.FreeSpaceHandling.FreePage(tx, pageToFree);
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
 
                     tx.Commit();
                 }
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var retrievedFreePages = Env.AllPages(tx)["Free Pages"];
+                var retrievedFreePages = Env.AllPages(tx.LowLevelTransaction)["Free Pages"];
 
-                freedPages.ExceptWith(tx.FreeSpaceRoot.AllPages()); // need to take into account that some of free pages might be used for free space handling
-                var sorted = freedPages.OrderBy(x => x);
+                freedPages.ExceptWith(Env.FreeSpaceHandling.AllPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
+                var sorted = freedPages.OrderBy(x => x).ToList();
 
                 Assert.Equal(sorted, retrievedFreePages);
             }

@@ -410,22 +410,14 @@ namespace Voron
 
         public Dictionary<string, List<long>> AllPages(LowLevelTransaction tx)
         {
-            throw new NotImplementedException();
-            //var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
-            //    {
-            //        {"Root", tx.Root.AllPages()},
-            //        {"Free Space Overhead", tx.FreeSpaceRoot.AllPages()},
-            //        {"Free Pages", _freeSpaceHandling.AllPages(tx)}
-            //    };
+            var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    {"Root", tx.RootObjects.AllPages()},
+                    {"Free Space Overhead", FreeSpaceHandling.AllPages(tx)},
+                    {"Free Pages", _freeSpaceHandling.AllPages(tx)}
+                };
 
-            //foreach (var tree in tx.Trees)
-            //{
-            //    if (tree == null)
-            //        continue;
-            //    results.Add(tree.Name, tree.AllPages());
-            //}
-
-            //return results;
+            return results;
         }
 
 		public StorageReport GenerateReport(LowLevelTransaction tx, bool computeExactSizes = false)

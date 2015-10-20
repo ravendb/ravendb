@@ -8,5 +8,6 @@ namespace Voron.Impl.FreeSpace
         List<long> AllPages(LowLevelTransaction tx);
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
+        IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
     }
 }

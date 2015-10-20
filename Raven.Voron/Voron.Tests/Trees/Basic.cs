@@ -18,83 +18,91 @@ namespace Voron.Tests.Trees
             random.NextBytes(buffer);
 
             List<long> allPages = null;
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("a", new MemoryStream(buffer));
-                allPages = tx.Root.AllPages();
+                var tree = tx.CreateTree("foo");
+                tree.Add("a", new MemoryStream(buffer));
+                allPages = tree.AllPages();
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(tx.Root.State.PageCount, allPages.Count);
-                Assert.Equal(4, tx.Root.State.PageCount);
-                Assert.Equal(3, tx.Root.State.OverflowPages);
+                var tree = tx.ReadTree("foo");
+                Assert.Equal(tree.State.PageCount, allPages.Count);
+                Assert.Equal(4, tree.State.PageCount);
+                Assert.Equal(3, tree.State.OverflowPages);
             }
         }
 
         [Fact]
         public void CanAdd()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("test", StreamFor("value"));
+                var tree = tx.CreateTree("foo");
+                tree.Add("test", StreamFor("value"));
             }
         }
 
         [Fact]
         public void CanAddAndRead()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("b", StreamFor("2"));
-                tx.Root.Add("c", StreamFor("3"));
-                tx.Root.Add("a", StreamFor("1"));
-                var actual = ReadKey(tx, "a");
+                var tree = tx.CreateTree("foo");
+                tree.Add("b", StreamFor("2"));
+                tree.Add("c", StreamFor("3"));
+                tree.Add("a", StreamFor("1"));
+                var actual = tree.Read("a");
 
-                Assert.Equal("a", actual.Item1);
-                Assert.Equal("1", actual.Item2);
+                using (var it = tree.Iterate())
+                {
+                    Assert.True(it.Seek("a"));
+                    Assert.Equal("a", it.CurrentKey.ToString());
+                }
+
+                Assert.Equal("1", actual.Reader.ToString());
             }
         }
 
         [Fact]
         public void CanAddAndReadStats()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
                 Slice key = "test";
-                tx.Root.Add(key, StreamFor("value"));
+                var tree = tx.CreateTree("foo");
+                tree.Add(key, StreamFor("value"));
 
                 tx.Commit();
 
-                Assert.Equal(1, tx.Root.State.PageCount);
-                Assert.Equal(1, tx.Root.State.LeafPages);
+                Assert.Equal(1, tree.State.PageCount);
+                Assert.Equal(1, tree.State.LeafPages);
             }
         }
 
         [Fact]
         public void CanAddEnoughToCausePageSplit()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
                 Stream stream = StreamFor("value");
-
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 256; i++)
                 {
                     stream.Position = 0;
-                    tx.Root.Add("test-" + i, stream);
+                    tree.Add("test-" + i, stream);
 
                 }
 
                 tx.Commit();
-                if (Env.Options.PageSize != 4096)
-#pragma warning disable 162
-                    return;
-#pragma warning restore 162
-                Assert.Equal(4, tx.Root.State.PageCount);
-                Assert.Equal(3, tx.Root.State.LeafPages);
-                Assert.Equal(1, tx.Root.State.BranchPages);
-                Assert.Equal(2, tx.Root.State.Depth);
+
+
+                Assert.Equal(4, tree.State.PageCount);
+                Assert.Equal(3, tree.State.LeafPages);
+                Assert.Equal(1, tree.State.BranchPages);
+                Assert.Equal(2, tree.State.Depth);
 
             }
         }
@@ -103,23 +111,28 @@ namespace Voron.Tests.Trees
         public void AfterPageSplitAllDataIsValid()
         {
             const int count = 256;
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < count; i++)
                 {
-                    tx.Root.Add("test-" + i.ToString("000"), StreamFor("val-" + i));
+                   tree.Add("test-" + i.ToString("000"), StreamFor("val-" + i));
 
                 }
 
                 tx.Commit();
             }
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                for (int i = 0; i < count; i++)
+                var tree = tx.ReadTree("foo");
+                using (var it = tree.Iterate())
                 {
-                    var read = ReadKey(tx, "test-" + i.ToString("000"));
-                    Assert.Equal("test-" + i.ToString("000"), read.Item1);
-                    Assert.Equal("val-" + i, read.Item2);
+                    for (int i = 0; i < count; i++)
+                    {
+                        Assert.True(it.Seek("test-" + i.ToString("000")));
+                        Assert.Equal("test-" + i.ToString("000"), it.CurrentKey.ToString());
+                        Assert.Equal("val-" + i, it.CreateReaderForCurrent().ToString());
+                    }
                 }
             }
         }
@@ -127,35 +140,33 @@ namespace Voron.Tests.Trees
         [Fact]
         public void PageSplitsAllAround()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
                 Stream stream = StreamFor("value");
-
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 256; i++)
                 {
                     for (int j = 0; j < 5; j++)
                     {
                         stream.Position = 0;
-                        if (j == 2 && i == 205)
-                        {
-
-                        }
-                        tx.Root.Add("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
+                       
+                        tree.Add("test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
                     }
                 }
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
+                var tree = tx.ReadTree("foo");
                 for (int i = 0; i < 256; i++)
                 {
                     for (int j = 0; j < 5; j++)
                     {
                         var key = "test-" + j.ToString("000") + "-" + i.ToString("000");
-                        var readKey = ReadKey(tx, key);
-                        Assert.Equal(readKey.Item1, key);
+
+                        Assert.True(tree.Read(key) != null);
                     }
                 }
             }

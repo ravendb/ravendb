@@ -22,10 +22,10 @@ namespace Voron.Impl.FileHeaders
 			[FieldOffset(0)]
 			public ushort ValueSize;
 
-			[FieldOffset(1)]
+			[FieldOffset(2)]
 			public OptionFlags Flags;
 
-			[FieldOffset(2)]
+			[FieldOffset(3)]
 			public ushort NumberOfEntries;
 		}
 

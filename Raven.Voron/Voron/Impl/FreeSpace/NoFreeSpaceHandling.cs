@@ -23,5 +23,10 @@ namespace Voron.Impl.FreeSpace
         {
             return -1;
         }
+
+        public IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx)
+        {
+            yield break;
+        }
     }
 }

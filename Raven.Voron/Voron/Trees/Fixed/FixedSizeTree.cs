@@ -37,8 +37,8 @@ namespace Voron.Trees.Fixed
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
-            if(_maxEmbeddedEntries == 0)
-                throw new ArgumentException("The value size must be smaller than 512");
+            if (_maxEmbeddedEntries == 0)
+                throw new ArgumentException("The value size must be ");
 
             var header = (FixedSizeTreeHeader.Embedded*)_parent.DirectRead(_treeName);
             if (header == null)
@@ -538,14 +538,14 @@ namespace Voron.Trees.Fixed
             {
                 case null:
                     // nothing to do
-		            return new DeletionResult();
-				case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    return new DeletionResult();
+                case FixedSizeTreeHeader.OptionFlags.Embedded:
                     return RemoveEmbeddedEntry(key);
-	            case FixedSizeTreeHeader.OptionFlags.Large:
+                case FixedSizeTreeHeader.OptionFlags.Large:
                     return RemoveLargeEntry(key);
             }
 
-	        throw new InvalidOperationException("TreeFlags has invalid value: " + _flags);
+            throw new InvalidOperationException("TreeFlags has invalid value: " + _flags);
         }
 
         public struct DeletionResult
@@ -587,16 +587,16 @@ namespace Voron.Trees.Fixed
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
-	        if (_lastMatch > 0)
-		        startPos++;
-			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-			if (_lastMatch < 0)
-				endPos--;
+            if (_lastMatch > 0)
+                startPos++;
+            var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
+            if (_lastMatch < 0)
+                endPos--;
 
-			if (startPos > endPos)
-				return 0;
+            if (startPos > endPos)
+                return 0;
 
-	        byte entriesDeleted = (byte)(endPos - startPos + 1);
+            byte entriesDeleted = (byte)(endPos - startPos + 1);
 
             if (entriesDeleted == header->NumberOfEntries)
             {
@@ -798,7 +798,7 @@ namespace Voron.Trees.Fixed
                 page = RebalancePage(page, largeHeader);
             }
 
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult { NumberOfEntriesDeleted = 1 };
         }
 
         private void RemoveEntryFromPage(TreePage page, int pos)
@@ -847,10 +847,10 @@ namespace Voron.Trees.Fixed
                     Memory.Copy(page.Base, _tx.GetReadOnlyTreePage(childPage).Base, _tx.DataPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
-	                if (largeTreeHeader != null)
-		                largeTreeHeader->Depth--;
+                    if (largeTreeHeader != null)
+                        largeTreeHeader->Depth--;
 
-	                _tx.FreePage(childPage);
+                    _tx.FreePage(childPage);
                     largeTreeHeader->PageCount--;
                 }
 
@@ -1033,7 +1033,7 @@ namespace Voron.Trees.Fixed
                 // only single entry, just remove it
                 _flags = null;
                 _parent.Delete(_treeName);
-                return new DeletionResult {NumberOfEntriesDeleted = 1, TreeRemoved = true};
+                return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
             }
 
             byte* newData = _parent.DirectAdd(_treeName,
@@ -1047,10 +1047,10 @@ namespace Voron.Trees.Fixed
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult { NumberOfEntriesDeleted = 1 };
         }
 
-		public Slice Read(long key)
+        public Slice Read(long key)
         {
             switch (_flags)
             {
@@ -1110,7 +1110,7 @@ namespace Voron.Trees.Fixed
                 if (header == null)
                     return 0;
 
-                var flags = ((FixedSizeTreeHeader.Embedded*) header)->Flags;
+                var flags = ((FixedSizeTreeHeader.Embedded*)header)->Flags;
                 switch (flags)
                 {
                     case FixedSizeTreeHeader.OptionFlags.Embedded:
@@ -1121,6 +1121,34 @@ namespace Voron.Trees.Fixed
                         return 0;
                 }
             }
+        }
+
+        public IEnumerable<long> OverheadPages()
+        {
+            var list = new List<long>();
+            var header = _parent.DirectRead(_treeName);
+            if (header == null)
+                return list;
+            var flags = ((FixedSizeTreeHeader.Embedded*)header)->Flags;
+            if (flags != FixedSizeTreeHeader.OptionFlags.Embedded)
+                return list;
+
+            var stack = new Stack<long>();
+            stack.Push(((FixedSizeTreeHeader.Large*)header)->RootPageNumber);
+
+            while (stack.Count > 0)
+            {
+                var page = _tx.GetReadOnlyTreePage(stack.Pop());
+                list.Add(page.PageNumber);
+                if (page.IsBranch == false)
+                    continue;
+                for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
+                {
+                    stack.Push(PageValueFor(page, i));
+                }
+            }
+
+            return list;
         }
 
         public long FreeSpaceOverHead

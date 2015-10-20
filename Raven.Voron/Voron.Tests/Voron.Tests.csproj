@@ -85,6 +85,14 @@
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StorageTest.cs" />
+    <Compile Include="Trees\Basic.cs" />
+    <Compile Include="Trees\CanDefrag.cs" />
+    <Compile Include="Trees\CanIterateBackward.cs" />
+    <Compile Include="Trees\Deletes.cs" />
+    <Compile Include="Trees\FreeSpaceTest.cs" />
+    <Compile Include="Util\CrcTests.cs" />
+    <Compile Include="Util\ImmutableAppendOnlyTests.cs" />
+    <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
