@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Bundles.Authorization;
@@ -14,38 +15,119 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
     public class PrestonStreaming : AuthorizationTest
     {
         [Fact]
-        public void DocumentWithoutPermissionWillBeFilteredOutSilentlyWithStreaming()
+        public void DocumentWithoutPermissionWillBeFilteredOutSilentlyWithQueryStreaming()
         {
             new CompanyIndex().Execute(store);
-            var company = new Company
+            var rhinosCompany = new Company
             {
                 Name = "Hibernating Rhinos"
             };
+
+						var secretCompany = new Company
+						{
+							Name = "Secret Co."
+						};
+
+						var authorizationUser = new AuthorizationUser
+						{
+							Id = UserId,
+							Name = "Ayende Rahien",
+						};
+
+					  var operation = "Company/Bid"; 
+					
             using (var s = store.OpenSession())
             {
-                s.Store(new AuthorizationUser
-                {
-                    Id = UserId,
-                    Name = "Ayende Rahien",
-                });
+                s.Store(authorizationUser);
+								s.Store(rhinosCompany);
+								s.Store(secretCompany);
 
-                s.Store(company);
+								var documentAuthorization = new DocumentAuthorization();
+								documentAuthorization.Permissions.Add(new DocumentPermission()
+								{
+									Allow = true,
+									Operation = operation,
+									User = UserId
+								});
 
-                s.SetAuthorizationFor(company, new DocumentAuthorization());// deny everyone
+								s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
+								s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
 
                 s.SaveChanges();
             }
+
             WaitForIndexing(store);
+
             using (var s = store.OpenSession())
             {
-                s.SecureFor(UserId, "Company/Bid");
-                var results = QueryExtensions.StreamAllFrom(s.Advanced.LuceneQuery<Company, CompanyIndex>(), s);
+                s.SecureFor(UserId, operation);
+				var expected = s.Advanced.LuceneQuery<Company, CompanyIndex>().ToList().Count();
+				
+				var results = QueryExtensions.StreamAllFrom(s.Advanced.LuceneQuery<Company, CompanyIndex>(), s);
 
-                Assert.Equal(0, results.Count());
+	            Assert.Equal(expected, results.Count());
             }
         }
 
+		[Fact]
+		public void DocumentWithoutPermissionWillBeFilteredOutSilentlyWithStreaming()
+		{
+			var rhinosCompany = new Company
+			{
+				Name = "Hibernating Rhinos"
+			};
 
+			var secretCompany = new Company
+			{
+				Name = "Secret Co."
+			};
+
+			var authorizationUser = new AuthorizationUser
+			{
+				Id = UserId,
+				Name = "Ayende Rahien",
+			};
+
+			var operation = "Company/Bid";
+
+			using (var s = store.OpenSession())
+			{
+				s.Store(authorizationUser);
+				s.Store(rhinosCompany);
+				s.Store(secretCompany);
+
+				var documentAuthorization = new DocumentAuthorization();
+				documentAuthorization.Permissions.Add(new DocumentPermission()
+				{
+					Allow = true,
+					Operation = operation,
+					User = UserId
+				});
+
+				s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
+				s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
+
+				s.SaveChanges();
+			}
+
+
+			using (var s = store.OpenSession())
+			{
+				s.SecureFor(UserId, operation);
+
+				var results = 0;
+
+				using (var it = s.Advanced.Stream<Company>("companies/"))
+				{
+					while (it.MoveNext())
+					{
+						results++;
+					}
+				}
+
+				Assert.Equal(2, results);
+			}
+		}
     }
 
     public class Company

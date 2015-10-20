@@ -451,6 +451,7 @@
     <Compile Include="TransformerDictionaryOrderTests.cs" />
     <Compile Include="TransformerParameterTests.cs" />
     <Compile Include="TransformersAndEtags.cs" />
+    <Compile Include="TransformerTest.cs" />
     <Compile Include="TransformResultsWithProjection.cs" />
     <Compile Include="TransformWithConversionListener.cs" />
     <Compile Include="TransformWithLoad.cs" />

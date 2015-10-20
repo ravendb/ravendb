@@ -68,19 +68,30 @@ namespace Raven.Client.Document.SessionOperations
 				sessionOperations.TrackIncludedDocument(include);
 			}
 
-			var transformedResults = TransformResults().ToList();
-			var finalResults = transformedResults.Select(ApplyTrackingIfNeeded<T>)
-												 .ToArray();
-
+			var finalResults = ids != null ? 
+				ReturnResultsById<T>() : 
+				ReturnResults<T>();
 			for (var i = 0; i < finalResults.Length; i++)
 			{
-				if (ReferenceEquals(finalResults[i], null))
+				var finalResult = finalResults[i];
+				if (ReferenceEquals(finalResult, null))
 					sessionOperations.RegisterMissing(ids[i]);
 			}
 
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
 			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includePaths);
 
+			return finalResults;
+		}
+
+		private T[] ReturnResults<T>()
+		{
+			var finalResults = new T[results.Length];
+			for (int i = 0; i < results.Length; i++)
+			{
+				if (results[i] != null)
+					finalResults[i] = sessionOperations.TrackEntity<T>(results[i]);
+			}
 			return finalResults;
 		}
 
@@ -92,14 +103,26 @@ namespace Raven.Client.Document.SessionOperations
 			return default(T);
 		}
 
-		private IEnumerable<JsonDocument> TransformResults()
+		private T[] ReturnResultsById<T>()
 		{
-			if (ids == null)
-				return results;
-
-			var finalResult = ids.Select(id => results.Where(r => r != null)
-			                                   		  .FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase)));
-			return finalResult;
+			var finalResults = new T[ids.Length];
+			var dic = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+			for (int i = 0; i < ids.Length; i++)
+			{
+				if (ids[i] == null)
+					continue;
+				dic[ids[i]] = i;
+			}
+			foreach (var jsonDocument in results)
+			{
+				if (jsonDocument == null)
+					continue;
+				var id = jsonDocument.Metadata.Value<string>("@id");
+				int value;
+				if (dic.TryGetValue(id, out value))
+					finalResults[value] = sessionOperations.TrackEntity<T>(jsonDocument);
+			}
+			return finalResults;
 		}
 	}
 }
