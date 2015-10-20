@@ -335,6 +335,7 @@ namespace Voron.Tests.FixedSize
         [InlineDataWithRandomSeed(500000)]
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
+        [InlineData(100000, 1684385375)]// reproduced a bug, do not remove
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
@@ -360,7 +361,7 @@ namespace Voron.Tests.FixedSize
             {
                 var start = random.Next(count);
                 var end = random.Next(start, count);
-
+             
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.Root.FixedTreeFor("test", valSize: 48);
