@@ -59,7 +59,7 @@ namespace Raven.Client.Document
 			var destinationsToCheck = replicationDocument.Destinations
 			                                             .Where(x => x.CanBeFailover())
 			                                             .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
-														 .ToList();
+			                                             .ToList();
 
 			if (destinationsToCheck.Count == 0)
 				return 0;
@@ -78,17 +78,17 @@ namespace Raven.Client.Document
 
 			var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-			var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
-			for (int i = 0; i < destinationsToCheck.Count; i++)
-			{
+		    var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
+		    for (int i = 0; i < destinationsToCheck.Count; i++)
+		    {
 				latestEtags[i] = new ReplicatedEtagInfo { DestinationUrl = destinationsToCheck[i] };
-			}
+		    }
 
 			var tasks = destinationsToCheck
 				.Select((url, index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token))
 				.ToArray();
 
-			try
+		    try
 		    {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
 		        return tasks.Length;
@@ -150,7 +150,7 @@ namespace Raven.Client.Document
 				catch (Exception e)
 				{
 					if (log.IsDebugEnabled)
-						log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
+					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
 
 					throw;
 				}
@@ -159,37 +159,37 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
+	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
 				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
 				HttpMethods.Get,
-				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials),
+				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
 			try
 			{
-				using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
-				{
+		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
+		    {
 					var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
+			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
 					if (log.IsDebugEnabled)
-						log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
-
-					return new ReplicatedEtagInfo
-					{
-						DestinationUrl = destinationUrl,
-						DocumentEtag = etag
-					};
-				}
-			}
+				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
+				
+			    return new ReplicatedEtagInfo
+			    {
+				    DestinationUrl = destinationUrl,
+					DocumentEtag = etag 
+			    };
+		    }
+		}
 			catch (ErrorResponseException e)
 			{
 				if (e.StatusCode == HttpStatusCode.ServiceUnavailable)
 					throw new OperationCanceledException("Got 'Service Unavailable' status code on response, aborting operation");
 
 				throw;
-			}
-		}
+	}
+}
 	}
 }
