@@ -393,6 +393,7 @@
     <Compile Include="Samina3.cs" />
     <Compile Include="Scott.cs" />
     <Compile Include="ScriptedIndexResultsAndDecimals.cs" />
+    <Compile Include="ScriptedPathBug.cs" />
     <Compile Include="Sean.cs" />
     <Compile Include="SeanBuchanan.cs" />
     <Compile Include="SearchByMapReduceExample.cs" />
