@@ -250,8 +250,26 @@ class extensions {
 
         String.prototype.getSizeInBytesAsUTF8 = function () {
             var result = 0;
+            var isQuated = false;
+            var prevChar : any = 0;
             for (var n = 0; n < this.length; n++) {
+
                 var charCode = this.fixedCharCodeAt(n);
+
+                if (charCode === 34 /*quates*/) {
+                    if (!(isQuated === true && prevChar === 92 /*backslash*/)) {
+                        isQuated = !isQuated;
+                    }
+                }
+
+                prevChar = charCode;
+
+                // whiteSpaceCharacters list from : https://en.wikipedia.org/wiki/Whitespace_character
+                var whiteSpaceCharacters = [9, 10, 11, 12, 13, 32, 133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 6158, 8203, 8204, 8205, 8288, 65279];
+                if (isQuated === false && $.inArray(charCode, whiteSpaceCharacters) > -1) {
+                    continue;
+                }
+
                 if (typeof charCode === "number") {
                     if (charCode < 128) {
                         result = result + 1;
