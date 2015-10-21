@@ -23,8 +23,8 @@ namespace Raven.Smuggler.Database
 
 		IDatabaseSmugglerIdentityActions IdentityActions();
 
-		Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options);
+		Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
-		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state);
+		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken);
 	}
 }

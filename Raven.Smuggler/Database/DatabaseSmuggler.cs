@@ -61,7 +61,7 @@ namespace Raven.Smuggler.Database
 					.InitializeAsync(_options, _report, cancellationToken)
 					.ConfigureAwait(false);
 
-				var state = await GetOperationStateAsync(_options, _source, _destination).ConfigureAwait(false);
+				var state = await GetOperationStateAsync(_options, _source, _destination, cancellationToken).ConfigureAwait(false);
 
 				var sources = _source.SupportsMultipleSources
 					? _source.Sources
@@ -126,14 +126,14 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		private static async Task<OperationState> GetOperationStateAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+		private static async Task<OperationState> GetOperationStateAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, CancellationToken cancellationToken)
 		{
 			OperationState state = null;
 
 			if (destination.SupportsOperationState)
 			{
 				state = await destination
-					.LoadOperationStateAsync(options)
+					.LoadOperationStateAsync(options, cancellationToken)
 					.ConfigureAwait(false);
 			}
 

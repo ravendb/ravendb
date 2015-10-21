@@ -73,14 +73,14 @@ namespace Raven.Smuggler.Database.Impl.Files
 			await base.InitializeAsync(options, report, cancellationToken).ConfigureAwait(false);
 		}
 
-		public override Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
+		public override Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			var etagFileLocation = Path.Combine(_path, IncrementalExportStateFile);
 
 			return new CompletedTask<OperationState>(ReadLastEtagsFromFile(etagFileLocation));
 		}
 
-		public override Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+		public override Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
 		{
 			if (_options.Incremental)
 			{

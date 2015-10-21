@@ -128,7 +128,7 @@ namespace Raven.Smuggler.Database
 											if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
 												state.LastDocsEtag = tempLastEtag;
 
-											await Destination.SaveOperationStateAsync(Options, state).ConfigureAwait(false);
+											await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
 										}
 
 										// Wait for the batch to be indexed before continue.
@@ -189,7 +189,7 @@ namespace Raven.Smuggler.Database
 							if (lastEtag.CompareTo(state.LastDocsEtag) > 0)
 								state.LastDocsEtag = lastEtag;
 
-							await Destination.SaveOperationStateAsync(Options, state).ConfigureAwait(false);
+							await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
 						}
 
 						Report.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);

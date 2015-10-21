@@ -75,12 +75,12 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new DatabaseSmugglerStreamIdentityActions(_writer);
 		}
 
-		public virtual Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
+		public virtual Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

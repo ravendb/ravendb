@@ -13,6 +13,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client;
+using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database.Impl.Remote
 {
@@ -67,7 +68,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return new DatabaseSmugglerRemoteIdentityActions(_store);
 		}
 
-		public async Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
+		public async Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrWhiteSpace(_options.ContinuationToken) == false)
 			{
@@ -95,9 +96,27 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return null;
 		}
 
-		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+		public async Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
 		{
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(_options.ContinuationToken) == false)
+			{
+				var continuationDocId = "Raven/Smuggler/Continuation/" + _options.ContinuationToken;
+
+				try
+				{
+					await _store
+						.AsyncDatabaseCommands
+						.PutAsync(continuationDocId, null, RavenJObject.FromObject(state), null, cancellationToken)
+						.ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					if (options.IgnoreErrorsAndContinue == false)
+						throw;
+
+					_report.ShowProgress("Failed saving continuation state. Message: {0}", e.Message);
+				}
+			}
 		}
 	}
 }

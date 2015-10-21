@@ -239,12 +239,12 @@ namespace Raven.Tests.Issues
 				return _identityActions;
 			}
 
-			public Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
+			public Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 			{
 				throw new NotSupportedException();
 			}
 
-			public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+			public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
 			{
 				throw new NotSupportedException();
 			}
