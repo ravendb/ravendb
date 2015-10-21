@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -37,7 +38,6 @@ namespace Raven.Client.Document
 	{
 		protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-
 		private static int counter;
 
 		private readonly int hash = Interlocked.Increment(ref counter);
@@ -1327,18 +1327,21 @@ more responsive application.
 
 		protected void LogBatch(SaveChangesData data)
 		{
-			log.Debug(() =>
-			{
-				var sb = new StringBuilder()
-					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-					.AppendLine();
-				foreach (var commandData in data.Commands)
-				{
-					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-				}
-				return sb.ToString();
-			});
-		}
+            if ( log.IsDebugEnabled )
+            {
+                log.Debug(() =>
+                {
+                    var sb = new StringBuilder()
+                        .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+                        .AppendLine();
+                    foreach (var commandData in data.Commands)
+                    {
+                        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+                    }
+                    return sb.ToString();
+                });
+            }
+        }
 
 		public void RegisterMissing(string id)
 		{
