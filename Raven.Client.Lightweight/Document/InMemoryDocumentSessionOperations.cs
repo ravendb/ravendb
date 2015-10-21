@@ -1343,7 +1343,6 @@ more responsive application.
 				return sb.ToString();
 			});
 		}
-        }
 
 		public void RegisterMissing(string id)
 		{
