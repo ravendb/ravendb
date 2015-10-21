@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="AccessViolationWithIteratorUsage.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,53 +8,53 @@ using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-    public class AccessViolationWithIteratorUsage : StorageTest
-    {
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            options.ManualFlushing = true;
-        }
+	public class AccessViolationWithIteratorUsage : StorageTest
+	{
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			options.ManualFlushing = true;
+		}
 
-        [Fact]
-        public void ShouldNotThrow()
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(tx, "test");
+		[Fact]
+		public void ShouldNotThrow()
+		{
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.CreateTree(  "test");
 
-                tree.Add("items/1", new MemoryStream());
-                tree.Add("items/2", new MemoryStream());
+				tree.Add("items/1", new MemoryStream());
+				tree.Add("items/2", new MemoryStream());
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            using (var snapshot = Env.CreateSnapshot())
-            using (var iterator = snapshot.Iterate("test"))
-            {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    for (int i = 0; i < 10; i++)
-                    {
-                        Env.CreateTree(tx, "test").Add("items/" + i, new MemoryStream(new byte[2048]));
-                    }
+			using (var txr = Env.ReadTransaction())
+			using (var iterator = txr.ReadTree("test").Iterate())
+			{
+				using (var tx = Env.WriteTransaction())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						tx.CreateTree( "test").Add("items/" + i, new MemoryStream(new byte[2048]));
+					}
 
-                    tx.Commit();
-                }
+					tx.Commit();
+				}
 
-                Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    for (int i = 10; i < 40; i++)
-                    {
-                        Env.CreateTree(tx, "test").Add("items/" + i, new MemoryStream(new byte[2048]));
-                    }
+				using (var tx = Env.WriteTransaction())
+				{
+					for (int i = 10; i < 40; i++)
+					{
+						tx.CreateTree("test").Add("items/" + i, new MemoryStream(new byte[2048]));
+					}
 
-                    tx.Commit();
-                }
+					tx.Commit();
+				}
 
-                iterator.MoveNext();
-            }
-        }
-    }
+				iterator.MoveNext();
+			}
+		}
+	}
 }

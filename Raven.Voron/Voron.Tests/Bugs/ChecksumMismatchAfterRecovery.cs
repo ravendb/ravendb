@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ChecksumMismatchAfterRecovery.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -41,21 +41,23 @@ namespace Voron.Tests.Bugs
 
             using (var env = new StorageEnvironment(options))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 50; i++)
                     {
-                        tx.Root.Add			("items/" + i, new MemoryStream(buffer));
+                        tree.Add("items/" + i, new MemoryStream(buffer));
                     }
 
                     tx.Commit();
                 }
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 50; i < 100; i++)
                     {
-                        tx.Root.Add			("items/" + i, new MemoryStream(buffer));
+                        tree.Add("items/" + i, new MemoryStream(buffer));
                     }
 
                     tx.Commit();
@@ -66,12 +68,12 @@ namespace Voron.Tests.Bugs
 
             using (var env = new StorageEnvironment(options))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
-
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 100; i++)
                     {
-                        var readResult = tx.Root.Read("items/" + i);
+                        var readResult = tree.Read("items/" + i);
                         Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);

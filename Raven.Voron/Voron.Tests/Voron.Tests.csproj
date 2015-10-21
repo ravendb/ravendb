@@ -87,6 +87,11 @@
     <Compile Include="Backups\MinimalIncrementalBackupTests.cs" />
     <Compile Include="Backups\RavenDB_2939.cs" />
     <Compile Include="Backups\RavenDB_3115.cs" />
+    <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
+    <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\DataCorruptionInOverflow.cs" />
+    <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />
+    <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="FixedSize\InlineDataWithRandomSeed.cs" />
     <Compile Include="FixedSize\LargeFixedSizeTreeBugs.cs" />
@@ -139,6 +144,7 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Bugs\Data\mapped.djrs" />
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
@@ -160,6 +166,12 @@
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Bugs\Data\data.txt" />
+    <Content Include="Bugs\Data\data2.txt" />
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt" />
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt" />
   </ItemGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
