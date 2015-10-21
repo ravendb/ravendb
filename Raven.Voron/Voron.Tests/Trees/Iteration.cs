@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,15 +13,22 @@ namespace Voron.Tests.Trees
         [Fact]
         public void EmptyIterator()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.WriteTransaction())
             {
-                var iterator = tx.Root.Iterate();
+                tx.CreateTree("foo");
+                tx.Commit();
+            }
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("foo");
+                var iterator = tree.Iterate();
                 Assert.False(iterator.Seek(Slice.BeforeAllKeys));
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var iterator = tx.Root.Iterate();
+                var tree = tx.ReadTree("foo");
+                var iterator = tree.Iterate();
                 Assert.False(iterator.Seek(Slice.AfterAllKeys));
             }
         }
@@ -33,19 +40,21 @@ namespace Voron.Tests.Trees
             var buffer = new byte[512];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 25; i++)
                 {
-                    tx.Root.Add			(i.ToString("0000"), new MemoryStream(buffer));
+                    tree.Add(i.ToString("0000"), new MemoryStream(buffer));
                 }
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var iterator = tx.Root.Iterate();
+                var tree = tx.ReadTree("foo");
+                var iterator = tree.Iterate();
                 Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
                 for (int i = 0; i < 24; i++)

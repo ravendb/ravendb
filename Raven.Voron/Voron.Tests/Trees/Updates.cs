@@ -1,5 +1,7 @@
-using System;
+﻿using System;
 using System.IO;
+using Voron.Impl;
+using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Trees
@@ -13,35 +15,39 @@ namespace Voron.Tests.Trees
             var buffer = new byte[8192];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("a", new MemoryStream(buffer));
+                var tree = tx.CreateTree("foo");
+                tree.Add("a", new MemoryStream(buffer));
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(4, tx.Root.State.PageCount);
-                Assert.Equal(3, tx.Root.State.OverflowPages);
+                var tree = tx.CreateTree("foo");
+                Assert.Equal(4, tree.State.PageCount);
+                Assert.Equal(3, tree.State.OverflowPages);
             }
 
             buffer = new byte[8192 * 2];
             random.NextBytes(buffer);
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("a", new MemoryStream(buffer));
+                var tree = tx.CreateTree("foo");
+                tree.Add("a", new MemoryStream(buffer));
 
                 tx.Commit();
             }
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(6, tx.Root.State.PageCount);
-                Assert.Equal(5, tx.Root.State.OverflowPages);				
+                var tree = tx.CreateTree("foo");
+                Assert.Equal(6, tree.State.PageCount);
+                Assert.Equal(5, tree.State.OverflowPages);
             }
         }
 
@@ -49,12 +55,14 @@ namespace Voron.Tests.Trees
         [Fact]
         public void CanAddAndUpdate()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test", StreamFor("1"));
-                tx.Root.Add			("test", StreamFor("2"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test", StreamFor("1"));
+                tree.Add("test", StreamFor("2"));
 
-                var readKey = ReadKey(tx, "test");
+                var readKey = ReadKey(tx, tree, "test");
                 Assert.Equal("test", readKey.Item1);
                 Assert.Equal("2", readKey.Item2);
             }
@@ -63,17 +71,19 @@ namespace Voron.Tests.Trees
         [Fact]
         public void CanAddAndUpdate2()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test/1", StreamFor("1"));
-                tx.Root.Add			("test/2", StreamFor("2"));
-                tx.Root.Add			("test/1", StreamFor("3"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test/1", StreamFor("1"));
+                tree.Add("test/2", StreamFor("2"));
+                tree.Add("test/1", StreamFor("3"));
 
-                var readKey = ReadKey(tx, "test/1");
+                var readKey = ReadKey(tx, tree, "test/1");
                 Assert.Equal("test/1", readKey.Item1);
                 Assert.Equal("3", readKey.Item2);
 
-                readKey = ReadKey(tx, "test/2");
+                readKey = ReadKey(tx, tree, "test/2");
                 Assert.Equal("test/2", readKey.Item1);
                 Assert.Equal("2", readKey.Item2);
 
@@ -83,17 +93,19 @@ namespace Voron.Tests.Trees
         [Fact]
         public void CanAddAndUpdate1()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test/1", StreamFor("1"));
-                tx.Root.Add			("test/2", StreamFor("2"));
-                tx.Root.Add			("test/2", StreamFor("3"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test/1", StreamFor("1"));
+                tree.Add("test/2", StreamFor("2"));
+                tree.Add("test/2", StreamFor("3"));
 
-                var readKey = ReadKey(tx, "test/1");
+                var readKey = ReadKey(tx, tree, "test/1");
                 Assert.Equal("test/1", readKey.Item1);
                 Assert.Equal("1", readKey.Item2);
 
-                readKey = ReadKey(tx, "test/2");
+                readKey = ReadKey(tx, tree, "test/2");
                 Assert.Equal("test/2", readKey.Item1);
                 Assert.Equal("3", readKey.Item2);
 
@@ -104,44 +116,70 @@ namespace Voron.Tests.Trees
         [Fact]
         public void CanDelete()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test", StreamFor("1"));
-                Assert.NotNull(ReadKey(tx, "test"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test", StreamFor("1"));
+                Assert.NotNull(ReadKey(tx, tree, "test"));
 
-                tx.Root.Delete("test");
-                Assert.Null(ReadKey(tx, "test"));
+                tree.Delete("test");
+                Assert.Null(ReadKey(tx, tree, "test"));
             }
         }
 
         [Fact]
         public void CanDelete2()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test/1", StreamFor("1"));
-                tx.Root.Add			("test/2", StreamFor("1"));
-                Assert.NotNull(ReadKey(tx, "test/2"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test/1", StreamFor("1"));
+                tree.Add("test/2", StreamFor("1"));
+                Assert.NotNull(ReadKey(tx, tree, "test/2"));
 
-                tx.Root.Delete("test/2");
-                Assert.Null(ReadKey(tx, "test/2"));
-                Assert.NotNull(ReadKey(tx, "test/1"));
+                tree.Delete("test/2");
+                Assert.Null(ReadKey(tx, tree, "test/2"));
+                Assert.NotNull(ReadKey(tx, tree, "test/1"));
             }
         }
 
         [Fact]
         public void CanDelete1()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("test/1", StreamFor("1"));
-                tx.Root.Add			("test/2", StreamFor("1"));
-                Assert.NotNull(ReadKey(tx, "test/1"));
+                var tree = tx.CreateTree("foo");
+                
+                tree.Add("test/1", StreamFor("1"));
+                tree.Add("test/2", StreamFor("1"));
+                Assert.NotNull(ReadKey(tx, tree, "test/1"));
 
-                tx.Root.Delete("test/1");
-                Assert.Null(ReadKey(tx, "test/1"));
-                Assert.NotNull(ReadKey(tx, "test/2"));
+                tree.Delete("test/1");
+                Assert.Null(ReadKey(tx, tree, "test/1"));
+                Assert.NotNull(ReadKey(tx, tree, "test/2"));
             }
+        }
+
+        protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
+        {
+            var tx = txh.LowLevelTransaction;
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
+            var p = tree.FindPageFor(key, out node, out lazy);
+
+
+            if (node == null)
+                return null;
+
+            var item1 = p.GetNodeKey(node).ToSlice();
+
+            if (item1.Compare(key) != 0)
+                return null;
+            return Tuple.Create(item1,
+                new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize,
+                    (ushort)node->DataSize));
         }
     }
 }

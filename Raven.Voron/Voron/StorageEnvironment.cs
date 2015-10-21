@@ -294,9 +294,9 @@ namespace Voron
             return new Transaction(NewLowLevelTransaction(TransactionFlags.Read));
         }
 
-        public Transaction WriteTransaction(TimeSpan? timeout = null)
+        public Transaction WriteTransaction()
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, timeout));
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null));
         }
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Xunit;
 
 namespace Voron.Tests.Trees
@@ -8,38 +8,38 @@ namespace Voron.Tests.Trees
         [Fact]
         public void ItemCountIsConsistentWithAdditionsAndRemovals()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 80; ++i)
                 {
-                    tx.Root.Add			(string.Format("{0}1", i), new MemoryStream(new byte[1472]));
-                    tx.Root.Add			(string.Format("{0}2", i), new MemoryStream(new byte[992]));
-                    tx.Root.Add			(string.Format("{0}3", i), new MemoryStream(new byte[1632]));
-                    tx.Root.Add			(string.Format("{0}4", i), new MemoryStream(new byte[632]));
-                    tx.Root.Add			(string.Format("{0}5", i), new MemoryStream(new byte[824]));
-                    tx.Root.Add			(string.Format("{0}6", i), new MemoryStream(new byte[1096]));
-                    tx.Root.Add			(string.Format("{0}7", i), new MemoryStream(new byte[2048]));
-                    tx.Root.Add			(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
-                    tx.Root.Add			(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
+                    tree.Add(string.Format("{0}1", i), new MemoryStream(new byte[1472]));
+                    tree.Add(string.Format("{0}2", i), new MemoryStream(new byte[992]));
+                    tree.Add(string.Format("{0}3", i), new MemoryStream(new byte[1632]));
+                    tree.Add(string.Format("{0}4", i), new MemoryStream(new byte[632]));
+                    tree.Add(string.Format("{0}5", i), new MemoryStream(new byte[824]));
+                    tree.Add(string.Format("{0}6", i), new MemoryStream(new byte[1096]));
+                    tree.Add(string.Format("{0}7", i), new MemoryStream(new byte[2048]));
+                    tree.Add(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
+                    tree.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
-                    Assert.Equal(tx.Root.State.EntriesCount, 9 * (i + 1));
+                    Assert.Equal(tree.State.EntriesCount, 9 * (i + 1));
                 }
 
-                //RenderAndShow(tx, 1);
 
                 for (int i = 79; i >= 0; --i)
                 {
-                    tx.Root.Delete(string.Format("{0}1", i));
-                    tx.Root.Delete(string.Format("{0}2", i));
-                    tx.Root.Delete(string.Format("{0}3", i));
-                    tx.Root.Delete(string.Format("{0}4", i));
-                    tx.Root.Delete(string.Format("{0}5", i));
-                    tx.Root.Delete(string.Format("{0}6", i));
-                    tx.Root.Delete(string.Format("{0}7", i));
-                    tx.Root.Delete(string.Format("{0}8", i));
-                    tx.Root.Delete(string.Format("{0}9", i));
+                    tree.Delete(string.Format("{0}1", i));
+                    tree.Delete(string.Format("{0}2", i));
+                    tree.Delete(string.Format("{0}3", i));
+                    tree.Delete(string.Format("{0}4", i));
+                    tree.Delete(string.Format("{0}5", i));
+                    tree.Delete(string.Format("{0}6", i));
+                    tree.Delete(string.Format("{0}7", i));
+                    tree.Delete(string.Format("{0}8", i));
+                    tree.Delete(string.Format("{0}9", i));
 
-                    Assert.Equal(tx.Root.State.EntriesCount, 9 * i);
+                    Assert.Equal(tree.State.EntriesCount, 9 * i);
                 }
 
                 tx.Commit();
@@ -49,38 +49,39 @@ namespace Voron.Tests.Trees
         [Fact]
         public void ItemCountIsConsistentWithUpdates()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 80; ++i)
                 {
-                    tx.Root.Add			(string.Format("{0}1", i), new MemoryStream(new byte[1472]));
-                    tx.Root.Add			(string.Format("{0}2", i), new MemoryStream(new byte[992]));
-                    tx.Root.Add			(string.Format("{0}3", i), new MemoryStream(new byte[1632]));
-                    tx.Root.Add			(string.Format("{0}4", i), new MemoryStream(new byte[632]));
-                    tx.Root.Add			(string.Format("{0}5", i), new MemoryStream(new byte[824]));
-                    tx.Root.Add			(string.Format("{0}6", i), new MemoryStream(new byte[1096]));
-                    tx.Root.Add			(string.Format("{0}7", i), new MemoryStream(new byte[2048]));
-                    tx.Root.Add			(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
-                    tx.Root.Add			(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
+                    tree.Add(string.Format("{0}1", i), new MemoryStream(new byte[1472]));
+                    tree.Add(string.Format("{0}2", i), new MemoryStream(new byte[992]));
+                    tree.Add(string.Format("{0}3", i), new MemoryStream(new byte[1632]));
+                    tree.Add(string.Format("{0}4", i), new MemoryStream(new byte[632]));
+                    tree.Add(string.Format("{0}5", i), new MemoryStream(new byte[824]));
+                    tree.Add(string.Format("{0}6", i), new MemoryStream(new byte[1096]));
+                    tree.Add(string.Format("{0}7", i), new MemoryStream(new byte[2048]));
+                    tree.Add(string.Format("{0}8", i), new MemoryStream(new byte[1228]));
+                    tree.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
-                    Assert.Equal(tx.Root.State.EntriesCount, 9 * (i + 1));
+                    Assert.Equal(tree.State.EntriesCount, 9 * (i + 1));
                 }
 
                 //RenderAndShow(tx, 1);
 
                 for (int i = 0; i < 80; ++i)
                 {
-                    tx.Root.Add			(string.Format("{0}9", i), new MemoryStream(new byte[1472]));
-                    tx.Root.Add			(string.Format("{0}8", i), new MemoryStream(new byte[992]));
-                    tx.Root.Add			(string.Format("{0}7", i), new MemoryStream(new byte[1632]));
-                    tx.Root.Add			(string.Format("{0}6", i), new MemoryStream(new byte[632]));
-                    tx.Root.Add			(string.Format("{0}5", i), new MemoryStream(new byte[824]));
-                    tx.Root.Add			(string.Format("{0}4", i), new MemoryStream(new byte[1096]));
-                    tx.Root.Add			(string.Format("{0}3", i), new MemoryStream(new byte[2048]));
-                    tx.Root.Add			(string.Format("{0}2", i), new MemoryStream(new byte[1228]));
-                    tx.Root.Add			(string.Format("{0}1", i), new MemoryStream(new byte[8192]));
+                    tree.Add(string.Format("{0}9", i), new MemoryStream(new byte[1472]));
+                    tree.Add(string.Format("{0}8", i), new MemoryStream(new byte[992]));
+                    tree.Add(string.Format("{0}7", i), new MemoryStream(new byte[1632]));
+                    tree.Add(string.Format("{0}6", i), new MemoryStream(new byte[632]));
+                    tree.Add(string.Format("{0}5", i), new MemoryStream(new byte[824]));
+                    tree.Add(string.Format("{0}4", i), new MemoryStream(new byte[1096]));
+                    tree.Add(string.Format("{0}3", i), new MemoryStream(new byte[2048]));
+                    tree.Add(string.Format("{0}2", i), new MemoryStream(new byte[1228]));
+                    tree.Add(string.Format("{0}1", i), new MemoryStream(new byte[8192]));
 
-                    Assert.Equal(tx.Root.State.EntriesCount, 9 * 80);
+                    Assert.Equal(tree.State.EntriesCount, 9 * 80);
                 }
 
                 tx.Commit();
