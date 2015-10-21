@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -34,7 +35,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			_leaveOpen = leaveOpen;
 		}
 
-		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public virtual bool SupportsOperationState => false;
+
+		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
 			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
 			_streamWriter = new StreamWriter(_gZipStream);
@@ -64,7 +67,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public IDatabaseSmugglerIdentityActions IdentityActions()
@@ -72,9 +75,14 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new DatabaseSmugglerStreamIdentityActions(_writer);
 		}
 
-		public virtual OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)
+		public virtual Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
 		{
-			return state;
+			throw new NotSupportedException();
+		}
+
+		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+		{
+			throw new NotSupportedException();
 		}
 
 		public void Dispose()

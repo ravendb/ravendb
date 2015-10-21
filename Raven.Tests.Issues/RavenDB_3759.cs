@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
 					});
 
 				var destination = new DatabaseSmugglerCountingDestination();
-				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input, CancellationToken.None), destination);
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input), destination);
 				await smuggler.ExecuteAsync();
 
 				Assert.Equal(1059, destination.WroteDocuments);
@@ -161,7 +161,7 @@ namespace Raven.Tests.Issues
 					});
 
 				var destination = new DatabaseSmugglerCountingDestination();
-				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input, CancellationToken.None), destination);
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(input), destination);
 				await smuggler.ExecuteAsync();
 
 				Assert.Equal(1061, destination.WroteDocuments);
@@ -207,7 +207,9 @@ namespace Raven.Tests.Issues
 			{
 			}
 
-			public Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+			public bool SupportsOperationState => false;
+
+			public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 			{
 				return new CompletedTask();
 			}
@@ -237,9 +239,14 @@ namespace Raven.Tests.Issues
 				return _identityActions;
 			}
 
-			public OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)
+			public Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
 			{
-				return state;
+				throw new NotSupportedException();
+			}
+
+			public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+			{
+				throw new NotSupportedException();
 			}
 
 			private class DatabaseSmugglerCountingIndexActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIndexActions

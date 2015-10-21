@@ -9,7 +9,9 @@ namespace Raven.Smuggler.Database
 {
 	public interface IDatabaseSmugglerDestination : IDisposable
 	{
-		Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
+		bool SupportsOperationState { get; }
+
+		Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken);
 
 		IDatabaseSmugglerIndexActions IndexActions();
 
@@ -21,6 +23,8 @@ namespace Raven.Smuggler.Database
 
 		IDatabaseSmugglerIdentityActions IdentityActions();
 
-		OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state);
+		Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options);
+
+		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state);
 	}
 }

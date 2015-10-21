@@ -20,7 +20,7 @@ namespace Raven.Tests.Smuggler
 	public class FileToFileTests : ReplicationBase
 	{
 		[Fact]
-		public void T1()
+		public void Northwind_RemoteToFile_FileToRemote_Test()
 		{
 			using (var store1 = CreateStore())
 			using (var store2 = CreateStore())

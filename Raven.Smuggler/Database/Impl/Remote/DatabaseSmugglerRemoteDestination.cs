@@ -4,9 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
@@ -18,17 +20,25 @@ namespace Raven.Smuggler.Database.Impl.Remote
 	{
 		private readonly IDocumentStore _store;
 
-		public DatabaseSmugglerRemoteDestination(IDocumentStore store)
+		private readonly DatabaseSmugglerRemoteDestinationOptions _options;
+
+		private Report _report;
+
+		public DatabaseSmugglerRemoteDestination(IDocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
 		{
 			_store = store;
+			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
 		}
 
 		public void Dispose()
 		{
 		}
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public bool SupportsOperationState => true;
+
+		public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
+			_report = report;
 			return new CompletedTask();
 		}
 
@@ -57,9 +67,37 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return new DatabaseSmugglerRemoteIdentityActions(_store);
 		}
 
-		public OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)
+		public async Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
 		{
-			return state;
+			if (string.IsNullOrWhiteSpace(_options.ContinuationToken) == false)
+			{
+				var continuationDocId = "Raven/Smuggler/Continuation/" + _options.ContinuationToken;
+
+				try
+				{
+					var continuationDocument = await _store
+						.AsyncDatabaseCommands
+						.GetAsync(continuationDocId)
+						.ConfigureAwait(false);
+
+					if (continuationDocument != null)
+						return continuationDocument.DataAsJson.JsonDeserialization<OperationState>();
+				}
+				catch (Exception e)
+				{
+					if (options.IgnoreErrorsAndContinue == false)
+						throw;
+
+					_report.ShowProgress("Failed loading continuation state. Message: {0}", e.Message);
+				}
+			}
+
+			return null;
+		}
+
+		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

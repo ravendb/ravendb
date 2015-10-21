@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database.Impl.Streams;
@@ -28,16 +29,21 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		private readonly string _path;
 
-		public DatabaseSmugglerFileDestination(string path)
+		private readonly DatabaseSmugglerFileDestinationOptions _options;
+
+		public DatabaseSmugglerFileDestination(string path, DatabaseSmugglerFileDestinationOptions options = null)
 			: base(Stream.Null, leaveOpen: false)
 		{
 			_path = path;
+			_options = options ?? new DatabaseSmugglerFileDestinationOptions();
 		}
 
-		public override async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public override bool SupportsOperationState => true;
+
+		public override async Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
 			var filePath = _path;
-			if (options.Incremental)
+			if (_options.Incremental)
 			{
 				if (Directory.Exists(_path) == false)
 				{
@@ -64,21 +70,45 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 			_stream = File.Create(filePath);
 
-			await base.InitializeAsync(options, cancellationToken).ConfigureAwait(false);
+			await base.InitializeAsync(options, report, cancellationToken).ConfigureAwait(false);
 		}
 
-		public override OperationState ModifyOperationState(DatabaseSmugglerOptions options, OperationState state)
+		public override Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options)
 		{
 			var etagFileLocation = Path.Combine(_path, IncrementalExportStateFile);
-			ReadLastEtagsFromFile(state, etagFileLocation);
 
-			return state;
+			return new CompletedTask<OperationState>(ReadLastEtagsFromFile(etagFileLocation));
 		}
 
-		public void ReadLastEtagsFromFile(OperationState result, string etagFileLocation)
+		public override Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state)
 		{
-			if (!File.Exists(etagFileLocation))
-				return;
+			if (_options.Incremental)
+			{
+				var etagFileLocation = Path.Combine(_path, IncrementalExportStateFile);
+
+				WriteLastEtagsToFile(state, etagFileLocation);
+			}
+
+			return new CompletedTask();
+		}
+
+		private static void WriteLastEtagsToFile(OperationState state, string etagFileLocation)
+		{
+			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
+			{
+				new RavenJObject
+					{
+						{"LastDocEtag", state.LastDocsEtag.ToString()},
+						{"LastDocDeleteEtag", state.LastDocDeleteEtag.ToString()},
+					}.WriteTo(new JsonTextWriter(streamWriter));
+				streamWriter.Flush();
+			}
+		}
+
+		private OperationState ReadLastEtagsFromFile(string etagFileLocation)
+		{
+			if (File.Exists(etagFileLocation) == false)
+				return null;
 
 			using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
 			using (var jsonReader = new JsonTextReader(streamReader))
@@ -91,10 +121,14 @@ namespace Raven.Smuggler.Database.Impl.Files
 				catch (Exception e)
 				{
 					_log.WarnException("Could not parse etag document from file : " + etagFileLocation + ", ignoring, will start from scratch", e);
-					return;
+					return null;
 				}
-				result.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
-				result.LastDocDeleteEtag = Etag.Parse(ravenJObject.Value<string>("LastDocDeleteEtag") ?? Etag.Empty.ToString());
+
+				return new OperationState
+				{
+					LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag")),
+					LastDocDeleteEtag = Etag.Parse(ravenJObject.Value<string>("LastDocDeleteEtag") ?? Etag.Empty.ToString())
+				};
 			}
 		}
 	}

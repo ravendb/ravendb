@@ -17,7 +17,7 @@ namespace Raven.Smuggler.Database
 {
 	internal class IndexSmuggler : SmugglerBase
 	{
-		public IndexSmuggler(DatabaseSmugglerOptions options, ReportActions report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+		public IndexSmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
 			: base(options, report, source, destination)
 		{
 		}

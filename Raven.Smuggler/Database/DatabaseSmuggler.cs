@@ -25,17 +25,17 @@ namespace Raven.Smuggler.Database
 
 		private readonly IDatabaseSmugglerDestination _destination;
 
-		private readonly ReportActions _report;
+		private readonly Report _report;
 
 		public DatabaseSmuggler(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
 		{
 			_options = options;
 			_source = source;
 			_destination = destination;
-			_report = new ReportActions();
+			_report = new Report();
 		}
 
-		public ReportActions Report
+		public Report Report
 		{
 			get
 			{
@@ -58,10 +58,10 @@ namespace Raven.Smuggler.Database
 					.ConfigureAwait(false);
 
 				await _destination
-					.InitializeAsync(_options, cancellationToken)
+					.InitializeAsync(_options, _report, cancellationToken)
 					.ConfigureAwait(false);
 
-				var state = GetOperationState(_options, _source, _destination);
+				var state = await GetOperationStateAsync(_options, _source, _destination).ConfigureAwait(false);
 
 				var sources = _source.SupportsMultipleSources
 					? _source.Sources
@@ -126,15 +126,25 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		private static OperationState GetOperationState(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+		private static async Task<OperationState> GetOperationStateAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
 		{
-			var state = new OperationState
-			{
-				LastDocsEtag = options.StartDocsEtag,
-				LastDocDeleteEtag = options.StartDocsDeletionEtag,
-			};
+			OperationState state = null;
 
-			state = destination.ModifyOperationState(options, state);
+			if (destination.SupportsOperationState)
+			{
+				state = await destination
+					.LoadOperationStateAsync(options)
+					.ConfigureAwait(false);
+			}
+
+			if (state == null)
+			{
+				state = new OperationState
+				{
+					LastDocsEtag = options.StartDocsEtag,
+					LastDocDeleteEtag = options.StartDocsDeletionEtag,
+				};
+			}
 
 			return state;
 		}

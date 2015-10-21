@@ -17,7 +17,7 @@ namespace Raven.Smuggler.Database
 {
 	internal class IdentitySmuggler : SmugglerBase
 	{
-		public IdentitySmuggler(DatabaseSmugglerOptions options, ReportActions report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+		public IdentitySmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
 			: base(options, report, source, destination)
 		{
 		}

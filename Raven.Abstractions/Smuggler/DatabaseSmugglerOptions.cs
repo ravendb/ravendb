@@ -60,8 +60,6 @@ namespace Raven.Abstractions.Smuggler
 
 		public int MaxStepsForTransformScript { get; set; }
 
-		public bool Incremental { get; set; }
-
 		public virtual bool MatchFilters(RavenJObject document)
 		{
 			foreach (var filter in Filters)
@@ -126,7 +124,6 @@ namespace Raven.Abstractions.Smuggler
 				IgnoreErrorsAndContinue = IgnoreErrorsAndContinue,
 				OperateOnTypes = OperateOnTypes,
 				BatchSize = BatchSize,
-				Incremental = Incremental,
 				Limit = Limit,
 				Filters = Filters,
 				MaxStepsForTransformScript = MaxStepsForTransformScript,

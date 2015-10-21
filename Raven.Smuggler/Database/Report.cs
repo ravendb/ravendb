@@ -2,7 +2,7 @@
 
 namespace Raven.Smuggler.Database
 {
-	public class ReportActions
+	public class Report
 	{
 		public void ShowProgress(string format, params object[] args)
 		{

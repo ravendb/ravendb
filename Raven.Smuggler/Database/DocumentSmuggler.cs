@@ -24,7 +24,7 @@ namespace Raven.Smuggler.Database
 
 		private readonly SmugglerJintHelper _patcher;
 
-		public DocumentSmuggler(DatabaseSmugglerOptions options, ReportActions report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
+		public DocumentSmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
 			: base(options, report, source, destination)
 		{
 			_maxEtags = maxEtags;
@@ -120,6 +120,21 @@ namespace Raven.Smuggler.Database
 										Report.ShowProgress("Exported {0} documents", totalCount);
 										lastReport = SystemTime.UtcNow;
 									}
+
+									if (totalCount % Options.BatchSize == 0)
+									{
+										if (Destination.SupportsOperationState)
+										{
+											if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+												state.LastDocsEtag = tempLastEtag;
+
+											await Destination.SaveOperationStateAsync(Options, state).ConfigureAwait(false);
+										}
+
+										// Wait for the batch to be indexed before continue.
+										//if (Options.WaitForIndexing)
+										//	await WaitForIndexingAsOfLastWrite().ConfigureAwait(false);
+									}
 								}
 							}
 
@@ -167,6 +182,14 @@ namespace Raven.Smuggler.Database
 									totalCount++;
 								}
 							}
+						}
+
+						if (Destination.SupportsOperationState)
+						{
+							if (lastEtag.CompareTo(state.LastDocsEtag) > 0)
+								state.LastDocsEtag = lastEtag;
+
+							await Destination.SaveOperationStateAsync(Options, state).ConfigureAwait(false);
 						}
 
 						Report.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
