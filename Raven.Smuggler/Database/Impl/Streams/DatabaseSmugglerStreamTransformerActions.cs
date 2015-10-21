@@ -22,7 +22,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task WriteTransformerAsync(TransformerDefinition transformer, CancellationToken cancellationToken)
 		{
-			var transformerJson = RavenJObject.FromObject(transformer);
+			var transformerJson = new RavenJObject
+			{
+				{ "name", transformer.Name },
+				{ "definition", RavenJObject.FromObject(transformer) }
+			};
 			transformerJson.WriteTo(Writer);
 			return new CompletedTask();
 		}

@@ -17,7 +17,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
 		{
-			var indexAsJson = RavenJObject.FromObject(index);
+			var indexAsJson = new RavenJObject
+			{
+				{ "name", index.Name },
+				{ "definition", RavenJObject.FromObject(index) }
+			};
 			indexAsJson.WriteTo(Writer);
 			return new CompletedTask();
 		}

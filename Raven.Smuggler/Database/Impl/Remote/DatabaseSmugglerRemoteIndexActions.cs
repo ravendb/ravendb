@@ -21,7 +21,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
 		{
-			return _store.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, cancellationToken);
+			return _store.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, overwrite: true, token: cancellationToken);
 		}
 	}
 }

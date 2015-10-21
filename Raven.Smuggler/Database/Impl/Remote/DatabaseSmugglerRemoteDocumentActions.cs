@@ -24,7 +24,12 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public Task WriteDocumentAsync(RavenJObject document, CancellationToken cancellationToken)
 		{
-			_bulkInsert.Store(document);
+			var metadata = document.Value<RavenJObject>("@metadata");
+			document.Remove("@metadata");
+
+			var id = metadata.Value<string>("@id");
+
+			_bulkInsert.Store(document, metadata, id);
 			return new CompletedTask();
 		}
 	}

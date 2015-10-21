@@ -79,14 +79,14 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public void Dispose()
 		{
-			_writer.WriteEndObject();
+			_writer?.WriteEndObject();
 
 			_streamWriter?.Dispose();
 
 			_gZipStream?.Dispose();
 
 			if (_leaveOpen == false)
-				_stream.Dispose();
+				_stream?.Dispose();
 		}
 	}
 }

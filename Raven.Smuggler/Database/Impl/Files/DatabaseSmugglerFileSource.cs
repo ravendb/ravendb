@@ -24,8 +24,6 @@ namespace Raven.Smuggler.Database.Impl.Files
 	{
 		private readonly string _path;
 
-		private readonly CancellationToken _cancellationToken;
-
 		private readonly List<IDatabaseSmugglerSource> _sources;
 
 		public string DisplayName
@@ -40,10 +38,9 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => _sources;
 
-		public DatabaseSmugglerFileSource(string path, CancellationToken cancellationToken)
+		public DatabaseSmugglerFileSource(string fileOrDirectoryPath)
 		{
-			_path = path;
-			_cancellationToken = cancellationToken;
+			_path = fileOrDirectoryPath;
 			_sources = new List<IDatabaseSmugglerSource>();
 		}
 
