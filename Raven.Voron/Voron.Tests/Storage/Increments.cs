@@ -62,7 +62,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(1, tx.ReadTree("tree0").State.EntriesCount);
+                Assert.Equal(1, tx.ReadTree("tree0").State.NumberOfEntries);
             }
         }
 	}

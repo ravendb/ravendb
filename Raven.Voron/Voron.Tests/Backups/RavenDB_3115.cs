@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3115.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,73 +11,73 @@ using Xunit;
 
 namespace Voron.Tests.Backups
 {
-    public class RavenDB_3115 : IDisposable
-    {
-        protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
-        {
-            options.MaxLogFileSize = 1000 * options.PageSize;
-            options.IncrementalBackupEnabled = true;
-            options.ManualFlushing = true;
+	public class RavenDB_3115 : IDisposable
+	{
+		protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
+		{
+			options.MaxLogFileSize = 1000 * options.PageSize;
+			options.IncrementalBackupEnabled = true;
+			options.ManualFlushing = true;
 
-            return options;
-        }
+			return options;
+		}
 
-        public RavenDB_3115()
-        {
-            Clean();
-        }
+		public RavenDB_3115()
+		{
+			Clean();
+		}
 
-        [Fact]
-        public void ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone()
-        {
-            var bytes = new byte[1024];
+		[Fact]
+		public void ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone()
+		{
+			var bytes = new byte[1024];
 
-            new Random().NextBytes(bytes);
+			new Random().NextBytes(bytes);
 
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
-            {
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    env.CreateTree(tx, "items");
+			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
+			{
+				using (var tx = env.WriteTransaction())
+				{
+					tx.CreateTree(  "items");
 
-                    tx.Commit();
-                }
+					tx.Commit();
+				}
 
-                for (int j = 0; j < 100; j++)
-                {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                    {
-                        var tree = tx.ReadTree("items");
+				for (int j = 0; j < 100; j++)
+				{
+					using (var tx = env.WriteTransaction())
+					{
+						var tree = tx.ReadTree("items");
 
-                        for (int i = 0; i < 100; i++)
-                        {
-                            tree.Add("items/" + i, bytes);
-                        }
+						for (int i = 0; i < 100; i++)
+						{
+							tree.Add("items/" + i, bytes);
+						}
 
-                        tx.Commit();
-                    }
-                }
+						tx.Commit();
+					}
+				}
 
-                BackupMethods.Incremental.ToFile(env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
-            }
+				BackupMethods.Incremental.ToFile(env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+			}
 
-            // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
-            {
-            }
-        }
+			// restart
+			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
+			{
+			}
+		}
 
-        public void Dispose()
-        {
-            Clean();
-        }
+		public void Dispose()
+		{
+			Clean();
+		}
 
-        private static void Clean()
-        {
-            if (Directory.Exists("Data"))
-                Directory.Delete("Data", true);
+		private static void Clean()
+		{
+			if (Directory.Exists("Data"))
+				Directory.Delete("Data", true);
 
-            IncrementalBackupTestUtils.Clean();
-        }
-    }
+			IncrementalBackupTestUtils.Clean();
+		}
+	}
 }

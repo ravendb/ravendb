@@ -14,7 +14,7 @@ namespace Voron.Trees
         public long OverflowPages;
         public int Depth;
         public long PageCount;
-        public long EntriesCount;
+        public long NumberOfEntries;
 	    public TreeFlags Flags;
 
         public long RootPageNumber;
@@ -46,7 +46,7 @@ namespace Voron.Trees
             header->LeafPages = LeafPages;
             header->OverflowPages = OverflowPages;
             header->PageCount = PageCount;
-            header->EntriesCount = EntriesCount;
+            header->NumberOfEntries = NumberOfEntries;
             header->RootPageNumber = RootPageNumber;
         }
 
@@ -56,7 +56,7 @@ namespace Voron.Trees
                 {
                     BranchPages = BranchPages,
                     Depth = Depth,
-                    EntriesCount = EntriesCount,
+                    NumberOfEntries = NumberOfEntries,
                     LeafPages = LeafPages,
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
@@ -111,7 +111,7 @@ namespace Voron.Trees
     Depth: {0}, TreeFlags: {3}
     Root Page: {4}
     Leafs: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}
-    Size: {8:F2} Mb", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, ((float)(PageCount * _tx.DataPager.PageSize) / (1024 * 1024)));
+    Size: {8:F2} Mb", Depth, PageCount, NumberOfEntries, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages, ((float)(PageCount * _tx.DataPager.PageSize) / (1024 * 1024)));
         }
     }
 }

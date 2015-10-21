@@ -77,7 +77,7 @@ namespace Voron.Debugging
 					Name = tree.Name,
 					BranchPages = state.BranchPages,
 					Depth = state.Depth,
-					EntriesCount = state.EntriesCount,
+					NumberOfEntries = state.NumberOfEntries,
 					LeafPages = state.LeafPages,
 					OverflowPages = state.OverflowPages,
 					PageCount = state.PageCount,
@@ -122,7 +122,7 @@ namespace Voron.Debugging
 
                                     Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
 
-                                    multiValues.EntriesCount += multiValueTreeHeader->EntriesCount;
+                                    multiValues.NumberOfEntries += multiValueTreeHeader->NumberOfEntries;
                                     multiValues.BranchPages += multiValueTreeHeader->BranchPages;
                                     multiValues.LeafPages += multiValueTreeHeader->LeafPages;
                                     multiValues.PageCount += multiValueTreeHeader->PageCount;
@@ -132,7 +132,7 @@ namespace Voron.Debugging
                                 {
                                     var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
 
-                                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+                                    multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
                                 }
                             case TreeNodeFlags.PageRef:
@@ -140,7 +140,7 @@ namespace Voron.Debugging
                                     var overFlowPage = _tx.GetReadOnlyTreePage(currentNode->PageNumber);
                                     var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
 
-                                    multiValues.EntriesCount += nestedPage.NumberOfEntries;
+                                    multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
                                 }
                             default:

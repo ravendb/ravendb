@@ -68,7 +68,7 @@ namespace Voron.Trees
                     Depth = header->Depth,
                     OverflowPages = header->OverflowPages,
                     LeafPages = header->LeafPages,
-                    EntriesCount = header->EntriesCount,
+                    NumberOfEntries = header->NumberOfEntries,
                     Flags = header->Flags,
                     InWriteTransaction = llt.Flags.HasFlag(TransactionFlags.ReadWrite),
                 }
@@ -236,7 +236,7 @@ namespace Voron.Trees
             }
             else // new item should be recorded
             {
-                State.EntriesCount++;
+                State.NumberOfEntries++;
             }
 
             CheckConcurrency(key, version, nodeVersion, TreeActionType.Add);
@@ -616,7 +616,7 @@ namespace Voron.Trees
 
             page = ModifyPage(page);
 
-            State.EntriesCount--;
+            State.NumberOfEntries--;
             ushort nodeVersion;
             RemoveLeafNode(page, out nodeVersion);
 
@@ -759,7 +759,7 @@ namespace Voron.Trees
 
         public override string ToString()
         {
-            return Name + " " + State.EntriesCount;
+            return Name + " " + State.NumberOfEntries;
         }
 
 
@@ -866,7 +866,7 @@ namespace Voron.Trees
         public long DeleteFixedTreeFor(string key, byte valSize = 0)
         {
             var fixedSizeTree = FixedTreeFor(key, valSize);
-            var numberOfEntries = fixedSizeTree.EntriesCount;
+            var numberOfEntries = fixedSizeTree.NumberOfEntries;
 
             foreach (var page in fixedSizeTree.AllPages())
             {

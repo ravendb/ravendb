@@ -17,7 +17,7 @@ namespace Voron.Impl.FreeSpace
             var freeSpaceTree = GetFreeSpaceTree(tx);
 
 
-            if (freeSpaceTree.EntriesCount == 0)
+            if (freeSpaceTree.NumberOfEntries == 0)
 	            return null;
 
             using (var it = freeSpaceTree.Iterate())
@@ -271,7 +271,7 @@ namespace Voron.Impl.FreeSpace
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
 
-            if (freeSpaceTree.EntriesCount == 0)
+            if (freeSpaceTree.NumberOfEntries == 0)
                 return new List<long>();
 
             using (var it = freeSpaceTree.Iterate())

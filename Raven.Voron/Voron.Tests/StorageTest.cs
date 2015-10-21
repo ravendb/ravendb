@@ -142,5 +142,24 @@ namespace Voron.Tests
 
 			return results;
 		}
+
+        protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
+        {
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
+            var p = tree.FindPageFor(key, out node, out lazy);
+
+
+            if (node == null)
+                return null;
+
+            var item1 = p.GetNodeKey(node).ToSlice();
+
+            if (item1.Compare(key) != 0)
+                return null;
+            return Tuple.Create(item1,
+                new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize,
+                    (ushort)node->DataSize));
+        }
 	}
 }

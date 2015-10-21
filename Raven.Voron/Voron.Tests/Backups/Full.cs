@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Packaging;
 using Voron.Impl;
@@ -41,11 +41,12 @@ namespace Voron.Tests.Backups
             var buffer = new byte[8192];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 2; i++)
                 {
-                    tx.Root.Add("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -54,11 +55,12 @@ namespace Voron.Tests.Backups
             Env.FlushLogToDataFile(); // force writing data to the data file
 
             // add more data to journal files
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 2; i < 4; i++)
                 {
-                    tx.Root.Add("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -75,11 +77,12 @@ namespace Voron.Tests.Backups
 
             using (var env = new StorageEnvironment(options))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 4; i++)
                     {
-                        var readResult = tx.Root.Read("items/" + i);
+                        var readResult = tree.Read("items/" + i);
                         Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
@@ -97,11 +100,12 @@ namespace Voron.Tests.Backups
             var buffer = new byte[8192];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 500; i++)
                 {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -110,13 +114,14 @@ namespace Voron.Tests.Backups
             Assert.True(Env.Journal.Files.Count > 1);
 
             Env.FlushLogToDataFile(); // force writing data to the data file
-             
+
             // add more data to journal files
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 500; i < 1000; i++)
                 {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -133,11 +138,12 @@ namespace Voron.Tests.Backups
 
             using (var env = new StorageEnvironment(options))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 1000; i++)
                     {
-                        var readResult = tx.Root.Read("items/" + i);
+                        var readResult = tree.Read("items/" + i);
                         Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
@@ -151,6 +157,6 @@ namespace Voron.Tests.Backups
         {
             base.Dispose();
             DeleteBackupData();
-        }	
+        }
     }
 }

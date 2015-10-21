@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="EdgeCases.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -22,31 +22,35 @@ namespace Voron.Tests.Journal
         [Fact]
         public void TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var bytes = new byte[4 * tx.DataPager.PageSize]; 
-                tx.Root.Add			("items/0", new MemoryStream(bytes));
+                var tree = tx.CreateTree("foo");
+                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                tree.Add("items/0", new MemoryStream(bytes));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var bytes = new byte[1 * tx.DataPager.PageSize];
-                tx.Root.Add			("items/1", new MemoryStream(bytes));
+                var tree = tx.CreateTree("foo");
+                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+              tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var bytes = new byte[1 * tx.DataPager.PageSize];
-                tx.Root.Add			("items/1", new MemoryStream(bytes));
+                var tree = tx.CreateTree("foo");
+                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var bytes = new byte[1 * tx.DataPager.PageSize];
-                tx.Root.Add			("items/1", new MemoryStream(bytes));
+                var tree = tx.CreateTree("foo");
+                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
             }
 

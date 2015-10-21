@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="IncrementalBackup.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,113 +12,118 @@ using Xunit;
 
 namespace Voron.Tests.Backups
 {
-    public class Incremental : StorageTest
-    {
+	public class Incremental : StorageTest
+	{
 
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            options.MaxLogFileSize = 1000 * options.PageSize;
-            options.IncrementalBackupEnabled = true;
-            options.ManualFlushing = true;
-        }
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			options.MaxLogFileSize = 1000 * options.PageSize;
+			options.IncrementalBackupEnabled = true;
+			options.ManualFlushing = true;
+		}
 
-        public Incremental()
-        {
-            IncrementalBackupTestUtils.Clean();
-        }
+		public Incremental()
+		{
+			IncrementalBackupTestUtils.Clean();
+		}
 
-        [Fact]
-        public void CanBackupAndRestoreOnEmptyStorage()
-        {
+		[Fact]
+		public void CanBackupAndRestoreOnEmptyStorage()
+		{
             RequireFileBasedPager();
 
-            var random = new Random();
-            var buffer = new byte[8192];
-            random.NextBytes(buffer);
+			var random = new Random();
+			var buffer = new byte[8192];
+			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 500; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[] { IncrementalBackupTestUtils.IncrementalBackupFile(0) });
 
-            using (var env = new StorageEnvironment(options))
-            {
+			using (var env = new StorageEnvironment(options))
+			{
 
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
+				using (var tx = env.ReadTransaction())
+				{
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 500; i++)
-                    {
-                        var readResult = tx.Root.Read("items/" + i);
-                        Assert.NotNull(readResult);
-                        var memoryStream = new MemoryStream();
-                        readResult.Reader.CopyTo(memoryStream);
-                        Assert.Equal(memoryStream.ToArray(), buffer);
-                    }
-                }
-            }
-        }
+					{
+						var readResult = tree.Read("items/" + i);
+						Assert.NotNull(readResult);
+						var memoryStream = new MemoryStream();
+						readResult.Reader.CopyTo(memoryStream);
+						Assert.Equal(memoryStream.ToArray(), buffer);
+					}
+				}
+			}
+		}
 
-        [Fact]
-        public void CanDoMultipleIncrementalBackupsAndRestoreOneByOne()
-        {
+		[Fact]
+		public void CanDoMultipleIncrementalBackupsAndRestoreOneByOne()
+		{
             RequireFileBasedPager();
 
-            var random = new Random();
-            var buffer = new byte[1024];
-            random.NextBytes(buffer);
+			var random = new Random();
+			var buffer = new byte[1024];
+			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 300; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 300; i < 600; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 600; i < 1000; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            Env.FlushLogToDataFile(); // make sure that incremental backup will work even if we flushed journals to the data file
+			Env.FlushLogToDataFile(); // make sure that incremental backup will work even if we flushed journals to the data file
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(2));
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(2));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
@@ -127,66 +132,69 @@ namespace Voron.Tests.Backups
                 IncrementalBackupTestUtils.IncrementalBackupFile(2)
             });
 
-            using (var env = new StorageEnvironment(options))
-            {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.ReadTransaction())
+				{
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 1000; i++)
-                    {
-                        var readResult = tx.Root.Read("items/" + i);
-                        Assert.NotNull(readResult);
-                        var memoryStream = new MemoryStream();
-                        readResult.Reader.CopyTo(memoryStream);
-                        Assert.Equal(memoryStream.ToArray(), buffer);
-                    }
-                }
-            }
-        }
+					{
+						var readResult = tree.Read("items/" + i);
+						Assert.NotNull(readResult);
+						var memoryStream = new MemoryStream();
+						readResult.Reader.CopyTo(memoryStream);
+						Assert.Equal(memoryStream.ToArray(), buffer);
+					}
+				}
+			}
+		}
 
-        [Fact]
-        public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
+		[Fact]
+		public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
         {
             RequireFileBasedPager();
-            var random = new Random();
-            var buffer = new byte[100];
-            random.NextBytes(buffer);
+			var random = new Random();
+			var buffer = new byte[100];
+			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 5; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+		    var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
 
-            var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+			var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            Assert.Equal(usedPagesInJournal, backedUpPages);
+			Assert.Equal(usedPagesInJournal, backedUpPages);
 
-            var writePos = Env.Journal.CurrentFile.WritePagePosition;
-        
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+			var writePos = Env.Journal.CurrentFile.WritePagePosition;
+		
+			using (var tx = Env.WriteTransaction())
+			{
+                var tree = tx.CreateTree("foo");
                 for (int i = 5; i < 10; i++)
-                {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
-                }
+				{
+					tree.Add			("items/" + i, new MemoryStream(buffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
+			var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
 
-            backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
+			backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
 
-            Assert.Equal(usedByLastTransaction, backedUpPages);
+			Assert.Equal(usedByLastTransaction, backedUpPages);
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
             {
@@ -194,21 +202,22 @@ namespace Voron.Tests.Backups
                 IncrementalBackupTestUtils.IncrementalBackupFile(1)
             });
 
-            using (var env = new StorageEnvironment(options))
-            {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.ReadTransaction())
+				{
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 10; i++)
-                    {
-                        var readResult = tx.Root.Read("items/" + i);
-                        Assert.NotNull(readResult);
-                        var memoryStream = new MemoryStream();
-                        readResult.Reader.CopyTo(memoryStream);
-                        Assert.Equal(memoryStream.ToArray(), buffer);
-                    }
-                }
-            }
-        }
+					{
+						var readResult = tree.Read("items/" + i);
+						Assert.NotNull(readResult);
+						var memoryStream = new MemoryStream();
+						readResult.Reader.CopyTo(memoryStream);
+						Assert.Equal(memoryStream.ToArray(), buffer);
+					}
+				}
+			}
+		}
 
         [Fact]
         public void IncrementalBackupShouldAcceptEmptyIncrementalBackups()
@@ -218,11 +227,12 @@ namespace Voron.Tests.Backups
             var buffer = new byte[100];
             random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 5; i++)
                 {
-                    tx.Root.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add			("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -256,11 +266,12 @@ namespace Voron.Tests.Backups
 
             using (var env = new StorageEnvironment(options))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 5; i++)
                     {
-                        var readResult = tx.Root.Read("items/" + i);
+                        var readResult = tree.Read("items/" + i);
                         Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
@@ -270,199 +281,199 @@ namespace Voron.Tests.Backups
             }
         }
 
-        [Fact]
-        public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
-        {
-            RequireFileBasedPager();
+		[Fact]
+		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
+		{
+			RequireFileBasedPager();
 
-            const int testedOverflowSize = 20000;
+			const int testedOverflowSize = 20000;
 
-            var overflowValue = new byte[testedOverflowSize];
-            new Random(1).NextBytes(overflowValue);
-
-
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(tx, "test");
-
-                var itemBytes = new byte[16000];
-
-                new Random(2).NextBytes(itemBytes);
-                tree.Add("items/1", itemBytes);
-
-                new Random(3).NextBytes(itemBytes);
-                tree.Add("items/2", itemBytes);
-
-                tree.Delete("items/1");
-                tree.Delete("items/2");
-
-                tree.Add("items/3", overflowValue);
-
-                tx.Commit();
-            }
-
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
-
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
-
-            BackupMethods.Incremental.Restore(options, new[]
-            {
-                IncrementalBackupTestUtils.IncrementalBackupFile(0)
-            });
-
-            using (var env = new StorageEnvironment(options))
-            {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
-                    var tree = tx.ReadTree("test");
-
-                    var readResult = tree.Read("items/3");
-
-                    var readBytes = new byte[testedOverflowSize];
-
-                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
-
-                    Assert.Equal(overflowValue, readBytes);
-                }
-            }
-        }
-
-        [Fact]
-        public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
-        {
-            RequireFileBasedPager();
-
-            const int testedOverflowSize = 16000;
-
-            var overflowValue = new byte[testedOverflowSize];
-            new Random(1).NextBytes(overflowValue);
+			var overflowValue = new byte[testedOverflowSize];
+			new Random(1).NextBytes(overflowValue);
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(tx, "test");
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.CreateTree( "test");
 
-                var itemBytes = new byte[2000];
+				var itemBytes = new byte[16000];
 
-                new Random(2).NextBytes(itemBytes);
-                tree.Add("items/1", itemBytes);
+				new Random(2).NextBytes(itemBytes);
+				tree.Add("items/1", itemBytes);
 
+				new Random(3).NextBytes(itemBytes);
+				tree.Add("items/2", itemBytes);
 
-                itemBytes = new byte[30000];
-                new Random(3).NextBytes(itemBytes);
-                tree.Add("items/2", itemBytes);
+				tree.Delete("items/1");
+				tree.Delete("items/2");
 
-                tx.Commit();
-            }
+				tree.Add("items/3", overflowValue);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(tx, "test");
-                tree.Delete("items/1");
-                tree.Delete("items/2");
+				tx.Commit();
+			}
 
-                tree.Add("items/3", overflowValue);
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
-                tx.Commit();
-            }
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
-
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
-
-            BackupMethods.Incremental.Restore(options, new[]
+			BackupMethods.Incremental.Restore(options, new[]
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0)
             });
 
-            using (var env = new StorageEnvironment(options))
-            {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
-                    var tree = tx.ReadTree("test");
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.ReadTransaction())
+				{
+					var tree = tx.ReadTree("test");
 
-                    var readResult = tree.Read("items/3");
+					var readResult = tree.Read("items/3");
 
-                    var readBytes = new byte[testedOverflowSize];
+					var readBytes = new byte[testedOverflowSize];
 
-                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+					readResult.Reader.Read(readBytes, 0, testedOverflowSize);
 
-                    Assert.Equal(overflowValue, readBytes);
-                }
-            }
-        }
+					Assert.Equal(overflowValue, readBytes);
+				}
+			}
+		}
 
-        [Fact]
-        public void IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891()
-        {
-            RequireFileBasedPager();
+		[Fact]
+		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
+		{
+			RequireFileBasedPager();
 
-            const int testedOverflowSize = 50000;
+			const int testedOverflowSize = 16000;
 
-            var overflowValue = new byte[testedOverflowSize];
-            new Random(1).NextBytes(overflowValue);
+			var overflowValue = new byte[testedOverflowSize];
+			new Random(1).NextBytes(overflowValue);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = Env.CreateTree(tx, "test");
 
-                var itemBytes = new byte[30000];
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.CreateTree( "test");
 
-                new Random(2).NextBytes(itemBytes);
-                tree.Add("items/1", itemBytes);
+				var itemBytes = new byte[2000];
 
-                new Random(3).NextBytes(itemBytes);
-                tree.Add("items/2", itemBytes);
+				new Random(2).NextBytes(itemBytes);
+				tree.Add("items/1", itemBytes);
 
-                tree.Delete("items/1");
 
-                tx.Commit();
-            }
+				itemBytes = new byte[30000];
+				new Random(3).NextBytes(itemBytes);
+				tree.Add("items/2", itemBytes);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var tree = tx.ReadTree("test");
+				tx.Commit();
+			}
 
-                tree.Delete("items/2");
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.CreateTree( "test");
+				tree.Delete("items/1");
+				tree.Delete("items/2");
 
-                tree.Add("items/3", overflowValue);
+				tree.Add("items/3", overflowValue);
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options, new[]
+			BackupMethods.Incremental.Restore(options, new[]
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0)
             });
 
-            using (var env = new StorageEnvironment(options))
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.ReadTransaction())
+				{
+					var tree = tx.ReadTree("test");
+
+					var readResult = tree.Read("items/3");
+
+					var readBytes = new byte[testedOverflowSize];
+
+					readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+
+					Assert.Equal(overflowValue, readBytes);
+				}
+			}
+		}
+
+		[Fact]
+		public void IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891()
+		{
+			RequireFileBasedPager();
+
+			const int testedOverflowSize = 50000;
+
+			var overflowValue = new byte[testedOverflowSize];
+			new Random(1).NextBytes(overflowValue);
+
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.CreateTree(  "test");
+
+				var itemBytes = new byte[30000];
+
+				new Random(2).NextBytes(itemBytes);
+				tree.Add("items/1", itemBytes);
+
+				new Random(3).NextBytes(itemBytes);
+				tree.Add("items/2", itemBytes);
+
+				tree.Delete("items/1");
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.WriteTransaction())
+			{
+				var tree = tx.ReadTree("test");
+
+				tree.Delete("items/2");
+
+				tree.Add("items/3", overflowValue);
+
+				tx.Commit();
+			}
+
+			BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+
+			var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+			BackupMethods.Incremental.Restore(options, new[]
             {
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
-                    var tree = tx.ReadTree("test");
+                IncrementalBackupTestUtils.IncrementalBackupFile(0)
+            });
 
-                    var readResult = tree.Read("items/3");
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.ReadTransaction())
+				{
+					var tree = tx.ReadTree("test");
 
-                    var readBytes = new byte[testedOverflowSize];
+					var readResult = tree.Read("items/3");
 
-                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+					var readBytes = new byte[testedOverflowSize];
 
-                    Assert.Equal(overflowValue, readBytes);
-                }
-            }
-        }
+					readResult.Reader.Read(readBytes, 0, testedOverflowSize);
 
-        public override void Dispose()
-        {
-            base.Dispose();
-            IncrementalBackupTestUtils.Clean();
-        }	
-    }
+					Assert.Equal(overflowValue, readBytes);
+				}
+			}
+		}
+
+		public override void Dispose()
+		{
+			base.Dispose();
+			IncrementalBackupTestUtils.Clean();
+		}	
+	}
 }

@@ -20,53 +20,49 @@ namespace Voron.Tests.ScratchBuffer
 		[Fact]
 		public void CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch()
 		{
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				var tree = Env.CreateTree(txw, "foo");
+				var tree = txw.CreateTree( "foo");
 
 				tree.Add("bars/1", new string('a', 1000));
 
 				txw.Commit();
-
-                DebugStuff.RenderAndShowTree(txw, 1);
 			}
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				Env.CreateTree(txw, "bar");
+				txw.CreateTree("bar");
 
 				txw.Commit();
 			}
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				var tree = Env.CreateTree(txw, "foo");
+				var tree = txw.CreateTree( "foo");
 
 				tree.Add("bars/1", new string('b', 1000));
 
 				txw.Commit();
 
-                DebugStuff.RenderAndShowTree(txw, 1);
 			}
 
-			var txr = Env.NewTransaction(TransactionFlags.Read);
+			var txr = Env.ReadTransaction();
 			{
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var txw = Env.WriteTransaction())
 				{
-					var tree = Env.CreateTree(txw, "foo");
+					var tree = txw.CreateTree( "foo");
 
 					tree.Add("bars/1", new string('c', 1000));
 
 					txw.Commit();
 
-                    DebugStuff.RenderAndShowTree(txw, 1);
 				}
 
 				Env.FlushLogToDataFile();
 
 				txr.Dispose();
 
-				using (var txr2 = Env.NewTransaction(TransactionFlags.Read))
+				using (var txr2 = Env.ReadTransaction())
 				{
 					var allocated1 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
@@ -82,7 +78,7 @@ namespace Voron.Tests.ScratchBuffer
 
 					Assert.True(allocated3 < allocated2);
 
-					var read = Env.CreateTree(txr2, "foo").Read("bars/1");
+					var read = txr2.CreateTree("foo").Read("bars/1");
 
 					Assert.NotNull(read);
 					Assert.Equal(new string('c', 1000), read.Reader.AsSlice().ToString());

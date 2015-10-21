@@ -30,9 +30,10 @@ namespace Voron.Tests.Journal
 
             for (var i = 0; i < 15; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    tx.Root.Add			("item/" + i, new MemoryStream(bytes));
+                    var tree = tx.CreateTree("foo");
+                    tree.Add("item/" + i, new MemoryStream(bytes));
                     tx.Commit();
                 }
             }
@@ -41,9 +42,10 @@ namespace Voron.Tests.Journal
 
             for (var i = 0; i < 15; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.Read))
+                using (var tx = Env.ReadTransaction())
                 {
-                    Assert.NotNull(tx.Root.Read("item/" + i));
+                    var tree = tx.CreateTree("foo");
+                    Assert.NotNull(tree.Read("item/" + i));
                 }
             }
         }
@@ -51,15 +53,22 @@ namespace Voron.Tests.Journal
         [Fact]
         public void ShouldNotReadUncommittedTransaction()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("items/1", StreamFor("values/1"));
+                var tree = tx.CreateTree("foo");
+                tx.Commit();
+            }
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+                tree.Add("items/1", StreamFor("values/1"));
                 // tx.Commit(); uncommitted transaction
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                Assert.Null(tx.Root.Read("items/1"));
+                var tree = tx.CreateTree("foo");
+                Assert.Null(tree.Read("items/1"));
             }
         }
 
@@ -68,10 +77,11 @@ namespace Voron.Tests.Journal
         {
             for (var i = 0; i < 100; i++)
             {
-               
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+
+                using (var tx = Env.WriteTransaction())
                 {
-                    tx.Root.Add			("items/" + i, StreamFor("values/" + i));
+                    var tree = tx.CreateTree("foo");
+                    tree.Add("items/" + i, StreamFor("values/" + i));
                     tx.Commit();
                 }
             }
@@ -85,9 +95,10 @@ namespace Voron.Tests.Journal
 
             for (var i = 0; i < 100; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.Read))
+                using (var tx = Env.ReadTransaction())
                 {
-                    var readKey = ReadKey(tx, "items/" + i);
+                    var tree = tx.CreateTree("foo");
+                    var readKey = ReadKey(tx, tree, "items/" + i);
                     Assert.Equal("values/" + i, readKey.Item2);
                 }
             }

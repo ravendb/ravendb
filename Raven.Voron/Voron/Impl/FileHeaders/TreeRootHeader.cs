@@ -16,7 +16,7 @@ namespace Voron.Impl.FileHeaders
         [FieldOffset(40)]
         public long PageCount;
         [FieldOffset(48)]
-        public long EntriesCount;
+        public long NumberOfEntries;
         [FieldOffset(56)]
         public int Depth;
         [FieldOffset(60)]

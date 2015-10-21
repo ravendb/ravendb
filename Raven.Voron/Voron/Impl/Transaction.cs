@@ -4,6 +4,7 @@ using System.IO;
 using Voron.Debugging;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
+using Voron.Trees.Fixed;
 
 namespace Voron.Impl
 {
@@ -204,6 +205,11 @@ namespace Voron.Impl
         {
             if (_lowLevelTransaction != null)
                 _lowLevelTransaction.Dispose();
+        }
+
+        public FixedSizeTree FixedTreeFor(string treeName, ushort valSize = 0)
+        {
+            return new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName, valSize);
         }
     }
 

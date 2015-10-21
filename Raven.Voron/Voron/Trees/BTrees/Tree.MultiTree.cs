@@ -227,7 +227,7 @@ namespace Voron.Trees
 				// previously, we would convert back to a simple model if we dropped to a single entry
 				// however, it doesn't really make sense, once you got enough values to go to an actual nested 
 				// tree, you are probably going to remain that way, or be removed completely.
-				if (tree.State.EntriesCount != 0) 
+				if (tree.State.NumberOfEntries != 0) 
 					return;
 				_tx.TryRemoveMultiValueTree(this, key);
 				_llt.FreePage(tree.State.RootPageNumber);
@@ -285,7 +285,7 @@ namespace Voron.Trees
 			{
 				var tree = OpenMultiValueTree(key, node);
 
-				return tree.State.EntriesCount;
+				return tree.State.NumberOfEntries;
 			}
 
 			var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, node));

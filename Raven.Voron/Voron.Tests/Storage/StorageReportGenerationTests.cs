@@ -69,7 +69,7 @@ namespace Voron.Tests.Storage
 
 					Assert.Equal(numberOfOverflowPages[treeReport.Name], treeReport.OverflowPages);
 					
-					Assert.Equal(numberOfEntries[treeReport.Name], treeReport.EntriesCount);
+					Assert.Equal(numberOfEntries[treeReport.Name], treeReport.NumberOfEntries);
 
 					Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0);
 				}
@@ -129,7 +129,7 @@ namespace Voron.Tests.Storage
 					Assert.Equal(0, treeReport.BranchPages);
 					Assert.Equal(1, treeReport.LeafPages); // root
 					Assert.Equal(0, treeReport.OverflowPages);
-					Assert.Equal(0, treeReport.EntriesCount);
+					Assert.Equal(0, treeReport.NumberOfEntries);
 					Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0); // just the header of page root
 					Assert.Equal(1, treeReport.Depth);
 				}
@@ -218,7 +218,7 @@ namespace Voron.Tests.Storage
 
 				Assert.True(treeReport.PageCount > 0);
 				Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages);
-				Assert.Equal(numberOfFixedSizeTrees, treeReport.EntriesCount);
+				Assert.Equal(numberOfFixedSizeTrees, treeReport.NumberOfEntries);
 				Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0); // just the header of page root
 			}
 		}
@@ -251,9 +251,9 @@ namespace Voron.Tests.Storage
 			{
 				var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-				Assert.Equal(keys.Length, report.Trees[0].EntriesCount);
+				Assert.Equal(keys.Length, report.Trees[0].NumberOfEntries);
 
-				Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.EntriesCount);
+				Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.NumberOfEntries);
 			}
 		}
 

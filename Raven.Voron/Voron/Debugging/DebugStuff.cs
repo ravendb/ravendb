@@ -156,7 +156,7 @@ namespace Voron.Debugging
 				else
 				{
 					var header = (FixedSizeTreeHeader.Large*)ptr;
-					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->EntriesCount, header->ValueSize);
+					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
 					writer.WriteLine("<div class='css-treeview'><ul>");
 
 					var page = tx.GetReadOnlyTreePage(header->RootPageNumber);

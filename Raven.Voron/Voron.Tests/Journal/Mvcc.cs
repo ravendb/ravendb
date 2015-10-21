@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Mvcc.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -32,26 +32,29 @@ namespace Voron.Tests.Journal
                 nines[i] = 9;
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("items/1", new MemoryStream(ones));
-                tx.Root.Add			("items/2", new MemoryStream(ones));
+                var tree = tx.CreateTree("foo");
+                tree.Add("items/1", new MemoryStream(ones));
+                tree.Add("items/2", new MemoryStream(ones));
                 tx.Commit();
             }
 
             Env.FlushLogToDataFile(); // make sure that pages where items/1 is contained will be flushed to the data file
 
-            using (var txr = Env.NewTransaction(TransactionFlags.Read))
+            using (var txr = Env.ReadTransaction())
             {
-                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                var treeR = txr.CreateTree("foo");
+                using (var txw = Env.WriteTransaction())
                 {
-                    txw.Root.Add("items/1", new MemoryStream(nines));
+                    var treeW = txw.CreateTree("foo");
+                    treeW.Add("items/1", new MemoryStream(nines));
                     txw.Commit();
                 }
 
                 Env.FlushLogToDataFile(); // should not flush pages of items/1 because there is an active read transaction
 
-                var readResult = txr.Root.Read("items/1");
+                var readResult = treeR.Read("items/1");
 
                 int used;
                 var readData = readResult.Reader.ReadBytes(readResult.Reader.Length, out used).Take(used).ToArray();

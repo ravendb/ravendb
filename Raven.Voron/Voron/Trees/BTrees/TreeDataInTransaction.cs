@@ -49,7 +49,7 @@ namespace Voron.Trees
 //
 //        public override string ToString()
 //        {
-//            return _tree.Name + " " + _state.EntriesCount;
+//            return _tree.Name + " " + _state.NumberOfEntries;
 //        }
 //    }
 }

@@ -26,20 +26,20 @@ namespace Voron.Tests.Journal
 		public void UncommittedTransactionMustNotModifyPageTranslationTableOfLogFile()
 		{
 			long pageAllocatedInUncommittedTransaction;
-			using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx1 = Env.WriteTransaction())
 			{
-			    var page = tx1.AllocatePage(1);
+			    var page = tx1.LowLevelTransaction.AllocatePage(1);
 
 				pageAllocatedInUncommittedTransaction = page.PageNumber;
 
-				Assert.NotNull(tx1.GetReadOnlyPage(pageAllocatedInUncommittedTransaction));
+				Assert.NotNull(tx1.LowLevelTransaction.GetReadOnlyTreePage(pageAllocatedInUncommittedTransaction));
 				
 				// tx.Commit(); do not commit
 			}
-			using (var tx2 = Env.NewTransaction(TransactionFlags.Read))
+			using (var tx2 = Env.ReadTransaction())
 			{
 				// tx was not committed so in the log should not apply
-				var readPage = Env.Journal.ReadPage(tx2,pageAllocatedInUncommittedTransaction, scratchPagerStates: null);
+				var readPage = Env.Journal.ReadPage(tx2.LowLevelTransaction,pageAllocatedInUncommittedTransaction, scratchPagerStates: null);
 
 				Assert.Null(readPage);
 			}
