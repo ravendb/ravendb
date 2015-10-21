@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -170,9 +171,10 @@ namespace Raven.Client.Document.SessionOperations
 			var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
 			if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-			    projectionFields != null && projectionFields.Length == 1 && // We are projecting one field only (although that could be derived from the
-			    // previous check, one could never be too careful
-			    ((metadata != null && result.Count == 2) || (metadata == null && result.Count == 1)) // there are no more props in the result object
+                // We are projecting one field only (although that could be derived from the
+                // previous check, one could never be too careful
+                projectionFields != null && projectionFields.Length == 1 && 
+                HasSingleValidProperty(result, metadata) // there are no more props in the result object
 				)
 			{
 				return (T)(object)documentId;
@@ -187,7 +189,7 @@ namespace Raven.Client.Document.SessionOperations
 				// we need to make an additional check, since it is possible that a value was explicitly stated
 				// for the identity property, in which case we don't want to override it.
 				var identityProperty = sessionOperations.Conventions.GetIdentityProperty(typeof(T));
-				if (identityProperty == null ||
+				if (identityProperty != null &&
 				    (result[identityProperty.Name] == null ||
 				     result[identityProperty.Name].Type == JTokenType.Null))
 				{
@@ -198,8 +200,35 @@ namespace Raven.Client.Document.SessionOperations
 			return deserializedResult;
 		}
 
+	    private bool HasSingleValidProperty(RavenJObject result, RavenJObject metadata)
+	    {
+	        if (metadata == null && result.Count == 1)
+	            return true;// { Foo: val }
 
-		private T DeserializedResult<T>(RavenJObject result)
+	        if ((metadata != null && result.Count == 2))
+	            return true; // { @metadata: {}, Foo: val }
+
+            if ((metadata != null && result.Count == 3))
+            {
+                var entityName = metadata.Value<string>(Constants.RavenEntityName);
+
+                var idPropName = sessionOperations.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
+
+                if (result.ContainsKey(idPropName))
+                {
+                    // when we try to project the id by name
+                    var token = result.Value<RavenJToken>(idPropName);
+
+                    if(token == null || token.Type == JTokenType.Null)
+                        return true; // { @metadata: {}, Foo: val, Id: null }
+                }
+            }
+
+	        return false;
+	    }
+
+
+	    private T DeserializedResult<T>(RavenJObject result)
 		{
 			if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
 			{
