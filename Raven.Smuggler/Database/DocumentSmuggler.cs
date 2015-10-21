@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,6 +47,18 @@ namespace Raven.Smuggler.Database
 				var reachedMaxEtag = false;
 				Report.ShowProgress("Exporting Documents");
 
+				var affectedCollections = new List<string>();
+				Options.Filters.ForEach(filter =>
+				{
+					if (string.Equals(filter.Path, "@metadata.Raven-Entity-Name", StringComparison.OrdinalIgnoreCase))
+					{
+						filter.Values.ForEach(collectionName =>
+						{
+							affectedCollections.Add(collectionName);
+						});
+					}
+				});
+
 				do
 				{
 					var hasDocs = false;
@@ -74,7 +88,17 @@ namespace Raven.Smuggler.Database
 									lastEtag = tempLastEtag;
 
 									if (Options.MatchFilters(document) == false)
-										continue;
+									{
+										if (affectedCollections.Count <= 0)
+											continue;
+
+										if (document.ContainsKey("@metadata") == false)
+											continue;
+
+										var key = document["@metadata"].Value<string>("@id");
+										if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+											continue;
+									}
 
 									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
 										continue;
