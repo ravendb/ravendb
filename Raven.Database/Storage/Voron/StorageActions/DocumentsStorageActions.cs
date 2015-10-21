@@ -94,104 +94,164 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
+		public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+		{
+			if (take < 0)
+				throw new ArgumentException("must have zero or positive value", "take");
+
+			if (take == 0)
+				return etag;
+
+			if (string.IsNullOrEmpty(etag))
+				throw new ArgumentNullException("etag");
+
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+											  .Iterate(Snapshot, writeBatch.Value))
+			{
+				var slice = (Slice)etag.ToString();
+				if (iterator.Seek(slice) == false)
+					return etag;
+
+				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+				{
+					if (iterator.MoveNext() == false)
+						return etag;
+				}
+				
+				ValueReader etagReader;
+				long totalSize = 0;
+
+				do
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					etagReader = iterator.CurrentKey.CreateReader();
+					/*var docKey = GetKeyFromCurrent(iterator);
+					var readResult = tableStorage.Documents.Read(Snapshot, docKey, null);
+					totalSize += readResult.Reader.Length;
+					if (maxSize.HasValue && totalSize >= maxSize)
+						break;*/
+				}
+				while (iterator.MoveNext() && --take > 0);
+
+				return Etag.Parse(etagReader.ReadBytes(16, out take));
+			}
+		}
+
+		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+			Reference<bool> earlyExit = null)
+		{
+			if (earlyExit != null)
+				earlyExit.Value = false;
+			if (take < 0)
+				throw new ArgumentException("must have zero or positive value", "take");
+
+			if (take == 0)
+				yield break;
+
+			if (string.IsNullOrEmpty(etag))
+				throw new ArgumentNullException("etag");
+
+			Stopwatch duration = null;
+			if (timeout != null)
+				duration = Stopwatch.StartNew();
+
+
+			Etag lastDocEtag = null;
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+				.Iterate(Snapshot, writeBatch.Value))
+			{
+				var slice = (Slice) etag.ToString();
+				if (iterator.Seek(slice) == false)
+					yield break;
+
+				if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+				{
+					if (iterator.MoveNext() == false)
+						yield break;
+				}
+
+				long fetchedDocumentTotalSize = 0;
+				int fetchedDocumentCount = 0;
+
+				Etag docEtag = etag;
+
+				do
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+
+					docEtag = Etag.Parse(iterator.CurrentKey.ToString());
+
+					// We can skip many documents so the timeout should be at the start of the process to be executed.
+					if (timeout != null)
+					{
+						if (duration.Elapsed > timeout.Value)
+						{
+							if (earlyExit != null)
+								earlyExit.Value = true;
+							break;
+						}
+					}
+
+					if (untilEtag != null)
+					{
+						// This is not a failure, we are just ahead of when we expected to. 
+						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+							break;
+					}
+
+					var key = GetKeyFromCurrent(iterator);
+					if (!string.IsNullOrEmpty(idPrefix))
+					{
+						if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
+						{
+							// We assume that we have processed it because it is not of our interest.
+							lastDocEtag = docEtag;
+							continue;
+						}
+					}
+
+					var document = DocumentByKey(key);
+					if (document == null) //precaution - should never be true
+					{
+						throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
+					}
+
+					if (!document.Etag.Equals(docEtag))
+					{
+						throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its index", key));
+					}
+
+					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
+					fetchedDocumentCount++;
+
+					yield return document;
+
+					lastDocEtag = docEtag;
+
+					if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
+					{
+						if (untilEtag != null && earlyExit != null)
+							earlyExit.Value = true;
+						break;
+					}
+
+					if (fetchedDocumentCount >= take)
+					{
+						if (untilEtag != null && earlyExit != null)
+							earlyExit.Value = true;
+						break;
+					}
+				} while (iterator.MoveNext());
+			}
+
+			// We notify the last that we considered.
+			if (lastProcessedDocument != null)
+				lastProcessedDocument(lastDocEtag);
+		}
+
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
         {
-            if (take < 0)
-                throw new ArgumentException("must have zero or positive value", "take");
-
-            if (take == 0) 
-                yield break;
-
-            if (string.IsNullOrEmpty(etag))
-                throw new ArgumentNullException("etag");
-
-            Stopwatch duration = null;
-            if (timeout != null)
-                duration = Stopwatch.StartNew();
-
-
-            Etag lastDocEtag = null;
-            using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                              .Iterate(Snapshot, writeBatch.Value))
-            {
-                var slice = (Slice)etag.ToString();
-                if (iterator.Seek(slice) == false)
-                    yield break;
-
-                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
-                {
-                    if (iterator.MoveNext() == false)
-                        yield break;
-                }
-
-                long fetchedDocumentTotalSize = 0;
-                int fetchedDocumentCount = 0;
-
-                Etag docEtag = etag;
-
-                do
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    
-                    docEtag = Etag.Parse(iterator.CurrentKey.ToString());
-
-                    // We can skip many documents so the timeout should be at the start of the process to be executed.
-                    if (timeout != null)
-                    {
-                        if (duration.Elapsed > timeout.Value)
-                            break;
-                    }     
-
-                    if (untilEtag != null)
-                    {
-                        // This is not a failure, we are just ahead of when we expected to. 
-                        if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-                            break;
-                    }
-
-                    var key = GetKeyFromCurrent(iterator);
-                    if (!string.IsNullOrEmpty(idPrefix))
-                    {                        
-                        if (!key.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            // We assume that we have processed it because it is not of our interest.
-                            lastDocEtag = docEtag;
-                            continue;
-                        }                            
-                    }                        
-
-                    var document = DocumentByKey(key);
-                    if (document == null) //precaution - should never be true
-                    {
-                        throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
-                    }
-
-                    if (!document.Etag.Equals(docEtag))
-                    {
-                        throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its index", key));
-                    }
-
-                    fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-                    fetchedDocumentCount++;
-
-                    yield return document;
-
-                    lastDocEtag = docEtag;
-
-                    if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
-                        break;
-                } 
-                while (iterator.MoveNext() && fetchedDocumentCount < take);
-            }
-
-            // We notify the last that we considered.
-            if (lastProcessedDocument != null)
-                lastProcessedDocument(lastDocEtag);
-        }
-
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null)
-        {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
         }
 
 		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
