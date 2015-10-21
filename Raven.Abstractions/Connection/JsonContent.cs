@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Abstractions.Util.Streams;
 
 namespace Raven.Abstractions.Connection
 {
@@ -42,23 +43,30 @@ namespace Raven.Abstractions.Connection
 		{
 		    if (HasNoData())
 		        return new CompletedTask<bool>(true);
+			            
+            using ( var intermediate = new BufferPoolMemoryStream () )
+            {
+                var writer = new StreamWriter(intermediate, DefaultEncoding);
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                {
+                    writer.Write(Jsonp);
+                    writer.Write("(");
+                }
 
-			var writer = new StreamWriter(stream, DefaultEncoding);
-			if (string.IsNullOrEmpty(Jsonp) == false)
-			{
-				writer.Write(Jsonp);
-				writer.Write("(");
-			}
+                Data.WriteTo(new JsonTextWriter(writer)
+                {
+                    Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
+                }, Default.Converters);
 
-			Data.WriteTo(new JsonTextWriter(writer)
-			{
-				Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
-			}, Default.Converters);
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                    writer.Write(")");
 
-			if (string.IsNullOrEmpty(Jsonp) == false)
-				writer.Write(")");
+                writer.Flush();
 
-			writer.Flush();
+                intermediate.Position = 0;
+                intermediate.CopyTo(stream);
+            }            
+
             return new CompletedTask<bool>(true);
 		}
 

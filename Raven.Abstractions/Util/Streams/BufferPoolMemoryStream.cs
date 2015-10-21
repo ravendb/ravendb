@@ -7,19 +7,16 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-
-using Raven.Abstractions.Util.Streams;
-using Raven.Abstractions.Util;
 using Sparrow;
 
-namespace Raven.Database.Util.Streams
+namespace Raven.Abstractions.Util.Streams
 {
     public class BufferPoolMemoryStream : Stream
     {       
         protected byte[] _buffer;
         protected ObjectPool<byte[]> _bufferPool;
 
-        private const int BufferPoolLimit = BufferSharedPools.ByteBufferSize / 2;
+        private const int BufferPoolLimit = BufferSharedPools.MicroByteBufferSize / 2;
 		
 		[CLSCompliant(false)]
         protected long _length;
@@ -113,11 +110,21 @@ namespace Raven.Database.Util.Streams
             if (newCapacity > BufferPoolLimit)
             {
                 // We will ensure to cap out to fit the capacity as best as we can.
-                if (newCapacity <= BufferSharedPools.ByteBufferSize)
+                if (newCapacity <= BufferSharedPools.MicroByteBufferSize)
+                {
+                    newCapacity = BufferSharedPools.MicroByteBufferSize;
+                    newBufferPool = BufferSharedPools.MicroByteArray;
+                }
+                else if (newCapacity <= BufferSharedPools.SmallByteBufferSize)
+                {
+                    newCapacity = BufferSharedPools.SmallByteBufferSize;
+                    newBufferPool = BufferSharedPools.SmallByteArray;
+                }
+                else if (newCapacity <= BufferSharedPools.ByteBufferSize)
                 {
                     newCapacity = BufferSharedPools.ByteBufferSize;
                     newBufferPool = BufferSharedPools.ByteArray;
-                }                    
+                }
                 else if (newCapacity <= BufferSharedPools.BigByteBufferSize)
                 {
                     newCapacity = BufferSharedPools.BigByteBufferSize;
