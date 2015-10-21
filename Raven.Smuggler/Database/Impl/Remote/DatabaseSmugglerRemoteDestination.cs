@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
@@ -36,6 +39,8 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		}
 
 		public bool SupportsOperationState => true;
+
+		public bool SupportsWaitingForIndexing => true;
 
 		public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
@@ -117,6 +122,43 @@ namespace Raven.Smuggler.Database.Impl.Remote
 					_report.ShowProgress("Failed saving continuation state. Message: {0}", e.Message);
 				}
 			}
+		}
+
+		public async Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
+		{
+			if (_options.WaitForIndexing == false)
+				return;
+
+			var stopwatch = Stopwatch.StartNew();
+			var justIndexingWait = Stopwatch.StartNew();
+
+			var stats = await _store
+				.AsyncDatabaseCommands
+				.GetStatisticsAsync(cancellationToken)
+				.ConfigureAwait(false);
+
+			var tries = 0;
+			var cutOffEtag = stats.LastDocEtag;
+			while (true)
+			{
+				if (stats.Indexes.All(x => x.LastIndexedEtag.CompareTo(cutOffEtag) >= 0))
+				{
+					_report.ShowProgress("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+					break;
+				}
+
+				if (tries++ % 10 == 0)
+					_report.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+
+				Thread.Sleep(1000);
+				stats = await _store
+					.AsyncDatabaseCommands
+					.GetStatisticsAsync(cancellationToken)
+					.ConfigureAwait(false);
+			}
+
+			stopwatch.Stop();
+			justIndexingWait.Stop();
 		}
 	}
 }

@@ -132,8 +132,8 @@ namespace Raven.Smuggler.Database
 										}
 
 										// Wait for the batch to be indexed before continue.
-										//if (Options.WaitForIndexing)
-										//	await WaitForIndexingAsOfLastWrite().ConfigureAwait(false);
+										if (Destination.SupportsWaitingForIndexing)
+											await Destination.WaitForIndexingAsOfLastWriteAsync(cancellationToken).ConfigureAwait(false);
 									}
 								}
 							}

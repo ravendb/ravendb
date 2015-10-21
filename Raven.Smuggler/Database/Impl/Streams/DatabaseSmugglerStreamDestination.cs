@@ -37,6 +37,8 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public virtual bool SupportsOperationState => false;
 
+		public bool SupportsWaitingForIndexing => false;
+
 		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
 			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
@@ -81,6 +83,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 		}
 
 		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

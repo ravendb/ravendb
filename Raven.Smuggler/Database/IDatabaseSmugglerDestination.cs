@@ -11,6 +11,8 @@ namespace Raven.Smuggler.Database
 	{
 		bool SupportsOperationState { get; }
 
+		bool SupportsWaitingForIndexing { get; }
+
 		Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken);
 
 		IDatabaseSmugglerIndexActions IndexActions();
@@ -26,5 +28,7 @@ namespace Raven.Smuggler.Database
 		Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
 		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken);
+
+		Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
 	}
 }

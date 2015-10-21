@@ -209,6 +209,8 @@ namespace Raven.Tests.Issues
 
 			public bool SupportsOperationState => false;
 
+			public bool SupportsWaitingForIndexing => false;
+
 			public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 			{
 				return new CompletedTask();
@@ -245,6 +247,11 @@ namespace Raven.Tests.Issues
 			}
 
 			public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+			{
+				throw new NotSupportedException();
+			}
+
+			public Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
 			{
 				throw new NotSupportedException();
 			}
