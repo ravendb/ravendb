@@ -336,6 +336,7 @@ namespace Voron.Tests.FixedSize
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(100000, 1684385375)]// reproduced a bug, do not remove
+        [InlineData(2000000, 439586390)]
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];

@@ -728,7 +728,6 @@ namespace Voron.Trees.Fixed
 
         private int RemoveRangeFromPage(Page page, long rangeEnd, FixedSizeTreeHeader.Large* largeHeader)
         {
-            page = _tx.ModifyPage(page.PageNumber, _parent, page);
             var startPos = page.LastSearchPosition;
             BinarySearch(page, rangeEnd);
             var endPos = page.LastSearchPosition;
@@ -745,6 +744,7 @@ namespace Voron.Trees.Fixed
                     return 0;
             }
 
+			page = _tx.ModifyPage(page.PageNumber, _parent, page);
 			var entriesDeleted = (endPos - startPos + 1);
 			if (startPos == 0)
 	        {
@@ -767,14 +767,19 @@ namespace Voron.Trees.Fixed
             }
             else
             {
-				if (startPos == 0 && _cursor.Count > 0)
-				{
-					var parentPage = _cursor.Peek();
-					parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
-					SetSeparatorKeyAtPosition(parentPage, KeyFor(page, 0), parentPage.LastSearchPosition);
-				}
+	            if (startPos == 0 && _cursor.Count > 0)
+	            {
+		            var parentPage = _cursor.Pop();
+					var separatorKey = KeyFor(page, 0);
+					if (parentPage.LastSearchPosition > 0 || separatorKey != long.MinValue)
+		            {
+			            parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+			            SetSeparatorKeyAtPosition(parentPage, separatorKey, parentPage.LastSearchPosition);
+		            }
+					_cursor.Push(parentPage);
+	            }
 
-				while (page != null)
+	            while (page != null)
                 {
                     page = RebalancePage(page, largeHeader);
                 }

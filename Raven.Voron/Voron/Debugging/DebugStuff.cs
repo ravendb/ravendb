@@ -272,12 +272,10 @@ namespace Voron.Debugging
 				else
 				{
 					var key =
-					 *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
+					 *(long*)(page.Base + page.FixedSize_StartPosition + (sizeof(long) + sizeof(long)) * i);
 					var pageNum = *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
-					var s = key.ToString("#,#");
-					if (i == 0)
-						s = "[smallest]";
+					var s = key == long.MinValue ? "[smallest]" : key.ToString("#,#");
 
 					RenderFixedSizeTreePage(tx, tx.GetReadOnlyPage(pageNum), sw, header, s, false);
 				}
