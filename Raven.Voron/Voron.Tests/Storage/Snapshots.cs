@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Voron.Impl;
@@ -8,35 +8,25 @@ namespace Voron.Tests.Storage
 {
     public class Snapshots : StorageTest
     {
-        [Fact]
-        public void SingleItemBatchTest()
-        {
-            var batch = new WriteBatch();
-            batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), Constants.RootTreeName);
 
-            Env.Writer.Write(batch);
-
-            using (var snapshot = Env.CreateSnapshot())
-            {
-                var reader = snapshot.Read(null, "key/1").Reader;
-                Assert.Equal("123", reader.ToStringValue());
-            }
-        }
 
         [Fact]
         public void SingleItemBatchTestLowLevel()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
+                var tree = tx.CreateTree("foo");
+
+                tree.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
 
                 tx.Commit();
             }
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var reader = tx.Root.Read("key/1").Reader;
+                var tree = tx.CreateTree("foo");
+                var reader = tree.Read("key/1").Reader;
                 Assert.Equal("123", reader.ToStringValue());
                 tx.Commit();
             }

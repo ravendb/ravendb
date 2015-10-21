@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Xunit;
 
@@ -9,9 +9,9 @@ namespace Voron.Tests.Storage
         [Fact]
         public void CanGrowBeyondInitialSize()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.CreateTree(tx, "test");
+                tx.CreateTree("test");
                 tx.Commit();
             }
 
@@ -20,9 +20,9 @@ namespace Voron.Tests.Storage
 
             for (int i = 0; i < 20; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
-                    var tree = tx.Environment.CreateTree(tx,"test");
+                    var tree = tx.CreateTree("test");
                     for (int j = 0; j < 12; j++)
                     {
                         tree.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
@@ -40,11 +40,12 @@ namespace Voron.Tests.Storage
 
             for (int i = 0; i < 20; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("test");
                     for (int j = 0; j < 12; j++)
                     {
-                        tx.Root.Add			(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+                        tree.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
                     }
                     tx.Commit();
                 }
@@ -53,9 +54,9 @@ namespace Voron.Tests.Storage
         [Fact]
         public void CanGrowBeyondInitialSize_WithAnotherTree()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.CreateTree(tx, "test");
+                tx.CreateTree("test");
                 tx.Commit();
             }
             var buffer = new byte[1024 * 512];
@@ -63,12 +64,13 @@ namespace Voron.Tests.Storage
 
             for (int i = 0; i < 20; i++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
 
+                    var tree = tx.CreateTree("test");
                     for (int j = 0; j < 12; j++)
                     {
-                        tx.Root.Add			(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+                        tree.Add(string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
                     }
                     tx.Commit();
                 }

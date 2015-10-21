@@ -20,24 +20,27 @@ namespace Voron.Tests.Storage
                 pager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        tx.Root.Add			("test/1", new MemoryStream());
+                        var tree = tx.CreateTree("foo");
+                        tree.Add("test/1", new MemoryStream());
                         tx.Commit();
                     }
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        tx.Root.Add			("test/2", new MemoryStream());
+                        var tree = tx.CreateTree("foo");
+                        tree.Add("test/2", new MemoryStream());
                         tx.Commit();
                     }
                 }
 
                 using (var env = new StorageEnvironment(pager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    using (var tx = env.ReadTransaction())
                     {
-                        Assert.NotNull(tx.Root.Read("test/1"));
-                        Assert.NotNull(tx.Root.Read("test/2"));
+                        var tree = tx.CreateTree("foo");
+                        Assert.NotNull(tree.Read("test/1"));
+                        Assert.NotNull(tree.Read("test/2"));
                         tx.Commit();
                     }
                 }
@@ -52,24 +55,27 @@ namespace Voron.Tests.Storage
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        tx.Root.Add			("test/1", new MemoryStream());
+                        var tree = tx.CreateTree("foo");
+                        tree.Add("test/1", new MemoryStream());
                         tx.Commit();
                     }
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        tx.Root.Add			("test/2", new MemoryStream());
+                        var tree = tx.CreateTree("foo");
+                        tree.Add("test/2", new MemoryStream());
                         tx.Commit();
                     }
                 }
 
                 using (var env = new StorageEnvironment(pureMemoryPager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    using (var tx = env.ReadTransaction())
                     {
-                        Assert.NotNull(tx.Root.Read("test/1"));
-                        Assert.NotNull(tx.Root.Read("test/2"));
+                        var tree = tx.CreateTree("foo");
+                        Assert.NotNull(tree.Read("test/1"));
+                        Assert.NotNull(tree.Read("test/2"));
                         tx.Commit();
                     }
                 }
@@ -84,14 +90,14 @@ namespace Voron.Tests.Storage
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        env.CreateTree(tx, "test");
+                       tx.CreateTree("test");
                         tx.Commit();
                     }
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        var tree = tx.Environment.CreateTree(tx,"test");
+                        var tree = tx.CreateTree("test");
                         tree.Add("test", Stream.Null);
                         tx.Commit();
 
@@ -101,15 +107,15 @@ namespace Voron.Tests.Storage
 
                 using (var env = new StorageEnvironment(pureMemoryPager))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        var tree = env.CreateTree(tx, "test");
+                        var tree = tx.CreateTree( "test");
                         tx.Commit();
                     }
 
-                    using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    using (var tx = env.ReadTransaction())
                     {
-                        var tree = tx.Environment.CreateTree(tx,"test");
+                        var tree = tx.CreateTree("test");
                         Assert.NotNull(tree.Read("test"));
                         tx.Commit();
                     }

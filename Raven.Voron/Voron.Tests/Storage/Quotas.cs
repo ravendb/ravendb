@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Quotas.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,11 +23,12 @@ namespace Voron.Tests.Storage
             var quotaEx = Assert.Throws<QuotaException>(() =>
             {
                 // everything in one transaction
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 1024; i++)
                     {
-                        tx.Root.Add			("items/" + i, new MemoryStream(new byte[1024]));
+                        tree.Add("items/" + i, new MemoryStream(new byte[1024]));
                     }
 
                     tx.Commit();

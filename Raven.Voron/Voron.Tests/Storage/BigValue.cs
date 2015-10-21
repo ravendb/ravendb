@@ -1,4 +1,4 @@
-using Sparrow;
+﻿using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,9 +27,10 @@ namespace Voron.Tests.Storage
             var random = new Random(43321);
             var buffer = new byte[1024 * 1024 * 6 + 283];
             random.NextBytes(buffer);
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+                var tree = tx.CreateTree("foo");
+                tree.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
                 tx.Commit();
             }
 
@@ -40,38 +41,43 @@ namespace Voron.Tests.Storage
 
             var old = Env.Options.DataPager.NumberOfAllocatedPages;
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Delete(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                tree.Delete(new Slice(BitConverter.GetBytes(1203)));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.Null(readResult);
             }
 
             if (restartCount >= 2)
                 RestartDatabase();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.Null(readResult);
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
                 buffer = new byte[1024 * 1024 * 3 + 1238];
                 random.NextBytes(buffer);
-                tx.Root.Add			(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+                var tree = tx.CreateTree("foo");
+                tree.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -83,9 +89,10 @@ namespace Voron.Tests.Storage
             if (restartCount >= 3)
                 RestartDatabase();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -96,9 +103,10 @@ namespace Voron.Tests.Storage
 
             Env.FlushLogToDataFile();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -110,11 +118,12 @@ namespace Voron.Tests.Storage
             if (restartCount >= 4)
                 RestartDatabase();
 
-            Assert.Equal(old ,Env.Options.DataPager.NumberOfAllocatedPages);
+            Assert.Equal(old, Env.Options.DataPager.NumberOfAllocatedPages);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -126,7 +135,7 @@ namespace Voron.Tests.Storage
 
         private static unsafe void CompareBuffers(byte[] buffer, MemoryStream memoryStream)
         {
-            fixed(byte* b = buffer)
+            fixed (byte* b = buffer)
             fixed (byte* c = memoryStream.GetBuffer())
                 Assert.Equal(0, Memory.Compare(b, c, buffer.Length));
         }
@@ -137,15 +146,17 @@ namespace Voron.Tests.Storage
             var random = new Random(43321);
             var buffer = new byte[1024 * 1024 * 15 + 283];
             random.NextBytes(buffer);
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+                var tree = tx.CreateTree("foo");
+                tree.Add(new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(1203)));
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read(new Slice(BitConverter.GetBytes(1203)));
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -160,23 +171,25 @@ namespace Voron.Tests.Storage
         {
             var buffers = new List<byte[]>();
             var random = new Random(43321);
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 1500; i++)
                 {
                     var buffer = new byte[912];
                     random.NextBytes(buffer);
                     buffers.Add(buffer);
-                    tx.Root.Add			(new Slice(BitConverter.GetBytes(i)), new MemoryStream(buffer));
+                    tree.Add(new Slice(BitConverter.GetBytes(i)), new MemoryStream(buffer));
                 }
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 1500; i++)
                 {
-                    var readResult = tx.Root.Read(new Slice(BitConverter.GetBytes(i)));
+                    var readResult = tree.Read(new Slice(BitConverter.GetBytes(i)));
                     Assert.NotNull(readResult);
 
                     var memoryStream = new MemoryStream();

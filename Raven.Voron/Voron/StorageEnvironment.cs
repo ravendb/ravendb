@@ -408,38 +408,37 @@ namespace Voron
 			Monitor.Exit(_txWriter);
         }
 
-		public StorageReport GenerateReport(LowLevelTransaction tx, bool computeExactSizes = false)
+		public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
 	    {
-            throw new NotImplementedException();
-            //var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
-            //var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
-            //var trees = new List<Tree>();
-            //using (var rootIterator = tx.Root.Iterate())
-            //{
-            //    if (rootIterator.Seek(Slice.BeforeAllKeys))
-            //    {
-            //        do
-            //        {
-            //            var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
-            //            trees.Add(tree);
+            var trees = new List<Tree>();
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate())
+            {
+                if (rootIterator.Seek(Slice.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+                        trees.Add(tree);
 
-            //        }
-            //        while (rootIterator.MoveNext());
-            //    }
-            //}
+                    }
+                    while (rootIterator.MoveNext());
+                }
+            }
 
-            //var generator = new StorageReportGenerator(tx);
+            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
 
-            //return generator.Generate(new ReportInput
-            //{
-            //    NumberOfAllocatedPages = numberOfAllocatedPages,
-            //    NumberOfFreePages = numberOfFreePages,
-            //    NextPageNumber = NextPageNumber,
-            //    Journals = Journal.Files.ToList(),
-            //    Trees = trees,
-            //    IsLightReport = !computeExactSizes
-            //});
+            return generator.Generate(new ReportInput
+            {
+                NumberOfAllocatedPages = numberOfAllocatedPages,
+                NumberOfFreePages = numberOfFreePages,
+                NextPageNumber = NextPageNumber,
+                Journals = Journal.Files.ToList(),
+                Trees = trees,
+                IsLightReport = !computeExactSizes
+            });
 	    }
 
 		public EnvironmentStats Stats()

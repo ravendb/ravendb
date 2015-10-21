@@ -9,6 +9,7 @@ using Voron.Platform.Win32;
 using Xunit;
 using Xunit.Extensions;
 using Raven.Unix.Native;
+using Voron.Trees;
 
 namespace Voron.Tests.Storage
 {
@@ -28,17 +29,19 @@ namespace Voron.Tests.Storage
         public void Should_be_able_to_read_and_write_lots_of_data()
         {
             CreatTestSchema();
-            var writeBatch = new WriteBatch();
             var testData = GenerateTestData().ToList();
 
-            foreach (var dataPair in testData)
-                writeBatch.Add(dataPair.Key, StreamFor(dataPair.Value), TestTreeName);
-
-            Env.Writer.Write(writeBatch);
-
-            using (var snapshot = Env.CreateSnapshot())
+            using (var tx = Env.WriteTransaction())
             {
-                using (var iterator = snapshot.Iterate(TestTreeName))
+                var tree = tx.CreateTree(TestTreeName);
+                foreach (var dataPair in testData)
+                    tree.Add(dataPair.Key, StreamFor(dataPair.Value));
+                tx.Commit();
+            }
+            
+            using (var snapshot = Env.ReadTransaction())
+            {
+                using (var iterator = snapshot.ReadTree(TestTreeName).Iterate())
                 {
                     Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -70,13 +73,15 @@ namespace Voron.Tests.Storage
         public void Should_be_able_to_read_and_write_small_values()
         {
             CreatTestSchema();
-            var writeBatch = new WriteBatch();
-            writeBatch.Add("key", StreamFor("value"), TestTreeName);
-            Env.Writer.Write(writeBatch);
-
-            using (var snapshot = Env.CreateSnapshot())
+            using (var tx = Env.WriteTransaction())
             {
-                var storedValue = Encoding.UTF8.GetString(snapshot.Read(TestTreeName, "key").Reader.AsStream().ReadData());
+                tx.CreateTree(TestTreeName).Add("key", StreamFor("value"));
+                tx.Commit();
+            }
+
+            using (var snapshot = Env.ReadTransaction())
+            {
+                var storedValue = Encoding.UTF8.GetString(snapshot.ReadTree(TestTreeName).Read("key").Reader.AsStream().ReadData());
                 Assert.Equal("value", storedValue);
             }
         }
@@ -104,7 +109,7 @@ namespace Voron.Tests.Storage
             Assert.DoesNotThrow(() => Env.Options.DataPager.EnsureContinuous(0, growthMultiplier));
             var testData = GenerateTestData().ToList();
             CreatTestSchema();
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.ReadTree(TestTreeName);
                 foreach (var dataPair in testData)
@@ -118,9 +123,9 @@ namespace Voron.Tests.Storage
 
         private void CreatTestSchema()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.CreateTree(tx, TestTreeName);
+                tx.CreateTree(TestTreeName);
                 tx.Commit();
             }
         }

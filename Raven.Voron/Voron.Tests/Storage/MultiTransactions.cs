@@ -14,16 +14,17 @@ namespace Voron.Tests.Storage
             {
                 for (int x = 0; x < 10; x++)
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
+                        var tree = tx.CreateTree("foo");
                         var value = new byte[100];
                         new Random().NextBytes(value);
                         var ms = new MemoryStream(value);
                         for (long i = 0; i < 100; i++)
                         {
                             ms.Position = 0;
-                            
-                            tx.Root.Add			((x * i).ToString("0000000000000000"), ms);
+
+                            tree.Add((x * i).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();
