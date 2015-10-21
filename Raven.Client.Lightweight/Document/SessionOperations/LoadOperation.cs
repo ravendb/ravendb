@@ -27,7 +27,7 @@ namespace Raven.Client.Document.SessionOperations
 		public void LogOperation()
 		{
 			if (log.IsDebugEnabled)
-				log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+			log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterLoadContext()

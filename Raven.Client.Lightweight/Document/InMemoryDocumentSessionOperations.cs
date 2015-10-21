@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -37,7 +38,6 @@ namespace Raven.Client.Document
 	{
 		protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-
 		private static int counter;
 
 		private readonly int hash = Interlocked.Increment(ref counter);
@@ -572,7 +572,7 @@ more responsive application.
 				// could happen because of primitive types, type name handling and references
 				jToken = (value != null) ? JToken.FromObject(value) : JValue.CreateNull();
 				return jToken;
-		}
+			}
 			catch (Exception ex)
 			{
 				throw new InvalidOperationException("This is a bug. Value should be JToken.", ex);
@@ -1165,7 +1165,7 @@ more responsive application.
 
 			var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 			var changedData = changes != null ? new List<DocumentsChanges>() : null;
-			
+
 			var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
 			var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
 
@@ -1331,18 +1331,19 @@ more responsive application.
 		protected void LogBatch(SaveChangesData data)
 		{
 			if (log.IsDebugEnabled)
-				log.Debug(() =>
+			log.Debug(() =>
+			{
+				var sb = new StringBuilder()
+					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+					.AppendLine();
+				foreach (var commandData in data.Commands)
 				{
-					var sb = new StringBuilder()
-						.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-						.AppendLine();
-					foreach (var commandData in data.Commands)
-					{
-						sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-					}
-					return sb.ToString();
-				});
+					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+				}
+				return sb.ToString();
+			});
 		}
+        }
 
 		public void RegisterMissing(string id)
 		{

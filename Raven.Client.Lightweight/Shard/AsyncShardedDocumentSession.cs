@@ -140,13 +140,19 @@ namespace Raven.Client.Shard
 
 		public Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
-			object existingEntity;
+            if (knownMissingIds.Contains(id))
+            {
+                return CompletedTask.With(default(T));
+            }
+
+            object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
 				return CompletedTask.With((T)existingEntity);
 			}
+		   
 
-			IncrementRequestCount();
+            IncrementRequestCount();
 			var shardRequestData = new ShardRequestData
 			{
 				EntityType = typeof(T),
@@ -411,8 +417,10 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-                            var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
+						    var multiLoadResult = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false));
+						    var items = multiLoadResult
 								.Results
+                                .Where(x=>x != null)
 								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
 								.Select(JsonExtensions.ToJObject)
 								.Select(
@@ -663,73 +671,78 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
+		async Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
 		{
-			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
-											 .ContinueWith(keysTask =>
-											 {
-												 keysTask.AssertNotFailed();
+			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
+			var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
+			try
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+				{
+					cachingScope.Dispose();
+					return ; // nothing to do here
+				}
 
-												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
-												 try
-												 {
-													 var data = PrepareForSaveChanges();
-													 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-													 {
-														 cachingScope.Dispose();
-														 return new CompletedTask(); // nothing to do here
-													 }
+				IncrementRequestCount();
+				LogBatch(data);
 
-													 IncrementRequestCount();
-													 LogBatch(data);
+				// split by shards
+				var saveChangesPerShard = await GetChangesToSavePerShardAsync(data);
 
-													 // split by shards
-													 var saveChangesPerShard = GetChangesToSavePerShard(data);
+				var saveTasks = new Task<BatchResult[]>[saveChangesPerShard.Count];
+				var saveChanges = new List<SaveChangesData>();
+				// execute on all shards
+				foreach (var shardAndObjects in saveChangesPerShard)
+				{
+					token.ThrowIfCancellationRequested();
+					var shardId = shardAndObjects.Key;
 
-													 var saveTasks = new List<Func<Task<BatchResult[]>>>();
-													 var saveChanges = new List<SaveChangesData>();
-													 // execute on all shards
-													 foreach (var shardAndObjects in saveChangesPerShard)
-													 {
-														 token.ThrowIfCancellationRequested();
-														 var shardId = shardAndObjects.Key;
+					IAsyncDatabaseCommands databaseCommands;
+					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+						throw new InvalidOperationException(
+							string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-														 IAsyncDatabaseCommands databaseCommands;
-														 if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
-															 throw new InvalidOperationException(
-																 string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
-
-														 var localCopy = shardAndObjects.Value;
-														 saveChanges.Add(localCopy);
-														 saveTasks.Add(() => databaseCommands.BatchAsync(localCopy.Commands.ToArray(), token));
-													 }
-
-													 return saveTasks.StartInParallel().ContinueWith(task =>
-													 {
-														 try
-														 {
-															 var results = task.Result;
-															 for (int index = 0; index < results.Length; index++)
-															 {
-																 token.ThrowIfCancellationRequested();
-																 UpdateBatchResults(results[index], saveChanges[index]);
-															 }
-														 }
-														 finally
-														 {
-															 cachingScope.Dispose();
-														 }
-													 }, token);
-												 }
-												 catch
-												 {
-													 cachingScope.Dispose();
-													 throw;
-												 }
-											 }, token).Unwrap();
+					var localCopy = shardAndObjects.Value;
+					saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
+					saveChanges.Add(localCopy);
+                }
+			    await Task.WhenAll(saveTasks);
+			    for (int index = 0; index < saveTasks.Length; index++)
+			    {
+			        var results = await saveTasks[index];
+			        UpdateBatchResults(results, saveChanges[index]);
+			    }
+			}
+			catch
+			{
+				cachingScope.Dispose();
+				throw;
+			}
+											 
 		}
 
-		protected override string GenerateKey(object entity)
+
+        protected async Task<Dictionary<string, SaveChangesData>> GetChangesToSavePerShardAsync(SaveChangesData data)
+        {
+            var saveChangesPerShard = CreateSaveChangesBatchPerShardFromDeferredCommands();
+
+            for (int index = 0; index < data.Entities.Count; index++)
+            {
+                var entity = data.Entities[index];
+                var metadata = await GetMetadataForAsync(entity);
+                var shardId = metadata.Value<string>(Constants.RavenShardId);
+                if (shardId == null)
+                    throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
+                var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
+                shardSaveChangesData.Entities.Add(entity);
+                shardSaveChangesData.Commands.Add(data.Commands[index]);
+            }
+            return saveChangesPerShard;
+        }
+
+
+        protected override string GenerateKey(object entity)
 		{
 			throw new NotSupportedException("Cannot generated key synchronously in an async session");
 		}

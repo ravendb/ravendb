@@ -223,6 +223,7 @@
     <Compile Include="DictionaryOfEnum.cs" />
     <Compile Include="DicWithDateTimeKeys.cs" />
     <Compile Include="DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
+    <Compile Include="DistinctBug.cs" />
     <Compile Include="DistinctWithPaging.cs" />
     <Compile Include="Dmitry.cs" />
     <Compile Include="DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
@@ -464,6 +465,7 @@
     <Compile Include="TransformerDictionaryOrderTests.cs" />
     <Compile Include="TransformerParameterTests.cs" />
     <Compile Include="TransformersAndEtags.cs" />
+    <Compile Include="TransformerTest.cs" />
     <Compile Include="TransformResultsWithProjection.cs" />
     <Compile Include="TransformWithConversionListener.cs" />
     <Compile Include="TransformWithLoad.cs" />
