@@ -186,10 +186,14 @@ namespace Voron.Tests.Trees
             const int numberOfFreedPages = 5000;
             var random = new Random();
             var freedPages = new HashSet<long>();
+            var allocatedPages = new List<long>(maxPageNumber);
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.State.NextPageNumber = maxPageNumber + 1;
+                for (int i = 0; i < maxPageNumber; i++)
+                {
+                     allocatedPages.Add(tx.LowLevelTransaction.AllocatePage(1).PageNumber);
+                }
 
                 tx.Commit();
             }
@@ -198,29 +202,19 @@ namespace Voron.Tests.Trees
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    var allPages = Env.AllPages(tx.LowLevelTransaction);
-                    long pageToFree;
 
                     do
                     {
-                        pageToFree = random.Next(0, maxPageNumber);
-                        var skip = false;
-                        foreach (var pages in allPages)
-                        {
-                            if (pages.Value.Contains(pageToFree))
-                            {
-                                skip = true;
-                                break;
-                            }
-                        }
-
-                        if (skip) continue;
-                        if (freedPages.Add(pageToFree))
+                        var idx = random.Next(0, allocatedPages.Count);
+                        if (allocatedPages[idx] == -1)
                             break;
+                        freedPages.Add(allocatedPages[idx]);
+                        Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, allocatedPages[idx]);
+                        allocatedPages[idx] = -1;
+
 
                     } while (true);
 
-                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
 
                     tx.Commit();
                 }
@@ -228,9 +222,9 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.WriteTransaction())
             {
-                var retrievedFreePages = Env.AllPages(tx.LowLevelTransaction)["Free Pages"];
+                var retrievedFreePages = Env.FreeSpaceHandling.AllPages(tx.LowLevelTransaction);
 
-                freedPages.ExceptWith(Env.FreeSpaceHandling.AllPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
+                //freedPages.ExceptWith(Env.FreeSpaceHandling.GetFreePagesOverheadPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
                 var sorted = freedPages.OrderBy(x => x).ToList();
 
                 Assert.Equal(sorted, retrievedFreePages);

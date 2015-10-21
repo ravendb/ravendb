@@ -408,18 +408,6 @@ namespace Voron
 			Monitor.Exit(_txWriter);
         }
 
-        public Dictionary<string, List<long>> AllPages(LowLevelTransaction tx)
-        {
-            var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
-                {
-                    {"Root", tx.RootObjects.AllPages()},
-                    {"Free Space Overhead", FreeSpaceHandling.AllPages(tx)},
-                    {"Free Pages", _freeSpaceHandling.AllPages(tx)}
-                };
-
-            return results;
-        }
-
 		public StorageReport GenerateReport(LowLevelTransaction tx, bool computeExactSizes = false)
 	    {
             throw new NotImplementedException();

@@ -225,14 +225,13 @@ namespace Voron.Trees.Fixed
                 largePtr->RootPageNumber = parentPage.PageNumber;
                 largePtr->Depth++;
                 largePtr->PageCount++;
-                var dataStart = GetSeparatorKeyAtPosition(parentPage);
+                var dataStart = GetSeparatorKeyAtPosition(parentPage, 0);
                 dataStart[0] = long.MinValue;
                 dataStart[1] = page.PageNumber;
 
             }
 
             parentPage = _parent.ModifyPage(parentPage);
-
             if (page.IsLeaf) // simple case of splitting a leaf pageNum
             {
                 var newPage = _parent.NewPage(TreePageFlags.Leaf | TreePageFlags.FixedSize, 1);
@@ -240,6 +239,14 @@ namespace Voron.Trees.Fixed
                 newPage.FixedSize_ValueSize = _valSize;
                 newPage.FixedSize_NumberOfEntries = 0;
                 largePtr->PageCount++;
+
+                if (FreeSpaceTree)
+                {
+                    // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
+                    // because the allocation of a new page called above could remove some sections
+                    // from the page that is being split
+                    BinarySearch(page, key);
+                }
 
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
@@ -257,7 +264,7 @@ namespace Voron.Trees.Fixed
                         page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * _entrySize),
                         newPage.FixedSize_NumberOfEntries * _entrySize
                         );
-                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key, newPage.PageNumber);
+                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, KeyFor(newPage,0), newPage.PageNumber);
                 }
                 return null;// we don't care about it for leaf pages
             }
@@ -271,12 +278,19 @@ namespace Voron.Trees.Fixed
 
                 if (page.LastMatch > 0)
                     page.LastSearchPosition++;
+
+                if (FreeSpaceTree)
+                {
+                    // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
+                    // because the allocation of a new page called above could remove some sections
+                    // from the page that is being split
+                    BinarySearch(page, key);
+                }
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
                 {
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
-
-                    var dataStart = GetSeparatorKeyAtPosition(newPage);
+                    var dataStart = GetSeparatorKeyAtPosition(newPage, page.LastSearchPosition);
                     dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
                     dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
@@ -795,7 +809,7 @@ namespace Voron.Trees.Fixed
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long* GetSeparatorKeyAtPosition(TreePage page, int position = 0)
+        private long* GetSeparatorKeyAtPosition(TreePage page, int position)
         {
             var dataStart = (long*)(page.Base + page.FixedSize_StartPosition + (BranchEntrySize * position));
             return dataStart;
@@ -1165,35 +1179,8 @@ namespace Voron.Trees.Fixed
             }
         }
 
-        public IEnumerable<long> OverheadPages()
-        {
-            var list = new List<long>();
-            var header = _parent.DirectRead(_treeName);
-            if (header == null)
-                return list;
-            var flags = ((FixedSizeTreeHeader.Embedded*)header)->Flags;
-            if (flags != FixedSizeTreeHeader.OptionFlags.Embedded)
-                return list;
-
-            var stack = new Stack<long>();
-            stack.Push(((FixedSizeTreeHeader.Large*)header)->RootPageNumber);
-
-            while (stack.Count > 0)
-            {
-                var page = _tx.GetReadOnlyTreePage(stack.Pop());
-                list.Add(page.PageNumber);
-                if (page.IsBranch == false)
-                    continue;
-                for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
-                {
-                    stack.Push(PageValueFor(page, i));
-                }
-            }
-
-            return list;
-        }
-
-        public long FreeSpaceOverHead
+       
+        public long PageCount
         {
             get
             {
@@ -1213,6 +1200,8 @@ namespace Voron.Trees.Fixed
                 }
             }
         }
+
+        public bool FreeSpaceTree { get; set; }
 
         [Conditional("DEBUG")]
         public void DebugRenderAndShow()

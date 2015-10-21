@@ -312,17 +312,20 @@ namespace Voron.Impl.FreeSpace
 
 	    public long GetFreePagesOverhead(LowLevelTransaction tx)
 	    {
-	        return GetFreeSpaceTree(tx).FreeSpaceOverHead;
+	        return GetFreeSpaceTree(tx).PageCount;
 	    }
 
         public IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx)
         {
-            return GetFreeSpaceTree(tx).OverheadPages();
+            return GetFreeSpaceTree(tx).AllPages();
         }
 
 	    private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
 	    {
-	        return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260);
+	        return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260)
+	        {
+	            FreeSpaceTree =true
+	        };
 	    }
 	}
 }
