@@ -255,7 +255,7 @@ namespace Voron.Trees.Fixed
                         page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * _entrySize),
                         newPage.FixedSize_NumberOfEntries * _entrySize
                         );
-                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key, newPage.PageNumber);
+                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, KeyFor(newPage,0), newPage.PageNumber);
                 }
                 return null;// we don't care about it for leaf pages
             }
