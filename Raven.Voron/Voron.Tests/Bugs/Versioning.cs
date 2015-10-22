@@ -41,7 +41,7 @@
 			{
 				for (var i = 0; i < DocumentCount; i++)
 				{
-				    var readTree = snapshot.ReadTree("tree1");
+				    var readTree = snapshot.CreateTree("tree1");
 				    var result = readTree.Read("Foo" + 1);
 					readTree.Delete("Foo" + i, result.Version);
 				}

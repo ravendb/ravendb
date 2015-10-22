@@ -192,10 +192,18 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Bugs\Data\data.txt" />
-    <Content Include="Bugs\Data\data2.txt" />
-    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt" />
-    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt" />
+    <Content Include="Bugs\Data\data.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\data2.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

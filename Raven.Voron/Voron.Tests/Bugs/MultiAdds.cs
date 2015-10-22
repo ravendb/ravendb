@@ -266,7 +266,7 @@ namespace Voron.Tests.Bugs
 		{
 			var results = new List<string>();
 
-			using (var tx = env.ReadTransaction())
+			using (var tx = env.WriteTransaction())
 			{
 				for (var i = 0; i < number; i++)
 				{

@@ -23,7 +23,7 @@ namespace Voron.Tests.Bugs
 				}
 
 				using (var snapshot = Env.ReadTransaction())
-				using (var iterator = snapshot.CreateTree("queue1").MultiRead(treeName))
+				using (var iterator = snapshot.CreateTree(treeName).MultiRead("queue1"))
 				{
 					Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
