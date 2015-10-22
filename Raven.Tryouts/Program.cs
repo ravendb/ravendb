@@ -6,6 +6,7 @@ using System.Transactions;
 using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;
+using Raven.Tests.Issues.Prefetcher;
 
 namespace Raven.Tryouts
 {
@@ -13,44 +14,15 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			IOExtensions.DeleteDirectory("\\FooBar");
-			using (var store = new EmbeddableDocumentStore
-			{
-				DataDirectory = "\\FooBar"
-			})
-			{
-				store.Initialize();
+		    for (int i = 0; i < 10; i++)
+		    {
+		        Console.WriteLine(i);
 
-				ThreadPool.SetMinThreads(25, 25);
-
-				using (var bulk = store.BulkInsert())
-				{
-					for (int i = 1; i < 1001; i++)
-					{
-						Console.WriteLine(i);
-						bulk.Store(new { Foo = i }, "foobar/" + i);
-					}
-				}
-
-				Console.WriteLine("Warming up, jit, etc.");
-				for (int i = 0; i < 5; i++)
-				{
-					MeasureRunSync(store);
-				}
-
-				Console.WriteLine("Start loading test");
-				long total = 0;
-				int counter = 0;
-				Parallel.For(0, 1, _ =>
-				{
-					for (int i = 0; i < 15; i++)
-					{
-						Interlocked.Increment(ref counter);
-						Interlocked.Add(ref total, MeasureRunSync(store));
-					}
-				});
-				Console.WriteLine("average : " + (total / (decimal)counter));
-			}
+		        using (var x = new RavenDB_3581())
+		        {
+                    x.DisposeShouldCleanFutureBatches();
+		        }
+		    }
 		}
 
 		private static long MeasureRunSync(EmbeddableDocumentStore store)
