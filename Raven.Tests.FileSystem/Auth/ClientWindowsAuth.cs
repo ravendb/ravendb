@@ -60,11 +60,14 @@ namespace Raven.Tests.FileSystem.Auth
         {
             var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
 
-            var ms = new MemoryStream(new byte[]{1, 2, 4});
+            var ms = new MemoryStream(new byte[1024 * 1024 * 10]);
 
             await client.UploadAsync("/dir/ms.bin", ms);
+	        ms.Position = 0;
+			await client.UploadAsync("/dir/ms.bin", ms);
 
-            var result = await client.DownloadAsync("/dir/ms.bin");
+			var result = new MemoryStream();
+			(await client.DownloadAsync("/dir/ms.bin")).CopyTo(result);
 
             ms.Position = 0;
             result.Position = 0;
@@ -143,9 +146,9 @@ namespace Raven.Tests.FileSystem.Auth
         {
             var configClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
 
-            await configClient.SetKeyAsync("test-conf", new NameValueCollection() { { "key", "value" } });
+            await configClient.SetKeyAsync("test-conf", new RavenJObject() { { "key", "value" } });
 
-            var config = await configClient.GetKeyAsync<NameValueCollection>("test-conf");
+            var config = await configClient.GetKeyAsync<RavenJObject>("test-conf");
 
             Assert.Equal("value", config["key"]);
 
@@ -172,13 +175,14 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task ShouldThrowWhenWindowsDocumentDoesNotContainFileSystem()
         {
             // in this test be careful if the specified credentials belong to admin user or not
+			// to make this test to you need to specify the credentials of a user who isn't an admin on this machine
 
             var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));
 
-            using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesnContainsThisFS", 
+            using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesNotContainsThisFS", 
                 credentials: new NetworkCredential(username, password, domain)))
             {
                 await anotherClient.EnsureFileSystemExistsAsync(); // will pass because by using this api key we have access to <system> database
@@ -187,8 +191,8 @@ namespace Raven.Tests.FileSystem.Auth
 
                 try
                 {
-                    await anotherClient.UploadAsync("def.bin", new RandomStream(1)); // should throw because a file system ShouldThrow_ApiKeyDoesnContainsThisFS isn't added to ApiKeyDefinition
-                }
+                    await anotherClient.UploadAsync("def.bin", new MemoryStream(1)); // should throw because a file system ShouldThrow_WindowsDocumentDoesNotContainsThisFS isn't added to ApiKeyDefinition
+				}
                 catch (InvalidOperationException ex)
                 {
                     errorResponse = ex.InnerException as ErrorResponseException;
