@@ -176,6 +176,8 @@ namespace Raven.Database.Impl
                                 var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
                                 foreach (var property in result)
                                 {
+                                    if (property.Value == null ) continue;
+
                                     queryResult.Projection[property.Key] = property.Value;
                                 }
                             }
