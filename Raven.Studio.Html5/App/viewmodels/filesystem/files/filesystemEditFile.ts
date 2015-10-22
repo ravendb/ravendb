@@ -189,7 +189,6 @@ class filesystemEditFile extends viewModelBase {
     }
 
     appendRecentFile(fileId: string) {
-
         var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName == this.filesystemForEditedFile.name);
         if (existingRecentFilesStore) {
             var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
@@ -199,11 +198,9 @@ class filesystemEditFile extends viewModelBase {
                 }
                 existingRecentFilesStore.recentFiles.unshift(fileId);
             }
-
         } else {
             filesystemEditFile.recentDocumentsInFilesystem.push({ filesystemName: this.filesystemForEditedFile.name, recentFiles: ko.observableArray([fileId]) });
         }
-
     }
 
     private stringify(obj: any) {

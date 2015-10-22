@@ -23,7 +23,7 @@ namespace Raven.Client.Counters
 			}
 		}
 
-		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
+		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
 			var requestUriString = String.Format("{0}/cs/{1}/replications/save", Url, Name);
