@@ -36,6 +36,11 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public IndexLockMode LockMode { get; set; }
 
+        /// <summary>
+        /// Index version, used in index replication in order to identify if two indexes are indeed the same.
+        /// </summary>
+        public int? IndexVersion { get; set; }
+
 		/// <summary>
 		/// Index map function, if there is only one
 		/// </summary>

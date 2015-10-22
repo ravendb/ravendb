@@ -211,7 +211,7 @@ namespace Raven.Database.Json
 					jintEngine.SetValue(kvp.Key, jsInstance);
 				}
 			}
-			
+
 			jintEngine.ResetStatementsCount();
 		}
 
@@ -230,6 +230,7 @@ namespace Raven.Database.Json
 				cfg.AllowDebuggerStatement(false);
 #endif
 				cfg.LimitRecursion(1024);
+				cfg.NullPropagation();
 				cfg.MaxStatements(int.MaxValue); // allow lodash to load
 			});
 

@@ -13,26 +13,17 @@ namespace Raven.Database.TimeSeries.Controllers
 	{
 		protected string TimeSeriesName
 		{
-			get
-			{
-				return ResourceName;
-			}
+			get { return ResourceName; }
 		}
 
 		protected TimeSeriesStorage TimeSeries
 		{
-			get
-			{
-				return Resource;
-			}
+			get { return Resource; }
 		}
 
 		public override ResourceType ResourceType
 		{
-			get
-			{
-				return ResourceType.TimeSeries;
-			}
+			get { return ResourceType.TimeSeries; }
 		}
 
 		public override void MarkRequestDuration(long duration)

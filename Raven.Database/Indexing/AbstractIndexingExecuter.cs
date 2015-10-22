@@ -22,7 +22,7 @@ namespace Raven.Database.Indexing
 	    protected readonly IndexReplacer indexReplacer;
 
 	    protected TaskScheduler scheduler;
-        protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
+        protected readonly ILog Log;
         protected ITransactionalStorage transactionalStorage;
         protected int workCounter;
         protected int lastFlushedWorkCounter;
@@ -31,6 +31,7 @@ namespace Raven.Database.Indexing
 
         protected AbstractIndexingExecuter(WorkContext context, IndexReplacer indexReplacer)
         {
+            Log = LogManager.GetLogger(GetType());
             this.transactionalStorage = context.TransactionalStorage;
             this.context = context;
 	        this.indexReplacer = indexReplacer;

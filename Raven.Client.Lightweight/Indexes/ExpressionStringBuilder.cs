@@ -273,7 +273,7 @@ namespace Raven.Client.Indexes
                 switch (instance.NodeType)
                 {
                     case ExpressionType.MemberAccess:
-                        var memberExpression = ((MemberExpression) instance);
+                        var memberExpression = ((MemberExpression)instance);
                         if (memberName == null)
                         {
                             memberName = memberExpression.Member.Name;
@@ -281,7 +281,7 @@ namespace Raven.Client.Indexes
                         instance = memberExpression.Expression;
                         break;
                     case ExpressionType.Parameter:
-                        var parameterExpression = ((ParameterExpression) instance);
+                        var parameterExpression = ((ParameterExpression)instance);
                         if (memberName == null)
                         {
                             memberName = parameterExpression.Name;
@@ -311,7 +311,7 @@ namespace Raven.Client.Indexes
 				{
 					string propName;
 					var customAttributeType = customAttribute.GetType();
-					if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+                    if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
 						continue;
 					switch (customAttributeType.Name)
 					{
@@ -688,7 +688,7 @@ namespace Raven.Client.Indexes
 					else
 					{
 						right = convention.SaveEnumsAsIntegers
-                                    ? Expression.Constant((int)constantExpression.Value)
+                                    ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
 									: Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
 					}
@@ -799,7 +799,7 @@ namespace Raven.Client.Indexes
 			if (node.Value == null)
 			{
 				// Avoid converting/casting the type, if it already converted/casted.
-				if(_currentPrecedence == ExpressionOperatorPrecedence.Assignment)
+                if (_currentPrecedence == ExpressionOperatorPrecedence.Assignment)
 					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
 				Out("null");
 				return node;
@@ -1025,20 +1025,20 @@ namespace Raven.Client.Indexes
 
 		private bool TypeExistsOnServer(Type type)
 		{
-			if (type.Assembly == typeof(object).Assembly) // mscorlib
+            if (type.Assembly == typeof(object).Assembly) // mscorlib
 				return true;
 
-			if (type.Assembly == typeof (Uri).Assembly) // System assembly
+            if (type.Assembly == typeof(Uri).Assembly) // System assembly
 				return true;
 
-			if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
+            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
 				return true;
 
-			if (type.Assembly == typeof(RavenJObject).Assembly)
+            if (type.Assembly == typeof(RavenJObject).Assembly)
 				return true;
 
-			if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
-				type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
+            if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
+                type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
 				return true;
 
 			return false;
@@ -1683,10 +1683,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
 		{
-			var declaringType = node.Method.DeclaringType;
-			if (declaringType == null)
-				return false;
-			if (declaringType.Name == "Enumerable")
+            var declaringType = node.Method.DeclaringType;
+            if (declaringType == null)
+                return false;
+            if (declaringType.Name == "Enumerable")
 			{
 				switch (node.Method.Name)
 				{
@@ -1847,25 +1847,42 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.NewArrayInit:
 					Out("new ");
+                    OutputAppropriateArrayType(node);
+                    Out("[]");
+                    VisitExpressions('{', node.Expressions, '}');
+                    return node;
+
+                case ExpressionType.NewArrayBounds:
+                    Out("new ");
+                    OutputAppropriateArrayType(node);
+                    VisitExpressions('[', node.Expressions, ']');
+                    return node;
+            }
+            return node;
+        }
+
+        private void OutputAppropriateArrayType(NewArrayExpression node)
+        {
 					if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
 					{
 						Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
 					}
-					else if (node.Expressions.Count == 0)
+            else
 					{
+                switch (node.NodeType)
+                {
+                    case ExpressionType.NewArrayInit:
+                        if (node.Expressions.Count == 0)
+                        {
 						Out("object");
 					}
-					Out("[]");
-					VisitExpressions('{', node.Expressions, '}');
-					return node;
-
+                        break;
 				case ExpressionType.NewArrayBounds:
-					Out("new " + node.Type.GetElementType());
-					VisitExpressions('[', node.Expressions, ']');
-					return node;
+                        Out("object");
+                        break;
 			}
-			return node;
 		}
+        }
 
 		private static bool CheckIfAnonymousType(Type type)
 		{
@@ -2232,7 +2249,7 @@ namespace Raven.Client.Indexes
 			if (nonNullableType.IsEnum)
 				return true;
 
-			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
+            return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
 		}
 	}
 }

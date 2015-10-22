@@ -103,7 +103,7 @@ namespace Voron.Platform.Win32
 
 		public override string ToString()
 		{
-			return GetSourceName() + ", Length: " + _totalAllocationSize;
+			return string.Format("{0}, Length: {1:#,#.##;;0} MB", GetSourceName(), _totalAllocationSize / 1024d / 1024d);
 		}
 
 		private PagerState AllocateMorePagesAndRemapContinuously(long allocationSize)

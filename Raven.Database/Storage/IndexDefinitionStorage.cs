@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -460,8 +461,19 @@ namespace Raven.Database.Storage
         {
             var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
             if (currentIndexDefinition == null)
+            {
+                if (CheckIfIndexIsBeenDeleted(newIndexDef))
+                {
+                    //index is been deleted ignoring this index
+                    return IndexCreationOptions.Noop;
+                }
+                if (newIndexDef.IndexVersion == null)
+                    newIndexDef.IndexVersion = 0;
                 return IndexCreationOptions.Create;
-
+            }
+            
+            if (newIndexDef.IndexVersion == null)
+                newIndexDef.IndexVersion = currentIndexDefinition.IndexVersion + 1;
             if (currentIndexDefinition.IsTestIndex) // always update test indexes
                 return IndexCreationOptions.Update;
 
@@ -475,7 +487,41 @@ namespace Raven.Database.Storage
                 ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
         }
 
-        public bool Contains(string indexName)
+        private bool CheckIfIndexIsBeenDeleted(IndexDefinition definition)
+        {
+            return CheckIfIndexVersionIsEqualOrSmaller(definition, Constants.RavenReplicationIndexesTombstones)
+                || CheckIfIndexVersionIsEqualOrSmaller(definition, "Raven/Indexes/PendingDeletion");
+        }
+
+        private bool CheckIfIndexVersionIsEqualOrSmaller(IndexDefinition definition, string listName)
+        {
+            bool res = false;
+            if (definition.IndexVersion == null) return false;
+            transactionalStorage.Batch(action =>
+            {
+                var li = action.Lists.Read(listName, definition.Name);
+                if (li == null) return;
+                int version;
+                string versionStr = li.Data.Value<string>("IndexVersion");
+                // The index that we are trying to add is deleted
+                if (int.TryParse(versionStr, out version))
+                {
+                    if (version >= definition.IndexVersion.Value)
+                    {
+                        if (version > definition.IndexVersion.Value)
+                            logger.Error("Trying to add an index ({0}) with a version smaller than the deleted version, this should not happen", definition.Name);
+                        res = true;
+                    }
+                }
+                else
+                {
+                    logger.Error("Failed to parse index version of index {0}", definition.Name);
+                }
+            });
+            return res;
+        }
+
+public bool Contains(string indexName)
         {
             return indexNameToId.ContainsKey(indexName);
         }

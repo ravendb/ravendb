@@ -18,7 +18,7 @@ namespace Rhino.Licensing
 	/// <summary>
 	/// Base license validator.
 	/// </summary>
-	public abstract class AbstractLicenseValidator
+	public abstract class AbstractLicenseValidator : IDisposable
 	{
 		/// <summary>
 		/// License validator logger
@@ -265,8 +265,18 @@ namespace Rhino.Licensing
 						// we explicitly don't want bad things to happen if we can't do that
 						Logger.ErrorException("Could not setup node discovery", e);
 					}
-			        discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
-			        discoveryClient.PublishMyPresence();
+			        if (discoveryClient == null)
+			        {
+			            lock (this)
+			            {
+			                if (discoveryClient == null)
+			                {
+                                discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
+			                }
+			            }
+			        }
+                    discoveryClient.PublishMyPresence();
+
 			    }
 			    return;
 			}
@@ -653,5 +663,10 @@ namespace Rhino.Licensing
 
 			}
 		}
+
+	    public void Dispose()
+        {
+            discoveryHost.Dispose();
+        }
 	}
 }

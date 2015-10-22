@@ -270,20 +270,20 @@ namespace Raven.Tests.Replication
 				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
 				SpinWait.SpinUntil(() => replicationTask.TransformerReplication.Execute());
 
-				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+				var expectedTransformerNames = new List<string>()
 				{ 
-                    anotherTransformer.TransformerName, 
-                    userTransformer.TransformerName, 							
-					yetAnotherTransformer.TransformerName 
-                };
-
-				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
+							anotherTransformer.TransformerName, 
+							yetAnotherTransformer.TransformerName };
+                expectedTransformerNames.Sort();
+                var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+                transformerNamesAtDestination1.Sort();
+                transformerNamesAtDestination2.Sort();
+                transformerNamesAtDestination3.Sort();
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3);
 			}
 		}
 
@@ -374,12 +374,11 @@ namespace Raven.Tests.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(anotherTransformer.TransformerName, anotherTransformer.CreateTransformerDefinition());
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
 
-				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+				var expectedTransformerNames = new List<string>()
 				{ 
-                    anotherTransformer.TransformerName, 
-                    userTransformer.TransformerName, 							
-					yetAnotherTransformer.TransformerName 
-                };
+							anotherTransformer.TransformerName, 
+							yetAnotherTransformer.TransformerName };
+                expectedTransformerNames.Sort();
 				
 				// ReSharper disable once AccessToDisposedClosure
 				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
@@ -391,13 +390,15 @@ namespace Raven.Tests.Replication
 				});
 				replicationRequest.ExecuteRequest();
 
-				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
-	
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2.Select(x => x.Name));
-                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3.Select(x => x.Name));
+				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024).Select(x => x.Name).ToList();
+                transformerNamesAtDestination1.Sort();
+                transformerNamesAtDestination2.Sort();
+                transformerNamesAtDestination3.Sort();
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination1);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination2);
+                Assert.Equal(expectedTransformerNames, transformerNamesAtDestination3);
 			}
 		}
 

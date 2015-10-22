@@ -258,8 +258,8 @@ namespace Voron.Debugging
 		private unsafe static void RenderFixedSizeTreePage(Transaction tx, TreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
 		{
 			sw.WriteLine(
-				"<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
-				page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text);
+				"<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
+				page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text, page.Source);
 
 			for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
 			{
@@ -272,12 +272,10 @@ namespace Voron.Debugging
 				else
 				{
 					var key =
-					 *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
+					 *(long*)(page.Base + page.FixedSize_StartPosition + (sizeof(long) + sizeof(long)) * i);
 					var pageNum = *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
-					var s = key.ToString("#,#");
-					if (i == 0)
-						s = "[smallest]";
+					var s = key == long.MinValue ? "[smallest]" : key.ToString("#,#");
 
 					RenderFixedSizeTreePage(tx, tx.GetReadOnlyPage(pageNum), sw, header, s, false);
 				}

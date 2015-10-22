@@ -97,7 +97,6 @@
     <TypeScriptCompile Include="App\viewmodels\counter\counterStorageStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounter.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\patch\patch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebug.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugChanges.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugConfig.ts" />
@@ -141,7 +140,6 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
-    <TypeScriptCompile Include="App\common\bindingHelpers\datePickerBindingHandler.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />
@@ -1322,6 +1320,7 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
+	<Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
   <ProjectExtensions>
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">

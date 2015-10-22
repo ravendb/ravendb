@@ -114,6 +114,10 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public string Name { get; set; }
 
+        /// <summary>
+        /// The index version that changed
+        /// </summary>
+        public int? Version { get; set; }
 		/// <summary>
 		/// TODO [ppekrol]
 		/// </summary>

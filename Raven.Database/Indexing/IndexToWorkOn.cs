@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 
 		public override string ToString()
 		{
-			return string.Format("IndexId: {0}, LastIndexedEtag: {1}", IndexId, LastIndexedEtag);
+			return string.Format("Index: {0}, LastIndexedEtag: {1}", Index == null ? IndexId.ToString() : Index.PublicName, LastIndexedEtag);
 		}
 	}
 }
