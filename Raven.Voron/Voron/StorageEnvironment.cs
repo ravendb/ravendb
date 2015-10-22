@@ -132,6 +132,9 @@ namespace Voron
 
                 var buffer = new byte[16];
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                if(dbIdBytes != 16)
+                    throw new InvalidDataException("The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
+
                 DbId = new Guid(buffer);
 
                 var schemaVersion = metadataTree.Read("schema-version");
