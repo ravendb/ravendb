@@ -580,6 +580,10 @@
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj">
+      <Project>{44a7d299-5ae6-4e2e-9e32-18cb9fd82264}</Project>
+      <Name>Raven.Tests.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>

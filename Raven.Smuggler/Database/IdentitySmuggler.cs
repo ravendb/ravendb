@@ -26,6 +26,12 @@ namespace Raven.Smuggler.Database
 		{
 			using (var actions = Destination.IdentityActions())
 			{
+				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				{
+					await Source.SkipIdentitiesAsync(cancellationToken).ConfigureAwait(false);
+					return;
+				}
+
 				int readCount = 0, filteredCount = 0, writeCount = 0;
 				var retries = Source.SupportsRetries ? DatabaseSmuggler.NumberOfRetries : 1;
 				do

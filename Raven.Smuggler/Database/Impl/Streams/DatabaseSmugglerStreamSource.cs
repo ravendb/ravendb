@@ -125,7 +125,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
 		{
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, cancellationToken, _options));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, cancellationToken));
 		}
 
 		public Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
@@ -235,6 +235,43 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new CompletedTask<SmuggleType>(SmuggleType.None);
 		}
 
+		public Task SkipDocumentsAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		public Task SkipIndexesAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		public Task SkipTransformersAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		public Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		public Task SkipIdentitiesAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		private Task SkipAsync(CancellationToken cancellationToken)
+		{
+			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+
+				RavenJToken.ReadFrom(_reader);
+			}
+
+			return new CompletedTask();
+		}
+
 		public void Dispose()
 		{
 			_streamReader?.Dispose();
@@ -251,14 +288,11 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 			private readonly CancellationToken _cancellationToken;
 
-			private readonly DatabaseSmugglerOptions _options;
-
-			public YieldJsonResults(Etag fromEtag, JsonTextReader reader, CancellationToken cancellationToken, DatabaseSmugglerOptions options)
+			public YieldJsonResults(Etag fromEtag, JsonTextReader reader, CancellationToken cancellationToken)
 			{
 				_fromEtag = fromEtag;
 				_reader = reader;
 				_cancellationToken = cancellationToken;
-				_options = options;
 			}
 
 			public void Dispose()
@@ -275,9 +309,6 @@ namespace Raven.Smuggler.Database.Impl.Streams
 					_cancellationToken.ThrowIfCancellationRequested();
 
 					var document = (RavenJObject)RavenJToken.ReadFrom(_reader);
-
-					if (_options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
-						continue;
 
 					var etag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 					if (EtagUtil.IsGreaterThan(_fromEtag, etag))

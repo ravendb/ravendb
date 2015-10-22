@@ -117,9 +117,6 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public async Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
 		{
-			if (_options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
-				return new EmptyAsyncEnumerator<RavenJObject>();
-
 			return await _store
 				.AsyncDatabaseCommands
 				.StreamDocsAsync(fromEtag, pageSize: pageSize, token: cancellationToken)
@@ -199,24 +196,30 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		{
 			return new CompletedTask<SmuggleType>(_types[_typeIndex++]);
 		}
-	}
 
-	public class EmptyAsyncEnumerator<T> : IAsyncEnumerator<RavenJObject>
-	{
-		public EmptyAsyncEnumerator()
+		public Task SkipDocumentsAsync(CancellationToken cancellationToken)
 		{
-			Current = null;
+			return new CompletedTask();
 		}
 
-		public void Dispose()
+		public Task SkipIndexesAsync(CancellationToken cancellationToken)
 		{
+			return new CompletedTask();
 		}
 
-		public Task<bool> MoveNextAsync()
+		public Task SkipTransformersAsync(CancellationToken cancellationToken)
 		{
-			return new CompletedTask<bool>(false);
+			return new CompletedTask();
 		}
 
-		public RavenJObject Current { get; }
+		public Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken)
+		{
+			return new CompletedTask();
+		}
+
+		public Task SkipIdentitiesAsync(CancellationToken cancellationToken)
+		{
+			return new CompletedTask();
+		}
 	}
 }

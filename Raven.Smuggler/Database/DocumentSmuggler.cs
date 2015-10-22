@@ -38,6 +38,12 @@ namespace Raven.Smuggler.Database
 		{
 			using (var actions = Destination.DocumentActions())
 			{
+				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				{
+					await Source.SkipDocumentsAsync(cancellationToken).ConfigureAwait(false);
+					return;
+				}
+
 				var lastEtag = state.LastDocsEtag;
 				var maxEtag = _maxEtags.LastDocsEtag;
 				var now = SystemTime.UtcNow;

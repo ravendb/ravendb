@@ -28,6 +28,12 @@ namespace Raven.Smuggler.Database
 				if (Source.SupportsDocumentDeletions == false)
 					return;
 
+				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				{
+					await Source.SkipDocumentDeletionsAsync(cancellationToken).ConfigureAwait(false);
+					return;
+				}
+
 				var enumerator = await Source
 					.ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, _maxEtags.LastDocDeleteEtag.IncrementBy(1), cancellationToken)
 					.ConfigureAwait(false);

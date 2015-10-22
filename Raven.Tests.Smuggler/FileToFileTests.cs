@@ -3,21 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.IO;
 
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Impl.Files;
 using Raven.Smuggler.Database.Impl.Remote;
-using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Smuggler
 {
-	public class FileToFileTests : ReplicationBase
+	public class FileToFileTests : SmugglerTest
 	{
 		[Fact]
 		public void Northwind_RemoteToFile_FileToRemote_Test()

@@ -26,6 +26,12 @@ namespace Raven.Smuggler.Database
 		{
 			using (var actions = Destination.IndexActions())
 			{
+				if (Options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
+				{
+					await Source.SkipIndexesAsync(cancellationToken).ConfigureAwait(false);
+					return;
+				}
+
 				var count = 0;
 				var retries = Source.SupportsRetries ? DatabaseSmuggler.NumberOfRetries : 1;
 				var pageSize = Source.SupportsPaging ? Options.BatchSize : int.MaxValue;

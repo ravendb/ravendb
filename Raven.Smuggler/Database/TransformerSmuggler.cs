@@ -26,6 +26,12 @@ namespace Raven.Smuggler.Database
 		{
 			using (var actions = Destination.TransformerActions())
 			{
+				if (Options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
+				{
+					await Source.SkipTransformersAsync(cancellationToken).ConfigureAwait(false);
+					return;
+				}
+
 				var count = 0;
 				var retries = Source.SupportsRetries ? DatabaseSmuggler.NumberOfRetries : 1;
 				var pageSize = Source.SupportsPaging ? Options.BatchSize : int.MaxValue;

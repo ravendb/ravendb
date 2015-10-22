@@ -49,5 +49,15 @@ namespace Raven.Smuggler.Database
 		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken);
 
 		Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken);
+
+		Task SkipDocumentsAsync(CancellationToken cancellationToken);
+
+		Task SkipIndexesAsync(CancellationToken cancellationToken);
+
+		Task SkipTransformersAsync(CancellationToken cancellationToken);
+
+		Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken);
+
+		Task SkipIdentitiesAsync(CancellationToken cancellationToken);
 	}
 }
