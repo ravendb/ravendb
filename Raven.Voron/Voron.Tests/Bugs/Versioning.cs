@@ -42,7 +42,7 @@
 				for (var i = 0; i < DocumentCount; i++)
 				{
 				    var readTree = snapshot.CreateTree("tree1");
-				    var result = readTree.Read("Foo" + 1);
+				    var result = readTree.Read("Foo" + i);
 					readTree.Delete("Foo" + i, result.Version);
 				}
 			}

@@ -258,6 +258,8 @@ namespace Voron.Tests.Bugs
                         tx.CreateTree(tree).MultiAdd((i % 10).ToString(), value);
                     }
                 }
+
+                tx.Commit();
             }
 
 		}
