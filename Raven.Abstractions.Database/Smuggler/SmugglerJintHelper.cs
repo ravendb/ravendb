@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Database.Smuggler
 			{
 				cfg.AllowDebuggerStatement(false);
 				cfg.MaxStatements(databaseOptions.MaxStepsForTransformScript);
+				cfg.NullPropagation();
 			});
 
 			jint.Execute(string.Format(@"
