@@ -1,8 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
-using Raven.Client;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -12,9 +13,19 @@ namespace Raven.Smuggler.Database.Impl.Remote
 	{
 		private readonly BulkInsertOperation _bulkInsert;
 
-		public DatabaseSmugglerRemoteDocumentActions(IDocumentStore store)
+		public DatabaseSmugglerRemoteDocumentActions(DatabaseSmugglerOptions globalOptions, DatabaseSmugglerRemoteDestinationOptions options, DocumentStore store)
 		{
-			_bulkInsert = store.BulkInsert();
+			_bulkInsert = store.BulkInsert(store.DefaultDatabase, new BulkInsertOptions
+			{
+				BatchSize = globalOptions.BatchSize,
+				OverwriteExisting = true,
+				Compression = options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip,
+				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
+				{
+					MaxChunkVolumeInBytes = options.TotalDocumentSizeInChunkLimitInBytes,
+					MaxDocumentsPerChunk = options.ChunkSize
+				}
+			});
 		}
 
 		public void Dispose()

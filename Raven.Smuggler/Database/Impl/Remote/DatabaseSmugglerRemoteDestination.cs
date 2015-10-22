@@ -10,25 +10,26 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Client;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database.Impl.Remote
 {
 	public class DatabaseSmugglerRemoteDestination : IDatabaseSmugglerDestination
 	{
-		private readonly IDocumentStore _store;
+		private readonly DocumentStore _store;
 
 		private readonly DatabaseSmugglerRemoteDestinationOptions _options;
 
 		private Report _report;
 
-		public DatabaseSmugglerRemoteDestination(IDocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
+		private DatabaseSmugglerOptions _globalOptions;
+
+		public DatabaseSmugglerRemoteDestination(DocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
 		{
 			_store = store;
 			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
@@ -44,6 +45,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
 		{
+			_globalOptions = options;
 			_report = report;
 			return new CompletedTask();
 		}
@@ -55,7 +57,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public IDatabaseSmugglerDocumentActions DocumentActions()
 		{
-			return new DatabaseSmugglerRemoteDocumentActions(_store);
+			return new DatabaseSmugglerRemoteDocumentActions(_globalOptions, _options, _store);
 		}
 
 		public IDatabaseSmugglerTransformerActions TransformerActions()
