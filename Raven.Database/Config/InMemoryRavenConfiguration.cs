@@ -331,6 +331,9 @@ namespace Raven.Database.Config
 			Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
 
 			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
+			TimeSeries.TombstoneRetentionTime = ravenSettings.TimeSeries.TombstoneRetentionTime.Value;
+			TimeSeries.DeletedTombstonesInBatch = ravenSettings.TimeSeries.DeletedTombstonesInBatch.Value;
+			TimeSeries.ReplicationLatencyInMs = ravenSettings.TimeSeries.ReplicationLatencyInMs.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
@@ -1342,6 +1345,12 @@ namespace Raven.Database.Config
 				Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
 		}
 
+		public void CustomizeValuesForTimeSeriesTenant(string tenantId)
+		{
+			if (string.IsNullOrEmpty(Settings[Constants.TimeSeries.DataDirectory]) == false)
+				Settings[Constants.TimeSeries.DataDirectory] = Path.Combine(Settings[Constants.TimeSeries.DataDirectory], "TimeSeries", tenantId);
+		}
+
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
 		{
 			Port = defaultConfiguration.Port;
@@ -1570,7 +1579,7 @@ namespace Raven.Database.Config
 
 			/// <summary>
 			/// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
-			/// Purged on next counter storage startup. Default: 14 days.
+			/// Purged on next time series startup. Default: 14 days.
 			/// </summary>
 			public TimeSpan TombstoneRetentionTime { get; set; }
 

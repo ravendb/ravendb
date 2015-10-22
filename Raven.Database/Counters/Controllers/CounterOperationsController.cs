@@ -31,7 +31,7 @@ namespace Raven.Database.Counters.Controllers
 {
 	public class CounterOperationsController : BaseCountersApiController
 	{
-		[RavenRoute("cs/{counterStorageName}/sinceEtag/{etag}")]
+		[RavenRoute("cs/{counterStorageName}/sinceEtag")]
 		[HttpGet]
 		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024)
 		{
@@ -42,7 +42,7 @@ namespace Raven.Database.Counters.Controllers
 			return GetMessageWithObject(deltas);
 		}
 
-		[RavenRoute("cs/{counterStorageName}/change/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/change")]
 		[HttpPost]
 		public HttpResponseMessage Change(string groupName, string counterName, long delta)
 		{
@@ -397,7 +397,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
+		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal")]
 		[HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
 		{

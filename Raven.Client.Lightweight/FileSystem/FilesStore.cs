@@ -127,10 +127,13 @@ namespace Raven.Client.FileSystem
         }
 
 	    public string DefaultFileSystem { get; set; }
-
+        private bool disableReplicationInformerGeneration = false;
 	    public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
-        {
-			var key = Url;
+	    {
+	        if (disableReplicationInformerGeneration)
+	            return null;
+
+            var key = Url;
 			fsName = fsName ?? DefaultFileSystem;
 			if (string.IsNullOrEmpty(fsName) == false)
 			{
@@ -213,7 +216,7 @@ namespace Raven.Client.FileSystem
         {
             if (initialized)
                 return this;
-
+            disableReplicationInformerGeneration = true;
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
 
             try
@@ -226,12 +229,11 @@ namespace Raven.Client.FileSystem
                 {
                     try
                     {
-	                    AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-		                        .EnsureFileSystemExistsAsync()
-							    .GetAwaiter()
-                                .GetResult();
+
+                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem).EnsureFileSystemExistsAsync().GetAwaiter().GetResult();
+
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         if (failIfCannotCreate)
                             throw;
@@ -242,6 +244,10 @@ namespace Raven.Client.FileSystem
             {
                 Dispose();
                 throw;
+            }
+            finally
+            {
+                disableReplicationInformerGeneration = false;
             }
 
             return this;

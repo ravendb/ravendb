@@ -10,11 +10,11 @@ class updateCounterCommand extends commandBase {
 
     execute(): JQueryPromise<counterChange[]> {
         var args = {
-            group: this.group,
+            groupName: this.group,
             counterName: this.counterName,
             delta: this.delta
         };
-        var url = "/change/" + this.group + "/" + this.counterName + this.urlEncodeArgs({delta: this.delta });
+        var url = "/change/" + this.urlEncodeArgs(args);
         var action = this.post(url, null, this.cs, { dataType: undefined });
 
         var successMessage = this.isNew ? "Successfully created a new counter!" : "Successfully updated a counter!";

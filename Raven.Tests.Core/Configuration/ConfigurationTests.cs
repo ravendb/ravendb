@@ -252,7 +252,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxIndexCommitPointStoreTimeInterval.Value, actual => actual.MaxIndexCommitPointStoreTimeInterval);
 			configurationComparer.Assert(expected => expected.MinIndexingTimeIntervalToStoreCommitPoint.Value, actual => actual.MinIndexingTimeIntervalToStoreCommitPoint);
 			configurationComparer.Assert(expected => expected.MaxNumberOfStoredCommitPoints.Value, actual => actual.MaxNumberOfStoredCommitPoints);
-            // allow +- 16MB tollerance in memory during the test (can happen in slow machines / debug):
+			// allow +- 16MB tolerance in memory during the test (can happen in slow machines / debug):
 			configurationComparer.AssertInRange(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb, 16);
 			configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
 			configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
@@ -286,7 +286,10 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
 			configurationComparer.Assert(expected => expected.Counter.TombstoneRetentionTime.Value, actual => actual.Counter.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.Counter.DeletedTombstonesInBatch.Value, actual => actual.Counter.DeletedTombstonesInBatch);
-            configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
+			configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
+			configurationComparer.Assert(expected => expected.TimeSeries.TombstoneRetentionTime.Value, actual => actual.TimeSeries.TombstoneRetentionTime);
+			configurationComparer.Assert(expected => expected.TimeSeries.DeletedTombstonesInBatch.Value, actual => actual.TimeSeries.DeletedTombstonesInBatch);
+            configurationComparer.Assert(expected => expected.TimeSeries.ReplicationLatencyInMs.Value, actual => actual.TimeSeries.ReplicationLatencyInMs);
             configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
             configurationComparer.Assert(expected => expected.Replication.ForceReplicationRequestBuffering.Value, actual => actual.Replication.ForceReplicationRequestBuffering);
 			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);

@@ -32,6 +32,7 @@ namespace Raven.Client.FileSystem
         private readonly IFilesConflictListener[] conflictListeners;
         private bool resolvingConflict = false;
 
+
         /// <summary>
         /// Notify when the failover status changed
         /// </summary>
@@ -49,8 +50,8 @@ namespace Raven.Client.FileSystem
                 FileSystemName = fileSystemName;
                 ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-				if (replicationInformerGetter != null)
-					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
+                if (replicationInformerGetter != null && ReplicationInformer!= null)
+                    ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
 
 				SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, credentials.Credentials);
             }
