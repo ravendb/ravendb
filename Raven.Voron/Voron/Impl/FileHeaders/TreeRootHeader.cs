@@ -6,20 +6,22 @@ namespace Voron.Impl.FileHeaders
     public struct TreeRootHeader
     {
         [FieldOffset(0)]
-        public long RootPageNumber;
-        [FieldOffset(8)]
-        public long BranchPages;
-        [FieldOffset(16)]
-        public long LeafPages;
-        [FieldOffset(32)]
-        public long OverflowPages;
-        [FieldOffset(40)]
-        public long PageCount;
-        [FieldOffset(48)]
-        public long NumberOfEntries;
-        [FieldOffset(56)]
-        public int Depth;
-        [FieldOffset(60)]
+        public RootObjectType RootObjectType;
+        [FieldOffset(1)]
         public TreeFlags Flags;
+        [FieldOffset(2)]
+        public long RootPageNumber;
+        [FieldOffset(10)]
+        public long BranchPages;
+        [FieldOffset(18)]
+        public long LeafPages;
+        [FieldOffset(34)]
+        public long OverflowPages;
+        [FieldOffset(42)]
+        public long PageCount;
+        [FieldOffset(50)]
+        public long NumberOfEntries;
+        [FieldOffset(58)]
+        public int Depth;
     }
 }

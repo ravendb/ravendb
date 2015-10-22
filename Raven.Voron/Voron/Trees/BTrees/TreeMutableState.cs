@@ -39,7 +39,8 @@ namespace Voron.Trees
         }
 
 	    public void CopyTo(TreeRootHeader* header)
-        {
+	    {
+	        header->RootObjectType = RootObjectType.VariableSizeTree;
 			header->Flags = Flags;
             header->BranchPages = BranchPages;
             header->Depth = Depth;

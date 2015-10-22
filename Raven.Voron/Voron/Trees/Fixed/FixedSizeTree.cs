@@ -25,7 +25,7 @@ namespace Voron.Trees.Fixed
         private readonly ushort _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
-        private FixedSizeTreeHeader.OptionFlags? _flags;
+        private RootObjectType? _type;
         private Stack<TreePage> _cursor;
 
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize)
@@ -44,7 +44,16 @@ namespace Voron.Trees.Fixed
             if (header == null)
                 return;
 
-            _flags = header->Flags;
+            switch (header->RootObjectType)
+            {
+                case RootObjectType.EmbeddedFixedSizeTree:
+                case RootObjectType.FixedSizeTree:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Tried to open '" + treeName +"' as FixedSizeTree, but is actually " + header->RootObjectType);
+            }
+
+            _type = header->RootObjectType;
 
             if (header->ValueSize != valSize)
                 throw new InvalidOperationException("The expected value len " + valSize + " does not match actual value len " +
@@ -105,20 +114,20 @@ namespace Voron.Trees.Fixed
         public byte* DirectAdd(long key, out bool isNew)
         {
             byte* pos;
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     pos = AddNewEntry(key);
                     isNew = true;
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     pos = AddEmbeddedEntry(key, out isNew);
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     pos = AddLargeEntry(key, out isNew);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
             return pos;
         }
@@ -380,14 +389,14 @@ namespace Voron.Trees.Fixed
                 if (newEntriesCount > _maxEmbeddedEntries)
                 {
                     // convert to large database
-                    _flags = FixedSizeTreeHeader.OptionFlags.Large;
+                    _type =RootObjectType.FixedSizeTree;
                     var allocatePage = _parent.NewPage(TreePageFlags.Leaf, 1);
 
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
                     largeHeader->ValueSize = _valSize;
                     largeHeader->Depth = 1;
-                    largeHeader->Flags = FixedSizeTreeHeader.OptionFlags.Large;
+                    largeHeader->RootObjectType = RootObjectType.FixedSizeTree;
                     largeHeader->RootPageNumber = allocatePage.PageNumber;
                     largeHeader->PageCount = 1;
 
@@ -406,7 +415,7 @@ namespace Voron.Trees.Fixed
                     byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
                     header = (FixedSizeTreeHeader.Embedded*)newData;
                     header->ValueSize = _valSize;
-                    header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+                    header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
                     header->NumberOfEntries = newEntriesCount;
 
                     Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
@@ -422,10 +431,10 @@ namespace Voron.Trees.Fixed
             // new, just create it & go
             var ptr = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + _entrySize);
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
-            header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+            header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
             header->ValueSize = _valSize;
             header->NumberOfEntries = 1;
-            _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+            _type = RootObjectType.EmbeddedFixedSizeTree;
 
             byte* dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
             *(long*)(dataStart) = key;
@@ -486,13 +495,13 @@ namespace Voron.Trees.Fixed
         public List<long> AllPages()
         {
             var results = new List<long>();
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
                     var root = _tx.GetReadOnlyTreePage(largePtr->RootPageNumber);
 
@@ -516,7 +525,7 @@ namespace Voron.Trees.Fixed
 
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
 
             return results;
@@ -525,17 +534,17 @@ namespace Voron.Trees.Fixed
         public bool Contains(long key)
         {
             byte* dataStart;
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     return false;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     var embeddedPtr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)embeddedPtr;
                     dataStart = embeddedPtr + sizeof(FixedSizeTreeHeader.Embedded);
                     BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     return _lastMatch == 0;
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
                     var page = _tx.GetReadOnlyTreePage(largePtr->RootPageNumber);
 
@@ -551,25 +560,26 @@ namespace Voron.Trees.Fixed
 
                     BinarySearch(dataStart, page.FixedSize_NumberOfEntries, key, _entrySize);
                     return _lastMatch == 0;
+                default:
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
-
-            return false;
         }
 
         public DeletionResult Delete(long key)
         {
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     // nothing to do
                     return new DeletionResult();
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     return RemoveEmbeddedEntry(key);
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     return RemoveLargeEntry(key);
+                default:
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
 
-            throw new InvalidOperationException("TreeFlags has invalid value: " + _flags);
         }
 
         public struct DeletionResult
@@ -584,24 +594,24 @@ namespace Voron.Trees.Fixed
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 
             long entriedDeleted;
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     entriedDeleted = 0;
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     entriedDeleted = DeleteRangeEmbedded(start, end);
                     break;
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     entriedDeleted = DeleteRangeLarge(start, end);
                     break;
                 default:
-                    throw new InvalidOperationException("TreeFlags value is not valid: " + _flags);
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
             return new DeletionResult
             {
                 NumberOfEntriesDeleted = entriedDeleted,
-                TreeRemoved = _flags == null
+                TreeRemoved = _type == null
             };
         }
 
@@ -625,7 +635,7 @@ namespace Voron.Trees.Fixed
             if (entriesDeleted == header->NumberOfEntries)
             {
                 _parent.Delete(_treeName);
-                _flags = null;
+                _type = null;
                 return entriesDeleted;
             }
 
@@ -640,7 +650,7 @@ namespace Voron.Trees.Fixed
             header = (FixedSizeTreeHeader.Embedded*)newData;
             header->NumberOfEntries -= entriesDeleted;
             header->ValueSize = _valSize;
-            header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+            header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
 
             return entriesDeleted;
         }
@@ -694,7 +704,7 @@ namespace Voron.Trees.Fixed
             largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             int rangeRemoved = 1;
             while (rangeRemoved > 0 &&
-                _flags == FixedSizeTreeHeader.OptionFlags.Large // we may revert to embedded by the deletions, or remove entirely
+                _type == RootObjectType.FixedSizeTree // we may revert to embedded by the deletions, or remove entirely
                 )
             {
                 page = FindPageFor(start);
@@ -714,11 +724,11 @@ namespace Voron.Trees.Fixed
                 }
 
                 rangeRemoved = RemoveRangeFromPage(page, end, largeHeader);
-                if (_flags == FixedSizeTreeHeader.OptionFlags.Large)// we might have converted to embedded, in which case we can't use it
+                if (_type == RootObjectType.FixedSizeTree)// we might have converted to embedded, in which case we can't use it
                     largeHeader->NumberOfEntries -= rangeRemoved;
                 entriesDeleted += rangeRemoved;
             }
-            if (_flags == FixedSizeTreeHeader.OptionFlags.Embedded)
+            if (_type == RootObjectType.EmbeddedFixedSizeTree)
             {
                 // we converted to embeded in the delete, but might still have some range there
                 return entriesDeleted + DeleteRangeEmbedded(start, end);
@@ -830,7 +840,7 @@ namespace Voron.Trees.Fixed
             if (_cursor.Count == 0) //remove the root page
             {
                 _parent.Delete(_treeName);
-                _flags = null;
+                _type = null;
                 return true;
             }
             var parentPage = _cursor.Pop();
@@ -891,10 +901,10 @@ namespace Voron.Trees.Fixed
                     var ptr = _parent.DirectAdd(_treeName,
                         sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.FixedSize_NumberOfEntries));
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
-                    header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+                    header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
                     header->ValueSize = _valSize;
                     header->NumberOfEntries = (byte)page.FixedSize_NumberOfEntries;
-                    _flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+                    _type = RootObjectType.EmbeddedFixedSizeTree;
 
                     Memory.Copy(ptr + sizeof(FixedSizeTreeHeader.Embedded),
                         page.Base + page.FixedSize_StartPosition,
@@ -1087,7 +1097,7 @@ namespace Voron.Trees.Fixed
             if (startingEntryCount == 1)
             {
                 // only single entry, just remove it
-                _flags = null;
+                _type = null;
                 _parent.Delete(_treeName);
                 return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
             }
@@ -1102,17 +1112,17 @@ namespace Voron.Trees.Fixed
             header = (FixedSizeTreeHeader.Embedded*)newData;
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
-            header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
+            header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
             return new DeletionResult { NumberOfEntriesDeleted = 1 };
         }
 
         public Slice Read(long key)
         {
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     return null;
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     var ptr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
@@ -1120,7 +1130,7 @@ namespace Voron.Trees.Fixed
                     if (_lastMatch != 0)
                         return null;
                     return new Slice(dataStart + (pos * _entrySize) + sizeof(long), _valSize);
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
                     var page = _tx.GetReadOnlyTreePage(largePtr->RootPageNumber);
 
@@ -1138,24 +1148,24 @@ namespace Voron.Trees.Fixed
                     if (_lastMatch != 0)
                         return null;
                     return new Slice(dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize);
+                default:
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
-
-            return null;
         }
 
         public IFixedSizeIterator Iterate()
         {
-            switch (_flags)
+            switch (_type)
             {
                 case null:
                     return new NullIterator();
-                case FixedSizeTreeHeader.OptionFlags.Embedded:
+                case RootObjectType.EmbeddedFixedSizeTree:
                     return new EmbeddedIterator(this);
-                case FixedSizeTreeHeader.OptionFlags.Large:
+                case RootObjectType.FixedSizeTree:
                     return new LargeIterator(this);
+                default:
+                    throw new ArgumentOutOfRangeException(_type.ToString());
             }
-
-            return null;
         }
 
         public long NumberOfEntries
@@ -1166,15 +1176,15 @@ namespace Voron.Trees.Fixed
                 if (header == null)
                     return 0;
 
-                var flags = ((FixedSizeTreeHeader.Embedded*)header)->Flags;
+                var flags = ((FixedSizeTreeHeader.Embedded*)header)->RootObjectType;
                 switch (flags)
                 {
-                    case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    case RootObjectType.EmbeddedFixedSizeTree:
                         return ((FixedSizeTreeHeader.Embedded*)header)->NumberOfEntries;
-                    case FixedSizeTreeHeader.OptionFlags.Large:
+                    case RootObjectType.FixedSizeTree:
                         return ((FixedSizeTreeHeader.Large*)header)->NumberOfEntries;
                     default:
-                        return 0;
+                        throw new ArgumentOutOfRangeException(_type.ToString());
                 }
             }
         }
@@ -1188,15 +1198,15 @@ namespace Voron.Trees.Fixed
                 if (header == null)
                     return 0;
 
-                var flags = ((FixedSizeTreeHeader.Embedded*)header)->Flags;
+                var flags = ((FixedSizeTreeHeader.Embedded*)header)->RootObjectType;
                 switch (flags)
                 {
-                    case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    case RootObjectType.EmbeddedFixedSizeTree:
                         return 1;
-                    case FixedSizeTreeHeader.OptionFlags.Large:
+                    case RootObjectType.FixedSizeTree:
                         return ((FixedSizeTreeHeader.Large*)header)->PageCount;
                     default:
-                        return 0;
+                        throw new ArgumentOutOfRangeException(_type.ToString());
                 }
             }
         }

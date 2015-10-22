@@ -140,7 +140,7 @@ namespace Voron.Debugging
 				{
 					writer.WriteLine("<p>empty fixed size tree</p>");
 				}
-				else if (((FixedSizeTreeHeader.Embedded*)ptr)->Flags == FixedSizeTreeHeader.OptionFlags.Embedded)
+				else if (((FixedSizeTreeHeader.Embedded*)ptr)->RootObjectType == RootObjectType.EmbeddedFixedSizeTree)
 				{
 					var header = ((FixedSizeTreeHeader.Embedded*)ptr);
 					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);

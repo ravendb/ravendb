@@ -10,44 +10,38 @@ namespace Voron.Impl.FileHeaders
 {
 	public class FixedSizeTreeHeader
 	{
-		public enum OptionFlags : byte
-		{
-			Embedded = 1,
-			Large = 2
-		}
-
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Embedded
 		{
-			[FieldOffset(0)]
+		    [FieldOffset(0)]
+            public RootObjectType RootObjectType;
+
+            [FieldOffset(2)]
 			public ushort ValueSize;
-
-			[FieldOffset(2)]
-			public OptionFlags Flags;
-
-			[FieldOffset(3)]
+			
+			[FieldOffset(4)]
 			public ushort NumberOfEntries;
 		}
 
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Large
 		{
-			[FieldOffset(0)]
-			public ushort ValueSize;
+            [FieldOffset(0)]
+            public RootObjectType RootObjectType;
 
-			[FieldOffset(2)]
-			public OptionFlags Flags;
+            [FieldOffset(2)]
+            public ushort ValueSize;
 
-			[FieldOffset(3)]
+			[FieldOffset(4)]
 			public long NumberOfEntries;
 
-			[FieldOffset(11)]
+			[FieldOffset(12)]
 			public long RootPageNumber;
 
-            [FieldOffset(19)]
+            [FieldOffset(20)]
             public int Depth;
 
-            [FieldOffset(23)]
+            [FieldOffset(24)]
             public long PageCount;
         }
 	}

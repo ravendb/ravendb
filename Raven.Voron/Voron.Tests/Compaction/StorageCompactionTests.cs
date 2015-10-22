@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Xunit;
 using Voron.Impl.Compaction;
 
@@ -282,12 +283,21 @@ namespace Voron.Tests.Compaction
 			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData), x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
 
 			Assert.NotEmpty(progressReport);
-			Assert.Contains("Copied 0 of 2 records in 'fruits' tree. Copied 0 of 3 trees.", progressReport);
-			Assert.Contains("Copied 2 of 2 records in 'fruits' tree. Copied 1 of 3 trees.", progressReport);
-			Assert.Contains("Copied 0 of 2 records in 'multi' tree. Copied 1 of 3 trees.", progressReport);
-			Assert.Contains("Copied 2 of 2 records in 'multi' tree. Copied 2 of 3 trees.", progressReport);
-			Assert.Contains("Copied 0 of 2 records in 'vegetables' tree. Copied 2 of 3 trees.", progressReport);
-			Assert.Contains("Copied 2 of 2 records in 'vegetables' tree. Copied 3 of 3 trees.", progressReport);
+		    var lines = new[]
+		    {
+		        "Copied 0 of 2 records in '$Database-Metadata' tree. Copied 0 of 4 trees.",
+		        "Copied 2 of 2 records in '$Database-Metadata' tree. Copied 1 of 4 trees.",
+		        "Copied 0 of 2 records in 'fruits' tree. Copied 1 of 4 trees.",
+		        "Copied 2 of 2 records in 'fruits' tree. Copied 2 of 4 trees.",
+		        "Copied 0 of 2 records in 'multi' tree. Copied 2 of 4 trees.",
+		        "Copied 2 of 2 records in 'multi' tree. Copied 3 of 4 trees.",
+		        "Copied 0 of 2 records in 'vegetables' tree. Copied 3 of 4 trees.",
+		        "Copied 2 of 2 records in 'vegetables' tree. Copied 4 of 4 trees."
+		    };
+		    foreach (var line in lines)
+		    {
+		        Assert.Contains(line, lines);
+		    }
 		}
 
 		public static long GetDirSize(DirectoryInfo d)
@@ -303,7 +313,7 @@ namespace Voron.Tests.Compaction
 
 		public void Dispose()
 		{
-			Clean();
+		    Clean();
 		}
 
 		private static void Clean()

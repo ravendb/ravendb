@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using Voron.Debugging;
 using Voron.Impl.FileHeaders;
@@ -38,6 +39,9 @@ namespace Voron.Impl
             var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead((Slice)treeName);
             if (header != null)
             {
+                if(header->RootObjectType != RootObjectType.VariableSizeTree)
+                    throw new InvalidOperationException("Tried to opened " + treeName + " as a variable size tree, but it is actually a " + header->RootObjectType);
+
                 tree = Tree.Open(_lowLevelTransaction, this, header);
                 tree.Name = treeName;
                 _trees.Add(treeName, tree);
@@ -185,7 +189,7 @@ namespace Voron.Impl
                 return tree;
 
             if (_lowLevelTransaction.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new InvalidOperationException("No such tree: " + name + " and cannot create trees in read transactions");
+                throw new InvalidOperationException("No such tree: '" + name + "' and cannot create trees in read transactions");
 
             Slice key = name;
 
