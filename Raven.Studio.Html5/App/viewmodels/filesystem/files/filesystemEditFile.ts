@@ -1,8 +1,6 @@
 ﻿import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import ace = require("ace/ace");
-
 import filesystem = require("models/filesystem/filesystem");
 import getFileCommand = require("commands/filesystem/getFileCommand");
 import updateFileMetadataCommand = require("commands/filesystem/updateFileMetadataCommand");

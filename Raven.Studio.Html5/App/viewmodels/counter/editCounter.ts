@@ -39,16 +39,17 @@ class editCounter extends viewModelBase {
         }
 
 	    var cs = this.activeCounterStorage();
-		this.load(args.groupName, args.counterName)
+        this.load(args.groupName, args.counterName)
             .done(() => {
                 this.groupName(args.groupName);
                 this.counterName(args.counterName);
-                this.groupLink(appUrl.forCounterStorageCounters(this.groupName(), cs));
-                this.appendRecentFile(this.groupName(), this.counterName());
+                this.groupLink(appUrl.forCounterStorageCounters(args.groupName, cs));
+                this.appendRecentCounter(args.groupName, args.counterName);
 		        deffered.resolve({ can: true });
 		    })
 			.fail(() => {
-				messagePublisher.reportError("Can't find counter!");
+                messagePublisher.reportError("Can't find counter!");
+                this.removeFromTopRecentCounters(args.groupName, args.counterName);
                 deffered.resolve({ redirect: appUrl.forCounterStorageCounters(null, cs) });
 			});
 
@@ -72,11 +73,6 @@ class editCounter extends viewModelBase {
 		        this.counter(result);
 				this.isLoading(false);
 	        });
-    }
-
-    navigateToFiles() {
-        var filesUrl = appUrl.forFilesystemFiles(this.activeFilesystem());
-        router.navigate(filesUrl);
     }
 
 	refresh() {
@@ -123,7 +119,7 @@ class editCounter extends viewModelBase {
         app.showDialog(viewModel, editCounter.container);
     }
 
-	removeFromTopRecentFiles(groupName: string, counterName: string) {
+    removeFromTopRecentCounters(groupName: string, counterName: string) {
 		var currentFilesystemName = this.activeFilesystem().name;
         var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().first(x => x.counterStorageName === currentFilesystemName);
         if (recentFilesForCurFilesystem) {
@@ -160,7 +156,7 @@ class editCounter extends viewModelBase {
         }
     }
 
-    appendRecentFile(groupName: string, counterName: string) {
+    appendRecentCounter(groupName: string, counterName: string) {
         var csName = this.activeCounterStorage().name;
         var existingRecentCounters = editCounter.recentCountersInCounterStorage.first(x => x.counterStorageName === csName);
         if (existingRecentCounters) {

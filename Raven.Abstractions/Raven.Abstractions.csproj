@@ -165,7 +165,6 @@
     <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterSummary.cs" />
     <Compile Include="Counters\CounterUtils.cs" />
-    <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
     <Compile Include="Counters\Notifications\ChangeNotification.cs" />
     <Compile Include="Counters\Notifications\CounterStorageNotification.cs" />
