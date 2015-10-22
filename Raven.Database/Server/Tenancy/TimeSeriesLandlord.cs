@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Tenancy
 
 			SetupTenantConfiguration(config);
 
-			config.CustomizeValuesForDatabaseTenant(tenantId);
+			config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
 			config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
 			//config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;

@@ -105,7 +105,7 @@ namespace Raven.Client.Document.SessionOperations
 		private T[] ReturnResultsById<T>()
 		{
 			var finalResults = new T[ids.Length];
-			var dic = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+			var dic = new Dictionary<string, int>(ids.Length, StringComparer.OrdinalIgnoreCase);
 			for (int i = 0; i < ids.Length; i++)
 			{
 				if (ids[i] == null)
