@@ -30,6 +30,8 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
+using Sparrow;
+
 namespace Raven.Database.Server.Controllers
 {
 	public class StreamsController : ClusterAwareRavenDbApiController

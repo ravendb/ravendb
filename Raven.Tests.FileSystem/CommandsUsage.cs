@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -648,7 +649,6 @@ namespace Raven.Tests.FileSystem
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
             Assert.Throws<InvalidOperationException>(()=>AsyncHelpers.RunSync(() => adminClient.CreateFileSystemAsync(fileSystemSpec)));
-
         }
 
         [Fact]

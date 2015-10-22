@@ -175,7 +175,7 @@ namespace Raven.Tests
 
             db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("Foo", null);
+            var fetchedData = db.Documents.Get("Foo");
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
@@ -227,7 +227,7 @@ namespace Raven.Tests
 
             db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("Foo", null);
+            var fetchedData = db.Documents.Get("Foo");
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
