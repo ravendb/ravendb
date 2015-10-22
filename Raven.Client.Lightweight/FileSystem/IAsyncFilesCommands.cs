@@ -88,6 +88,7 @@ namespace Raven.Client.FileSystem
 		Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
+        IDisposable ForceReadFromMaster();
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
