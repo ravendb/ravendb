@@ -1,167 +1,170 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace Voron.Tests.Bugs
 {
-    using System;
-    using System.IO;
-    using System.Threading.Tasks;
+	using System;
+	using System.IO;
+	using System.Threading.Tasks;
 
-    using Voron.Impl;
-    using Xunit;
+	using Voron.Impl;
+	using Xunit;
 
-    public class InvalidReleasesOfScratchPages : StorageTest
-    {
-        [Fact]
-        public void ReadTransactionCanReadJustCommittedValue()
-        {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.ManualFlushing = true;
-            using (var env = new StorageEnvironment(options))
-            {
-                CreateTrees(env, 1, "tree");
+	public class InvalidReleasesOfScratchPages : StorageTest
+	{
+		[Fact]
+		public void ReadTransactionCanReadJustCommittedValue()
+		{
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
+			options.ManualFlushing = true;
+			using (var env = new StorageEnvironment(options))
+			{
+				CreateTrees(env, 1, "tree");
 
-                using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    txw.Environment.CreateTree(txw, "tree0").Add("key/1", new MemoryStream());
-                    txw.Commit();
+				using (var txw = env.WriteTransaction())
+				{
+					txw.CreateTree("tree0").Add("key/1", new MemoryStream());
+					txw.Commit();
 
-                    using (var txr = env.NewTransaction(TransactionFlags.Read))
-                    {
-                        Assert.NotNull(txr.Environment.CreateTree(txr, "tree0").Read("key/1"));
-                    }
-                }
-            }
-        }
+					using (var txr = env.ReadTransaction())
+					{
+						Assert.NotNull(txr.CreateTree("tree0").Read("key/1"));
+					}
+				}
+			}
+		}
 
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            options.MaxScratchBufferSize *= 2;
-        }
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			options.MaxScratchBufferSize *= 2;
+		}
 
-        [Fact]
-        public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
-        {
-            const int numberOfWriteThreads = 10;
-            const int numberOfReadThreads = 10;
-            const int numberOfTrees = 2;
+		[Fact]
+		public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
+		{
+			const int numberOfWriteThreads = 10;
+			const int numberOfReadThreads = 10;
+			const int numberOfTrees = 2;
 
-            var trees = CreateTrees(Env, numberOfTrees, "tree");
+			var trees = CreateTrees(Env, numberOfTrees, "tree");
 
-            Task readParallelTask = null;
+			Task readParallelTask = null;
 
-            var taskWorkTime = TimeSpan.FromSeconds(60);
+			var taskWorkTime = TimeSpan.FromSeconds(60);
 
-            var writeTime = Stopwatch.StartNew();
+			var writeTime = Stopwatch.StartNew();
 
-            var writeParallelTask = Task.Factory.StartNew(
-                () =>
-                {
-                    Parallel.For(
-                        0,
-                        numberOfWriteThreads,
-                        i =>
-                        {
-                            var random = new Random(i ^ 1337);
-                            var dataSize = random.Next(100, 100);
-                            var buffer = new byte[dataSize];
-                            random.NextBytes(buffer);
+			var writeParallelTask = Task.Factory.StartNew(
+				() =>
+				{
+					Parallel.For(
+						0,
+						numberOfWriteThreads,
+						i =>
+						{
+							var random = new Random(i ^ 1337);
+							var dataSize = random.Next(100, 100);
+							var buffer = new byte[dataSize];
+							random.NextBytes(buffer);
 
-                            while (writeTime.Elapsed < taskWorkTime && (readParallelTask == null || readParallelTask.Exception == null))
-                            {
-                                var tIndex = random.Next(0, numberOfTrees - 1);
-                                var treeName = trees[tIndex];
+							while (writeTime.Elapsed < taskWorkTime && (readParallelTask == null || readParallelTask.Exception == null))
+							{
+								var tIndex = random.Next(0, numberOfTrees - 1);
+								var treeName = trees[tIndex];
 
-                                var batch = new WriteBatch();
-                                batch.Add("testdocuments/" + random.Next(0, 100000), new MemoryStream(buffer), treeName);
+							    using (var tx = Env.WriteTransaction())
+							    {
+							        var tree = tx.CreateTree(treeName);
+							        tree.Add("testdocuments/" + random.Next(0, 100000), new MemoryStream(buffer));
+                                    tx.Commit();
+							    }
 
-                                Env.Writer.Write(batch);
-                            }
-                        });
-                },
-                TaskCreationOptions.LongRunning);
+							}
+						});
+				},
+				TaskCreationOptions.LongRunning);
 
-            var readTime = Stopwatch.StartNew();
-            readParallelTask = Task.Factory.StartNew(
-                () =>
-                    {
-                        Parallel.For(
-                            0,
-                            numberOfReadThreads,
-                            i =>
-                                {
-                                    var random = new Random(i);
+			var readTime = Stopwatch.StartNew();
+			readParallelTask = Task.Factory.StartNew(
+				() =>
+					{
+						Parallel.For(
+							0,
+							numberOfReadThreads,
+							i =>
+								{
+									var random = new Random(i);
 
-                                    while (readTime.Elapsed < taskWorkTime)
-                                    {
-                                        var tIndex = random.Next(0, numberOfTrees - 1);
-                                        var treeName = trees[tIndex];
+									while (readTime.Elapsed < taskWorkTime)
+									{
+										var tIndex = random.Next(0, numberOfTrees - 1);
+										var treeName = trees[tIndex];
 
-                                        using (var snapshot = Env.CreateSnapshot())
-                                        using (var iterator = snapshot.Iterate(treeName))
-                                        {
-                                            if (!iterator.Seek(Slice.BeforeAllKeys))
-                                            {
-                                                continue;
-                                            }
+										using (var snapshot = Env.ReadTransaction())
+										using (var iterator = snapshot.ReadTree(treeName).Iterate())
+										{
+											if (!iterator.Seek(Slice.BeforeAllKeys))
+											{
+												continue;
+											}
 
-                                            do
-                                            {
-                                                Assert.Contains("testdocuments/", iterator.CurrentKey.ToString());
-                                            } while (iterator.MoveNext());
-                                        }
-                                    }
-                                });
-                    },
-                TaskCreationOptions.LongRunning);
+											do
+											{
+												Assert.Contains("testdocuments/", iterator.CurrentKey.ToString());
+											} while (iterator.MoveNext());
+										}
+									}
+								});
+					},
+				TaskCreationOptions.LongRunning);
 
 
-            try
-            {
-                Task.WaitAll(new[] { writeParallelTask, readParallelTask });
-            }
-            catch (Exception ex)
-            {
-                var aggregate = ex as AggregateException;
+			try
+			{
+				Task.WaitAll(new[] { writeParallelTask, readParallelTask });
+			}
+			catch (Exception ex)
+			{
+				var aggregate = ex as AggregateException;
 
-                if (aggregate != null)
-                {
-                    foreach (var innerEx in aggregate.InnerExceptions)
-                    {
-                        Console.WriteLine(innerEx);
-                    }
-                }
+				if (aggregate != null)
+				{
+					foreach (var innerEx in aggregate.InnerExceptions)
+					{
+						Console.WriteLine(innerEx);
+					}
+				}
 
-                throw ex;
-            }
-        }
+				throw ex;
+			}
+		}
 
-        [Fact]
-        public void AllScratchPagesShouldBeReleased()
-        {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.ManualFlushing = true;
-            using (var env = new StorageEnvironment(options))
-            {
-                using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    env.CreateTree(txw, "test");
+		[Fact]
+		public void AllScratchPagesShouldBeReleased()
+		{
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
+			options.ManualFlushing = true;
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var txw = env.WriteTransaction())
+				{
+					txw.CreateTree("test");
 
-                    txw.Commit();
-                }
+					txw.Commit();
+				}
 
-                using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    var tree = txw.Environment.CreateTree(txw, "test");
+				using (var txw = env.WriteTransaction())
+				{
+					var tree = txw.CreateTree("test");
 
-                    tree.Add("key/1", new MemoryStream(new byte[100]));
-                    tree.Add("key/1", new MemoryStream(new byte[200]));
-                    txw.Commit();
-                }
+					tree.Add("key/1", new MemoryStream(new byte[100]));
+					tree.Add("key/1", new MemoryStream(new byte[200]));
+					txw.Commit();
+				}
 
-                env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
+				env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
 
-                Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
-            }
-        }
-    }
+				Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
+			}
+		}
+	}
 }

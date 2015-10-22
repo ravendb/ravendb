@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RecoveryWithManualFlush.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,26 +19,28 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void ShouldRecoverFromJournalsAfterFlushWhereLastPageOfFlushedTxHadTheSameNumberAsFirstPageOfNextTxNotFlushedJet()
         {
-            using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx1 = Env.WriteTransaction())
             {
-                tx1.Root.Add("item/1", new MemoryStream(new byte[4000]));
-                tx1.Root.Add("item/2", new MemoryStream(new byte[4000]));
+                var tree = tx1.CreateTree("foo");
+                tree.Add("item/1", new MemoryStream(new byte[4000]));
+                tree.Add("item/2", new MemoryStream(new byte[4000]));
 
                 tx1.Commit();
             }
 
-            using (var tx2 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx2 = Env.WriteTransaction())
             {
                 // update items/2 will change it 'in place' - will modify the same already existing page
 
                 // this will also override the page translation table for the page where item/2 is placed
 
-                tx2.Root.Add("item/2", new MemoryStream(new byte[3999]));
+                var tree = tx2.CreateTree("foo");
+                tree.Add("item/2", new MemoryStream(new byte[3999]));
 
                 tx2.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
                 // here we have to flush inside the read transaction to ensure that
                 // the oldest active transaction id is the same as id of tx2
@@ -55,14 +57,15 @@ namespace Voron.Tests.Bugs
 
             StartDatabase();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read("item/1");
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("item/1");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(4000, readResult.Reader.Length);
 
-                readResult = tx.Root.Read("item/2");
+                readResult = tree.Read("item/2");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(3999, readResult.Reader.Length);
@@ -72,22 +75,24 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void ShouldRecoverTransactionEndPositionsTableAfterRestart()
         {
-            using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx1 = Env.WriteTransaction())
             {
-                tx1.Root.Add("item/1", new MemoryStream(new byte[4000]));
-                tx1.Root.Add("item/2", new MemoryStream(new byte[4000]));
+                var tree = tx1.CreateTree("foo");
+                tree.Add("item/1", new MemoryStream(new byte[4000]));
+                tree.Add("item/2", new MemoryStream(new byte[4000]));
 
                 tx1.Commit();
             }
 
-            using (var tx2 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx2 = Env.WriteTransaction())
             {
-                tx2.Root.Add("item/2", new MemoryStream(new byte[3999]));
+                var tree = tx2.CreateTree("foo");
+                tree.Add("item/2", new MemoryStream(new byte[3999]));
 
                 tx2.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
                 Env.FlushLogToDataFile();
             }
@@ -98,14 +103,15 @@ namespace Voron.Tests.Bugs
 
             Env.FlushLogToDataFile();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read("item/1");
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("item/1");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(4000, readResult.Reader.Length);
 
-                readResult = tx.Root.Read("item/2");
+                readResult = tree.Read("item/2");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(3999, readResult.Reader.Length);
@@ -115,9 +121,10 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void StorageRecoveryAfterFlushingToDataFile()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add			("items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
+                var tree = tx.CreateTree("foo");
+                tree.Add("items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
                 tx.Commit();
             }
 
@@ -125,13 +132,14 @@ namespace Voron.Tests.Bugs
 
             RestartDatabase();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var readResult = tx.Root.Read("items/1");
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("items/1");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(3, readResult.Reader.Length);
             }
-        } 
+        }
     }
 }

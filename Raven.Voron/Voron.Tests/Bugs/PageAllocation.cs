@@ -25,7 +25,7 @@ namespace Voron.Tests.Bugs
                 var tree1 = trees[0];
                 var tree2 = trees[1];
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
                     var t1 = tx.ReadTree(tree1);
 
@@ -35,7 +35,7 @@ namespace Voron.Tests.Bugs
                     tx.Commit();
                 }
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
                     var t1 = tx.ReadTree(tree1);
                     var t2 = tx.ReadTree(tree2);

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Voron.Debugging;
+using Voron.Trees;
 
 namespace Voron.Tests.Bugs
 {
@@ -29,9 +30,9 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void TreeAdds_WithVeryLargeKey()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.CreateTree(tx, "foo");
+                tx.CreateTree( "foo");
                 tx.Commit();
             }
 
@@ -41,9 +42,9 @@ namespace Voron.Tests.Bugs
                 inputData.Add(RandomString(1024));
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.Environment.CreateTree(tx, "foo");
+                var tree = tx.CreateTree("foo");
                 for (int index = 0; index < inputData.Count; index++)
                 {
                     var keyString = inputData[index];
@@ -70,11 +71,11 @@ namespace Voron.Tests.Bugs
                 foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
                 {
 
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
                         foreach (var treeName in trees)
                         {
-                            var tree = tx.Environment.CreateTree(tx, treeName);
+                            var tree = tx.CreateTree(treeName);
 
                             tree.Add(id, new MemoryStream(testBuffer));
                         }
@@ -103,11 +104,11 @@ namespace Voron.Tests.Bugs
             var addedIds = new List<string>();
             foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
             {
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
                     foreach (var treeName in trees)
                     {
-                        var tree = tx.Environment.CreateTree(tx, treeName);
+                        var tree = tx.CreateTree(treeName);
 
                         tree.Add(id, new MemoryStream(testBuffer));
 
@@ -142,11 +143,11 @@ namespace Voron.Tests.Bugs
 
                 foreach (var id in ids)
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
                         foreach (var treeName in trees)
                         {
-                            var tree = tx.Environment.CreateTree(tx, treeName);
+                            var tree = tx.CreateTree(treeName);
                             tree.Add(id, new MemoryStream(testBuffer));
                         }
 
@@ -160,11 +161,12 @@ namespace Voron.Tests.Bugs
 
         private void ValidateRecords(StorageEnvironment env, IEnumerable<string> trees, IList<string> ids)
         {
-            using (var snapshot = env.CreateSnapshot())
+            using (var snapshot = env.ReadTransaction())
             {
                 foreach (var tree in trees)
                 {
-                    using (var iterator = snapshot.Iterate(tree))
+                    var readTree = snapshot.ReadTree(tree);
+                    using (var iterator = readTree.Iterate())
                     {
                         Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -175,7 +177,7 @@ namespace Voron.Tests.Bugs
                         {
                             keys.Add(iterator.CurrentKey.ToString());
                             Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
-                            var readResult = snapshot.Read(tree, iterator.CurrentKey);
+                            var readResult = readTree.Read( iterator.CurrentKey);
                             if (readResult == null)
                             {
 
@@ -186,7 +188,7 @@ namespace Voron.Tests.Bugs
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.CreateTree(snapshot.Transaction, tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, readTree.State.NumberOfEntries);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }
@@ -214,13 +216,13 @@ namespace Voron.Tests.Bugs
 		[Fact]
 	    public void ShouldNotThrowPageFullExceptionDuringPageSplit()
 	    {
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = Env.WriteTransaction())
 			{
-				Env.CreateTree(tx, "foo");
+				tx.CreateTree( "foo");
 				tx.Commit();
 			}
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = Env.WriteTransaction())
 			{
 				var tree = tx.ReadTree("foo");
 
@@ -262,26 +264,24 @@ namespace Voron.Tests.Bugs
 				tree.Add("29", normal);
 				tree.Add("30", normal);
 
-				DebugStuff.RenderAndShowTree(tx, tree.State.RootPageNumber);
 
 				const int toInsert = 230;
 
 				tree.Add("20", new byte[toInsert]);
 
-				DebugStuff.RenderAndShowTree(tx, tree.State.RootPageNumber);
 			}
 	    }
 
 	    [Fact]
 	    public void ShouldNotThrowPageFullExceptionDuringPageSplit2()
 	    {
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    using (var tx = Env.WriteTransaction())
 		    {
-			    Env.CreateTree(tx, "foo");
+			    tx.CreateTree( "foo");
 			    tx.Commit();
 		    }
 
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    using (var tx = Env.WriteTransaction())
 		    {
 			    var tree = tx.ReadTree("foo");
 
@@ -292,7 +292,7 @@ namespace Voron.Tests.Bugs
 				tx.Commit();
 		    }
 
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    using (var tx = Env.WriteTransaction())
 		    {
 			    var tree = tx.ReadTree("foo");
 

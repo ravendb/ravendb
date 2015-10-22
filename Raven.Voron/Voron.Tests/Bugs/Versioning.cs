@@ -1,51 +1,51 @@
-namespace Voron.Tests.Bugs
+﻿namespace Voron.Tests.Bugs
 {
-    using System;
-    using System.IO;
+	using System;
+	using System.IO;
 
-    using Voron.Impl;
-    using Voron.Trees;
+	using Voron.Impl;
+	using Voron.Trees;
 
-    using Xunit;
+	using Xunit;
 
-    public class Versioning : StorageTest
-    {
-        [Fact]
-        public void SplittersAndRebalancersShouldNotChangeNodeVersion()
-        {
-            const int DocumentCount = 100000;
+	public class Versioning : StorageTest
+	{
+		[Fact]
+		public void SplittersAndRebalancersShouldNotChangeNodeVersion()
+		{
+			const int DocumentCount = 100000;
 
-            var rand = new Random();
-            var testBuffer = new byte[123];
-            rand.NextBytes(testBuffer);
+			var rand = new Random();
+			var testBuffer = new byte[123];
+			rand.NextBytes(testBuffer);
 
-            Tree t1 = null;
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = Env.WriteTransaction())
+			{
+				tx.CreateTree("tree1");
+				tx.Commit();
+			}
+
+            using (var tx = Env.WriteTransaction())
             {
-                t1 = Env.CreateTree(tx, "tree1");
+                var tree = tx.CreateTree("tree1");
+                for (var i = 0; i < DocumentCount; i++)
+                {
+                    tree.Add("Foo" + i, new MemoryStream(testBuffer));
+
+                }
                 tx.Commit();
             }
 
-            var batch = new WriteBatch();
-            for (var i = 0; i < DocumentCount; i++)
-            {
-                batch.Add("Foo" + i, new MemoryStream(testBuffer), "tree1");
-            }
-
-            Env.Writer.Write(batch);
-
-            batch = new WriteBatch();
-            using (var snapshot = Env.CreateSnapshot())
-            {
-                for (var i = 0; i < DocumentCount; i++)
-                {
-                    var result = snapshot.Read("tree1", "Foo" + 1, null);
-                    batch.Delete("Foo" + i, "tree1", result.Version);
-                }
-            }
-
-            Env.Writer.Write(batch);
-        }
-    }
+			using (var snapshot = Env.WriteTransaction())
+			{
+				for (var i = 0; i < DocumentCount; i++)
+				{
+				    var readTree = snapshot.ReadTree("tree1");
+				    var result = readTree.Read("Foo" + 1);
+					readTree.Delete("Foo" + i, result.Version);
+				}
+			}
+		}
+	}
 }

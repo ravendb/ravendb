@@ -1,137 +1,137 @@
-using System.Linq;
+﻿using System.Linq;
 using Voron.Debugging;
 
 namespace Voron.Tests.Bugs
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Text;
-    using System.Threading.Tasks;
+	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using System.IO;
+	using System.Text;
+	using System.Threading.Tasks;
 
-    using Voron.Impl;
-    using Voron.Trees;
+	using Voron.Impl;
+	using Voron.Trees;
 
-    using Xunit;
+	using Xunit;
 
-    public class Snapshots : StorageTest
-    {
-        public Snapshots()
-            : base(StorageEnvironmentOptions.CreateMemoryOnly())
-        {
-            
-        }
+	public class Snapshots : StorageTest
+	{
+		public Snapshots()
+			: base(StorageEnvironmentOptions.CreateMemoryOnly())
+		{
+			
+		}
 
-        [Fact]
-        public void SnapshotIssue()
-        {
-            const int DocumentCount = 50000;
-            
-            var rand = new Random();
-            var testBuffer = new byte[39];
-            rand.NextBytes(testBuffer);
+		[Fact]
+		public void SnapshotIssue()
+		{
+			const int DocumentCount = 50000;
+			
+			var rand = new Random();
+			var testBuffer = new byte[39];
+			rand.NextBytes(testBuffer);
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "tree1");
-                tx.Commit();
-            }
+			using (var tx = Env.WriteTransaction())
+			{
+				tx.CreateTree(  "tree1");
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var t1 = tx.Environment.CreateTree(tx,"tree1");
-                for (var i = 0; i < DocumentCount; i++)
-                {
-                    t1.Add("docs/" + i, new MemoryStream(testBuffer));
-                }
+			using (var tx = Env.WriteTransaction())
+			{
+			    var t1 = tx.CreateTree("tree1");
+				for (var i = 0; i < DocumentCount; i++)
+				{
+					t1.Add("docs/" + i, new MemoryStream(testBuffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            using (var snapshot = Env.CreateSnapshot())
-            {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    var t1 = tx.Environment.CreateTree(tx,"tree1");
-                    for (var i = 0; i < DocumentCount; i++)
-                    {
-                        t1.Delete("docs/" + i);
-                    }
+			using (var snapshot = Env.ReadTransaction())
+			{
+                using (var tx = Env.WriteTransaction())
+				{
+				    var t1 = tx.CreateTree("tree1");
+					for (var i = 0; i < DocumentCount; i++)
+					{
+						t1.Delete("docs/" + i);
+					}
 
-                    tx.Commit();
-                }
+					tx.Commit();
+				}
 
-                for (var i = 0; i < DocumentCount; i++)
-                {
-                    var result = snapshot.Read("tree1", "docs/" + i);
-                    Assert.NotNull(result);
+				for (var i = 0; i < DocumentCount; i++)
+				{
+					var result = snapshot.CreateTree("tree1").Read("docs/" + i);
+					Assert.NotNull(result);
 
-                    {
-                        int used;
-                        Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
-                    }
-                }
-            }
-        }
+					{
+						int used;
+						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
+					}
+				}
+			}
+		}
 
-        [Fact]
-        public void SnapshotIssue_ExplicitFlushing()
-        {
-            const int DocumentCount = 50000;
+		[Fact]
+		public void SnapshotIssue_ExplicitFlushing()
+		{
+			const int DocumentCount = 50000;
 
-            var rand = new Random();
-            var testBuffer = new byte[39];
-            rand.NextBytes(testBuffer);
+			var rand = new Random();
+			var testBuffer = new byte[39];
+			rand.NextBytes(testBuffer);
 
-            _options.ManualFlushing = true;
+			_options.ManualFlushing = true;
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "tree1");
-                tx.Commit();
-            }
+			using (var tx = Env.WriteTransaction())
+			{
+				tx.CreateTree( "tree1");
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                var t1 = tx.Environment.CreateTree(tx, "tree1");
-                for (var i = 0; i < DocumentCount; i++)
-                {
-                    t1.Add("docs/" + i, new MemoryStream(testBuffer));
-                }
+			using (var tx = Env.WriteTransaction())
+			{
+				var t1 = tx.CreateTree("tree1");
+				for (var i = 0; i < DocumentCount; i++)
+				{
+					t1.Add("docs/" + i, new MemoryStream(testBuffer));
+				}
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            Env.FlushLogToDataFile();
+			Env.FlushLogToDataFile();
 
-            using (var snapshot = Env.CreateSnapshot())
-            {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    var t1 = tx.Environment.CreateTree(tx, "tree1");
-                    for (var i = 0; i < DocumentCount; i++)
-                    {
-                        t1.Delete("docs/" + i);
-                    }
+			using (var snapshot = Env.ReadTransaction())
+			{
+				using (var tx = Env.WriteTransaction())
+				{
+					var t1 = tx.CreateTree( "tree1");
+					for (var i = 0; i < DocumentCount; i++)
+					{
+						t1.Delete("docs/" + i);
+					}
 
-                    tx.Commit();
-                }
+					tx.Commit();
+				}
 
-                Env.FlushLogToDataFile();
+				Env.FlushLogToDataFile();
 
-                for (var i = 0; i < DocumentCount; i++)
-                {
-                    var result = snapshot.Read("tree1", "docs/" + i);
-                    Assert.NotNull(result);
+				for (var i = 0; i < DocumentCount; i++)
+				{
+					var result = snapshot.ReadTree("tree1").Read( "docs/" + i);
+					Assert.NotNull(result);
 
-                    {
-                        int used;
-                        Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
-                    }
-                }
-            }
-        }
-    }
+					{
+						int used;
+						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
+					}
+				}
+			}
+		}
+	}
 }

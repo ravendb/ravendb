@@ -92,6 +92,31 @@
     <Compile Include="Bugs\DataCorruptionInOverflow.cs" />
     <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />
     <Compile Include="Bugs\Deletes.cs" />
+    <Compile Include="Bugs\EmptyTree.cs" />
+    <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\FreeSpaceAndOverflowPages.cs" />
+    <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
+    <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
+    <Compile Include="Bugs\Isolation.cs" />
+    <Compile Include="Bugs\Iterating.cs" />
+    <Compile Include="Bugs\LargeValues.cs" />
+    <Compile Include="Bugs\LongKeys.cs" />
+    <Compile Include="Bugs\MemoryAccess.cs" />
+    <Compile Include="Bugs\MultiAdds.cs" />
+    <Compile Include="Bugs\MultiReads.cs" />
+    <Compile Include="Bugs\PageAllocation.cs" />
+    <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
+    <Compile Include="Bugs\PageSplitter.cs" />
+    <Compile Include="Bugs\PageTableIssue.cs" />
+    <Compile Include="Bugs\RavenDB_2850.cs" />
+    <Compile Include="Bugs\Recovery.cs" />
+    <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
+    <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
+    <Compile Include="Bugs\Snapshots.cs" />
+    <Compile Include="Bugs\StartsWithSearch.cs" />
+    <Compile Include="Bugs\TreeRebalancer.cs" />
+    <Compile Include="Bugs\UpdateLastItem.cs" />
+    <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="FixedSize\InlineDataWithRandomSeed.cs" />
     <Compile Include="FixedSize\LargeFixedSizeTreeBugs.cs" />
@@ -144,7 +169,6 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Bugs\Data\mapped.djrs" />
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>

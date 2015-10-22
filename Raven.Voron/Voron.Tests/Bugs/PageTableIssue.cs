@@ -19,37 +19,34 @@ namespace Voron.Tests.Bugs
 		{
 			var bytes = new byte[1000];
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				var tree1 = Env.CreateTree(txw, "foo");
-				var tree2 = Env.CreateTree(txw, "bar");
-				var tree3 = Env.CreateTree(txw, "baz");
+				var tree1 = txw.CreateTree("foo");
+				var tree2 = txw.CreateTree("bar");
+				var tree3 = txw.CreateTree("baz");
 
 				tree1.Add("foos/1", new MemoryStream(bytes));
 
 				txw.Commit();
 
-                DebugStuff.RenderAndShowTree(txw, 1);
 			}
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				var tree = Env.CreateTree(txw, "bar");
+				var tree = txw.CreateTree( "bar");
 
 				tree.Add("bars/1", new MemoryStream(bytes));
 
 				txw.Commit();
-
-                DebugStuff.RenderAndShowTree(txw, 1);
 			}
 
 			var bytesToFillFirstJournalCompletely = new byte[8*Env.Options.PageSize];
 
 			new Random().NextBytes(bytesToFillFirstJournalCompletely);
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var txw = Env.WriteTransaction())
 			{
-				var tree = Env.CreateTree(txw, "baz");
+				var tree = txw.CreateTree("baz");
 
 				// here we have to put a big value to be sure that in next transaction we will put the
 				// updated value into a new journal file - this is the key to expose the issue
@@ -57,25 +54,23 @@ namespace Voron.Tests.Bugs
 
 				txw.Commit();
 
-                DebugStuff.RenderAndShowTree(txw, 1);
 			}
 
-			using (var txr = Env.NewTransaction(TransactionFlags.Read))
+			using (var txr = Env.ReadTransaction())
 			{
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var txw = Env.WriteTransaction())
 				{
-					var tree = Env.CreateTree(txw, "foo");
+					var tree = txw.CreateTree(  "foo");
 
 					tree.Add("foos/1", new MemoryStream());
 
 					txw.Commit();
 
-                    DebugStuff.RenderAndShowTree(txw, 1);
 				}
 
 				Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.CreateTree(txr, "foo").Read("foos/1"));
+				Assert.NotNull(txr.CreateTree("foo").Read("foos/1"));
 			}
 		}
 	}

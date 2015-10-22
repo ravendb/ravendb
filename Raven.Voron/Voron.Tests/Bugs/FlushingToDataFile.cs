@@ -33,33 +33,36 @@ namespace Voron.Tests.Bugs
 
             Assert.Equal(2 * Env.Options.PageSize, Env.Options.MaxLogFileSize);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("foo/0", new MemoryStream(value1));
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("foo/1", new MemoryStream(value1));
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
                 Env.FlushLogToDataFile(); // force flushing during read transaction
 
-                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var txw = Env.WriteTransaction())
                 {
                     // empty transaction is enough to expose the issue because it allocates 1 page in the scratch space for the transaction header
                     txw.Commit();
                 }
 
+                var tree = tx.CreateTree("foo");
                 for (var i = 0; i < 2; i++)
                 {
-                    var readResult = tx.Root.Read("foo/" + i);
+                    var readResult = tree.Read("foo/" + i);
 
                     Assert.NotNull(readResult);
                     Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -85,31 +88,35 @@ namespace Voron.Tests.Bugs
 
             Env.FlushLogToDataFile();
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("foo/0", new MemoryStream(value1));
-                tx.Root.Add("foo/1", new MemoryStream(value1));
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/0", new MemoryStream(value1));
+                tree.Add("foo/1", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("foo/0", new MemoryStream(value1));
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/0", new MemoryStream(value1));
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                tx.Root.Add("foo/4", new MemoryStream(value1));
+                var tree = tx.CreateTree("foo");
+                tree.Add("foo/4", new MemoryStream(value1));
                 tx.Commit();
             }
 
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var readResult = tx.Root.Read("foo/0");
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("foo/0");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -118,14 +125,15 @@ namespace Voron.Tests.Bugs
                 readResult.Reader.CopyTo(memoryStream);
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
                 Env.FlushLogToDataFile();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                var readResult = tx.Root.Read("foo/0");
+                var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("foo/0");
 
                 Assert.NotNull(readResult);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
@@ -152,32 +160,32 @@ namespace Voron.Tests.Bugs
                         var buffer = new byte[random.Next(100, 1000)];
                         random.NextBytes(buffer);
 
-                        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                        using (var tx = env.WriteTransaction())
                         {
                             for (int i = 0; i < 100; i++)
                             {
                                 foreach (var tree in trees)
                                 {
-                                    tx.Environment.CreateTree(tx, tree).Add(string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
+                                    tx.CreateTree(tree).Add(string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
                                 }
 
                             }
 
                             tx.Commit();
-                            env.FlushLogToDataFile(tx);
-                            var txr = env.NewTransaction(TransactionFlags.Read);
+                            env.FlushLogToDataFile(tx.LowLevelTransaction);
+                            var txr = env.ReadTransaction();
 
                             transactions.Add(txr);
                         }
                     }
 
-                    Assert.Equal(transactions.OrderBy(x => x.Id).First().Id, env.OldestTransaction);
+                    Assert.Equal(transactions.OrderBy(x => x.LowLevelTransaction.Id).First().LowLevelTransaction.Id, env.OldestTransaction);
 
                     foreach (var tx in transactions)
                     {
                         foreach (var tree in trees)
                         {
-                            using (var iterator = tx.Environment.CreateTree(tx, tree).Iterate())
+                            using (var iterator = tx.CreateTree(tree).Iterate())
                             {
                                 if (!iterator.Seek(Slice.BeforeAllKeys))
                                     continue;

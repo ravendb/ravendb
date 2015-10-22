@@ -9,16 +9,16 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void ShouldBeEmpty()
         {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            using (var tx = Env.WriteTransaction())
             {
-                Env.CreateTree(tx, "events");
+                tx.CreateTree("events");
 
                 tx.Commit();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
-                var treeIterator = tx.Environment.CreateTree(tx,"events").Iterate();
+                var treeIterator = tx.CreateTree("events").Iterate();
 
                 Assert.False(treeIterator.Seek(Slice.AfterAllKeys));
 
@@ -34,16 +34,16 @@ namespace Voron.Tests.Bugs
                 options.OwnsPagers = false;
                 using (var env = new StorageEnvironment(options))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        env.CreateTree(tx, "events");
+                        tx.CreateTree("events");
 
                         tx.Commit();
                     }
 
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        tx.Environment.CreateTree(tx,"events").Add("test", new MemoryStream(0));
+                        tx.CreateTree("events").Add("test", new MemoryStream(0));
 
                         tx.Commit();
                     }
@@ -51,16 +51,16 @@ namespace Voron.Tests.Bugs
 
                 using (var env = new StorageEnvironment(options))
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        env.CreateTree(tx, "events");
+                        tx.CreateTree("events");
 
                         tx.Commit();
                     }
 
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
-                        var tree = tx.Environment.CreateTree(tx,"events");
+                        var tree = tx.CreateTree("events");
                         var readResult = tree.Read("test");
                         Assert.NotNull(readResult);
 

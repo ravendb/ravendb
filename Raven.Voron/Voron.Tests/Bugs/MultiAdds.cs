@@ -46,15 +46,15 @@ namespace Voron.Tests.Bugs
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.WriteTransaction())
 				{
-					Env.CreateTree(tx, "foo");
+					tx.CreateTree( "foo");
 					tx.Commit();
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.WriteTransaction())
 				{
-					var tree = tx.Environment.CreateTree(tx,"foo");
+					var tree = tx.CreateTree("foo");
 					foreach (var buffer in inputData)
 					{						
 						Assert.DoesNotThrow(() => tree.MultiAdd("ChildTreeKey", new Slice(buffer)));
@@ -62,9 +62,9 @@ namespace Voron.Tests.Bugs
 					tx.Commit();
 				}
 				
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.WriteTransaction())
 				{
-					var tree = tx.Environment.CreateTree(tx,"foo");
+					var tree = tx.CreateTree("foo");
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
@@ -105,26 +105,30 @@ namespace Voron.Tests.Bugs
 			storageEnvironmentOptions.ManualFlushing = true;
 			using (var env = new StorageEnvironment(storageEnvironmentOptions))
 			{
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.WriteTransaction())
 				{
-					env.CreateTree(tx, "multi");
+					tx.CreateTree(  "multi");
 					tx.Commit();
 				}
 
-				var batch = new WriteBatch();
+                using (var tx = env.WriteTransaction())
+                {
+                   var batch = tx.CreateTree("multi");
 
-				batch.MultiAdd("0", "1", "multi");
-				batch.MultiAdd("1", "1", "multi");
-				batch.MultiAdd("2", "1", "multi");
-				batch.MultiAdd("3", "1", "multi");
-				batch.MultiAdd("4", "1", "multi");
-				batch.MultiAdd("5", "1", "multi");
+                    batch.MultiAdd("0", "1");
+                    batch.MultiAdd("1", "1");
+                    batch.MultiAdd("2", "1");
+                    batch.MultiAdd("3", "1");
+                    batch.MultiAdd("4", "1");
+                    batch.MultiAdd("5", "1");
 
-				env.Writer.Write(batch);
+                    tx.Commit();
+                }
 
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
+
+				using (var tx = env.ReadTransaction())
 				{
-					var tree = tx.Environment.CreateTree(tx,"multi");
+					var tree = tx.CreateTree("multi");
 					using (var iterator = tree.MultiRead("0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -139,20 +143,25 @@ namespace Voron.Tests.Bugs
 					}
 				}
 
-				batch = new WriteBatch();
+                using (var tx = env.WriteTransaction())
+                {
+                    var batch = tx.CreateTree("multi");
 
-				batch.MultiAdd("0", "2", "multi");
-				batch.MultiAdd("1", "2", "multi");
-				batch.MultiAdd("2", "2", "multi");
-				batch.MultiAdd("3", "2", "multi");
-				batch.MultiAdd("4", "2", "multi");
-				batch.MultiAdd("5", "2", "multi");
+                    batch.MultiAdd("0", "2");
+                    batch.MultiAdd("1", "2");
+                    batch.MultiAdd("2", "2");
+                    batch.MultiAdd("3", "2");
+                    batch.MultiAdd("4", "2");
+                    batch.MultiAdd("5", "2");
 
-				env.Writer.Write(batch);
+                    tx.Commit();
+                }
 
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
+
+
+				using (var tx = env.ReadTransaction())
 				{
-					var tree = tx.Environment.CreateTree(tx,"multi");
+					var tree = tx.CreateTree("multi");
 					using (var iterator = tree.MultiRead("0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -180,16 +189,20 @@ namespace Voron.Tests.Bugs
 
 				CreateTrees(env, 1, "multitree");
 
-				var batch = new WriteBatch();
+                using (var tx = env.WriteTransaction())
+                {
+                    var batch = tx.CreateTree("multitree0");
 
-				batch.MultiAdd("key", "value1", "multitree0");
-				batch.MultiAdd("key", "value2", "multitree0");
+                    batch.MultiAdd("key", "value1");
+                    batch.MultiAdd("key", "value2");
 
-				env.Writer.Write(batch);
+                    tx.Commit();
+                }
 
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
+
+				using (var tx = env.ReadTransaction())
 				{
-					var tree = tx.Environment.CreateTree(tx,"multitree0");
+					var tree = tx.CreateTree("multitree0");
 					using (var it = tree.MultiRead("key"))
 					{
 						Assert.True(it.Seek(Slice.BeforeAllKeys));
@@ -203,57 +216,16 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact]
-		public void PageNotSorted_ValidateDebugOption()
-		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				env.DebugJournal = DebugJournal.FromFile("Bugs/Data/mapped", env);
-				env.DebugJournal.Replay();
-
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
-				{
-					var tree = tx.ReadTree("mapped_results_by_view_and_reduce_key");
-
-					DebugStuff.RenderAndShowTree(tx, tree.State.RootPageNumber);
-				}
-			}
-		}
-
-		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
-		{
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
-			{
-				foreach (var tree in trees)
-				{
-					using (var iterator = tree.Iterate())
-					{
-						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
-
-						var count = 0;
-						do
-						{
-							count++;
-						}
-						while (iterator.MoveNext());
-
-						Assert.Equal(i * documentCount, tree.State.EntriesCount);
-						Assert.Equal(i * documentCount, count);
-					}
-				}
-			}
-		}
-
 		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
 		{
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			using (var tx = env.ReadTransaction())
 			{
 				for (var j = 0; j < 10; j++)
 				{
 					
 					foreach (var treeName in trees)
 					{
-					    var tree = tx.Environment.CreateTree(tx,treeName);
+					    var tree = tx.CreateTree(treeName);
 						using (var iterator = tree.MultiRead((j % 10).ToString()))
 						{
 							Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -271,52 +243,34 @@ namespace Voron.Tests.Bugs
 				}
 			}
 		}
-
-		private void AddRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, byte[] testBuffer, bool sequential)
-		{
-			var key = Guid.NewGuid().ToString();
-			var batch = new WriteBatch();
-
-			for (int i = 0; i < documentCount; i++)
-			{
-				foreach (var tree in trees)
-				{
-					var id = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
-
-					batch.Add(id, new MemoryStream(testBuffer), tree.Name);
-				}
-			}
-
-			env.Writer.Write(batch);
-		}
-
 		private void AddMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, bool sequential)
 		{
-			var key = Guid.NewGuid().ToString();
-			var batch = new WriteBatch();
+		    using (var tx = env.WriteTransaction())
+		    {
+                var key = Guid.NewGuid().ToString();
 
-			for (int i = 0; i < documentCount; i++)
-			{
-				foreach (var tree in trees)
-				{
-					var value = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree, i, key) : Guid.NewGuid().ToString();
+                for (int i = 0; i < documentCount; i++)
+                {
+                    foreach (var tree in trees)
+                    {
+                        var value = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree, i, key) : Guid.NewGuid().ToString();
 
-					batch.MultiAdd((i % 10).ToString(), value, tree);
-				}
-			}
+                        tx.CreateTree(tree).MultiAdd((i % 10).ToString(), value);
+                    }
+                }
+            }
 
-			env.Writer.Write(batch);
 		}
 
 		private IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
 		{
 			var results = new List<string>();
 
-			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = env.ReadTransaction())
 			{
 				for (var i = 0; i < number; i++)
 				{
-					results.Add(env.CreateTree(tx, prefix + i).Name);
+					results.Add(tx.CreateTree( prefix + i).Name);
 				}
 
 				tx.Commit();

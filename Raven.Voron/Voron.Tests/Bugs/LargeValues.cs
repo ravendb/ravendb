@@ -1,3 +1,5 @@
+﻿using Voron.Trees;
+
 namespace Voron.Tests.Bugs
 {
     using System;
@@ -26,13 +28,14 @@ namespace Voron.Tests.Bugs
             {
                 for (var transactions = 0; transactions < 100; transactions++)
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
+                        var tree = tx.CreateTree("foo");
                         for (var i = 0; i < 100; i++)
                         {
                             enumerator.MoveNext();
 
-                            tx.Root.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+                            tree.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
                         tx.Commit();
@@ -42,7 +45,7 @@ namespace Voron.Tests.Bugs
                         env.FlushLogToDataFile();
                 }
 
-                ValidateRecords(env, new List<string> { "Root" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
+                ValidateRecords(env, new List<string> { "foo" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
 
             options = StorageEnvironmentOptions.ForPath("tests");
@@ -50,17 +53,18 @@ namespace Voron.Tests.Bugs
 
             using (var env = new StorageEnvironment(options))
             {
-                ValidateRecords(env, new List<string> { "Root" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
+                ValidateRecords(env, new List<string> { "foo" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
         }
 
         private void ValidateRecords(StorageEnvironment env, IEnumerable<string> trees, IList<string> ids)
         {
-            using (var snapshot = env.CreateSnapshot())
+            using (var snapshot = env.ReadTransaction())
             {
-                foreach (var tree in trees)
+                foreach (var treeName in trees)
                 {
-                    using (var iterator = snapshot.Iterate(tree))
+                    var tree = snapshot.ReadTree(treeName);
+                    using (var iterator = tree.Iterate())
                     {
                         Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -71,13 +75,13 @@ namespace Voron.Tests.Bugs
                         {
                             keys.Add(iterator.CurrentKey.ToString());
                             Assert.True(ids.Contains(iterator.CurrentKey.ToString()), "Unknown key: " + iterator.CurrentKey);
-                            Assert.NotNull(snapshot.Read(tree, iterator.CurrentKey));
+                            Assert.NotNull(tree.Read(iterator.CurrentKey));
 
                             count++;
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.CreateTree(snapshot.Transaction,tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, tree.State.NumberOfEntries);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

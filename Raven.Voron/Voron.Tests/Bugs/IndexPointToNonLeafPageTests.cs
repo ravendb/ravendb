@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="IndexPointToNotLeafPageTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -27,13 +27,14 @@ namespace Voron.Tests.Bugs
 
             for (var transactions = 0; transactions < 36; transactions++)
             {
-                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = Env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("foo");
                     for (var i = 0; i < 100; i++)
                     {
                         enumerator.MoveNext();
 
-                        tx.Root.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+                        tree.Add(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                     }
 
                     tx.Commit();
@@ -42,11 +43,12 @@ namespace Voron.Tests.Bugs
                 Env.FlushLogToDataFile();
             }
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var tx = Env.ReadTransaction())
             {
+                var tree = tx.CreateTree("foo");
                 foreach (var item in sequentialLargeIds)
                 {
-                    var readResult = tx.Root.Read(item.Key.ToString("0000000000000000"));
+                    var readResult = tree.Read(item.Key.ToString("0000000000000000"));
 
                     Assert.NotNull(readResult);
 

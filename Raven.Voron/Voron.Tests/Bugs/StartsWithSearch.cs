@@ -15,10 +15,10 @@ namespace Voron.Tests.Bugs
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
                     var s = new string('0', 500);
-                    var tree = env.CreateTree(tx, "data");
+                    var tree = tx.CreateTree( "data");
                     for (int i = 0; i < 10; i++)
                     {
                         tree.Add("users-" + i + "-" + s, new byte[0]);
@@ -26,7 +26,7 @@ namespace Voron.Tests.Bugs
                     tx.Commit();
                 }
 
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
                     var tree = tx.ReadTree("data");
                     using (var it = tree.Iterate())
