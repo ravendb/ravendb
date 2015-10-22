@@ -11,6 +11,7 @@ using Jint;
 using Jint.Native;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Json

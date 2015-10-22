@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database

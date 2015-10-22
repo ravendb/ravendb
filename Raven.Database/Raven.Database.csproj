@@ -519,7 +519,6 @@
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerFilesApi.cs" />
     <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
@@ -610,7 +609,6 @@
     <Compile Include="Embedded\OwinEmbeddedHost.cs" />
     <Compile Include="Embedded\OwinClientHandler.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
-    <Compile Include="Json\JintOperationScope.cs" />
     <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
@@ -1347,6 +1345,10 @@
     <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
       <Project>{F796F69F-D17B-4260-92D6-65CB94C0E05C}</Project>
       <Name>Rachis</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
+      <Project>{ae07b425-0ef2-4710-b747-67b8ec20fcb7}</Project>
+      <Name>Raven.Abstractions.Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
