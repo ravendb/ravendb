@@ -99,7 +99,9 @@ class counters extends viewModelBase {
         this.groupToSelectName = args ? args.group : null;
 
         var cs = this.activeCounterStorage();
-        this.fetchGroups(cs).done(results => {
+                
+        //initial groups fetch
+        this.fetchGroups(cs, 0, Number.MAX_VALUE).done(results => {
 	        this.groupsLoaded(results, cs);
 	        counters.isInitialized(true);
         });
@@ -145,10 +147,10 @@ class counters extends viewModelBase {
         ];
     }
 
-    private fetchGroups(cs: counterStorage): JQueryPromise<any> {
+    private fetchGroups(cs: counterStorage, skip: number, pageSize: number): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var getGroupsCommand = new getCounterGroupsCommand(cs);
+        var getGroupsCommand = new getCounterGroupsCommand(cs, skip, pageSize);
         getGroupsCommand.execute().done((results: counterGroup[]) => deferred.resolve(results));
         return deferred;
     }
@@ -354,7 +356,8 @@ class counters extends viewModelBase {
         var deferred = $.Deferred();
         var cs = this.activeCounterStorage();
 
-        this.fetchGroups(cs).done(results => {
+        //TODO: add proper paging support here too
+        this.fetchGroups(cs, 0, Number.MAX_VALUE).done(results => {
             this.updateGroups(results);
 	        this.refreshGroupsData();
             //TODO: add a button to refresh the counters and than use this.refreshCollectionsData();

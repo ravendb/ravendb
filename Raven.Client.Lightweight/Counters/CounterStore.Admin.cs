@@ -20,7 +20,24 @@ namespace Raven.Client.Counters
 			internal CounterStoreAdminOperations(CounterStore parent)
 			{
 				this.parent = parent;
-			}			
+			}
+
+			public async Task<CounterNameGroupPair[]> GetAllCounterStorageNameAndGroups(string counterStorageName = null,
+				CancellationToken token = default(CancellationToken))
+			{
+				var nameGroupPairs = new List<CounterNameGroupPair>();
+				var taken = 0;
+				CounterNameGroupPair[] nameGroupPairsTaken;
+				do
+				{
+					nameGroupPairsTaken = await GetCounterStorageNameAndGroups(counterStorageName, token, taken).ConfigureAwait(false);
+					taken += nameGroupPairsTaken.Length;
+					if (nameGroupPairsTaken.Length > 0)
+						nameGroupPairs.AddRange(nameGroupPairsTaken);
+				} while (nameGroupPairsTaken.Length > 0);
+
+				return nameGroupPairs.ToArray();
+			}
 
 			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, 
 				CancellationToken token = default(CancellationToken),
@@ -28,7 +45,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names&skip={2}&take={3}", parent.Url, counterStorageName ?? parent.Name,skip,take);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName ?? parent.Name}?op=groups-names&skip={skip}&take={take}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -60,7 +77,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary&skip={2}&take={3}", parent.Url, counterStorageName ?? parent.Name,skip, take);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName ?? parent.Name}?op=summary&skip={skip}&take={take}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -84,9 +101,9 @@ namespace Raven.Client.Counters
 				CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
-					throw new ArgumentNullException("counterStorageDocument");
+					throw new ArgumentNullException(nameof(counterStorageDocument));
 
-				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
+				if (counterStorageName == null) throw new ArgumentNullException(nameof(counterStorageName));
 
 				parent.AssertInitialized();
 
@@ -105,7 +122,7 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
+							throw new InvalidOperationException($"Cannot create counter storage with the name '{counterStorageName}' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
 
 						throw;
 					}
@@ -123,7 +140,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = string.Format("{0}/admin/cs/{1}?hard-delete={2}", parent.Url, counterStorageName, hardDelete);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName}?hard-delete={hardDelete}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
@@ -134,7 +151,7 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.NotFound)
-							throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterStorageName));
+							throw new InvalidOperationException($"Counter storage with specified name ({counterStorageName}) doesn't exist");
 						throw;
 					}
 				}
@@ -144,7 +161,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/cs", parent.Url);
+				var requestUriString = $"{parent.Url}/cs";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{

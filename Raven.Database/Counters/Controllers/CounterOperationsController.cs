@@ -74,14 +74,13 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/groups")]
 		[HttpGet]
-		public HttpResponseMessage GetCounterGroups()
+		public HttpResponseMessage GetCounterGroups(int skip, int take)
 		{
 
 			using (var reader = CounterStorage.CreateReader())
 			{
 				CounterStorage.MetricsCounters.ClientRequests.Mark();
-				throw new NotImplementedException("do not forget to add paging here");
-				//return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups(skip, take).ToList());
+				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups(skip, take).ToList());
 			}
 		}
 

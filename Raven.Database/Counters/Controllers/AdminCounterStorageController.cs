@@ -90,7 +90,7 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.NotFound);
 			}
 
-			var counterSummaries = new List<CounterNameGroupPair>();
+			var counterNameGroupPairs = new List<CounterNameGroupPair>();
 			using (var reader = counterStorage.CreateReader())
 			{
 				var groupsAndNames = reader.GetCounterGroups(0,int.MaxValue)
@@ -101,10 +101,10 @@ namespace Raven.Database.Counters.Controllers
 						Group = group.Name
 					})).Skip(skip).Take(take);
 
-				counterSummaries.AddRange(groupsAndNames);
+				counterNameGroupPairs.AddRange(groupsAndNames);
 			}
 
-			return GetMessageWithObject(counterSummaries);
+			return GetMessageWithObject(counterNameGroupPairs);
 		}
 
 	    private async Task<HttpResponseMessage> GetSummary(string counterStorageId,int shouldSkip,int shouldTake)
