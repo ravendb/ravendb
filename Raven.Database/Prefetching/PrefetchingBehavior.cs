@@ -706,8 +706,15 @@ namespace Raven.Database.Prefetching
 						if (size > jsonDocuments.Count * 8 ||
 							sp.ElapsedMilliseconds > 3000)
 						{
-							var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
-							log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
+							if (log.IsDebugEnabled)
+							{
+								var topSizes = jsonDocuments
+									.OrderByDescending(x => x.SerializedSizeOnDisk)
+									.Take(10)
+									.Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
+
+								log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
+							}
 						}
 					}
 
