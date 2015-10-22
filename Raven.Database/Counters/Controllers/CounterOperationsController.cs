@@ -76,10 +76,12 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounterGroups()
 		{
+
 			using (var reader = CounterStorage.CreateReader())
 			{
 				CounterStorage.MetricsCounters.ClientRequests.Mark();
-				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups().ToList());
+				throw new NotImplementedException("do not forget to add paging here");
+				//return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups(skip, take).ToList());
 			}
 		}
 
@@ -392,7 +394,7 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = CounterStorage.CreateReader())
 			{
 				group = group ?? string.Empty;
-				var counters = reader.GetCountersSummary(group, skip, take);
+				var counters = reader.GetCounterSummariesByGroup(group, skip, take);
 				return GetMessageWithObject(counters);
 			}
 		}

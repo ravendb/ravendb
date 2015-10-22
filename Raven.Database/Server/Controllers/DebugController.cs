@@ -80,16 +80,17 @@ namespace Raven.Database.Server.Controllers
 			if (counter == null)
 				return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
 
-			using (var reader = counter.CreateReader())
-			{
-				var groupsAndNames = reader.GetCounterGroups().SelectMany(group => reader.GetCountersSummary(group.Name));					
-
-				return GetMessageWithObject(new
-				{
-					Stats = counter.CreateStats(),
-					GroupsAndNames = groupsAndNames
-				});
-			}
+			throw new NotImplementedException("do not forget to add paging here");
+//			using (var reader = counter.CreateReader())
+//			{
+//				var groupsAndNames = reader.GetCounterGroups().SelectMany(group => reader.GetCountersSummary(group.Name));					
+//
+//				return GetMessageWithObject(new
+//				{
+//					Stats = counter.CreateStats(),
+//					GroupsAndNames = groupsAndNames
+//				});
+//			}
 		}
 
 		[HttpGet]

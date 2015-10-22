@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,11 +22,13 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}			
 
-			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, CancellationToken token = default(CancellationToken))
+			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, 
+				CancellationToken token = default(CancellationToken),
+				int skip = 0, int take = 1024)
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names", parent.Url, counterStorageName ?? parent.Name);
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names&skip={2}&take={3}", parent.Url, counterStorageName ?? parent.Name,skip,take);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
@@ -34,11 +37,30 @@ namespace Raven.Client.Counters
 				}
 			}
 
-			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, CancellationToken token = default(CancellationToken))
+			public async Task<CounterSummary[]> GetAllCounterStorageSummaries(string counterStorageName = null,
+				CancellationToken token = default(CancellationToken))
+			{
+				var summaries = new List<CounterSummary>();
+				var taken = 0;
+				CounterSummary[] summariesTaken;
+                do
+				{
+					summariesTaken = await GetCounterStorageSummary(counterStorageName, token, taken).ConfigureAwait(false);
+					taken += summariesTaken.Length;
+					if(summariesTaken.Length > 0)
+						summaries.AddRange(summariesTaken);
+				} while (summariesTaken.Length > 0);
+
+				return summaries.ToArray();
+			}
+
+			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, 
+				CancellationToken token = default(CancellationToken),
+				int skip = 0,int take = 1024)
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary", parent.Url, counterStorageName ?? parent.Name);
+				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary&skip={2}&take={3}", parent.Url, counterStorageName ?? parent.Name,skip, take);
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{

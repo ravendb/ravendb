@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 
@@ -82,22 +80,6 @@ namespace Raven.Client.Counters
 							throw new InvalidOperationException(e.Message, e);
 						throw;
 					}
-				}
-			}, token).WithCancellation(token).ConfigureAwait(false);
-		}
-
-		public async Task<List<CounterView.ServerValue>> GetServersValuesAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
-		{
-			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().WithCancellation(token).ConfigureAwait(false);
-
-			return await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Get, async (url, counterStoreName) =>
-			{
-				var requestUriString = string.Format("{0}/getCounterServersValues/{1}/{2}", url, groupName, counterName);
-				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-				{
-					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<List<CounterView.ServerValue>>();
 				}
 			}, token).WithCancellation(token).ConfigureAwait(false);
 		}
