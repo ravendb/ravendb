@@ -81,6 +81,4 @@ namespace Raven.Abstractions.Counters
 
         public string LastError { get; set; }
     }
-
-
 }

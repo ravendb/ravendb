@@ -98,8 +98,9 @@ namespace Raven.Database.Actions
 														  string skipAfter = null)
         {
             var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
-                                           transformer, transformerParameters, skipAfter);
+            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, 
+                doc => { if (doc != null) list.Add(doc.ToJson()); }, transformer, transformerParameters, skipAfter);
+
             return list;
         }
 
@@ -115,6 +116,7 @@ namespace Raven.Database.Actions
             var canPerformRapidPagination = nextStart > 0 && start == nextStart;
             var actualStart = canPerformRapidPagination ? start : 0;
             var addedDocs = 0;
+            var docCountOnLastAdd = 0;
             var matchedDocs = 0;
 
             TransactionalStorage.Batch(
@@ -143,6 +145,11 @@ namespace Raven.Database.Actions
                         {
                             token.ThrowIfCancellationRequested();
                             docCount++;
+                            if (docCount - docCountOnLastAdd > 1000)
+                            {
+                                addDoc(null); // heartbeat
+                            }
+
                             var keyTest = doc.Key.Substring(idPrefix.Length);
 
                             if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
@@ -195,6 +202,7 @@ namespace Raven.Database.Actions
                             }
 
                             addedDocs++;
+                            docCountOnLastAdd = docCount;
 
                             if (addedDocs >= pageSize)
                                 break;
@@ -417,7 +425,11 @@ namespace Raven.Database.Actions
         public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; });
+            GetDocuments(start, pageSize, etag, token, doc =>
+            {
+                if (doc != null) list.Add(doc.ToJson());
+                return true;
+            });
             return list;
         }
 
@@ -436,16 +448,22 @@ namespace Raven.Database.Actions
                 while (true)
                 {
                     var documents = etag == null
-                                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
+                    int docCountOnLastAdd = 0;
                     foreach (var doc in documents)
                     {
                         docCount++;
 
                         token.ThrowIfCancellationRequested();
+
+                        if (docCount - docCountOnLastAdd > 1000)
+                        {
+                            addDocument(null); // heartbeat
+                        }
 
                         if (etag != null)
                             etag = doc.Etag;
@@ -454,23 +472,30 @@ namespace Raven.Database.Actions
 
                         var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                        
+
                         document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
                         if (document == null)
                             continue;
-                        
+
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
-                        
+
                         bool canContinue = addDocument(document);
                         if (!canContinue)
                             break;
 
                         lastDocumentReadEtag = etag;
+
+                        docCountOnLastAdd = docCount;
                     }
 
                     if (returnedDocs || docCount == 0)
                         break;
+
+                    // No document was found that matches the requested criteria
+                    // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                    if (lastDocumentReadEtag != null)
+                        etag = lastDocumentReadEtag;
 
                     start += docCount;
                 }
@@ -492,9 +517,15 @@ namespace Raven.Database.Actions
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     
                     int docCount = 0;
+                    int docCountOnLastAdd = 0;
                     foreach (var doc in documents)
                     {
-                        docCount++;                        
+                        docCount++;
+                        if (docCount - docCountOnLastAdd > 1000)
+                        {
+                            addDocument(null); // heartbeat
+                        }
+
                         token.ThrowIfCancellationRequested();
                         
                         etag = doc.Etag;
@@ -511,7 +542,10 @@ namespace Raven.Database.Actions
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
 
-                        bool canContinue = addDocument(document);                                                                          
+                        bool canContinue = addDocument(document);
+
+                        docCountOnLastAdd = docCount;
+
                         if (!canContinue)
                             break;
                     }

@@ -108,12 +108,12 @@ task Test -depends Compile {
 		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `											
+		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `	
-		"$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `				
-		"$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `				
-		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `						
+		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
+		"$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `
+		"$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `
+		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
 		"$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
@@ -372,7 +372,7 @@ task CopyRootFiles {
 	
 	(Get-Content "$build_dir\Output\Start.cmd") | 
 		Foreach-Object { $_ -replace "{build}", "$($env:buildlabel)" } |
-		Set-Content "$build_dir\Output\Start.cmd" -Encoding Default
+		Set-Content "$build_dir\Output\Start.cmd" -Encoding ASCII
 }
 
 task ZipOutput {
@@ -440,18 +440,76 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
+	$appPoolName = "RavenDB 3"
+	$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	Write-Host "App pool state is: $appPoolState"
 
-	Stop-WebAppPool "RavenDB 3" -ErrorAction SilentlyContinue # The error is probably because it was already stopped
-	
-	Remove-Item "$liveTest_dir\Plugins" -Force -Recurse -ErrorAction SilentlyContinue
-	mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
+	if($appPoolState -ne "Stopped") {
+		Stop-WebAppPool $appPoolName -ErrorAction SilentlyContinue # The error is probably because it was already stopped
+
+		# Wait for the apppool to shut down.
+		do
+		{
+			Write-Host "Wait for '$appPoolState' to be stopped"
+			Start-Sleep -Seconds 1
+			$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+		}
+		until ($appPoolState -eq "Stopped")
+	}
+
+	if(Test-Path "$liveTest_dir\Plugins") {
+		Remove-Item "$liveTest_dir\Plugins\*" -Force -Recurse -ErrorAction SilentlyContinue
+	} else {
+		mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
+	}
 	Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
 	
 	Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
 	Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
 
-	Start-WebAppPool "RavenDB 3"
+	$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	Write-Host "App pool state is: $appPoolState"
+
+	if ($appPoolState -eq "Stopped") {
+    	Write-Output "Starting IIS app pool $appPoolName"
+    	Start-WebAppPool $appPoolName
+	} else {
+    	Write-Output "Restarting IIS app pool $appPoolName"
+    	Restart-WebAppPool $appPoolName
+	}
+	# Wait for the apppool to start.
+	do
+	{
+		Write-Host "Wait for '$appPoolState' to be started"
+		Start-Sleep -Seconds 1
+		$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	}
+	until ($appPoolState -eq "Started")
+
+	Write-Output "Done updating $appPoolName"
+}
+
+task MonitorLiveTestRunning {
+	$appPoolName = "RavenDB 3"
+	$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+	Write-Host "App pool state is: $appPoolState"
+
+	if ($appPoolState -eq "Stopped") {
+    	Write-Output "Starting IIS app pool $appPoolName"
+    	Start-WebAppPool $appPoolName
+
+		# Wait for the apppool to start.
+		do
+		{
+			Write-Host "Wait for '$appPoolState' to be started"
+			Start-Sleep -Seconds 1
+			$appPoolState = (Get-WebAppPoolState $appPoolName).Value
+		}
+		until ($appPoolState -eq "Started")
+	}
+
+	Write-Output "Done monitoring $appPoolName"
 }
 
 task Upload {

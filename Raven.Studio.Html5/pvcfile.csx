@@ -3,6 +3,8 @@ pvc.Task("optimized-build", () => {
 	if (Directory.Exists(outputDirectory))
 		Directory.Delete(outputDirectory, true);
 
+	var typeScriptToolsVersion = GetTypeScriptToolsVersion();
+	
 	var list = new List<string> {
 		"Scripts/typings/**/*.d.ts",
 		"App/**/*.ts",
@@ -18,7 +20,7 @@ pvc.Task("optimized-build", () => {
 	pvc.Source(list.ToArray())
 
 	// Compile all the TypeScript files into JavaScript.
-	.Pipe(new PvcTypeScript("1.5", "--module amd --target ES5"))
+	.Pipe(new PvcTypeScript(typeScriptToolsVersion, "--module amd --target ES5"))
 
 	// Convert all the RequireJS modules into named modules. 
 	// Required for concatenation.
@@ -218,10 +220,20 @@ string CreateScriptElementFromStream(Stream stream)
 		"</script>";
 }
 
-/*pvc.Task("build", () => {
-	pvc.Source("Raven.Studio.Html5.csproj")
-		.Pipe(new PvcMSBuild(
-			buildTarget: "Clean;Build",
-	        enableParallelism: true
-		));
-});*/
+string GetTypeScriptToolsVersion()
+{
+	var xmldoc = new System.Xml.XmlDocument();
+	xmldoc.Load(@"Raven.Studio.Html5.csproj");
+
+	var ns = new System.Xml.XmlNamespaceManager(xmldoc.NameTable);
+	ns.AddNamespace("x", "http://schemas.microsoft.com/developer/msbuild/2003");
+	var node = xmldoc.SelectSingleNode("//x:TypeScriptToolsVersion", ns);
+	
+	if (node == null)
+		throw new InvalidOperationException("Could not find TypeScriptToolsVersion in csproj.");
+	
+	if (string.IsNullOrEmpty(node.InnerText))
+		throw new InvalidOperationException("Invalid TypeScriptToolsVersion in csproj file.");
+	
+	return node.InnerText;
+}

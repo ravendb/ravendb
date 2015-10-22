@@ -1,8 +1,8 @@
 using System;
 
-namespace Raven.Database.TimeSeries
+namespace Raven.Abstractions.TimeSeries
 {
-	public class Range
+	public class AggregatedPoint
 	{
 #if DEBUG
 		public string DebugKey { get; set; }
@@ -10,16 +10,11 @@ namespace Raven.Database.TimeSeries
 
 		public DateTimeOffset StartAt { get; set; }
 		
-		public PeriodDuration Duration { get; set; }
+		public AggregationDuration Duration { get; set; }
 
-		public RangeValue[] Values { get; set; }
+		public AggregationValue[] Values { get; set; }
 
-		public RangeValue Value
-		{
-			get { return Values[0]; }
-		}
-
-		public class RangeValue
+		public class AggregationValue
 		{
 			// Position 1
 			public double Volume { get; set; }
@@ -38,8 +33,6 @@ namespace Raven.Database.TimeSeries
 
 			// Position 6
 			public double Sum { get; set; }
-
-			internal const int StorageItemsLength = 6;
 		}
 	}
 }

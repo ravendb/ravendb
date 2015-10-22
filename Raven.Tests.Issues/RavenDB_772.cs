@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using Raven.Tests.Common;
 
@@ -178,6 +180,78 @@ namespace Raven.Tests.Issues
 										 .Customize(x => x.WaitForNonStaleResults()).ToList();
 
 					Assert.Equal(0, results.Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldGetCorrectResultsIfNumberOfMappedItemsIsBelowAndNextAboveTheSingleStepOptimizationLimitAndItemsGetToDifferentBuckets()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.Configuration.MaxNumberOfItemsToProcessInSingleBatch = 50;
+				documentStore.Configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
+                documentStore.Configuration.NumberOfItemsToExecuteReduceInSingleStep = 50;
+
+				new Countries_ByAbbreviationAndName().Execute(documentStore);
+
+				var random = new Random(1);
+				var addedKeys = new HashSet<string>();
+
+				using (var session = documentStore.OpenSession())
+				{
+					for (int i = 0; i < 49; i++)
+					{
+						var id = "countries/" + random.Next(900884);
+
+						while (addedKeys.Add(id) == false)
+						{
+							id = "countries/" + random.Next(900884); // make sure we have them distributed to different buckets
+						}
+
+						session.Store(new Country() {Name = "Israel", Abbreviation = "IL"}, id);
+					}
+
+					session.SaveChanges();
+				}
+
+				// here the reducing work will be done in single step way because 49 items < limit of 50
+				WaitForIndexing(documentStore.DocumentDatabase);
+				
+				using (var session = documentStore.OpenSession())
+				{
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>().ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(49, results.First(x => x.CountryAbbreviation == "IL").Count);
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// add items to force reduce in a multi step way
+					for (int i = 0; i < 101; i++)
+					{
+						var id = "countries/" + random.Next(900884);
+
+						while (addedKeys.Add(id) == false)
+						{
+							id = "countries/" + random.Next(900884);
+						}
+
+						session.Store(new Country { Name = "Israel", Abbreviation = "IL" });
+					}
+					
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					// after a multi step reduce should return correct results
+					var results = session.Query<Countries_ByAbbreviationAndName.Result, Countries_ByAbbreviationAndName>()
+										 .Customize(x => x.WaitForNonStaleResults()).ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(150, results.First(x => x.CountryAbbreviation == "IL").Count);
 				}
 			}
 		}

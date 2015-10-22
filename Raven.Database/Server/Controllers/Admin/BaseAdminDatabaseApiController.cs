@@ -10,28 +10,18 @@ namespace Raven.Database.Server.Controllers.Admin
 {
 	public class BaseAdminDatabaseApiController : AdminResourceApiController<DocumentDatabase, DatabasesLandlord>
 	{
-		public virtual string DatabaseName
-		{
-			get
-			{
-				return ResourceName;
-			}
+		public override ResourceType ResourceType {
+			get { return ResourceType.Database; }
 		}
 
-		public virtual DocumentDatabase Database
+		public string DatabaseName
 		{
-			get
-			{
-				return Resource;
-			}
+			get { return ResourceName; }
 		}
 
-		public override ResourceType ResourceType
+		public DocumentDatabase Database
 		{
-			get
-			{
-				return ResourceType.Database;
-			}
+			get { return Resource; }
 		}
 
 		public override void MarkRequestDuration(long duration)

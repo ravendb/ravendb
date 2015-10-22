@@ -48,7 +48,7 @@ namespace Raven.Client.TimeSeries
 				}, token).ConfigureAwait(false);
 			}
 
-			public async Task<TimeSeriesPoint[]> GetPoints(string type, string key, int skip = 0, int take = 20, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token =  default(CancellationToken))
+			public async Task<TimeSeriesPoint[]> GetPoints(string type, string key, DateTimeOffset? start = null, DateTimeOffset? end = null, int skip = 0, int take = 20, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
@@ -56,13 +56,38 @@ namespace Raven.Client.TimeSeries
 				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
 				{
 					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/points/{2}?key={3}&skip={4}&take={5}&start={6}&end={7}",
-						url, timeSeriesName, type, Uri.EscapeDataString(key), skip, take, start, end);
+						url, timeSeriesName, type, Uri.EscapeDataString(key), skip, take, EscapeDataString(start), EscapeDataString(end));
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{
 						var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 						return result.JsonDeserialization<TimeSeriesPoint[]>();
 					}
 				}, token).ConfigureAwait(false);
+			}
+
+			public async Task<AggregatedPoint[]> GetAggregatedPoints(string type, string key, AggregationDuration duration, DateTimeOffset? start = null, DateTimeOffset? end = null, int skip = 0, int take = 20, CancellationToken token = default(CancellationToken))
+			{
+				parent.AssertInitialized();
+
+				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
+				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, timeSeriesName) =>
+				{
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/aggregated-points/{2}?key={3}&durationType={8}&duration={9}&skip={4}&take={5}&start={6}&end={7}",
+						url, timeSeriesName, type, Uri.EscapeDataString(key), skip, take, EscapeDataString(start), EscapeDataString(end), duration.Type, duration.Duration);
+					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+					{
+						var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+						return result.JsonDeserialization<AggregatedPoint[]>();
+					}
+				}, token).ConfigureAwait(false);
+			}
+
+			private static string EscapeDataString(DateTimeOffset? start)
+			{
+				if (start.HasValue == false)
+					return null;
+
+				return Uri.EscapeDataString(start.Value.ToString("O"));
 			}
 
 			public async Task<TimeSeriesType[]> GetTypes(CancellationToken token = default(CancellationToken))

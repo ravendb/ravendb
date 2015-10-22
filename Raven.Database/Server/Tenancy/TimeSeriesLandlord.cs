@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Tenancy
 
 			SetupTenantConfiguration(config);
 
-			config.CustomizeValuesForDatabaseTenant(tenantId);
+			config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
 			config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
 			//config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
@@ -149,7 +149,7 @@ namespace Raven.Database.Server.Tenancy
 				throw new InvalidOperationException("TimeSeries '" + tenantId + "' is currently locked and cannot be accessed");
 
 			ManualResetEvent cleanupLock;
-			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad) == false)
+			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
 				throw new InvalidOperationException(string.Format("TimeSeries '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
 
 			if (ResourcesStoresCache.TryGetValue(tenantId, out timeSeries))

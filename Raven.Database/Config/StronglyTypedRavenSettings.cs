@@ -267,6 +267,9 @@ namespace Raven.Database.Config
 			Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);
 
 			TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
+			TimeSeries.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.TimeSeries.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+			TimeSeries.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.TimeSeries.DeletedTombstonesInBatch], 1000);
+			TimeSeries.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.TimeSeries.ReplicationLatencyMs], 30 * 1000);
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
@@ -564,6 +567,12 @@ namespace Raven.Database.Config
 		public class TimeSeriesConfiguration
 		{
 			public StringSetting DataDir { get; set; }
+
+			public TimeSpanSetting TombstoneRetentionTime { get; set; }
+
+			public IntegerSetting DeletedTombstonesInBatch { get; set; }
+
+			public IntegerSetting ReplicationLatencyInMs { get; set; }
 		}
 
 		public class EncryptionConfiguration
