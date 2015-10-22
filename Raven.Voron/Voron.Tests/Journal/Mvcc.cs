@@ -56,8 +56,9 @@ namespace Voron.Tests.Journal
 
                 var readResult = treeR.Read("items/1");
 
-                int used;
-                var readData = readResult.Reader.ReadBytes(readResult.Reader.Length, out used).Take(used).ToArray();
+
+                var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
+                var readData = bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray();
 
                 for (int i = 0; i < 3000; i++)
                 {

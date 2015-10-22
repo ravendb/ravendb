@@ -69,10 +69,11 @@ namespace Voron.Tests.Bugs
 					Assert.NotNull(result);
 
 					{
-						int used;
-						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
-					}
-				}
+                        var bytes = result.Reader.ReadBytes(result.Reader.Length);
+                        Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
+
+                    }
+                }
 			}
 		}
 
@@ -127,9 +128,9 @@ namespace Voron.Tests.Bugs
 					Assert.NotNull(result);
 
 					{
-						int used;
-						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
-					}
+                        var bytes = result.Reader.ReadBytes(result.Reader.Length);
+                        Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
+                    }
 				}
 			}
 		}

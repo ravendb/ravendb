@@ -130,8 +130,9 @@ namespace Voron
                 if(dbId == null)
                     throw new InvalidDataException("Could not find db id in metadata tree, possible mismatch / corruption?");
 
-                int used;
-                DbId = new Guid(dbId.Reader.ReadBytes(16, out used));
+                var buffer = new byte[16];
+                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                DbId = new Guid(buffer);
 
                 var schemaVersion = metadataTree.Read("schema-version");
                 if (schemaVersion == null)

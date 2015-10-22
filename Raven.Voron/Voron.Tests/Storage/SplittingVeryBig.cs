@@ -42,8 +42,8 @@ namespace Voron.Tests.Storage
 
 			    var reader = read.Reader;
 			    Assert.Equal(buffer.Length, read.Reader.Length);
-				int used;
-				Assert.Equal(buffer, reader.ReadBytes(read.Reader.Length, out used).Take(used).ToArray());
+			    var bytes = reader.ReadBytes(read.Reader.Length);
+			    Assert.Equal(buffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
 			}
 		}
 
@@ -92,10 +92,11 @@ namespace Voron.Tests.Storage
 
 					{
 						Assert.Equal(buffer.Length, read.Reader.Length);
-						int used;
-						Assert.Equal(buffer, read.Reader.ReadBytes(read.Reader.Length, out used).Take(used).ToArray());
-					}
-				}
+                        var bytes = read.Reader.ReadBytes(read.Reader.Length);
+                        Assert.Equal(buffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
+
+                    }
+                }
 			}
 
 			DeleteDirectory("test2.data");
