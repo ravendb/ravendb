@@ -318,7 +318,7 @@ namespace Voron.Trees.Fixed
                 if (page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
                 {
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
-                    var dataStart = GetSeparatorKeyAtPosition(newPage, page.LastSearchPosition);
+                    var dataStart = GetSeparatorKeyAtPosition(newPage, 0);
                     dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
                     dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
