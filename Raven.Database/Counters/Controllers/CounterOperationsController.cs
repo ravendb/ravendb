@@ -76,7 +76,6 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage GetCounterGroups(int skip, int take)
 		{
-
 			using (var reader = CounterStorage.CreateReader())
 			{
 				CounterStorage.MetricsCounters.ClientRequests.Mark();

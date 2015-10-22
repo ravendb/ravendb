@@ -36,7 +36,7 @@ namespace Raven.Database.Counters.Controllers
 			    return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
 		    HttpResponseMessage message;
-		    if (ValidateSkipAndTake(skip, take, out message))
+		    if (!ValidateSkipAndTake(skip, take, out message))
 				return message;
 
 		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
@@ -56,10 +56,10 @@ namespace Raven.Database.Counters.Controllers
 				{
 					Message = @"Skip and take are required operators. Also, they must be non-negative and take must not be equal to zero."
 				}, HttpStatusCode.BadRequest);
-				return true;
+				return false;
 			}
 
-			return false;
+			return true;
 		}
 
 		private async Task<HttpResponseMessage> GetNamesAndGroups(string id, int skip, int take)

@@ -23,7 +23,7 @@ namespace Raven.Tests.Counters
 				for (int i = 0; i < counterInEachGroupCount * groupCount; i++)
 				{
 					var withPaging = await store.Admin.GetCounterStorageNameAndGroups(skip:i, take:1);
-					Assert.Equal(1,withPaging.Length);
+					Assert.Equal(1,withPaging.Count);
 
 					var expected = withoutPaging.Skip(i).Take(1).First();
 					Assert.Equal(expected.Group,withPaging.First().Group);
@@ -46,7 +46,7 @@ namespace Raven.Tests.Counters
 				for (int i = 0; i < counterInEachGroupCount * groupCount; i++)
 				{
 					var withPaging = await store.Admin.GetCounterStorageSummary(skip: i, take: 1);
-					Assert.Equal(1, withPaging.Length);
+					Assert.Equal(1, withPaging.Count);
 
 					var expected = withoutPaging.Skip(i).Take(1).First();
 					Assert.Equal(expected.Total, withPaging.First().Total);
@@ -57,7 +57,7 @@ namespace Raven.Tests.Counters
 				}
 			}
 		}
-
+		
 		[Fact]
 		public void GetCounterSummary_should_handle_skip_take_properly()
 		{

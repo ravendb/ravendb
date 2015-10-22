@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,24 +23,24 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}
 
-			public async Task<CounterNameGroupPair[]> GetAllCounterStorageNameAndGroups(string counterStorageName = null,
+			public async Task<IReadOnlyList<CounterNameGroupPair>> GetAllCounterStorageNameAndGroups(string counterStorageName = null,
 				CancellationToken token = default(CancellationToken))
 			{
 				var nameGroupPairs = new List<CounterNameGroupPair>();
 				var taken = 0;
-				CounterNameGroupPair[] nameGroupPairsTaken;
+				IReadOnlyList<CounterNameGroupPair> nameGroupPairsTaken;
 				do
 				{
 					nameGroupPairsTaken = await GetCounterStorageNameAndGroups(counterStorageName, token, taken).ConfigureAwait(false);
-					taken += nameGroupPairsTaken.Length;
-					if (nameGroupPairsTaken.Length > 0)
+					taken += nameGroupPairsTaken.Count;
+					if (nameGroupPairsTaken.Count > 0)
 						nameGroupPairs.AddRange(nameGroupPairsTaken);
-				} while (nameGroupPairsTaken.Length > 0);
+				} while (nameGroupPairsTaken.Count > 0);
 
-				return nameGroupPairs.ToArray();
+				return nameGroupPairs.ToList();
 			}
 
-			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, 
+			public async Task<IReadOnlyList<CounterNameGroupPair>> GetCounterStorageNameAndGroups(string counterStorageName = null, 
 				CancellationToken token = default(CancellationToken),
 				int skip = 0, int take = 1024)
 			{
@@ -50,28 +51,28 @@ namespace Raven.Client.Counters
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<CounterNameGroupPair[]>(parent.JsonSerializer);
+					return response.ToObject<List<CounterNameGroupPair>>(parent.JsonSerializer);
 				}
 			}
 
-			public async Task<CounterSummary[]> GetAllCounterStorageSummaries(string counterStorageName = null,
+			public async Task<IReadOnlyList<CounterSummary>> GetAllCounterStorageSummaries(string counterStorageName = null,
 				CancellationToken token = default(CancellationToken))
 			{
 				var summaries = new List<CounterSummary>();
 				var taken = 0;
-				CounterSummary[] summariesTaken;
+				IReadOnlyList<CounterSummary> summariesTaken;
                 do
 				{
 					summariesTaken = await GetCounterStorageSummary(counterStorageName, token, taken).ConfigureAwait(false);
-					taken += summariesTaken.Length;
-					if(summariesTaken.Length > 0)
+					taken += summariesTaken.Count;
+					if(summariesTaken.Count > 0)
 						summaries.AddRange(summariesTaken);
-				} while (summariesTaken.Length > 0);
+				} while (summariesTaken.Count > 0);
 
 				return summaries.ToArray();
 			}
 
-			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, 
+			public async Task<IReadOnlyList<CounterSummary>> GetCounterStorageSummary(string counterStorageName = null, 
 				CancellationToken token = default(CancellationToken),
 				int skip = 0,int take = 1024)
 			{
@@ -82,7 +83,7 @@ namespace Raven.Client.Counters
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<CounterSummary[]>(parent.JsonSerializer);
+					return response.ToObject<List<CounterSummary>>(parent.JsonSerializer);
 				}
 			}
 
