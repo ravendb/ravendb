@@ -72,7 +72,7 @@ namespace Voron.Tests.Trees
 			            tx.CreateTree("test");
 			        }
 			    });
-			Assert.Contains("No such tree: test", e.Message);
+			Assert.Contains("No such tree: 'test'", e.Message);
 		}
 	}
 }
