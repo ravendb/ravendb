@@ -28,6 +28,25 @@ namespace Voron.Trees.Fixed
         private RootObjectType? _type;
         private Stack<TreePage> _cursor;
 
+        public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
+        {
+
+            var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);
+            if (header == null)
+                throw new InvalidOperationException("No such tree: " + treeName);
+
+            switch (header->RootObjectType)
+            {
+                case RootObjectType.EmbeddedFixedSizeTree:
+                case RootObjectType.FixedSizeTree:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " + header->RootObjectType);
+            }
+
+            return header->ValueSize;
+        }
+
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize)
         {
             _tx = tx;

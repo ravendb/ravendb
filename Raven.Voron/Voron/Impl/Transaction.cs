@@ -213,7 +213,22 @@ namespace Voron.Impl
 
         public FixedSizeTree FixedTreeFor(string treeName, ushort valSize = 0)
         {
+            return FixedTreeFor((Slice) treeName, valSize);
+        }
+
+        public FixedSizeTree FixedTreeFor(Slice treeName, ushort valSize)
+        {
             return new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName, valSize);
+        }
+
+
+        public RootObjectType GetRootObjectType(Slice name)
+        {
+            var val = _lowLevelTransaction.RootObjects.DirectRead(name);
+            if (val == null)
+                return RootObjectType.None;
+
+            return ((TreeRootHeader*) val)->RootObjectType;
         }
     }
 

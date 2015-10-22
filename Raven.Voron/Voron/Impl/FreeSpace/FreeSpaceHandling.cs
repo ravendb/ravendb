@@ -5,7 +5,12 @@ namespace Voron.Impl.FreeSpace
 {
 	public class FreeSpaceHandling : IFreeSpaceHandling
 	{
-        internal const int NumberOfPagesInSection = 2048; 
+        internal const int NumberOfPagesInSection = 2048;
+
+	    public static bool IsFreeSpaceTreeName(string name)
+	    {
+	        return name == "$free-space";
+	    }
 
 	    private readonly static Slice FreeSpaceKey = "$free-space";
 
