@@ -834,8 +834,6 @@ namespace Voron.Impl.Journal
 
 			CurrentFile.Write(tx, pages);
 
-			var transactionHeader = *(TransactionHeader*)pages[0];
-
 			if (CurrentFile.AvailablePages == 0)
 				CurrentFile = null;
 		}

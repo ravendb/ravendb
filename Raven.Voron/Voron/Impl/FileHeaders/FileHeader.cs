@@ -52,13 +52,13 @@ namespace Voron.Impl.FileHeaders
 		/// <summary>
 		/// Information about an incremental backup
 		/// </summary>
-	    [FieldOffset(116)] 
+	    [FieldOffset(126)] 
 		public IncrementalBackupInfo IncrementalBackup;
 
         /// <summary>
         /// The page size for the data file
         /// </summary>
-        [FieldOffset(140)]
+        [FieldOffset(150)]
         public int PageSize;
     }
 }
