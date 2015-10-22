@@ -1287,14 +1287,11 @@ namespace Raven.Database.Counters
 					buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
 
-			public void Commit(bool notifyParent = true)
+			public void Commit()
 			{
 				transaction.Commit();
 				parent.LastWrite = SystemTime.UtcNow;
-				if (notifyParent)
-				{
-					parent.Notify();
-				}
+				parent.Notify();
 			}
 
 			public void Dispose()
