@@ -40,7 +40,7 @@ namespace Raven.Client.Counters
 				//TODO : perhaps this call should not be with failover? discuss with Oren
 				var states = await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get,async (url, counterStoreName) =>
 				{
-					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/sinceEtag/{2}?skip={3}&take={4}", url, counterStoreName, etag, skip, take);
+					var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}/sinceEtag?etag={2}&skip={3}&take={4}", url, counterStoreName, etag, skip, take);
 
 					using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 					{

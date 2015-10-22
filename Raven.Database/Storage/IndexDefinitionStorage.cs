@@ -490,11 +490,11 @@ namespace Raven.Database.Storage
 
         private bool CheckIfIndexIsBeenDeleted(IndexDefinition definition)
         {
-            return CheckIfIndexVersionIsEqual(definition, Constants.RavenReplicationIndexesTombstones)
-                || CheckIfIndexVersionIsEqual(definition, "Raven/Indexes/PendingDeletion");
+            return CheckIfIndexVersionIsEqualOrSmaller(definition, Constants.RavenReplicationIndexesTombstones)
+                || CheckIfIndexVersionIsEqualOrSmaller(definition, "Raven/Indexes/PendingDeletion");
         }
 
-        private bool CheckIfIndexVersionIsEqual(IndexDefinition definition, string listName)
+        private bool CheckIfIndexVersionIsEqualOrSmaller(IndexDefinition definition, string listName)
         {
             bool res = false;
             if (definition.IndexVersion == null) return false;
@@ -507,10 +507,16 @@ namespace Raven.Database.Storage
                 // The index that we are trying to add is deleted
                 if (int.TryParse(versionStr, out version))
                 {
-                    if (version == definition.IndexVersion.Value)
+                    if (version >= definition.IndexVersion.Value)
                     {
+                        if (version > definition.IndexVersion.Value)
+                            logger.Error("Trying to add an index ({0}) with a version smaller than the deleted version, this should not happen", definition.Name);
                         res = true;
                     }
+                }
+                else
+                {
+                    logger.Error("Failed to parse index version of index {0}", definition.Name);
                 }
             });
             return res;

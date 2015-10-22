@@ -84,7 +84,7 @@ namespace Raven.Tests.Counters
 
 				//invoking create counter with the same name twice should fail
 			    Assert.Throws<InvalidOperationException>(() => 
-                    store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName).Wait());
+                    store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName).GetAwaiter().GetResult());
 			}
 		}
 	}

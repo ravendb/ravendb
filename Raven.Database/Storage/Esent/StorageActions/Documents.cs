@@ -255,9 +255,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null)
-        {
-            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+			Reference<bool> earlyExit = null)
+		{
+			if (earlyExit != null)
+				earlyExit.Value = false;
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
                 yield break;
@@ -281,8 +284,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 // We can skip many documents so the timeout should be at the start of the process to be executed.
                 if (timeout != null)
                 {
-                    if (duration.Elapsed > timeout.Value)
-                        break;
+	                if (duration.Elapsed > timeout.Value)
+	                {
+		                if (earlyExit != null)
+			                earlyExit.Value = true;
+		                break;
+	                }
                 }                
 
                 if (untilEtag != null && fetchedDocumentCount > 0)
@@ -312,18 +319,30 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
-                    break;  
-            } 
-            while (Api.TryMoveNext(session, Documents) && fetchedDocumentCount < take);
+				{
+					if (untilEtag != null && earlyExit != null)
+						earlyExit.Value = true;
+					break;
+				}
+
+	            if (fetchedDocumentCount >= take)
+	            {
+					if (untilEtag !=null && earlyExit != null)
+						earlyExit.Value = true;
+					break;
+				}
+			} 
+            while (Api.TryMoveNext(session, Documents));
 
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
                 lastProcessedDocument(lastDocEtag);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null,
+			Reference<bool> earlyExit = null)
 		{
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
 		}
 
 		public Etag GetBestNextDocumentEtag(Etag etag)
@@ -378,7 +397,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 	        return stat;
 	    }
 
-	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (take <= 0)
 				yield break;
@@ -407,6 +426,43 @@ namespace Raven.Database.Storage.Esent.StorageActions
 				yield return ReadCurrentDocument();
 				take--;
 			} while (Api.TryMoveNext(session, Documents) && take > 0);
+		}
+
+		public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+		{
+			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+				return etag;
+
+			if (TryMoveTableRecords(Documents, take, false))
+			{
+				//skipping failed, will try to move one by one
+				Api.JetSetCurrentIndex(session, Documents, "by_etag");
+				Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+				if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+					return etag;
+
+				bool needPrev;
+				do
+				{
+					needPrev = false;
+					if (take <= 0)
+						break;
+					take--;
+					cancellationToken.ThrowIfCancellationRequested();
+
+					needPrev = true;
+				} while (Api.TryMoveNext(session, Documents));
+
+				if (needPrev)
+				{
+					if (Api.TryMovePrevious(session, Documents) == false)
+						return etag;
+				}
+			}
+
+			return Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 		}
 
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
