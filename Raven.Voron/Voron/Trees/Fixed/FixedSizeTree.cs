@@ -1121,18 +1121,24 @@ namespace Voron.Trees.Fixed
                 return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
             }
 
-            byte* newData = _parent.DirectAdd(_treeName,
-                sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize));
+            TemporaryPage tmp;
+            using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+            {
+                int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
+                Memory.Copy(tmp.TempPagePointer, ptr, srcCopyStart);
+                Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
 
-            int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
-            Memory.Copy(newData, ptr, srcCopyStart);
-            Memory.Copy(newData + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
+                var newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize);
+                byte* newData = _parent.DirectAdd(_treeName,newDataSize);
 
-            header = (FixedSizeTreeHeader.Embedded*)newData;
-            header->NumberOfEntries--;
-            header->ValueSize = _valSize;
-            header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
-            return new DeletionResult { NumberOfEntriesDeleted = 1 };
+                Memory.Copy(newData, tmp.TempPagePointer, newDataSize);
+
+                header = (FixedSizeTreeHeader.Embedded*)newData;
+                header->NumberOfEntries--;
+                header->ValueSize = _valSize;
+                header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
+                return new DeletionResult { NumberOfEntriesDeleted = 1 };
+            }
         }
 
         public Slice Read(long key)
