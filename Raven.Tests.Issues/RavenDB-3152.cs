@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;

@@ -42,6 +42,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -54,7 +55,26 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Json\JintOperationScope.cs" />
+    <Compile Include="Smuggler\Other\CounterOperationState.cs" />
+    <Compile Include="Smuggler\Database\DatabaseSmugglerOptions.cs" />
+    <Compile Include="Smuggler\Common\FilterSettings.cs" />
+    <Compile Include="Smuggler\Database\ItemType.cs" />
+    <Compile Include="Smuggler\Database\LastEtagsInfo.cs" />
+    <Compile Include="Smuggler\Database\OperationState.cs" />
+    <Compile Include="Smuggler\Other\ExportFilesDestinations.cs" />
+    <Compile Include="Smuggler\Other\ExportFilesResult.cs" />
+    <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
+    <Compile Include="Smuggler\ServerSupportedFeatures.cs" />
+    <Compile Include="Smuggler\SmugglerAction.cs" />
+    <Compile Include="Smuggler\SmugglerCounterOptions.cs" />
+    <Compile Include="Smuggler\SmugglerExportIncremental.cs" />
+    <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
+    <Compile Include="Smuggler\SmugglerHelper.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
+    <Compile Include="Smuggler\SmugglerMode.cs" />
+    <Compile Include="Smuggler\SmugglerOptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -67,6 +87,7 @@
       <Link>RavenDB.snk</Link>
     </None>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

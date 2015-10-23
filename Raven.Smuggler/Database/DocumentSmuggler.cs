@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
@@ -86,7 +87,7 @@ namespace Raven.Smuggler.Database
 									var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 									var key = document["@metadata"].Value<string>("@id");
 
-									Notifications.DocumentRead(this, key);
+									Notifications.OnDocumentRead(this, key);
 
 									if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
 									{

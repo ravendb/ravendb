@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Smuggler.Database;

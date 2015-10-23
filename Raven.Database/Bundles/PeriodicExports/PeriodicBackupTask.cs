@@ -18,7 +18,10 @@ using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Smuggler;
+using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Impl.Files;
 
 namespace Raven.Database.Bundles.PeriodicExports
 {
@@ -280,11 +283,6 @@ namespace Raven.Database.Bundles.PeriodicExports
 							bool performAnotherRun = false;
 							do
 							{
-								var dataDumper = new DatabaseDataDumper(documentDatabase, new SmugglerDatabaseOptions()
-								{
-									Limit = backupLimit
-								});
-
 							    var localBackupConfigs = exportConfigs;
 							    var localBackupStatus = exportStatus;
 							    if (localBackupConfigs == null)
@@ -293,9 +291,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 							    if (localBackupConfigs.Disabled) 
 								    return;
 
-							    if (fullBackup == false)
+								var source = new DatabaseSmugglerEmbeddedSource(Database);
+
+								if (fullBackup == false)
 							    {
-								    var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
+								    var currentEtags = await source.FetchCurrentMaxEtagsAsync(CancellationToken.None).ConfigureAwait(false);
 								    // No-op if nothing has changed
 								    if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
 									    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag)
@@ -326,15 +326,22 @@ namespace Raven.Database.Bundles.PeriodicExports
 								    }
 							    }
 
-                                var smugglerOptions = dataDumper.Options;
+								var smugglerOptions = new DatabaseSmugglerOptions
+								{
+									Limit = backupLimit
+								};
+
+								var smugglerFileOptions = new DatabaseSmugglerFileDestinationOptions();
+
 							    if (fullBackup == false)
 							    {
 								    smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
 								    smugglerOptions.StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag;
-								    smugglerOptions.Incremental = true;
-								    smugglerOptions.ExportDeletions = true;
+									smugglerFileOptions.Incremental = true;
 							    }
-							    exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> {ToFile = backupPath}).ConfigureAwait(false);
+
+								var smuggler = new DatabaseSmuggler(smugglerOptions, source, new DatabaseSmugglerFileDestination(backupPath, smugglerFileOptions));
+								exportResult = await smuggler.ExecuteAsync().ConfigureAwait(false);
 
 							    if (fullBackup == false)
 							    {

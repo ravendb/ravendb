@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Impl.Remote;

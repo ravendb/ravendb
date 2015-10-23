@@ -48,6 +48,7 @@ using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 using Raven.Abstractions.Exceptions;
+using Raven.Smuggler.Database;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
@@ -89,22 +90,24 @@ namespace Raven.Database.Server.Controllers.Admin
 
 						var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name).ConfigureAwait(false);
 
-						var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
-						{
-							Incremental = serverSmugglingItem.Incremental,
-							StripReplicationInformation = serverSmugglingItem.StripReplicationInformation,
-							ShouldDisableVersioningBundle = serverSmugglingItem.ShouldDisableVersioningBundle,
-						});
+						throw new NotImplementedException();
 
-						await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							To = new RavenConnectionStringOptions
-							{
-								Url = request.TargetServer.Url,
-								DefaultDatabase = serverSmugglingItem.Name
-							},
-							ReportProgress = message => status.Messages.Add(message)
-						}).ConfigureAwait(false);
+						//var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
+						//{
+						//	Incremental = serverSmugglingItem.Incremental,
+						//	StripReplicationInformation = serverSmugglingItem.StripReplicationInformation,
+						//	ShouldDisableVersioningBundle = serverSmugglingItem.ShouldDisableVersioningBundle,
+						//});
+
+						//await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						//{
+						//	To = new RavenConnectionStringOptions
+						//	{
+						//		Url = request.TargetServer.Url,
+						//		DefaultDatabase = serverSmugglingItem.Name
+						//	},
+						//	ReportProgress = message => status.Messages.Add(message)
+						//}).ConfigureAwait(false);
 					}
 
 					status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");

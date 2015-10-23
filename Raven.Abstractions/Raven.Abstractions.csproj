@@ -415,27 +415,6 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Replication\SideBySideReplicationInfo.cs" />
     <Compile Include="ServerSmugglerRequest.cs" />
-    <Compile Include="Smuggler\DatabaseSmugglerOptions.cs" />
-    <Compile Include="Smuggler\Data\CounterOperationState.cs" />
-    <Compile Include="Smuggler\Data\OperationState.cs" />
-    <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
-    <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
-    <Compile Include="Smuggler\Data\Tombstone.cs" />
-    <Compile Include="Smuggler\ISmugglerApi.cs" />
-    <Compile Include="Smuggler\ISmugglerDatabaseOperations.cs" />
-    <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
-    <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
-    <Compile Include="Smuggler\ServerSupportedFeatures.cs" />
-    <Compile Include="Smuggler\SmugglerAction.cs" />
-    <Compile Include="Smuggler\SmugglerCounterOptions.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
-    <Compile Include="Smuggler\SmugglerExportIncremental.cs" />
-    <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
-    <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
-    <Compile Include="Smuggler\SmugglerHelper.cs" />
-    <Compile Include="Smuggler\SmugglerMode.cs" />
-    <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
@@ -535,4 +514,5 @@
   <ItemGroup>
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
+  <ItemGroup />
 </Project>

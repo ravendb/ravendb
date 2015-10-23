@@ -509,18 +509,15 @@
     <Compile Include="ShiftReduceParserCode.cs" />
     <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
     <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDestination.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedSource.cs" />
     <Compile Include="Smuggler\ServerValidation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />
     <Compile Include="Smuggler\SmugglerCounterOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseApi.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseBetweenOperation.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerFilesApi.cs" />
     <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\RemainingReductionPerLevel.cs" />
@@ -1237,7 +1234,6 @@
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonAndCompressHandler.cs" />
     <Compile Include="Server\WebApi\RequestManager.cs" />
-    <Compile Include="Smuggler\DatabaseDataDumper.cs" />
     <Compile Include="Storage\BaseBackupOperation.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DatabaseSizeInformation.cs" />
@@ -1357,6 +1353,10 @@
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
       <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>

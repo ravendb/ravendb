@@ -43,12 +43,12 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		public void Execute()
+		public OperationState Execute()
 		{
-			AsyncHelpers.RunSync(() => ExecuteAsync(CancellationToken.None));
+			return AsyncHelpers.RunSync(() => ExecuteAsync(CancellationToken.None));
 		}
 
-		public async Task ExecuteAsync(CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<OperationState> ExecuteAsync(CancellationToken cancellationToken = default(CancellationToken))
 		{
 			using (_source)
 			using (_destination)
@@ -71,6 +71,8 @@ namespace Raven.Smuggler.Database
 
 				foreach (var source in sources)
 					await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
+
+				return state;
 			}
 		}
 

@@ -15,17 +15,19 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Database.Smuggler;
+//using Raven.Database.Smuggler;
 using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler
 {
 	public class Program
 	{
-        private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
-        private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
-		private readonly SmugglerCounterApi smugglerCounterApi = new SmugglerCounterApi();
+		//private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
+		//private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
+		//private readonly SmugglerCounterApi smugglerCounterApi = new SmugglerCounterApi();
 
 		private OptionSet databaseOptionSet;
 		private OptionSet filesystemOptionSet;
@@ -35,46 +37,46 @@ namespace Raven.Smuggler
 
 	    private Program()
 	    {
-            var databaseOptions = smugglerApi.Options;
-            var filesOptions = smugglerFilesApi.Options;
-			var counterOptions = smugglerCounterApi.Options;
+   //         var databaseOptions = smugglerApi.Options;
+   //         var filesOptions = smugglerFilesApi.Options;
+			//var counterOptions = smugglerCounterApi.Options;
 
-	        selectionDispatching = new OptionSet();
-		    selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
-			selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
-			{
-				bool disableCompression;
-				if (String.IsNullOrWhiteSpace(value) == false &&
-				    Boolean.TryParse(value, out disableCompression))
-					databaseOptions.DisableCompressionOnImport = disableCompression;
-				else
-					PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
-			});
+	  //      selectionDispatching = new OptionSet();
+		 //   selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+			//selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
+			//{
+			//	bool disableCompression;
+			//	if (String.IsNullOrWhiteSpace(value) == false &&
+			//	    Boolean.TryParse(value, out disableCompression))
+			//		databaseOptions.DisableCompressionOnImport = disableCompression;
+			//	else
+			//		PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
+			//});
 
-		    selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
-		    {
-			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
-				    mode = SmugglerMode.Database;
-				else PrintUsageAndExit(new ArgumentException("Parameters for Database and for other storage types are mixed. You cannot use multiple in the same request."));
-		    });
+		 //   selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
+		 //   {
+			//    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
+			//	    mode = SmugglerMode.Database;
+			//	else PrintUsageAndExit(new ArgumentException("Parameters for Database and for other storage types are mixed. You cannot use multiple in the same request."));
+		 //   });
 
-			selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
-		    {
-			    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
-				    mode = SmugglerMode.Filesystem;
-				else PrintUsageAndExit(new ArgumentException("Parameters for Filesystem and for other storage types are mixed. You cannot use multiple in the same request."));
-		    });
+			//selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
+		 //   {
+			//    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
+			//	    mode = SmugglerMode.Filesystem;
+			//	else PrintUsageAndExit(new ArgumentException("Parameters for Filesystem and for other storage types are mixed. You cannot use multiple in the same request."));
+		 //   });
 
-			selectionDispatching.Add("c|c2|counter|counter2:", OptionCategory.None, string.Empty, value =>
-			{
-				if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Counter)
-					mode = SmugglerMode.Counter;
-				else PrintUsageAndExit(new ArgumentException("Parameters for Counter and for other storage types are mixed. You cannot use multiple in the same request."));
-			});
+			//selectionDispatching.Add("c|c2|counter|counter2:", OptionCategory.None, string.Empty, value =>
+			//{
+			//	if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Counter)
+			//		mode = SmugglerMode.Counter;
+			//	else PrintUsageAndExit(new ArgumentException("Parameters for Counter and for other storage types are mixed. You cannot use multiple in the same request."));
+			//});
 
-			DefineDatabaseOptionsSet(databaseOptions);
-			DefineFilesystemOptionSet(filesOptions);
-			DefineCounterOptionSet(counterOptions);
+			//DefineDatabaseOptionsSet(databaseOptions);
+			//DefineFilesystemOptionSet(filesOptions);
+			//DefineCounterOptionSet(counterOptions);
 		}
 
 		private string counterStorageName;
@@ -116,91 +118,91 @@ namespace Raven.Smuggler
 			filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
 		}
 
-		private void DefineDatabaseOptionsSet(SmugglerDatabaseOptions databaseOptions)
-		{
-		    databaseOptionSet = new OptionSet();
-			databaseOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
-			databaseOptionSet.Add("operate-on-types:", OptionCategory.SmugglerDatabase, "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
-		                                               "Default is all items." + Environment.NewLine +
-		                                               "Usage example: Indexes,Documents,Attachments,RemoveAnalyzers", value =>
-		                                               {
-			                                               try
-			                                               {
-				                                               if (string.IsNullOrWhiteSpace(value) == false)
-				                                               {
-					                                               databaseOptions.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value, ignoreCase: true);
-				                                               }
-			                                               }
-			                                               catch (Exception e)
-			                                               {
-				                                               PrintUsageAndExit(e);
-			                                               }
-		                                               });
+		//private void DefineDatabaseOptionsSet(DatabaseSmugglerOptions databaseOptions)
+		//{
+		//    databaseOptionSet = new OptionSet();
+		//	databaseOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+		//	databaseOptionSet.Add("operate-on-types:", OptionCategory.SmugglerDatabase, "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
+		//                                               "Default is all items." + Environment.NewLine +
+		//                                               "Usage example: Indexes,Documents,Attachments,RemoveAnalyzers", value =>
+		//                                               {
+		//	                                               try
+		//	                                               {
+		//		                                               if (string.IsNullOrWhiteSpace(value) == false)
+		//		                                               {
+		//			                                               databaseOptions.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value, ignoreCase: true);
+		//		                                               }
+		//	                                               }
+		//	                                               catch (Exception e)
+		//	                                               {
+		//		                                               PrintUsageAndExit(e);
+		//	                                               }
+		//                                               });
 
-			databaseOptionSet.Add("metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a metadata property." + Environment.NewLine +
-		                                                 "Usage example: Raven-Entity-Name=Posts, or Raven-Entity-Name=Posts,Persons for multiple document types", (key, val) => databaseOptions.Filters.Add(new FilterSetting
-		                                                                                                                                                                                                     {
-			                                                                                                                                                                                                     Path = "@metadata." + key,
-			                                                                                                                                                                                                     ShouldMatch = true,
-			                                                                                                                                                                                                     Values = FilterSetting.ParseValues(val)
-		                                                                                                                                                                                                     }));
+		//	databaseOptionSet.Add("metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a metadata property." + Environment.NewLine +
+		//                                                 "Usage example: Raven-Entity-Name=Posts, or Raven-Entity-Name=Posts,Persons for multiple document types", (key, val) => databaseOptions.Filters.Add(new FilterSetting
+		//                                                                                                                                                                                                     {
+		//	                                                                                                                                                                                                     Path = "@metadata." + key,
+		//	                                                                                                                                                                                                     ShouldMatch = true,
+		//	                                                                                                                                                                                                     Values = FilterSetting.ParseValues(val)
+		//                                                                                                                                                                                                     }));
 
-			databaseOptionSet.Add("negative-metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a metadata property." + Environment.NewLine +
-		                                                          "Usage example: Raven-Entity-Name=Posts", (key, val) => databaseOptions.Filters.Add(
-			                                                          new FilterSetting
-			                                                          {
-				                                                          Path = "@metadata." + key,
-				                                                          ShouldMatch = false,
-				                                                          Values = FilterSetting.ParseValues(val)
-			                                                          }));
+		//	databaseOptionSet.Add("negative-metadata-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a metadata property." + Environment.NewLine +
+		//                                                          "Usage example: Raven-Entity-Name=Posts", (key, val) => databaseOptions.Filters.Add(
+		//	                                                          new FilterSetting
+		//	                                                          {
+		//		                                                          Path = "@metadata." + key,
+		//		                                                          ShouldMatch = false,
+		//		                                                          Values = FilterSetting.ParseValues(val)
+		//	                                                          }));
 
-			databaseOptionSet.Add("filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a document property" + Environment.NewLine +
-		                                        "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
-			                                        new FilterSetting
-			                                        {
-				                                        Path = key,
-				                                        ShouldMatch = true,
-				                                        Values = FilterSetting.ParseValues(val)
-			                                        }));
+		//	databaseOptionSet.Add("filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents by a document property" + Environment.NewLine +
+		//                                        "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
+		//	                                        new FilterSetting
+		//	                                        {
+		//		                                        Path = key,
+		//		                                        ShouldMatch = true,
+		//		                                        Values = FilterSetting.ParseValues(val)
+		//	                                        }));
 
-			databaseOptionSet.Add("negative-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a document property" + Environment.NewLine +
-		                                                 "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
-			                                                 new FilterSetting
-			                                                 {
-				                                                 Path = key,
-				                                                 ShouldMatch = false,
-				                                                 Values = FilterSetting.ParseValues(val)
-			                                                 }));
+		//	databaseOptionSet.Add("negative-filter:{=}", OptionCategory.SmugglerDatabase, "Filter documents NOT matching a document property" + Environment.NewLine +
+		//                                                 "Usage example: Property-Name=Value", (key, val) => databaseOptions.Filters.Add(
+		//	                                                 new FilterSetting
+		//	                                                 {
+		//		                                                 Path = key,
+		//		                                                 ShouldMatch = false,
+		//		                                                 Values = FilterSetting.ParseValues(val)
+		//	                                                 }));
 
-			databaseOptionSet.Add("ignore-errors-and-continue", OptionCategory.SmugglerDatabase, "If this option is enabled, smuggler will not halt its operation on errors. Errors still will be displayed to the user.", value =>
-			{
-				databaseOptions.IgnoreErrorsAndContinue = true;
-			});
-			databaseOptionSet.Add("transform:", OptionCategory.SmugglerDatabase, "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script);
-			databaseOptionSet.Add("transform-file:", OptionCategory.SmugglerDatabase, "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script));
-			databaseOptionSet.Add("max-steps-for-transform-script:", OptionCategory.SmugglerDatabase, "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s));
-			databaseOptionSet.Add("batch-size:", OptionCategory.SmugglerDatabase, "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s));
-			databaseOptionSet.Add("chunk-size:", OptionCategory.SmugglerDatabase, "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s));
-			databaseOptionSet.Add("d|database:", OptionCategory.SmugglerDatabase, "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultDatabase = value);
-			databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
-			databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
-			databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
-            databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
-			databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents.", s => databaseOptions.Limit = int.Parse(s));
-			databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
-			databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
-			databaseOptionSet.Add("u|user|username:", OptionCategory.SmugglerDatabase, "The username to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).UserName = value);
-			databaseOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerDatabase, "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).UserName = value);
-			databaseOptionSet.Add("p|pass|password:", OptionCategory.SmugglerDatabase, "The password to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Password = value);
-			databaseOptionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerDatabase, "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Password = value);
-			databaseOptionSet.Add("domain:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Domain = value);
-			databaseOptionSet.Add("domain2:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Domain = value);
-			databaseOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value);
-			databaseOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value);
-            databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
-			databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
-            databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
-		}
+		//	databaseOptionSet.Add("ignore-errors-and-continue", OptionCategory.SmugglerDatabase, "If this option is enabled, smuggler will not halt its operation on errors. Errors still will be displayed to the user.", value =>
+		//	{
+		//		databaseOptions.IgnoreErrorsAndContinue = true;
+		//	});
+		//	databaseOptionSet.Add("transform:", OptionCategory.SmugglerDatabase, "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script);
+		//	databaseOptionSet.Add("transform-file:", OptionCategory.SmugglerDatabase, "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script));
+		//	databaseOptionSet.Add("max-steps-for-transform-script:", OptionCategory.SmugglerDatabase, "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s));
+		//	databaseOptionSet.Add("batch-size:", OptionCategory.SmugglerDatabase, "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s));
+		//	databaseOptionSet.Add("chunk-size:", OptionCategory.SmugglerDatabase, "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s));
+		//	databaseOptionSet.Add("d|database:", OptionCategory.SmugglerDatabase, "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultDatabase = value);
+		//	databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
+		//	databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
+		//	databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
+  //          databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
+		//	databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents.", s => databaseOptions.Limit = int.Parse(s));
+		//	databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
+		//	databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
+		//	databaseOptionSet.Add("u|user|username:", OptionCategory.SmugglerDatabase, "The username to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).UserName = value);
+		//	databaseOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerDatabase, "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).UserName = value);
+		//	databaseOptionSet.Add("p|pass|password:", OptionCategory.SmugglerDatabase, "The password to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Password = value);
+		//	databaseOptionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerDatabase, "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Password = value);
+		//	databaseOptionSet.Add("domain:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Domain = value);
+		//	databaseOptionSet.Add("domain2:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Domain = value);
+		//	databaseOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value);
+		//	databaseOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value);
+  //          databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
+		//	databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
+  //          databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
+		//}
 
 		private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
 		{
@@ -242,8 +244,8 @@ namespace Raven.Smuggler
 
         private async Task Parse(string[] args)
 		{
-            var options = smugglerApi.Options;
-            var filesOptions = smugglerFilesApi.Options;
+            //var options = smugglerApi.Options;
+            //var filesOptions = smugglerFilesApi.Options;
 
 			// Do these arguments the traditional way to maintain compatibility
 			if (args.Length < 3)
@@ -298,19 +300,19 @@ namespace Raven.Smuggler
                                 PrintUsageAndExit(e);
                             }
 
-                            options.Source.Url = url;
-                            options.BackupPath = args[2];
+      //                      options.Source.Url = url;
+      //                      options.BackupPath = args[2];
 
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerApi.Options.Incremental = true;
+      //                      if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+      //                          smugglerApi.Options.Incremental = true;
 
-						if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
-						    NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
-							smugglerApi.Options.DisableCompressionOnImport = true;
+						//if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
+						//    NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
+						//	smugglerApi.Options.DisableCompressionOnImport = true;
 
-                            ValidateDatabaseParameters(smugglerApi, action);
-                            var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                            await databaseDispatcher.Execute(action).ConfigureAwait(false);
+      //                      ValidateDatabaseParameters(smugglerApi, action);
+      //                      var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+      //                      await databaseDispatcher.Execute(action).ConfigureAwait(false);
                         }
                         break;
                     case SmugglerMode.Filesystem:
@@ -324,14 +326,14 @@ namespace Raven.Smuggler
                                 PrintUsageAndExit(e);
                             }
 
-                            filesOptions.Source.Url = url;
-                            filesOptions.BackupPath = args[2];
+                            //filesOptions.Source.Url = url;
+                            //filesOptions.BackupPath = args[2];
 
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerFilesApi.Options.Incremental = true;
+                            //if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                            //    smugglerFilesApi.Options.Incremental = true;
 
-                            var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                            await filesDispatcher.Execute(action).ConfigureAwait(false);
+                            //var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+                            //await filesDispatcher.Execute(action).ConfigureAwait(false);
                         }
                         break;
 					case SmugglerMode.Counter:
@@ -347,26 +349,26 @@ namespace Raven.Smuggler
 
 						switch (action)
 						{
-							case SmugglerAction.Export:
-								smugglerCounterApi.Options.Source.Url = url;
-								smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
-								break;
-							case SmugglerAction.Import:
-								smugglerCounterApi.Options.Destination.Url = url;
-								smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName;
-								break;
-							case SmugglerAction.Between:
-								smugglerCounterApi.Options.Source.Url = url;
-								smugglerCounterApi.Options.Destination.Url = url;
-								smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
-								smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName2;
-								break;
+							//case SmugglerAction.Export:
+							//	smugglerCounterApi.Options.Source.Url = url;
+							//	smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
+							//	break;
+							//case SmugglerAction.Import:
+							//	smugglerCounterApi.Options.Destination.Url = url;
+							//	smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName;
+							//	break;
+							//case SmugglerAction.Between:
+							//	smugglerCounterApi.Options.Source.Url = url;
+							//	smugglerCounterApi.Options.Destination.Url = url;
+							//	smugglerCounterApi.Options.Source.CounterStoreId = counterStorageName;
+							//	smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName2;
+							//	break;
 						}
 
-						smugglerCounterApi.Options.BackupPath = args[2];
+						//smugglerCounterApi.Options.BackupPath = args[2];
 						
-						var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
-						await countersDispatcher.Execute(action).ConfigureAwait(false);
+						//var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
+						//await countersDispatcher.Execute(action).ConfigureAwait(false);
 					}
 						break;
 				}
@@ -388,21 +390,21 @@ namespace Raven.Smuggler
             }            
         }
 
-        private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
-        {
-			if (allowImplicitDatabase)
-				return;
+   //     private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
+   //     {
+			//if (allowImplicitDatabase)
+			//	return;
 
-                if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
-                {
-                    throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
-                }
+   //             if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
+   //             {
+   //                 throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+   //             }
 
-                if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
-                {
-                    throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
-                }
-            }
+   //             if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
+   //             {
+   //                 throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
+   //             }
+   //         }
 
 		private void PrintUsageAndExit(Exception e)
 		{

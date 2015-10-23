@@ -4,13 +4,17 @@ namespace Raven.Smuggler.Database
 {
 	public class DatabaseSmugglerNotifications
 	{
-		public EventHandler<string> DocumentRead = (sender, key) => { };
+		public EventHandler<string> OnDocumentRead = (sender, key) => { };
+
+		public EventHandler<string> OnProgress = (sender, message) => { };
 
 		public void ShowProgress(string format, params object[] args)
 		{
 			try
 			{
-				Console.WriteLine(format, args);
+				var message = string.Format(format, args);
+				Console.WriteLine(message);
+				OnProgress(this, message);
 			}
 			catch (FormatException e)
 			{

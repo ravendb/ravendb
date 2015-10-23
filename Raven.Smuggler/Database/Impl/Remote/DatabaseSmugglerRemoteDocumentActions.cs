@@ -39,13 +39,13 @@ namespace Raven.Smuggler.Database.Impl.Remote
 				}
 			});
 
-			_notifications.DocumentRead += DocumentFound;
+			_notifications.OnDocumentRead += DocumentFound;
 			_timeSinceLastWrite = Stopwatch.StartNew();
 		}
 
 		public void Dispose()
 		{
-			_notifications.DocumentRead -= DocumentFound;
+			_notifications.OnDocumentRead -= DocumentFound;
 			_bulkInsert?.Dispose();
 		}
 

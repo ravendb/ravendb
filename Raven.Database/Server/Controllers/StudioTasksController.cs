@@ -24,6 +24,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
@@ -34,7 +35,10 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
+using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Impl.Streams;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -152,27 +156,27 @@ for(var customFunction in customFunctions) {{
 				{
 					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
 					{
-						var dataDumper = new DatabaseDataDumper(Database);
-						dataDumper.Progress += s => status.LastProgress = s;
-                        var smugglerOptions = dataDumper.Options;
+                        var smugglerOptions = new DatabaseSmugglerOptions();
 						smugglerOptions.BatchSize = batchSize;
 						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
 					    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
 						smugglerOptions.OperateOnTypes = operateOnTypes;
 						smugglerOptions.TransformScript = transformScript;
-						smugglerOptions.CancelToken = cts;
 
 						// Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
 						// Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
 						if (filtersPipeDelimited != null)
 						{
 							smugglerOptions.Filters.AddRange(filtersPipeDelimited
-								.Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
-								.Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+								.Split(new[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+								.Select(f => f.Split(new[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
 								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
 						}
 
-						await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
+						var smuggler = new DatabaseSmuggler(smugglerOptions, new DatabaseSmugglerStreamSource(fileStream), new DatabaseSmugglerEmbeddedDestination(Database));
+						smuggler.Notifications.OnProgress += (sender, message) => status.LastProgress = message;
+
+						await smuggler.ExecuteAsync(cts.Token).ConfigureAwait(false);
 					}
 				}
 				catch (Exception e)
@@ -234,44 +238,46 @@ for(var customFunction in customFunctions) {{
 		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
 		{
-            var requestString = smugglerOptionsJson.SmugglerOptions;
-            SmugglerDatabaseOptions smugglerOptions;
-      
-            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-			{
-				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
-			}
+			throw new NotImplementedException();
 
-            var result = GetEmptyMessage();
+   //         var requestString = smugglerOptionsJson.SmugglerOptions;
+   //         SmugglerDatabaseOptions smugglerOptions;
+      
+   //         using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+			//{
+			//	var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+   //             smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
+			//}
+
+   //         var result = GetEmptyMessage();
             
-            // create PushStreamContent object that will be called when the output stream will be ready.
-			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
-			{
-			    try
-			    {
-				    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
-				    await dataDumper.ExportData(
-					    new SmugglerExportOptions<RavenConnectionStringOptions>
-					    {
-						    ToStream = outputStream
-					    }).ConfigureAwait(false);
-			    }
-			    finally
-			    {
-			        outputStream.Close();
-			    }
-			});
+   //         // create PushStreamContent object that will be called when the output stream will be ready.
+			//result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+			//{
+			//    try
+			//    {
+			//	    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
+			//	    await dataDumper.ExportData(
+			//		    new SmugglerExportOptions<RavenConnectionStringOptions>
+			//		    {
+			//			    ToStream = outputStream
+			//		    }).ConfigureAwait(false);
+			//    }
+			//    finally
+			//    {
+			//        outputStream.Close();
+			//    }
+			//});
 		    
-            var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
-		        string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-		        smugglerOptions.NoneDefualtFileName;
-            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
-            {
-                FileName = fileName + ".ravendump"
-            };
+   //         var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
+		 //       string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+		 //       smugglerOptions.NoneDefualtFileName;
+   //         result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+   //         {
+   //             FileName = fileName + ".ravendump"
+   //         };
 			
-			return new CompletedTask<HttpResponseMessage>(result);
+			//return new CompletedTask<HttpResponseMessage>(result);
 		}
         
 		[HttpPost]
@@ -285,10 +291,17 @@ for(var customFunction in customFunctions) {{
 				return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
 			}
 
-			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
+			using (var stream = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
-                var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
-                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
+				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
+				{
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
+					ShouldExcludeExpired = false
+				},
+				new DatabaseSmugglerStreamSource(stream),
+				new DatabaseSmugglerEmbeddedDestination(Database));
+
+				await smuggler.ExecuteAsync().ConfigureAwait(false);
 			}
 
 			return GetEmptyMessage();
