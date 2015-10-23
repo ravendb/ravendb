@@ -224,7 +224,7 @@ namespace Voron.Tests.Trees
             {
                 var retrievedFreePages = Env.FreeSpaceHandling.AllPages(tx.LowLevelTransaction);
 
-                //freedPages.ExceptWith(Env.FreeSpaceHandling.GetFreePagesOverheadPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
+                freedPages.ExceptWith(Env.FreeSpaceHandling.GetFreePagesOverheadPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
                 var sorted = freedPages.OrderBy(x => x).ToList();
 
                 Assert.Equal(sorted, retrievedFreePages);

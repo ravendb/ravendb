@@ -438,6 +438,16 @@ namespace Voron.Trees.Fixed
         private unsafe ushort CopyEmbeddedContentToTempPage(long key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
         {
             var ptr = _parent.DirectRead(_treeName);
+            if (ptr == null)
+            {
+                // we called NewPage and emptied this completed, then called CopyEmbeddedContentToTempPage() on effectively empty
+                isNew = true;
+                newSize = _entrySize;
+                srcCopyStart = 0;
+                *((long*)tmp.TempPagePointer) = key;
+
+                return 1;
+            }
             var dataStart = ptr + sizeof (FixedSizeTreeHeader.Embedded);
             var header = (FixedSizeTreeHeader.Embedded*) ptr;
             var startingEntryCount = header->NumberOfEntries;
