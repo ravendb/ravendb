@@ -39,7 +39,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 
 		public bool SupportsWaitingForIndexing => false;
 
-		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
+		public virtual Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			_gZipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
 			_streamWriter = new StreamWriter(_gZipStream);

@@ -15,8 +15,8 @@ namespace Raven.Smuggler.Database
 	{
 		private readonly LastEtagsInfo _maxEtags;
 
-		public DocumentDeletionsSmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
-			: base(options, report, source, destination)
+		public DocumentDeletionsSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
+			: base(options, notifications, source, destination)
 		{
 			_maxEtags = maxEtags;
 		}

@@ -2,8 +2,10 @@
 
 namespace Raven.Smuggler.Database
 {
-	public class Report
+	public class DatabaseSmugglerNotifications
 	{
+		public EventHandler<string> DocumentRead = (sender, key) => { };
+
 		public void ShowProgress(string format, params object[] args)
 		{
 			try

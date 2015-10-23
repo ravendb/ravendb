@@ -18,8 +18,8 @@ namespace Raven.Smuggler.Database
 {
 	internal class IdentitySmuggler : SmugglerBase
 	{
-		public IdentitySmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
-			: base(options, report, source, destination)
+		public IdentitySmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+			: base(options, notifications, source, destination)
 		{
 		}
 
@@ -46,26 +46,26 @@ namespace Raven.Smuggler.Database
 					{
 						if (retries-- == 0 && Options.IgnoreErrorsAndContinue)
 						{
-							Report.ShowProgress("Failed getting identities too much times, stopping the identity export entirely. Message: {0}", e.Message);
+							Notifications.ShowProgress("Failed getting identities too much times, stopping the identity export entirely. Message: {0}", e.Message);
 							return;
 						}
 
 						if (Options.IgnoreErrorsAndContinue == false)
 							throw new SmugglerExportException(e.Message, e);
 
-						Report.ShowProgress("Failed fetching identities. {0} retries remaining. Message: {1}", retries, e.Message);
+						Notifications.ShowProgress("Failed fetching identities. {0} retries remaining. Message: {1}", retries, e.Message);
 						continue;
 					}
 
 					readCount += identities.Count;
 
-					Report.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+					Notifications.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
 
 					var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, Options.OperateOnTypes)).ToList();
 
 					filteredCount += filteredIdentities.Count;
 
-					Report.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+					Notifications.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
 
 					foreach (var identity in filteredIdentities)
 					{
@@ -79,14 +79,14 @@ namespace Raven.Smuggler.Database
 							if (Options.IgnoreErrorsAndContinue == false)
 								throw new SmugglerExportException(e.Message, e);
 
-							Report.ShowProgress("Failed to export identity {0}. Message: {1}", identity, e.Message);
+							Notifications.ShowProgress("Failed to export identity {0}. Message: {1}", identity, e.Message);
 						}
 					}
 
 					break;
 				} while (Source.SupportsRetries);
 
-				Report.ShowProgress("IDENTITY. Read: {0}. Filtered: {1}. Wrote: {2}", readCount, readCount - filteredCount, writeCount);
+				Notifications.ShowProgress("IDENTITY. Read: {0}. Filtered: {1}. Wrote: {2}", readCount, readCount - filteredCount, writeCount);
 			}
 		}
 

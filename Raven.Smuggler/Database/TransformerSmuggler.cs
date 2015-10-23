@@ -17,8 +17,8 @@ namespace Raven.Smuggler.Database
 {
 	internal class TransformerSmuggler : SmugglerBase
 	{
-		public TransformerSmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
-			: base(options, report, source, destination)
+		public TransformerSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination)
+			: base(options, notifications, source, destination)
 		{
 		}
 
@@ -46,25 +46,25 @@ namespace Raven.Smuggler.Database
 					{
 						if (retries-- == 0 && Options.IgnoreErrorsAndContinue)
 						{
-							Report.ShowProgress("Failed getting transformers too much times, stopping the transformer export entirely. Message: {0}", e.Message);
+							Notifications.ShowProgress("Failed getting transformers too much times, stopping the transformer export entirely. Message: {0}", e.Message);
 							return;
 						}
 
 						if (Options.IgnoreErrorsAndContinue == false)
 							throw new SmugglerExportException(e.Message, e);
 
-						Report.ShowProgress("Failed fetching transformers. {0} retries remaining. Message: {1}", retries, e.Message);
+						Notifications.ShowProgress("Failed fetching transformers. {0} retries remaining. Message: {1}", retries, e.Message);
 						continue;
 					}
 
 					if (transformers.Count == 0)
 					{
-						Report.ShowProgress("Done with reading transformers, total: {0}", count);
+						Notifications.ShowProgress("Done with reading transformers, total: {0}", count);
 						break;
 					}
 
 					count += transformers.Count;
-					Report.ShowProgress("Reading batch of {0,3} transformers, read so far: {1,10:#,#;;0}", transformers.Count, count);
+					Notifications.ShowProgress("Reading batch of {0,3} transformers, read so far: {1,10:#,#;;0}", transformers.Count, count);
 
 					foreach (var transformer in transformers)
 					{
@@ -78,7 +78,7 @@ namespace Raven.Smuggler.Database
 							if (Options.IgnoreErrorsAndContinue == false)
 								throw new SmugglerExportException(e.Message, e);
 
-							Report.ShowProgress("Failed to export transformer {0}. Message: {1}", transformer, e.Message);
+							Notifications.ShowProgress("Failed to export transformer {0}. Message: {1}", transformer, e.Message);
 						}
 					}
 				} while (Source.SupportsPaging || Source.SupportsRetries);

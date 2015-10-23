@@ -25,7 +25,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		private readonly DatabaseSmugglerRemoteDestinationOptions _options;
 
-		private Report _report;
+		private DatabaseSmugglerNotifications _notifications;
 
 		private DatabaseSmugglerOptions _globalOptions;
 
@@ -43,10 +43,10 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public bool SupportsWaitingForIndexing => true;
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
+		public Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			_globalOptions = options;
-			_report = report;
+			_notifications = notifications;
 			return new CompletedTask();
 		}
 
@@ -57,7 +57,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		public IDatabaseSmugglerDocumentActions DocumentActions()
 		{
-			return new DatabaseSmugglerRemoteDocumentActions(_globalOptions, _options, _store);
+			return new DatabaseSmugglerRemoteDocumentActions(_globalOptions, _options, _notifications, _store);
 		}
 
 		public IDatabaseSmugglerTransformerActions TransformerActions()
@@ -96,7 +96,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 					if (options.IgnoreErrorsAndContinue == false)
 						throw;
 
-					_report.ShowProgress("Failed loading continuation state. Message: {0}", e.Message);
+					_notifications.ShowProgress("Failed loading continuation state. Message: {0}", e.Message);
 				}
 			}
 
@@ -121,7 +121,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 					if (options.IgnoreErrorsAndContinue == false)
 						throw;
 
-					_report.ShowProgress("Failed saving continuation state. Message: {0}", e.Message);
+					_notifications.ShowProgress("Failed saving continuation state. Message: {0}", e.Message);
 				}
 			}
 		}
@@ -145,12 +145,12 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			{
 				if (stats.Indexes.All(x => x.LastIndexedEtag.CompareTo(cutOffEtag) >= 0))
 				{
-					_report.ShowProgress("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+					_notifications.ShowProgress("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 					break;
 				}
 
 				if (tries++ % 10 == 0)
-					_report.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+					_notifications.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 
 				Thread.Sleep(1000);
 				stats = await _store

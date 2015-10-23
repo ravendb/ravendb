@@ -13,7 +13,7 @@ namespace Raven.Smuggler.Database
 
 		bool SupportsWaitingForIndexing { get; }
 
-		Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken);
+		Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken);
 
 		IDatabaseSmugglerIndexActions IndexActions();
 

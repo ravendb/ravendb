@@ -124,7 +124,7 @@
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamSource.cs" />
     <Compile Include="Database\Impl\Streams\DatabaseSmugglerStreamTransformerActions.cs" />
     <Compile Include="Database\IndexSmuggler.cs" />
-    <Compile Include="Database\Report.cs" />
+    <Compile Include="Database\DatabaseSmugglerNotifications.cs" />
     <Compile Include="Database\SmugglerBase.cs" />
     <Compile Include="Database\SmuggleType.cs" />
     <Compile Include="Database\TransformerSmuggler.cs" />

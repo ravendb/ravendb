@@ -50,7 +50,7 @@ namespace Raven.Tests.Smuggler.Helpers
 
 		public bool SupportsWaitingForIndexing => false;
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
+		public Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			return new CompletedTask();
 		}

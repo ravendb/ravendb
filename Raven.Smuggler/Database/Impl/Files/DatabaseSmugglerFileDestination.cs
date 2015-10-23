@@ -40,7 +40,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 		public override bool SupportsOperationState => true;
 
-		public override async Task InitializeAsync(DatabaseSmugglerOptions options, Report report, CancellationToken cancellationToken)
+		public override async Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			var filePath = _path;
 			if (_options.Incremental)
@@ -70,7 +70,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 
 			_stream = File.Create(filePath);
 
-			await base.InitializeAsync(options, report, cancellationToken).ConfigureAwait(false);
+			await base.InitializeAsync(options, notifications, cancellationToken).ConfigureAwait(false);
 		}
 
 		public override Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)

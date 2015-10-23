@@ -26,8 +26,8 @@ namespace Raven.Smuggler.Database
 
 		private readonly SmugglerJintHelper _patcher;
 
-		public DocumentSmuggler(DatabaseSmugglerOptions options, Report report, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
-			: base(options, report, source, destination)
+		public DocumentSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
+			: base(options, notifications, source, destination)
 		{
 			_maxEtags = maxEtags;
 			_patcher = new SmugglerJintHelper();
@@ -51,7 +51,7 @@ namespace Raven.Smuggler.Database
 				var lastReport = SystemTime.UtcNow;
 				var reportInterval = TimeSpan.FromSeconds(2);
 				var reachedMaxEtag = false;
-				Report.ShowProgress("Exporting Documents");
+				Notifications.ShowProgress("Exporting Documents");
 
 				var affectedCollections = new List<string>();
 				Options.Filters.ForEach(filter =>
@@ -84,6 +84,9 @@ namespace Raven.Smuggler.Database
 									var document = documents.Current;
 
 									var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+									var key = document["@metadata"].Value<string>("@id");
+
+									Notifications.DocumentRead(this, key);
 
 									if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
 									{
@@ -101,7 +104,6 @@ namespace Raven.Smuggler.Database
 										if (document.ContainsKey("@metadata") == false)
 											continue;
 
-										var key = document["@metadata"].Value<string>("@id");
 										if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
 											continue;
 									}
@@ -140,14 +142,14 @@ namespace Raven.Smuggler.Database
 										if (Options.IgnoreErrorsAndContinue == false)
 											throw;
 
-										Report.ShowProgress("EXPORT of a document {0} failed. Message: {1}", document, e.Message);
+										Notifications.ShowProgress("EXPORT of a document {0} failed. Message: {1}", document, e.Message);
 									}
 
 									totalCount++;
 
 									if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 									{
-										Report.ShowProgress("Exported {0} documents", totalCount);
+										Notifications.ShowProgress("Exported {0} documents", totalCount);
 										lastReport = SystemTime.UtcNow;
 									}
 
@@ -185,7 +187,7 @@ namespace Raven.Smuggler.Database
 									{
 										lastEtag = databaseStatistics.LastDocEtag;
 									}
-									Report.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+									Notifications.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 									continue;
 								}
 							}
@@ -222,14 +224,14 @@ namespace Raven.Smuggler.Database
 							await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
 						}
 
-						Report.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 						state.LastDocsEtag = lastEtag;
 						return;
 					}
 					catch (Exception e)
 					{
-						Report.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-						Report.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+						Notifications.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 						throw new SmugglerExportException(e.Message, e)
 						{
 							LastEtag = lastEtag,

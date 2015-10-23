@@ -14,7 +14,10 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		{
 			TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
 			ChunkSize = int.MaxValue;
+			HeartbeatLatency = TimeSpan.FromSeconds(10);
 		}
+
+		public TimeSpan HeartbeatLatency { get; set; }
 
 		public string ContinuationToken { get; set; }
 
