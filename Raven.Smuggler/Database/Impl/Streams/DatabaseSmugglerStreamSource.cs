@@ -259,6 +259,16 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return SkipAsync(cancellationToken);
 		}
 
+		public Task SkipAttachmentsAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
+		public Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken)
+		{
+			return SkipAsync(cancellationToken);
+		}
+
 		private Task SkipAsync(CancellationToken cancellationToken)
 		{
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)

@@ -41,7 +41,7 @@ namespace Raven.Smuggler.Database
 
 		bool SupportsRetries { get; }
 
-		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int batchSize, CancellationToken cancellationToken);
+		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int pageSize, CancellationToken cancellationToken);
 
 		Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
 
@@ -58,5 +58,9 @@ namespace Raven.Smuggler.Database
 		Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken);
 
 		Task SkipIdentitiesAsync(CancellationToken cancellationToken);
+
+		Task SkipAttachmentsAsync(CancellationToken cancellationToken);
+
+		Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken);
 	}
 }

@@ -220,5 +220,15 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		{
 			return new CompletedTask();
 		}
+
+		public Task SkipAttachmentsAsync(CancellationToken cancellationToken)
+		{
+			return new CompletedTask();
+		}
+
+		public Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken)
+		{
+			return new CompletedTask();
+		}
 	}
 }

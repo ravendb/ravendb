@@ -3,10 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Util;
 using Raven.Smuggler.Database;
 
 namespace Raven.Database.Smuggler.Embedded
@@ -15,6 +17,8 @@ namespace Raven.Database.Smuggler.Embedded
 	{
 		private readonly DocumentDatabase _database;
 
+		private DatabaseSmugglerOptions _globalOptions;
+
 		public DatabaseSmugglerEmbeddedDestination(DocumentDatabase database)
 		{
 			_database = database;
@@ -22,56 +26,56 @@ namespace Raven.Database.Smuggler.Embedded
 
 		public void Dispose()
 		{
-			throw new System.NotImplementedException();
 		}
 
-		public bool SupportsOperationState { get; }
+		public bool SupportsOperationState => false;
 
-		public bool SupportsWaitingForIndexing { get; }
+		public bool SupportsWaitingForIndexing => false;
 
 		public Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
-			throw new System.NotImplementedException();
+			_globalOptions = options;
+			return new CompletedTask();
 		}
 
 		public IDatabaseSmugglerIndexActions IndexActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerEmbeddedIndexActions(_database);
 		}
 
 		public IDatabaseSmugglerDocumentActions DocumentActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerEmbeddedDocumentActions(_globalOptions, _database);
 		}
 
 		public IDatabaseSmugglerTransformerActions TransformerActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerEmbeddedTransformerActions(_database);
 		}
 
 		public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerEmbeddedDocumentDeletionActions(_database);
 		}
 
 		public IDatabaseSmugglerIdentityActions IdentityActions()
 		{
-			throw new System.NotImplementedException();
+			return new DatabaseSmugglerEmbeddedIdentityActions(_database);
 		}
 
 		public Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 
 		public Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
 		{
-			throw new System.NotImplementedException();
+			throw new NotSupportedException();
 		}
 	}
 }

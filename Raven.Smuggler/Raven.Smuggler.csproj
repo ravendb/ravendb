@@ -95,6 +95,8 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Database\AttachmentDeletionsSmuggler.cs" />
+    <Compile Include="Database\AttachmentSmuggler.cs" />
     <Compile Include="Database\DocumentDeletionsSmuggler.cs" />
     <Compile Include="Database\DocumentSmuggler.cs" />
     <Compile Include="Database\IDatabaseSmugglerDestination.cs" />

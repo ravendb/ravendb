@@ -157,6 +157,16 @@ namespace Raven.Smuggler.Database.Impl.Files
 			throw new NotSupportedException();
 		}
 
+		public Task SkipAttachmentsAsync(CancellationToken cancellationToken)
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken)
+		{
+			throw new NotSupportedException();
+		}
+
 		private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
 		{
 			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path))

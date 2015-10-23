@@ -510,7 +510,12 @@
     <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
     <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->
     <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDestination.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDocumentActions.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDocumentDeletionActions.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedIdentityActions.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedIndexActions.cs" />
     <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedSource.cs" />
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedTransformerActions.cs" />
     <Compile Include="Smuggler\ServerValidation.cs" />
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />

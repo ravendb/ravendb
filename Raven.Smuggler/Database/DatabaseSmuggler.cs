@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 
 namespace Raven.Smuggler.Database
@@ -120,7 +121,15 @@ namespace Raven.Smuggler.Database
 							.ConfigureAwait(false);
 						continue;
 					case SmuggleType.Attachment:
+						await new AttachmentSmuggler(_options, _notifications, source, _destination)
+							.SmuggleAsync(state, cancellationToken)
+							.ConfigureAwait(false);
+						continue;
 					case SmuggleType.AttachmentDeletion:
+						await new AttachmentDeletionsSmuggler(_options, _notifications, source, _destination)
+							.SmuggleAsync(state, cancellationToken)
+							.ConfigureAwait(false);
+						continue;
 					default:
 						throw new NotSupportedException(type.ToString());
 				}
