@@ -69,7 +69,7 @@ namespace Voron.Impl.Scratch
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages)
         {
-            if (tx == null)
+           if (tx == null)
                 throw new ArgumentNullException("tx");
             var size = (int)Utils.NearestPowerOfTwo(numberOfPages);
 
@@ -136,7 +136,7 @@ namespace Voron.Impl.Scratch
                             {
                                 // we'll try next time
                             }
-                            catch (InvalidJournalFlushRequest)
+                            catch (InvalidJournalFlushRequestException)
                             {
                                 // journals flushing already in progress
                             }
@@ -156,7 +156,9 @@ namespace Voron.Impl.Scratch
                 // we can continue running. It is possible that a long running read transaction
                 // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
 
-                while (sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
+                while (
+                    tx.Environment.Options.ManualFlushing == false &&
+                    sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
                 {
                     if (_current.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                         return result;

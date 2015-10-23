@@ -415,7 +415,7 @@ namespace Voron.Impl.Journal
 					return;
 
 				if (Monitor.IsEntered(_flushingLock) && ignoreLockAlreadyTaken == false)
-					throw new InvalidJournalFlushRequest("Applying journals to the data file has been already requested on the same thread");
+					throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
 				bool lockTaken = false;
 

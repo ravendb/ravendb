@@ -63,7 +63,7 @@
   <ItemGroup>
     <Compile Include="Debugging\StorageReport.cs" />
     <Compile Include="Debugging\StorageReportGenerator.cs" />
-    <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
+    <Compile Include="Exceptions\InvalidJournalFlushRequestException.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
     <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
