@@ -1,12 +1,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Database.Impl.Streams
+namespace Raven.Smuggler.Database.Streams
 {
 	public class DatabaseSmugglerStreamDocumentActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerDocumentActions
 	{

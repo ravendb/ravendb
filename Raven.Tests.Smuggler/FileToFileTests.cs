@@ -7,8 +7,8 @@ using System.IO;
 
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Impl.Files;
-using Raven.Smuggler.Database.Impl.Remote;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 
 using Xunit;
 

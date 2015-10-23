@@ -9,7 +9,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Database.Impl.Remote
+namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteDocumentActions : IDatabaseSmugglerDocumentActions
 	{

@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Smuggler.Database.Impl.Streams
+namespace Raven.Smuggler.Database.Streams
 {
 	public class DatabaseSmugglerStreamActionsBase : IDisposable
 	{

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Smuggler.Database.Impl.Remote
+namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteDestinationOptions
 	{

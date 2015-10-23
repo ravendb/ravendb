@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Database.Impl.Streams
+namespace Raven.Smuggler.Database.Streams
 {
 	public class DatabaseSmugglerStreamTransformerActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerTransformerActions
 	{

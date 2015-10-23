@@ -1,4 +1,4 @@
-namespace Raven.Smuggler.Database.Impl.Files
+namespace Raven.Smuggler.Database.Files
 {
 	public class DatabaseSmugglerFileDestinationOptions
 	{

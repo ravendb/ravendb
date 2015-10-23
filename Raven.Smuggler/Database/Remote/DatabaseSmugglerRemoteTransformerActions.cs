@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 
-namespace Raven.Smuggler.Database.Impl.Remote
+namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteTransformerActions : IDatabaseSmugglerTransformerActions
 	{

@@ -38,7 +38,7 @@ using Raven.Database.Smuggler;
 using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Impl.Streams;
+using Raven.Smuggler.Database.Streams;
 
 namespace Raven.Database.Server.Controllers
 {

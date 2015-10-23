@@ -14,7 +14,7 @@ using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Smuggler.Database.Impl.Streams
+namespace Raven.Smuggler.Database.Streams
 {
 	public class DatabaseSmugglerStreamDestination : IDatabaseSmugglerDestination
 	{

@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Database.Impl.Remote
+namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteSource : IDatabaseSmugglerSource
 	{

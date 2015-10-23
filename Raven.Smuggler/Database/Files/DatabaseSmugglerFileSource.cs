@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,9 +16,9 @@ using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
-using Raven.Smuggler.Database.Impl.Streams;
+using Raven.Smuggler.Database.Streams;
 
-namespace Raven.Smuggler.Database.Impl.Files
+namespace Raven.Smuggler.Database.Files
 {
 	public class DatabaseSmugglerFileSource : IDatabaseSmugglerSource
 	{
