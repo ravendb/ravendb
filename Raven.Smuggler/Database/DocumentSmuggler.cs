@@ -12,10 +12,8 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
@@ -23,11 +21,11 @@ namespace Raven.Smuggler.Database
 {
 	internal class DocumentSmuggler : SmugglerBase
 	{
-		private readonly LastEtagsInfo _maxEtags;
+		private readonly DatabaseLastEtagsInfo _maxEtags;
 
 		private readonly SmugglerJintHelper _patcher;
 
-		public DocumentSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
+		public DocumentSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, DatabaseLastEtagsInfo maxEtags)
 			: base(options, notifications, source, destination)
 		{
 			_maxEtags = maxEtags;
@@ -35,11 +33,11 @@ namespace Raven.Smuggler.Database
 			_patcher.Initialize(options);
 		}
 
-		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
+		public override async Task SmuggleAsync(DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.DocumentActions())
 			{
-				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents) == false)
 				{
 					await Source.SkipDocumentsAsync(cancellationToken).ConfigureAwait(false);
 					return;

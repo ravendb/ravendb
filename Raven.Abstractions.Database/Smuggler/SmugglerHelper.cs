@@ -6,13 +6,14 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Smuggler
+namespace Raven.Abstractions.Database.Smuggler
 {
 	public static class SmugglerHelper
 	{

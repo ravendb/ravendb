@@ -11,9 +11,8 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -73,14 +72,14 @@ namespace Raven.Smuggler.Database.Impl.Files
 			await base.InitializeAsync(options, notifications, cancellationToken).ConfigureAwait(false);
 		}
 
-		public override Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public override Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			var etagFileLocation = Path.Combine(_path, IncrementalExportStateFile);
 
-			return new CompletedTask<OperationState>(ReadLastEtagsFromFile(etagFileLocation));
+			return new CompletedTask<DatabaseSmugglerOperationState>(ReadLastEtagsFromFile(etagFileLocation));
 		}
 
-		public override Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		public override Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			if (_options.Incremental)
 			{
@@ -92,7 +91,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 			return new CompletedTask();
 		}
 
-		private static void WriteLastEtagsToFile(OperationState state, string etagFileLocation)
+		private static void WriteLastEtagsToFile(DatabaseSmugglerOperationState state, string etagFileLocation)
 		{
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
@@ -105,7 +104,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 			}
 		}
 
-		private OperationState ReadLastEtagsFromFile(string etagFileLocation)
+		private DatabaseSmugglerOperationState ReadLastEtagsFromFile(string etagFileLocation)
 		{
 			if (File.Exists(etagFileLocation) == false)
 				return null;
@@ -124,7 +123,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 					return null;
 				}
 
-				return new OperationState
+				return new DatabaseSmugglerOperationState
 				{
 					LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag")),
 					LastDocDeleteEtag = Etag.Parse(ravenJObject.Value<string>("LastDocDeleteEtag") ?? Etag.Empty.ToString())

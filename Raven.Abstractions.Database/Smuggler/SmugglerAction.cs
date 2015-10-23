@@ -1,4 +1,4 @@
-namespace Raven.Abstractions.Smuggler
+namespace Raven.Abstractions.Database.Smuggler
 {
 	public enum SmugglerAction
 	{

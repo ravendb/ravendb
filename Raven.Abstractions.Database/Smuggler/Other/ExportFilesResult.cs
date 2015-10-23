@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Raven.Abstractions.Database.Smuggler.Database;
 
-namespace Raven.Abstractions.Smuggler.Data
+namespace Raven.Abstractions.Database.Smuggler.Other
 {
     public class ExportFilesResult : LastFilesEtagsInfo
     {

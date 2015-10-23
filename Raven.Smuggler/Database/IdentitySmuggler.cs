@@ -10,10 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 
 namespace Raven.Smuggler.Database
 {
@@ -24,11 +22,11 @@ namespace Raven.Smuggler.Database
 		{
 		}
 
-		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
+		public override async Task SmuggleAsync(DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.IdentityActions())
 			{
-				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents) == false)
 				{
 					await Source.SkipIdentitiesAsync(cancellationToken).ConfigureAwait(false);
 					return;
@@ -91,7 +89,7 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		private static bool FilterIdentity(string indentityName, ItemType operateOnTypes)
+		private static bool FilterIdentity(string indentityName, DatabaseItemType operateOnTypes)
 		{
 			if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
 				return false;
@@ -102,7 +100,7 @@ namespace Raven.Smuggler.Database
 			if (Constants.RavenSubscriptionsPrefix.Equals(indentityName, StringComparison.OrdinalIgnoreCase))
 				return false;
 
-			if (operateOnTypes.HasFlag(ItemType.Documents))
+			if (operateOnTypes.HasFlag(DatabaseItemType.Documents))
 				return true;
 
 			return false;

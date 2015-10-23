@@ -4,8 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Raven.Abstractions.Database.Smuggler.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Impl.Remote;
 using Raven.Tests.Smuggler.Helpers;
@@ -26,7 +25,7 @@ namespace Raven.Tests.Smuggler.OperateOnTypes
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.RemoveAnalyzers
+					OperateOnTypes = DatabaseItemType.RemoveAnalyzers
 				}, new DatabaseSmugglerRemoteSource(store), destination);
 				smuggler.Execute();
 
@@ -48,7 +47,7 @@ namespace Raven.Tests.Smuggler.OperateOnTypes
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.Documents
+					OperateOnTypes = DatabaseItemType.Documents
 				}, new DatabaseSmugglerRemoteSource(store), destination);
 				smuggler.Execute();
 
@@ -70,7 +69,7 @@ namespace Raven.Tests.Smuggler.OperateOnTypes
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.Indexes
+					OperateOnTypes = DatabaseItemType.Indexes
 				}, new DatabaseSmugglerRemoteSource(store), destination);
 				smuggler.Execute();
 
@@ -92,7 +91,7 @@ namespace Raven.Tests.Smuggler.OperateOnTypes
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.Transformers
+					OperateOnTypes = DatabaseItemType.Transformers
 				}, new DatabaseSmugglerRemoteSource(store), destination);
 				smuggler.Execute();
 
@@ -114,7 +113,7 @@ namespace Raven.Tests.Smuggler.OperateOnTypes
 				var destination = new DatabaseSmugglerCountingDestination();
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers
+					OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes | DatabaseItemType.Transformers
 				}, new DatabaseSmugglerRemoteSource(store), destination);
 				smuggler.Execute();
 

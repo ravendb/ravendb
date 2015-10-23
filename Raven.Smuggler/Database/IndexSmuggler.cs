@@ -8,11 +8,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 
 namespace Raven.Smuggler.Database
 {
@@ -23,11 +21,11 @@ namespace Raven.Smuggler.Database
 		{
 		}
 
-		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
+		public override async Task SmuggleAsync(DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.IndexActions())
 			{
-				if (Options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
+				if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
 				{
 					await Source.SkipIndexesAsync(cancellationToken).ConfigureAwait(false);
 					return;
@@ -71,7 +69,7 @@ namespace Raven.Smuggler.Database
 					{
 						try
 						{
-							if (Options.OperateOnTypes.HasFlag(ItemType.Indexes))
+							if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
 								await actions.WriteIndexAsync(index, cancellationToken).ConfigureAwait(false);
 						}
 						catch (Exception e)

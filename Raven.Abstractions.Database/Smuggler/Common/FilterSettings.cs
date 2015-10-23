@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Raven.Abstractions.Database.Smuggler.Data
+namespace Raven.Abstractions.Database.Smuggler.Common
 {
 	public class FilterSetting
 	{

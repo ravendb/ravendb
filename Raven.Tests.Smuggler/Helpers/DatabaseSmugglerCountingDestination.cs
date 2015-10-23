@@ -2,9 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
@@ -80,12 +79,12 @@ namespace Raven.Tests.Smuggler.Helpers
 			return _identityActions;
 		}
 
-		public Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

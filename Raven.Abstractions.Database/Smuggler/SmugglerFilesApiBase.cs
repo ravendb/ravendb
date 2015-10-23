@@ -1,14 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler.Data;
-using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -16,9 +6,20 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.Smuggler
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Other;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+
+namespace Raven.Abstractions.Database.Smuggler
 {
     public class SmugglerFilesApiBase : ISmugglerApi<FilesConnectionStringOptions, SmugglerFilesOptions, ExportFilesResult>
     {

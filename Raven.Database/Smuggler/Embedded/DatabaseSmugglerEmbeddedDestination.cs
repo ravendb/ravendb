@@ -6,8 +6,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Smuggler.Database;
 
 namespace Raven.Database.Smuggler.Embedded
@@ -60,12 +59,12 @@ namespace Raven.Database.Smuggler.Embedded
 			throw new System.NotImplementedException();
 		}
 
-		public Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			throw new System.NotImplementedException();
 		}
 
-		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			throw new System.NotImplementedException();
 		}

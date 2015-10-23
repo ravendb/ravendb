@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Json.Linq;

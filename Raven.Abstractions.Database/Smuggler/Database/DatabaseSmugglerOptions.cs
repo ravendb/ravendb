@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Common;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Smuggler
+namespace Raven.Abstractions.Database.Smuggler.Database
 {
 	public class DatabaseSmugglerOptions
 	{
@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Smuggler
 		{
 			Filters = new List<FilterSetting>();
 			ConfigureDefaultFilters();
-			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Transformers;
+			OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Documents | DatabaseItemType.Transformers;
 			ShouldExcludeExpired = false;
 			Limit = int.MaxValue;
 			StartDocsDeletionEtag = StartDocsEtag = Etag.Empty;
@@ -30,7 +30,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public Etag StartDocsDeletionEtag { get; set; }
 
-		public ItemType OperateOnTypes { get; set; }
+		public DatabaseItemType OperateOnTypes { get; set; }
 
 		public int BatchSize
 		{
@@ -61,7 +61,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public int MaxStepsForTransformScript { get; set; }
 
-		public virtual bool MatchFilters(RavenJObject document)
+		public bool MatchFilters(RavenJObject document)
 		{
 			foreach (var filter in Filters)
 			{
@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Smuggler
 			return true;
 		}
 
-		public virtual bool ExcludeExpired(RavenJObject document, DateTime now)
+		public bool ExcludeExpired(RavenJObject document, DateTime now)
 		{
 			var metadata = document.Value<RavenJObject>("@metadata");
 

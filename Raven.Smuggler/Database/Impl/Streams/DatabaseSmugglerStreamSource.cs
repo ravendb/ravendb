@@ -13,12 +13,10 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -92,7 +90,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				cancellationToken.ThrowIfCancellationRequested();
 
 				var index = (RavenJObject)RavenJToken.ReadFrom(_reader);
-				if (_options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
+				if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
 					continue;
 
 				var indexName = index.Value<string>("name");
@@ -103,7 +101,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				if (definition.Value<bool>("IsCompiled"))
 					continue; // can't import compiled indexes
 
-				if (_options.OperateOnTypes.HasFlag(ItemType.RemoveAnalyzers))
+				if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RemoveAnalyzers))
 					definition.Remove("Analyzers");
 
 				var indexDefinition = definition.JsonDeserialization<IndexDefinition>();
@@ -115,9 +113,9 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new CompletedTask<List<IndexDefinition>>(results);
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
+		public Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
-			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
+			return new CompletedTask<DatabaseLastEtagsInfo>(new DatabaseLastEtagsInfo
 			{
 				LastDocDeleteEtag = null,
 				LastDocsEtag = null
@@ -157,7 +155,7 @@ namespace Raven.Smuggler.Database.Impl.Streams
 				cancellationToken.ThrowIfCancellationRequested();
 
 				var transformer = RavenJToken.ReadFrom(_reader);
-				if (_options.OperateOnTypes.HasFlag(ItemType.Transformers) == false)
+				if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
 					continue;
 
 				var transformerName = transformer.Value<string>("name");

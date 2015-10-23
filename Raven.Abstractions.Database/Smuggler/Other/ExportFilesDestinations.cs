@@ -1,11 +1,8 @@
-﻿using Raven.Abstractions.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace Raven.Abstractions.Smuggler.Data
+using Raven.Abstractions.Data;
+
+namespace Raven.Abstractions.Database.Smuggler.Other
 {
     public class ExportFilesDestinations
     {

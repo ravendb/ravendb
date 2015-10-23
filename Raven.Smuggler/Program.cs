@@ -9,14 +9,13 @@ using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Extensions;
 using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Util;
 //using Raven.Database.Smuggler;
 using Raven.Smuggler.Helpers;

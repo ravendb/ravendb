@@ -8,9 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
@@ -47,7 +46,7 @@ namespace Raven.Database.Smuggler.Embedded
 			throw new System.NotImplementedException();
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
+		public Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
 			throw new System.NotImplementedException();
 		}

@@ -4,9 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
@@ -24,7 +23,7 @@ namespace Raven.Smuggler.Database
 
 		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken);
 
-		Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
+		Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
 
 		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken);
 

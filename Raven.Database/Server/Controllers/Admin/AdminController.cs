@@ -22,7 +22,7 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
-using Raven.Abstractions.Smuggler;
+
 using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;

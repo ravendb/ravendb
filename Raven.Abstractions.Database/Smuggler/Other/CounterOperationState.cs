@@ -1,4 +1,4 @@
-﻿namespace Raven.Abstractions.Smuggler.Data
+﻿namespace Raven.Abstractions.Database.Smuggler.Other
 {
 	public class CounterOperationState
 	{

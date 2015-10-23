@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 
-namespace Raven.Smuggler
+namespace Raven.Abstractions.Database.Smuggler
 {
     public class SmugglerExportIncremental
     {

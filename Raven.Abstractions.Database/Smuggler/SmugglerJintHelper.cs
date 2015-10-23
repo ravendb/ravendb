@@ -10,7 +10,7 @@ using Jint;
 using Jint.Native;
 
 using Raven.Abstractions.Database.Json;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Database.Smuggler

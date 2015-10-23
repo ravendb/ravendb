@@ -9,8 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Util;
 
 namespace Raven.Smuggler.Database
@@ -43,12 +42,12 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		public OperationState Execute()
+		public DatabaseSmugglerOperationState Execute()
 		{
 			return AsyncHelpers.RunSync(() => ExecuteAsync(CancellationToken.None));
 		}
 
-		public async Task<OperationState> ExecuteAsync(CancellationToken cancellationToken = default(CancellationToken))
+		public async Task<DatabaseSmugglerOperationState> ExecuteAsync(CancellationToken cancellationToken = default(CancellationToken))
 		{
 			using (_source)
 			using (_destination)
@@ -76,7 +75,7 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, OperationState state, CancellationToken cancellationToken)
+		private async Task ProcessSourceAsync(IDatabaseSmugglerSource source, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrEmpty(source.DisplayName) == false)
 				Notifications.ShowProgress("Processing source: {0}", source.DisplayName);
@@ -128,9 +127,9 @@ namespace Raven.Smuggler.Database
 			}
 		}
 
-		private static async Task<OperationState> GetOperationStateAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, CancellationToken cancellationToken)
+		private static async Task<DatabaseSmugglerOperationState> GetOperationStateAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, CancellationToken cancellationToken)
 		{
-			OperationState state = null;
+			DatabaseSmugglerOperationState state = null;
 
 			if (destination.SupportsOperationState)
 			{
@@ -141,7 +140,7 @@ namespace Raven.Smuggler.Database
 
 			if (state == null)
 			{
-				state = new OperationState
+				state = new DatabaseSmugglerOperationState
 				{
 					LastDocsEtag = options.StartDocsEtag,
 					LastDocDeleteEtag = options.StartDocsDeletionEtag,

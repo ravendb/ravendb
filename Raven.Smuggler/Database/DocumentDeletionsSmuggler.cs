@@ -6,30 +6,28 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Database.Smuggler.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 
 namespace Raven.Smuggler.Database
 {
 	internal class DocumentDeletionsSmuggler : SmugglerBase
 	{
-		private readonly LastEtagsInfo _maxEtags;
+		private readonly DatabaseLastEtagsInfo _maxEtags;
 
-		public DocumentDeletionsSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, LastEtagsInfo maxEtags)
+		public DocumentDeletionsSmuggler(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, IDatabaseSmugglerSource source, IDatabaseSmugglerDestination destination, DatabaseLastEtagsInfo maxEtags)
 			: base(options, notifications, source, destination)
 		{
 			_maxEtags = maxEtags;
 		}
 
-		public override async Task SmuggleAsync(OperationState state, CancellationToken cancellationToken)
+		public override async Task SmuggleAsync(DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			using (var actions = Destination.DocumentDeletionActions())
 			{
 				if (Source.SupportsDocumentDeletions == false)
 					return;
 
-				if (Options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents) == false)
 				{
 					await Source.SkipDocumentDeletionsAsync(cancellationToken).ConfigureAwait(false);
 					return;

@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Smuggler
+namespace Raven.Abstractions.Database.Smuggler
 {
     public interface ISmugglerApi<TIn, out TOptions, TOut>
         where TIn : ConnectionStringOptions, new()

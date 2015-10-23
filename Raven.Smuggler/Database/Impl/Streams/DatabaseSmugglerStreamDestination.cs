@@ -10,8 +10,7 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -77,12 +76,12 @@ namespace Raven.Smuggler.Database.Impl.Streams
 			return new DatabaseSmugglerStreamIdentityActions(_writer);
 		}
 
-		public virtual Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public virtual Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}
 
-		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		public virtual Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

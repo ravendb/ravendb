@@ -55,12 +55,13 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Json\JintOperationScope.cs" />
+    <Compile Include="Smuggler\Other\LastFilesEtagsInfo.cs" />
     <Compile Include="Smuggler\Other\CounterOperationState.cs" />
     <Compile Include="Smuggler\Database\DatabaseSmugglerOptions.cs" />
     <Compile Include="Smuggler\Common\FilterSettings.cs" />
-    <Compile Include="Smuggler\Database\ItemType.cs" />
-    <Compile Include="Smuggler\Database\LastEtagsInfo.cs" />
-    <Compile Include="Smuggler\Database\OperationState.cs" />
+    <Compile Include="Smuggler\Database\DatabaseItemType.cs" />
+    <Compile Include="Smuggler\Database\DatabaseLastEtagsInfo.cs" />
+    <Compile Include="Smuggler\Database\DatabaseSmugglerOperationState.cs" />
     <Compile Include="Smuggler\Other\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Other\ExportFilesResult.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />

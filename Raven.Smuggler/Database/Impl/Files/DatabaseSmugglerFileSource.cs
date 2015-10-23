@@ -11,10 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database.Impl.Streams;
@@ -68,7 +66,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 				return;
 
 			var optionsWithoutIndexesAndTransformers = options.Clone();
-			optionsWithoutIndexesAndTransformers.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
+			optionsWithoutIndexesAndTransformers.OperateOnTypes &= ~(DatabaseItemType.Indexes | DatabaseItemType.Transformers);
 
 			for (var i = 0; i < files.Length - 1; i++)
 			{
@@ -84,7 +82,7 @@ namespace Raven.Smuggler.Database.Impl.Files
 			throw new NotSupportedException();
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
+		public Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

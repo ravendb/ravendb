@@ -5,8 +5,6 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Counters;
 using Raven.Database.Counters;
 using Raven.Imports.Newtonsoft.Json;
@@ -18,6 +16,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Other;
 
 namespace Raven.Database.Smuggler
 {

@@ -3,9 +3,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Other;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 

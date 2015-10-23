@@ -1,9 +1,9 @@
 using System;
 
-namespace Raven.Abstractions.Database.Smuggler.Data
+namespace Raven.Abstractions.Database.Smuggler.Database
 {
 	[Flags]
-	public enum ItemType
+	public enum DatabaseItemType
 	{
 		Documents = 0x1,
 		Indexes = 0x2,

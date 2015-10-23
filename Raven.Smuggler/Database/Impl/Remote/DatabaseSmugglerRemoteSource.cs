@@ -12,9 +12,8 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -106,9 +105,9 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return indexes.ToList();
 		}
 
-		public Task<LastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
+		public Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken)
 		{
-			return new CompletedTask<LastEtagsInfo>(new LastEtagsInfo
+			return new CompletedTask<DatabaseLastEtagsInfo>(new DatabaseLastEtagsInfo
 			{
 				LastDocDeleteEtag = null,
 				LastDocsEtag = null

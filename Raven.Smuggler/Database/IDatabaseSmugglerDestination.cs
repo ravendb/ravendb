@@ -2,8 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 
 namespace Raven.Smuggler.Database
 {
@@ -25,9 +24,9 @@ namespace Raven.Smuggler.Database
 
 		IDatabaseSmugglerIdentityActions IdentityActions();
 
-		Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
+		Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
-		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken);
+		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken);
 
 		Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
 	}

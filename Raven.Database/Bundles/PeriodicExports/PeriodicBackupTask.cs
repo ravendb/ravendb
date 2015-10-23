@@ -9,10 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
@@ -279,7 +278,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					{
 						try
 						{
-							OperationState exportResult;
+							DatabaseSmugglerOperationState exportResult;
 							bool performAnotherRun = false;
 							do
 							{

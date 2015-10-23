@@ -10,9 +10,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -75,7 +74,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return new DatabaseSmugglerRemoteIdentityActions(_store);
 		}
 
-		public async Task<OperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public async Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrWhiteSpace(_options.ContinuationToken) == false)
 			{
@@ -89,7 +88,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 						.ConfigureAwait(false);
 
 					if (continuationDocument != null)
-						return continuationDocument.DataAsJson.JsonDeserialization<OperationState>();
+						return continuationDocument.DataAsJson.JsonDeserialization<DatabaseSmugglerOperationState>();
 				}
 				catch (Exception e)
 				{
@@ -103,7 +102,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			return null;
 		}
 
-		public async Task SaveOperationStateAsync(DatabaseSmugglerOptions options, OperationState state, CancellationToken cancellationToken)
+		public async Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrWhiteSpace(_options.ContinuationToken) == false)
 			{

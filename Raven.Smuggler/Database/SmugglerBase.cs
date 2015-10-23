@@ -1,8 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 
 namespace Raven.Smuggler.Database
 {
@@ -24,6 +23,6 @@ namespace Raven.Smuggler.Database
 			Destination = destination;
 		}
 
-		public abstract Task SmuggleAsync(OperationState state, CancellationToken cancellationToken);
+		public abstract Task SmuggleAsync(DatabaseSmugglerOperationState state, CancellationToken cancellationToken);
 	}
 }

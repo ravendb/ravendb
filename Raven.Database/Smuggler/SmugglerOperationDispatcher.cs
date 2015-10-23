@@ -4,8 +4,10 @@ using System.Net;
 using System.Net.Sockets;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
+
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Smuggler

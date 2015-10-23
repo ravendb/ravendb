@@ -24,10 +24,10 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Common;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
-using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
@@ -122,7 +122,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[RavenRoute("studio-tasks/import")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, DatabaseItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 			{
@@ -295,7 +295,7 @@ for(var customFunction in customFunctions) {{
 			{
 				var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions
 				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
+					OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes | DatabaseItemType.Transformers,
 					ShouldExcludeExpired = false
 				},
 				new DatabaseSmugglerStreamSource(stream),
