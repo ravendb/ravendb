@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using System.IO.Compression;
+using Raven.Abstractions.Util;
 
 namespace Raven.Client.Connection
 {
@@ -30,15 +31,23 @@ namespace Raven.Client.Connection
 			Disposables = new List<IDisposable>();
 		}
 
-		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
+            //TODO: Use BufferedStream
+
 			try
 			{
-				if (disableRequestCompression == false)
-					stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+                using (var uncloseableStream = new UndisposableStream(stream))
+                using (var bufferedStream = new BufferedStream(uncloseableStream))
+                {
+                    Stream innerStream = bufferedStream;
 
-			    await data.CopyToAsync(stream).ConfigureAwait(false);
-			    await stream.FlushAsync().ConfigureAwait(false);
+                    if (disableRequestCompression == false)
+                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);
+
+                    await data.CopyToAsync(innerStream).ConfigureAwait(false);
+                    await innerStream.FlushAsync().ConfigureAwait(false);
+                }
 			}
 			finally
 			{

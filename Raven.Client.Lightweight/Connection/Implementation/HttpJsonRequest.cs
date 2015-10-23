@@ -671,9 +671,14 @@ namespace Raven.Client.Connection.Implementation
         public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
+
+            HttpContent content = new JsonContent(tokenToWrite);
+            if (!factory.DisableRequestCompression)
+                content = new CompressedContent(content, "gzip");
+
 	        return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 	        {
-		        Content = new JsonContent(tokenToWrite),
+                Content = content,
 		        Headers =
 		        {
 			        TransferEncodingChunked = true

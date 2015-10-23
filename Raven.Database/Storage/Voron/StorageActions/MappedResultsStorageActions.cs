@@ -28,6 +28,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
     using Indexing;
     using Plugins;
     using Raven.Json.Linq;
+    using Raven.Abstractions.Util;
 
 	internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{
