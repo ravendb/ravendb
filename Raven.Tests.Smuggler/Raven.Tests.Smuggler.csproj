@@ -90,6 +90,7 @@
     </Compile>
     <Compile Include="Helpers\DatabaseSmugglerCountingDestination.cs" />
     <Compile Include="FileToFileTests.cs" />
+    <Compile Include="OperateOnTypes\EmbeddedSource.cs" />
     <Compile Include="OperateOnTypes\RemoteSource.cs" />
     <Compile Include="OperateOnTypes\FileSource.cs" />
     <Compile Include="SmugglerTest.cs" />
