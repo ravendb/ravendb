@@ -39,14 +39,15 @@ namespace Raven.Abstractions.Connection
 
 		public bool IsOutputHumanReadable { get; set; }
 
-		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
 		    if (HasNoData())
 		        return new CompletedTask<bool>(true);
-			            
-            using ( var intermediate = new BufferPoolMemoryStream () )
+
+            using ( var undisposableStream = new UndisposableStream(stream) )
+            using ( var bufferedStream = new BufferedStream(undisposableStream))
             {
-                var writer = new StreamWriter(intermediate, DefaultEncoding);
+                var writer = new StreamWriter(stream, DefaultEncoding);
                 if (string.IsNullOrEmpty(Jsonp) == false)
                 {
                     writer.Write(Jsonp);
@@ -62,10 +63,7 @@ namespace Raven.Abstractions.Connection
                     writer.Write(")");
 
                 writer.Flush();
-
-                intermediate.Position = 0;
-                intermediate.CopyTo(stream);
-            }            
+            }
 
             return new CompletedTask<bool>(true);
 		}
