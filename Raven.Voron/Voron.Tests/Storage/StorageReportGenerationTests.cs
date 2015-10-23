@@ -18,7 +18,7 @@ namespace Voron.Tests.Storage
 {
     public class StorageReportGenerationTests : StorageTest
     {
-        [Fact(Skip = "temp")]
+        [Fact]
         public void AllocatedSpaceOfDataFileEqualsToSumOfSpaceInUseAndFreeSpace()
         {
             using (var tx = Env.ReadTransaction())
@@ -29,7 +29,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(13)]
@@ -76,7 +76,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(0)]
         [InlineData(7)]
         [InlineData(14)]
@@ -136,7 +136,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(new[] { 1.0, 1.0, 1.0 }, 1.0)]
         [InlineData(new[] { 1.0, 0.0 }, 0.5)]
         [InlineData(new[] { 0.8, 0.7, 0.9, 0.8 }, 0.8)]
@@ -146,7 +146,7 @@ namespace Voron.Tests.Storage
             Assert.Equal(expectedDensity, StorageReportGenerator.CalculateTreeDensity(pageDensities.ToList()));
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(0)]
         [InlineData(7)]
         [InlineData(14)]
@@ -178,7 +178,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(15)]
@@ -223,7 +223,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Theory(Skip = "temp")]
+        [Theory]
         [InlineData(new[] { "key" }, 1000)]
         [InlineData(new[] { "key1", "key2" }, 1000)]
         [InlineData(new[] { "key" }, 1)]
@@ -257,7 +257,7 @@ namespace Voron.Tests.Storage
             }
         }
 
-        [Fact(Skip = "temp")]
+        [Fact]
         public void TreeReportContainsInformationAboutPagesOfChildMultiTrees()
         {
             using (var tx = Env.WriteTransaction())
@@ -276,8 +276,9 @@ namespace Voron.Tests.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.True(report.Trees[0].MultiValues.PageCount > 0);
-                Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+                Assert.True(report.Trees[1].MultiValues.PageCount > 0);
+                Assert.Equal(report.Trees[1].MultiValues.PageCount, 
+                    report.Trees[1].MultiValues.LeafPages + report.Trees[1].MultiValues.BranchPages + report.Trees[1].MultiValues.OverflowPages);
             }
 
             using (var tx = Env.WriteTransaction())
@@ -296,8 +297,9 @@ namespace Voron.Tests.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.True(report.Trees[0].MultiValues.PageCount == 0);
-                Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
+                Assert.True(report.Trees[1].MultiValues.PageCount == 0);
+                Assert.Equal(report.Trees[1].MultiValues.PageCount, 
+                    report.Trees[1].MultiValues.LeafPages + report.Trees[1].MultiValues.BranchPages + report.Trees[1].MultiValues.OverflowPages);
             }
         }
 
