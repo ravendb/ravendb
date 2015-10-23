@@ -60,10 +60,13 @@ namespace Voron.Tests.Storage
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
-                Assert.Equal(numberOfTrees, report.Trees.Count);
+                Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
 
                 foreach (var treeReport in report.Trees)
                 {
+                    if(treeReport.Name == "$Database-Metadata")
+                        continue;
+
                     Assert.True(treeReport.PageCount > 0);
                     Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages + treeReport.OverflowPages);
 
@@ -121,10 +124,13 @@ namespace Voron.Tests.Storage
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
-                Assert.Equal(numberOfTrees, report.Trees.Count);
+                Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
 
                 foreach (var treeReport in report.Trees)
                 {
+                    if(treeReport.Name == "$Database-Metadata")
+                        continue;
+
                     Assert.Equal(1, treeReport.PageCount); // root
                     Assert.Equal(0, treeReport.BranchPages);
                     Assert.Equal(1, treeReport.LeafPages); // root
@@ -190,7 +196,7 @@ namespace Voron.Tests.Storage
 
                 for (int treeNumber = 0; treeNumber < numberOfFixedSizeTrees; treeNumber++)
                 {
-                    var r = new Random();
+                    var r = new Random(numberOfFixedSizeTrees);
                     byte valueSize = (byte)r.Next(byte.MaxValue);
 
                     var fst = tree.FixedTreeFor("test-" + treeNumber, valueSize);
@@ -212,9 +218,9 @@ namespace Voron.Tests.Storage
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
-                Assert.Equal(1, report.Trees.Count);
+                Assert.Equal(1 + 1/*$Database-Metadata*/, report.Trees.Count);
 
-                var treeReport = report.Trees[0];
+                var treeReport = report.Trees[1];
 
                 Assert.True(treeReport.PageCount > 0);
                 Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages);
@@ -251,9 +257,9 @@ namespace Voron.Tests.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.Equal(keys.Length, report.Trees[0].NumberOfEntries);
+                Assert.Equal(keys.Length, report.Trees[1].NumberOfEntries);
 
-                Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[0].MultiValues.NumberOfEntries);
+                Assert.Equal(keys.Length * numberOfValuesPerKey, report.Trees[1].MultiValues.NumberOfEntries);
             }
         }
 

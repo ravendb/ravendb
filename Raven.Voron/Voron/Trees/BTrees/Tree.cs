@@ -742,7 +742,7 @@ namespace Voron.Trees
                         if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
                         {
                             var valueReader = TreeNodeHeader.Reader(_llt, node);
-                            byte valueSize = *valueReader.Base;
+                            var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
 
                             var fixedSizeTreeName = p.GetNodeKey(i);
 
