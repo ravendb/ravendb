@@ -31,7 +31,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			{
 				BatchSize = globalOptions.BatchSize,
 				OverwriteExisting = true,
-				Compression = options.DisableCompressionOnImport ? BulkInsertCompression.None : BulkInsertCompression.GZip,
+				Compression = options.DisableCompression ? BulkInsertCompression.None : BulkInsertCompression.GZip,
 				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
 				{
 					MaxChunkVolumeInBytes = options.TotalDocumentSizeInChunkLimitInBytes,

@@ -25,7 +25,7 @@ namespace Raven.Database.Smuggler.Embedded
 		private DatabaseSmugglerOptions _options;
 
 		private readonly List<SmuggleType> _types = new List<SmuggleType>
-	  {
+		{
 			SmuggleType.Index,
 			SmuggleType.Document,
 			SmuggleType.Transformer,

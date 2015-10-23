@@ -28,14 +28,38 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		private DatabaseSmugglerOptions _globalOptions;
 
+		private readonly bool _ownsStore;
+
 		public DatabaseSmugglerRemoteDestination(DocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
 		{
-			_store = store;
 			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
+
+			_store = store;
+			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression; // TODO [ppekrol] should it be reverted to the original value?
+			_ownsStore = false;
+		}
+
+		public DatabaseSmugglerRemoteDestination(DatabaseSmugglerRemoteConnectionOptions connectionOptions, DatabaseSmugglerRemoteDestinationOptions options = null)
+		{
+			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
+
+			_store = new DocumentStore
+			{
+				ApiKey = connectionOptions.ApiKey,
+				DefaultDatabase = connectionOptions.Database,
+				Url = connectionOptions.Url
+			};
+
+			if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
+				_store.ConnectionStringName = connectionOptions.ConnectionStringName;
+
+			_ownsStore = true;
 		}
 
 		public void Dispose()
 		{
+			if (_ownsStore)
+				_store?.Dispose();
 		}
 
 		public bool SupportsOperationState => true;
@@ -46,6 +70,14 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		{
 			_globalOptions = options;
 			_notifications = notifications;
+
+			if (_ownsStore)
+				_store.Initialize(ensureDatabaseExists: false);
+
+			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression;
+
+			// TODO [ppekrol] validate database existance
+
 			return new CompletedTask();
 		}
 

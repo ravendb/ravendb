@@ -38,13 +38,33 @@ namespace Raven.Smuggler.Database.Impl.Remote
 
 		private int _typeIndex;
 
+		private readonly bool _ownsStore;
+
+		public DatabaseSmugglerRemoteSource(DatabaseSmugglerRemoteConnectionOptions connectionOptions)
+		{
+			_store = new DocumentStore
+			{
+				ApiKey = connectionOptions.ApiKey,
+				DefaultDatabase = connectionOptions.Database,
+				Url = connectionOptions.Url
+			};
+
+			if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
+				_store.ConnectionStringName = connectionOptions.ConnectionStringName;
+
+			_ownsStore = true;
+		}
+
 		public DatabaseSmugglerRemoteSource(DocumentStore store)
 		{
 			_store = store;
+			_ownsStore = false;
 		}
 
 		public void Dispose()
 		{
+			if (_ownsStore)
+				_store?.Dispose();
 		}
 
 		public string DisplayName => _store.Url;
@@ -57,13 +77,12 @@ namespace Raven.Smuggler.Database.Impl.Remote
 		{
 			_options = options;
 
-			InitializeStore();
-			await InitializeBatchSizeAsync().ConfigureAwait(false);
-		}
+			if (_ownsStore)
+				_store.Initialize(ensureDatabaseExists: false);
 
-		private void InitializeStore()
-		{
-			_store.Initialize(ensureDatabaseExists: false);
+			// TODO [ppekrol] validate database existance
+
+			await InitializeBatchSizeAsync().ConfigureAwait(false);
 		}
 
 		private async Task InitializeBatchSizeAsync()

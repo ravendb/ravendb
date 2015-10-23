@@ -35,7 +35,7 @@ namespace Raven.Smuggler.Database.Impl.Remote
 			}
 		}
 
-		public bool DisableCompressionOnImport { get; set; }
+		public bool DisableCompression { get; set; }
 
 		public int ChunkSize
 		{

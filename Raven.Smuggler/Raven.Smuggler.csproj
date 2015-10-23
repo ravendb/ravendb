@@ -110,6 +110,7 @@
     <Compile Include="Database\Impl\Files\DatabaseSmugglerFileDestination.cs" />
     <Compile Include="Database\Impl\Files\DatabaseSmugglerFileDestinationOptions.cs" />
     <Compile Include="Database\Impl\Files\DatabaseSmugglerFileSource.cs" />
+    <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteConnectionOptions.cs" />
     <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDestination.cs" />
     <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDestinationOptions.cs" />
     <Compile Include="Database\Impl\Remote\DatabaseSmugglerRemoteDocumentActions.cs" />
