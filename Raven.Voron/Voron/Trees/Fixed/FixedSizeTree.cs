@@ -69,7 +69,7 @@ namespace Voron.Trees.Fixed
                 case RootObjectType.FixedSizeTree:
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("Tried to open '" + treeName +"' as FixedSizeTree, but is actually " + header->RootObjectType);
+                    throw new ArgumentOutOfRangeException("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " + header->RootObjectType);
             }
 
             _type = header->RootObjectType;
@@ -292,7 +292,7 @@ namespace Voron.Trees.Fixed
                         page.Base + page.FixedSize_StartPosition + (page.FixedSize_NumberOfEntries * _entrySize),
                         newPage.FixedSize_NumberOfEntries * _entrySize
                         );
-                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, KeyFor(newPage,0), newPage.PageNumber);
+                    AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, KeyFor(newPage, 0), newPage.PageNumber);
                 }
                 return null;// we don't care about it for leaf pages
             }
@@ -381,35 +381,25 @@ namespace Voron.Trees.Fixed
 
         private byte* AddEmbeddedEntry(long key, out bool isNew)
         {
-            var ptr = _parent.DirectRead(_treeName);
-            var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-            var header = (FixedSizeTreeHeader.Embedded*)ptr;
-            var startingEntryCount = header->NumberOfEntries;
-            var pos = BinarySearch(dataStart, startingEntryCount, key, _entrySize);
-            var newEntriesCount = startingEntryCount;
-            isNew = _lastMatch != 0;
-            if (isNew)
-            {
-                newEntriesCount++; // new entry, need more space
-            }
-            if (_lastMatch > 0)
-                pos++; // we need to put this _after_ the previous one
-            var newSize = (newEntriesCount * _entrySize);
             TemporaryPage tmp;
             using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
             {
-                int srcCopyStart = pos * _entrySize;
-                Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
-                var newEntryStart = tmp.TempPagePointer + srcCopyStart;
-                *((long*)newEntryStart) = key;
-
-                Memory.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos) * _entrySize);
+                int newSize;
+                int srcCopyStart;
+                var newEntriesCount = CopyEmbeddedContentToTempPage(key, tmp, out isNew, out newSize, out srcCopyStart);
 
                 if (newEntriesCount > _maxEmbeddedEntries)
                 {
                     // convert to large database
-                    _type =RootObjectType.FixedSizeTree;
+                    _type = RootObjectType.FixedSizeTree;
                     var allocatePage = _parent.NewPage(TreePageFlags.Leaf, 1);
+                    if (FreeSpaceTree)
+                    {
+                        // allocating the new page might have come from the free space fixed size tree
+                        // which removed the page from the embedded entry we are trying to use, need to re-read it
+                        // before copying
+                        newEntriesCount = CopyEmbeddedContentToTempPage(key, tmp, out isNew, out newSize, out srcCopyStart);
+                    }
 
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
@@ -432,7 +422,7 @@ namespace Voron.Trees.Fixed
                 else
                 {
                     byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
-                    header = (FixedSizeTreeHeader.Embedded*)newData;
+                    var header = (FixedSizeTreeHeader.Embedded*)newData;
                     header->ValueSize = _valSize;
                     header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
                     header->NumberOfEntries = newEntriesCount;
@@ -443,6 +433,32 @@ namespace Voron.Trees.Fixed
                     return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
                 }
             }
+        }
+
+        private unsafe ushort CopyEmbeddedContentToTempPage(long key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
+        {
+            var ptr = _parent.DirectRead(_treeName);
+            var dataStart = ptr + sizeof (FixedSizeTreeHeader.Embedded);
+            var header = (FixedSizeTreeHeader.Embedded*) ptr;
+            var startingEntryCount = header->NumberOfEntries;
+            var pos = BinarySearch(dataStart, startingEntryCount, key, _entrySize);
+            var newEntriesCount = startingEntryCount;
+            isNew = _lastMatch != 0;
+            if (isNew)
+            {
+                newEntriesCount++; // new entry, need more space
+            }
+            if (_lastMatch > 0)
+                pos++; // we need to put this _after_ the previous one
+            newSize = (newEntriesCount*_entrySize);
+
+            srcCopyStart = pos*_entrySize;
+            Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
+            var newEntryStart = tmp.TempPagePointer + srcCopyStart;
+            *((long*) newEntryStart) = key;
+
+            Memory.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos)*_entrySize);
+            return newEntriesCount;
         }
 
         private byte* AddNewEntry(long key)
@@ -799,16 +815,16 @@ namespace Voron.Trees.Fixed
             if (startPos == 0)
             {
                 // if this is the very first item in the page, we can just change the start position
-                page.FixedSize_StartPosition += (ushort) (_entrySize*entriesDeleted);
+                page.FixedSize_StartPosition += (ushort)(_entrySize * entriesDeleted);
             }
             else
             {
-                UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos*_entrySize),
-                    page.Base + page.FixedSize_StartPosition + ((endPos + 1)*_entrySize),
-                    ((page.FixedSize_NumberOfEntries - endPos - 1)*_entrySize)
+                UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos * _entrySize),
+                    page.Base + page.FixedSize_StartPosition + ((endPos + 1) * _entrySize),
+                    ((page.FixedSize_NumberOfEntries - endPos - 1) * _entrySize)
                     );
             }
-            page.FixedSize_NumberOfEntries -= (ushort) entriesDeleted;
+            page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
             if (page.FixedSize_NumberOfEntries == 0)
             {
                 RemoveEntirePage(page, largeHeader);
@@ -973,7 +989,7 @@ namespace Voron.Trees.Fixed
                     // remove the first value
                     parentPage.FixedSize_StartPosition += BranchEntrySize;
                     // set the next value (now the first), to be smaller than everything
-                    SetSeparatorKeyAtPosition(parentPage, long.MinValue,0);
+                    SetSeparatorKeyAtPosition(parentPage, long.MinValue, 0);
                 }
                 else
                 {
@@ -1129,7 +1145,7 @@ namespace Voron.Trees.Fixed
                 Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
 
                 var newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize);
-                byte* newData = _parent.DirectAdd(_treeName,newDataSize);
+                byte* newData = _parent.DirectAdd(_treeName, newDataSize);
 
                 Memory.Copy(newData, tmp.TempPagePointer, newDataSize);
 
@@ -1214,7 +1230,7 @@ namespace Voron.Trees.Fixed
             }
         }
 
-       
+
         public long PageCount
         {
             get
