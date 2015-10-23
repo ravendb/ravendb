@@ -13,7 +13,7 @@ namespace Voron.Tests.Bugs
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxScratchBufferSize = 1024*1024*1;
+			options.MaxScratchBufferSize = 1024*1024*1 + 4096;
 			options.ManualFlushing = true;
 		}
 
