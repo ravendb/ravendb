@@ -254,6 +254,9 @@ namespace Raven.Abstractions.Smuggler
 			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
 				return false;
 
+			if (Constants.RavenSubscriptionsPrefix.Equals(indentityName, StringComparison.OrdinalIgnoreCase))
+				return false;
+
 			if (operateOnTypes.HasFlag(ItemType.Documents))
 				return true;
 

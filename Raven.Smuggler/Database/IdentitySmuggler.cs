@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
@@ -95,6 +96,9 @@ namespace Raven.Smuggler.Database
 				return false;
 
 			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+				return false;
+
+			if (Constants.RavenSubscriptionsPrefix.Equals(indentityName, StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			if (operateOnTypes.HasFlag(ItemType.Documents))
