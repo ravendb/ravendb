@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Sparrow;
 using Sparrow.Platform;
@@ -290,6 +291,9 @@ namespace Voron.Impl
 
             Debug.Assert(pageNumber < State.NextPageNumber);
 
+
+            VerifyNoDuplicateScratchPages();
+
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
             _transactionPages.Add(pageFromScratchBuffer);
 
@@ -310,8 +314,24 @@ namespace Voron.Impl
                 pageFromScratchBuffer.PositionInScratchBuffer);
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
+
+            VerifyNoDuplicateScratchPages();
+
             return newPage;
 
+        }
+
+        [Conditional("VALIDATE")]
+        public void VerifyNoDuplicateScratchPages()
+        {
+            var pageNums = new HashSet<long>();
+            foreach (var txPage in _transactionPages)
+            {
+                var scratchPage = Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber,
+                    txPage.PositionInScratchBuffer);
+                if (pageNums.Add(scratchPage.PageNumber) == false)
+                    throw new InvalidDataException("Duplicate page in transaction: " + scratchPage.PageNumber);
+            }
         }
 
 
