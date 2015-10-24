@@ -74,6 +74,7 @@ namespace Voron.Debugging
 				var state = tree.State;
 				var treeReport = new TreeReport
 				{
+                    Type = RootObjectType.VariableSizeTree,
 					Name = tree.Name,
 					BranchPages = state.BranchPages,
 					Depth = state.Depth,

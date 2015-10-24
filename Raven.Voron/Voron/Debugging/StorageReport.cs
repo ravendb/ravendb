@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Voron.Impl.FileHeaders;
 
 namespace Voron.Debugging
 {
@@ -29,6 +30,7 @@ namespace Voron.Debugging
 
 	public class TreeReport
 	{
+        public RootObjectType Type { get; set; }
 		public string Name { get; set; }
 		public long PageCount { get; set; }
 		public long NumberOfEntries { get; set; }
