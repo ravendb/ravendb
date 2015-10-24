@@ -75,7 +75,7 @@ namespace Voron.Trees
 			if (item->Flags == TreeNodeFlags.PageRef)
 			{
 				var overFlowPage = ModifyPage(item->PageNumber);
-				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+				nestedPagePtr = overFlowPage.Base + Constants.TreePageHeaderSize;
 			}
 			else
 			{
@@ -109,7 +109,7 @@ namespace Voron.Trees
 				return;
 			}
 
-			int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
+			int pageSize = nestedPage.CalcSizeUsed() + Constants.TreePageHeaderSize;
 			var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
 			if (newRequiredSize <= maxNodeSize)
 			{
@@ -149,7 +149,7 @@ namespace Voron.Trees
 
 				var newNestedPage = new TreePage(ptr, "multi tree", newSize)
 				{
-					Lower = (ushort)Constants.PageHeaderSize,
+					Lower = (ushort)Constants.TreePageHeaderSize,
 					Upper = newSize,
 					TreeFlags = TreePageFlags.Leaf,
 					PageNumber = -1L // mark as invalid page number
@@ -172,7 +172,7 @@ namespace Voron.Trees
 		{
 			Slice valueToInsert = value;
 
-			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
+			var requiredPageSize = Constants.TreePageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
 			{
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
@@ -193,7 +193,7 @@ namespace Voron.Trees
 			var nestedPage = new TreePage(ptr, "multi tree", actualPageSize)
 			{
 				PageNumber = -1L,// hint that this is an inner page
-				Lower = (ushort) Constants.PageHeaderSize,
+				Lower = (ushort) Constants.TreePageHeaderSize,
 				Upper = actualPageSize,
 				TreeFlags = TreePageFlags.Leaf,
 			};
@@ -245,7 +245,7 @@ namespace Voron.Trees
 				if (item->Flags == TreeNodeFlags.PageRef)
 				{
 					var overFlowPage = ModifyPage(item->PageNumber);
-					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+					nestedPagePtr = overFlowPage.Base + Constants.TreePageHeaderSize;
 				}
 				else
 				{

@@ -14,7 +14,9 @@ namespace Voron.Impl
 		/// </summary>
 		public const int MinKeysInPage = 2;
 
-		public static readonly int PageHeaderSize = sizeof(TreePageHeader);
+        public static readonly int FixedSizeTreePageHeaderSize = sizeof(FixedSizeTreePageHeader);
+
+        public static readonly int TreePageHeaderSize = sizeof(TreePageHeader);
 
 		public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
 

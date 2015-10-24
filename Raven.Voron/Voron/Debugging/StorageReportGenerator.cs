@@ -138,13 +138,13 @@ namespace Voron.Debugging
                             case TreeNodeFlags.PageRef:
                                 {
                                     var overFlowPage = _tx.GetReadOnlyTreePage(currentNode->PageNumber);
-                                    var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.PageHeaderSize, currentNode);
+                                    var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.TreePageHeaderSize, currentNode);
 
                                     multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
                                 }
                             default:
-                                throw new InvalidEnumArgumentException("currentNode->TreeFlags", (int)currentNode->Flags, typeof(TreeNodeFlags));
+                                throw new InvalidEnumArgumentException("currentNode->FixedTreeFlags", (int)currentNode->Flags, typeof(TreeNodeFlags));
                         }
                     } while (multiTreeIterator.MoveNext());
                 }
@@ -166,21 +166,13 @@ namespace Voron.Debugging
                 {
                     var numberOfPages = _tx.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-                    densities.Add(((double)(page.OverflowSize + Constants.PageHeaderSize)) / (numberOfPages * pageSize));
+                    densities.Add(((double)(page.OverflowSize + Constants.TreePageHeaderSize)) / (numberOfPages * pageSize));
 
                     i += (numberOfPages - 1);
                 }
                 else
                 {
-                    if (page.IsFixedSize)
-                    {
-                        var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries * (page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
-                        densities.Add(((double)sizeUsed) / pageSize);
-                    }
-                    else
-                    {
-                        densities.Add(((double)page.SizeUsed) / pageSize);
-                    }
+                    densities.Add(((double) page.SizeUsed)/pageSize);
                 }
             }
             return densities;

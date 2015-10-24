@@ -37,7 +37,7 @@ namespace Voron.Trees
 			if (node->Flags == (TreeNodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyTreePage(node->PageNumber);
-				return overFlowPage.Base + Constants.PageHeaderSize;
+				return overFlowPage.Base + Constants.TreePageHeaderSize;
 			}
 			return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
 		}
@@ -51,7 +51,7 @@ namespace Voron.Trees
 				Debug.Assert(overFlowPage.IsOverflow, "Requested oveflow page but got " + overFlowPage.Flags);
 				Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
 
-                return new ValueReader(overFlowPage.Pointer + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                return new ValueReader(overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
 			}
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
@@ -63,7 +63,7 @@ namespace Voron.Trees
                 var overFlowPage = tx.GetPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                return new Slice(overFlowPage.Pointer + Constants.PageHeaderSize, (ushort)overFlowPage.OverflowSize);
+                return new Slice(overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize);
             }
             return new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize);
 	    }
@@ -74,7 +74,7 @@ namespace Voron.Trees
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetPage(node->PageNumber);
-                Memory.Copy(dest, overFlowPage.Pointer + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                Memory.Copy(dest, overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
             }
             Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }

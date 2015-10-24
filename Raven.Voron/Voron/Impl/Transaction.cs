@@ -238,5 +238,10 @@ namespace Voron.Impl
         {
             return tx.GetPage(pageNumber).ToTreePage();
         }
+
+        public static FixedSizeTreePage GetReadOnlyFixedSizeTreePage(this LowLevelTransaction tx, long pageNumber)
+        {
+            return tx.GetPage(pageNumber).ToFixedSizeTreePage();
+        }
     }
 }

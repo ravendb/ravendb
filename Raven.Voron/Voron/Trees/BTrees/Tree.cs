@@ -310,7 +310,7 @@ namespace Voron.Trees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.PageHeaderSize > _llt.DataPager.NodeMaxSize;
+            return len + Constants.TreePageHeaderSize > _llt.DataPager.NodeMaxSize;
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
@@ -319,7 +319,7 @@ namespace Voron.Trees
             var overflowPageStart = AllocateNewPage(_llt, TreePageFlags.Value, numberOfPages);
             overflowPageStart.Flags = PageFlags.Overflow;
             overflowPageStart.OverflowSize = overflowSize;
-            dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
+            dataPos = overflowPageStart.Base + Constants.TreePageHeaderSize;
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
 
@@ -575,7 +575,7 @@ namespace Voron.Trees
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num)
         {
             var page = tx.AllocatePage(num).ToTreePage();
-            page.Lower = (ushort)Constants.PageHeaderSize;
+            page.Lower = (ushort)Constants.TreePageHeaderSize;
             page.TreeFlags = flags;
             page.Upper = (ushort)page.PageSize;
             page.Dirty = true;
@@ -694,7 +694,7 @@ namespace Voron.Trees
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = _llt.GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.PageHeaderSize;
+                return overFlowPage.Base + Constants.TreePageHeaderSize;
             }
 
             return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
@@ -813,7 +813,7 @@ namespace Voron.Trees
 
                     overflowPage.OverflowSize = len;
 
-                    pos = overflowPage.Base + Constants.PageHeaderSize;
+                    pos = overflowPage.Base + Constants.TreePageHeaderSize;
                     return true;
                 }
             }

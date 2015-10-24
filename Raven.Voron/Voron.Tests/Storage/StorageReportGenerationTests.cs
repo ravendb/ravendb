@@ -331,7 +331,7 @@ namespace Voron.Tests.Storage
 
         private OverflowsAddResult AddOverflows(Transaction tx, Tree tree, int treeNumber, Random r)
         {
-            var minOverflowSize = tx.LowLevelTransaction.DataPager.NodeMaxSize - Constants.PageHeaderSize + 1;
+            var minOverflowSize = tx.LowLevelTransaction.DataPager.NodeMaxSize - Constants.TreePageHeaderSize + 1;
             var entriesAdded = new List<string>();
             var overflowsAdded = 0;
 

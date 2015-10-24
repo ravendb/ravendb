@@ -70,6 +70,7 @@
     <Compile Include="Impl\FileHeaders\RootObjectType.cs" />
     <Compile Include="Impl\LowLevelTransaction.cs" />
     <Compile Include="Page.cs" />
+    <Compile Include="Trees\BTrees\PageHeader.cs" />
     <Compile Include="Trees\Compact\PrefixTree.cs" />
     <Compile Include="Trees\Compact\PrefixTreeFlags.cs" />
     <Compile Include="Trees\Compact\PrefixTreeMutableState.cs" />
@@ -105,6 +106,7 @@
     <Compile Include="StructureSchema.cs" />
     <Compile Include="Trees\BTrees\TreePageIterator.cs" />
     <Compile Include="Trees\BTrees\Tree.MultiTree.cs" />
+    <Compile Include="Trees\Fixed\FixedSizeTreePage.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
     <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />

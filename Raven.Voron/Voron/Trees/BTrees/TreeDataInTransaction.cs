@@ -32,7 +32,7 @@ namespace Voron.Trees
 //        public void RecordNewPage(Page p, int num)
 //        {
 //            _state.PageCount++;
-//            var flags = p.TreeFlags;
+//            var flags = p.FixedTreeFlags;
 //            if (flags == (PageFlags.Branch))
 //            {
 //                _state.BranchPages++;

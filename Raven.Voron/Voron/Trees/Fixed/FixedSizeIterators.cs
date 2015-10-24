@@ -162,7 +162,7 @@ namespace Voron.Trees.Fixed
         public class LargeIterator : IFixedSizeIterator
         {
             private readonly FixedSizeTree _parent;
-            private TreePage _currentPage;
+            private FixedSizeTreePage _currentPage;
 
             public LargeIterator(FixedSizeTree parent)
             {
@@ -204,7 +204,7 @@ namespace Voron.Trees.Fixed
                     if (_currentPage == null)
                         throw new InvalidOperationException("No current page was set");
 
-                    return new Slice(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
+                    return new Slice(_currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
                 }
             }
 
@@ -216,14 +216,14 @@ namespace Voron.Trees.Fixed
                 while (_currentPage != null)
                 {
                     _currentPage.LastSearchPosition++;
-                    if (_currentPage.LastSearchPosition < _currentPage.FixedSize_NumberOfEntries)
+                    if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
                     {
                         // run out of entries, need to select the next page...
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
                             var childParentNumber = _parent.PageValueFor(_currentPage,_currentPage.LastSearchPosition);
-                            _currentPage = _parent._tx.GetReadOnlyTreePage(childParentNumber);
+                            _currentPage = _parent._tx.GetReadOnlyFixedSizeTreePage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;
                         }
@@ -259,7 +259,7 @@ namespace Voron.Trees.Fixed
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
 
-                return new ValueReader(_currentPage.Base + _currentPage.FixedSize_StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
+                return new ValueReader(_currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
 
 	        public bool Skip(int count)
@@ -273,7 +273,7 @@ namespace Voron.Trees.Fixed
 					}
 				}
 
-				var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.FixedSize_NumberOfEntries;
+				var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;
 				if (seek == false)
 					_currentPage = null;
 				return seek;

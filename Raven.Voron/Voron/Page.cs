@@ -50,5 +50,10 @@ namespace Voron
         {
             return new TreePage(Pointer, Source.DebugInfo, Source.PageSize);
         }
+
+        public FixedSizeTreePage ToFixedSizeTreePage()
+        {
+            return new FixedSizeTreePage(Pointer, Source.DebugInfo, Source.PageSize);
+        }
     }
 }

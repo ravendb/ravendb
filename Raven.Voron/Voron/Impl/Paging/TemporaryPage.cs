@@ -42,7 +42,7 @@ namespace Voron.Impl.Paging
 			return new TreePage((byte*)_tempPage.ToPointer(), "temp", _options.PageSize)
 	        {
 				Upper = (ushort)_options.PageSize,
-		        Lower = (ushort) Constants.PageHeaderSize,
+		        Lower = (ushort) Constants.TreePageHeaderSize,
 		        TreeFlags = TreePageFlags.None,
 	        };
         }

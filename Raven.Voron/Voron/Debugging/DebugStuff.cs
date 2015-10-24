@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
@@ -131,8 +128,10 @@ namespace Voron.Debugging
 }";
 
 		[Conditional("DEBUG")]
-		public unsafe static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, Tree tree, Slice name)
+		public unsafe static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
 		{
+		    var name = fst.Name;
+		    var tree = fst.Parent;
 			RenderHtmlTreeView(writer =>
 			{
 				var ptr = tree.DirectRead(name);
@@ -159,7 +158,7 @@ namespace Voron.Debugging
 					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
 					writer.WriteLine("<div class='css-treeview'><ul>");
 
-					var page = tx.GetReadOnlyTreePage(header->RootPageNumber);
+					var page = tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber);
 
 					RenderFixedSizeTreePage(tx, page, writer, header, "Root", true);
 
@@ -184,31 +183,31 @@ namespace Voron.Debugging
 			Process.Start(output);
 		}
 
-		private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, TreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
+		private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
 		{
 			sw.WriteLine(
                 "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
-                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text, page.Source);
+                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, page.Source);
 
-            for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
+            for (int i = 0; i < page.NumberOfEntries; i++)
 			{
 				if (page.IsLeaf)
 				{
 					var key =
-						*(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + header->ValueSize)) * i));
+						*(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + header->ValueSize)) * i));
 					sw.Write("{0:#,#;;0}, ", key);
 				}
 				else
 				{
 					var key =
-					 *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
-					var pageNum = *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
+					 *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
+					var pageNum = *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
 					var s = key.ToString("#,#");
 					if (i == 0)
 						s = "[smallest]";
 
-					RenderFixedSizeTreePage(tx, tx.GetReadOnlyTreePage(pageNum), sw, header, s, false);
+					RenderFixedSizeTreePage(tx, tx.GetReadOnlyFixedSizeTreePage(pageNum), sw, header, s, false);
 				}
 			}
 
