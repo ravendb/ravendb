@@ -244,6 +244,7 @@ namespace Voron.Trees.Fixed
             var allocatePage = _tx.AllocatePage(1).ToFixedSizeTreePage();
             allocatePage.Dirty = true;
             allocatePage.FixedTreeFlags = flags;
+            allocatePage.Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
             return allocatePage;
         }
 

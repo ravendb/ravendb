@@ -160,7 +160,7 @@ namespace Voron.Debugging
 
             for (var i = 0; i < allPages.Count; i++)
             {
-                var page = _tx.GetReadOnlyTreePage(allPages[i]);
+                var page = _tx.GetPage(allPages[i]);
 
                 if (page.IsOverflow)
                 {
@@ -172,7 +172,17 @@ namespace Voron.Debugging
                 }
                 else
                 {
-                    densities.Add(((double) page.SizeUsed)/pageSize);
+                    if ((page.Flags & PageFlags.FixedSizeTreePage) == PageFlags.FixedSizeTreePage)
+                    {
+                        var fstp = page.ToFixedSizeTreePage();
+                        var sizeUsed = Constants.FixedSizeTreePageHeaderSize + 
+                            (fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize));
+                        densities.Add(((double)sizeUsed) / pageSize);
+                    }
+                    else
+                    {
+                        densities.Add(((double)page.ToTreePage().SizeUsed) / pageSize);
+                    }
                 }
             }
             return densities;

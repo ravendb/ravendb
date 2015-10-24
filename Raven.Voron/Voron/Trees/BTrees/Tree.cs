@@ -317,7 +317,7 @@ namespace Voron.Trees
         {
             var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(overflowSize);
             var overflowPageStart = AllocateNewPage(_llt, TreePageFlags.Value, numberOfPages);
-            overflowPageStart.Flags = PageFlags.Overflow;
+            overflowPageStart.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.TreePageHeaderSize;
 
@@ -575,6 +575,7 @@ namespace Voron.Trees
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num)
         {
             var page = tx.AllocatePage(num).ToTreePage();
+            page.Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow);
             page.Lower = (ushort)Constants.TreePageHeaderSize;
             page.TreeFlags = flags;
             page.Upper = (ushort)page.PageSize;
