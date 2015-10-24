@@ -98,9 +98,8 @@ namespace Voron.Impl.Compaction
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
             TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount)
         {
-            var valueSize = FixedSizeTree.GetValueSize(txr.LowLevelTransaction, txr.LowLevelTransaction.RootObjects,
-                rootIterator.CurrentKey);
-            var fst = txr.FixedTreeFor(rootIterator.CurrentKey, valueSize);
+            
+            var fst = txr.FixedTreeFor(rootIterator.CurrentKey, 0);
             Report(treeName, copiedTrees, totalTreesCount, 0,
                 fst.NumberOfEntries,
                 progressReport);
@@ -113,12 +112,12 @@ namespace Voron.Impl.Compaction
                 {
                     using (var txw = compactedEnv.WriteTransaction())
                     {
-                        var snd = txw.FixedTreeFor(rootIterator.CurrentKey, valueSize);
+                        var snd = txw.FixedTreeFor(rootIterator.CurrentKey);
                         var transactionSize = 0L;
                         do
                         {
                             snd.Add(it.CurrentKey, it.Value);
-                            transactionSize += valueSize + sizeof (long);
+                            transactionSize += fst.ValueSize + sizeof (long);
                             copiedEntries++;
                         } while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && it.MoveNext());
 

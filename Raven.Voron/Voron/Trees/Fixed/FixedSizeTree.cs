@@ -30,7 +30,6 @@ namespace Voron.Trees.Fixed
 
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
-
             var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);
             if (header == null)
                 throw new InvalidOperationException("No such tree: " + treeName);
@@ -93,10 +92,7 @@ namespace Voron.Trees.Fixed
                 p.IsLeaf ? entrySize : BranchEntrySize);
         }
 
-        public Slice Name
-        {
-            get { return _treeName; }
-        }
+        public Slice Name => _treeName;
 
         public static long[] Debug(byte* p, int entries, int size)
         {
@@ -1284,7 +1280,29 @@ namespace Voron.Trees.Fixed
         }
 
         public bool FreeSpaceTree { get; set; }
-        public Tree Parent { get { return _parent; } }
+        public Tree Parent => _parent;
+        public ushort ValueSize => _valSize;
+
+        public int Depth
+        {
+            get
+            {
+                var header = _parent.DirectRead(_treeName);
+                if (header == null)
+                    return 0;
+
+                var flags = ((FixedSizeTreeHeader.Embedded*)header)->RootObjectType;
+                switch (flags)
+                {
+                    case RootObjectType.EmbeddedFixedSizeTree:
+                        return 0;
+                    case RootObjectType.FixedSizeTree:
+                        return ((FixedSizeTreeHeader.Large*)header)->Depth;
+                    default:
+                        throw new ArgumentOutOfRangeException(_type.ToString());
+                }
+            }
+        }
 
         [Conditional("DEBUG")]
         public void DebugRenderAndShow()

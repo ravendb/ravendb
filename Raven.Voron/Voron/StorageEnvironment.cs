@@ -418,6 +418,7 @@ namespace Voron
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
             var trees = new List<Tree>();
+            var fixedSizeTrees = new List<FixedSizeTree>();
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate())
             {
                 if (rootIterator.Seek(Slice.BeforeAllKeys))
@@ -433,6 +434,7 @@ namespace Voron
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
+                                fixedSizeTrees.Add(tx.FixedTreeFor(rootIterator.CurrentKey, 0));
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -450,6 +452,7 @@ namespace Voron
                 NextPageNumber = NextPageNumber,
                 Journals = Journal.Files.ToList(),
                 Trees = trees,
+                FixedSizeTrees = fixedSizeTrees,
                 IsLightReport = !computeExactSizes
             });
         }

@@ -207,14 +207,16 @@ namespace Voron.Impl
 
         public void Dispose()
         {
-            if (_lowLevelTransaction != null)
-                _lowLevelTransaction.Dispose();
+            _lowLevelTransaction?.Dispose();
         }
 
-        public FixedSizeTree FixedTreeFor(string treeName, ushort valSize = 0)
+        public FixedSizeTree FixedTreeFor(Slice treeName)
         {
-            return FixedTreeFor((Slice) treeName, valSize);
+            var valueSize = FixedSizeTree.GetValueSize(LowLevelTransaction, LowLevelTransaction.RootObjects,
+                treeName);
+            return FixedTreeFor(treeName, valueSize);
         }
+
 
         public FixedSizeTree FixedTreeFor(Slice treeName, ushort valSize)
         {

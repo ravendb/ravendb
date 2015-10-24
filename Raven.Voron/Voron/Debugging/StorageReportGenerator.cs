@@ -24,7 +24,8 @@ namespace Voron.Debugging
 		public long NumberOfFreePages;
 		public long NextPageNumber;
 		public List<Tree> Trees;
-		public List<JournalFile> Journals;
+        public List<FixedSizeTree> FixedSizeTrees;
+        public List<JournalFile> Journals;
 		public bool IsLightReport { get; set; }
 	}
 
@@ -88,6 +89,32 @@ namespace Voron.Debugging
 
 				trees.Add(treeReport);
 			}
+
+		    foreach (var fst in input.FixedSizeTrees)
+		    {
+                List<double> densities = null;
+
+                if (input.IsLightReport == false)
+                {
+                    densities = GetPageDensities(fst);
+                }
+
+                var treeReport = new TreeReport
+                {
+                    Type = RootObjectType.FixedSizeTree,
+                    Name = fst.Name.ToString(),
+                    BranchPages = -1,
+                    Depth = fst.Depth,
+                    NumberOfEntries = fst.NumberOfEntries,
+                    LeafPages = -1,
+                    OverflowPages = 0,
+                    PageCount = fst.PageCount,
+                    Density = densities == null ? 0 : CalculateTreeDensity(densities),
+                    MultiValues = null
+                };
+
+                trees.Add(treeReport);
+            }
 
 			var journals = input.Journals.Select(journal => new JournalReport
 			{
@@ -189,7 +216,23 @@ namespace Voron.Debugging
             return densities;
         }
 
-		private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
+        private List<double> GetPageDensities(FixedSizeTree tree)
+        {
+            var densities = new List<double>();
+            var allPages = tree.AllPages();
+            var pageSize = _tx.Environment.Options.PageSize;
+
+            for (var i = 0; i < allPages.Count; i++)
+            {
+                var fstp = _tx.GetPage(allPages[i]).ToFixedSizeTreePage();
+                var sizeUsed = Constants.FixedSizeTreePageHeaderSize +
+                               (fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize));
+                densities.Add(((double)sizeUsed) / pageSize);
+            }
+            return densities;
+        }
+
+        private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
 		{
 			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) TreeNodeHeader.GetDataSize(_tx, currentNode));
 
