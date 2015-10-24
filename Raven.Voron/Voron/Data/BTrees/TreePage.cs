@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
+using Sparrow;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
-    using Sparrow;
-    using System.Runtime.CompilerServices;
-
     public unsafe class TreePage
     {
         private readonly byte* _base;

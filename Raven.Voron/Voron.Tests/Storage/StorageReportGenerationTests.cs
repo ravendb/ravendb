@@ -7,10 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Trees;
 using Xunit;
 using Xunit.Extensions;
 

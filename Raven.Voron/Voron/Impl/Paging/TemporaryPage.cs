@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Voron.Trees;
+using Voron.Data.BTrees;
 
 namespace Voron.Impl.Paging
 {

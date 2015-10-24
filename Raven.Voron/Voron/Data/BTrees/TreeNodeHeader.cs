@@ -1,12 +1,11 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Voron.Impl;
-using Voron.Util;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
 	public unsafe struct  TreeNodeHeader

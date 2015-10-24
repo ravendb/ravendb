@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Voron.Data.BTrees;
 using Voron.Impl;
-using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Trees

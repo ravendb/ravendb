@@ -12,6 +12,8 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -21,8 +23,6 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Trees;
-using Voron.Trees.Fixed;
 using Voron.Util;
 using Voron.Util.Conversion;
 

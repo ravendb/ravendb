@@ -1,7 +1,7 @@
 using System;
 using Voron.Impl;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     public unsafe class TreePageIterator : IIterator
     {

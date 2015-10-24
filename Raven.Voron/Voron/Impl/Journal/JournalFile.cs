@@ -15,7 +15,6 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.Paging;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Journal

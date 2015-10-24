@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Voron.Trees;
+using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {

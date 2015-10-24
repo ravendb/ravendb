@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Platform.Win32

@@ -8,7 +8,7 @@ using System;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 
-namespace Voron.Trees.Fixed
+namespace Voron.Data.Fixed
 {
     public unsafe partial class FixedSizeTree
     {

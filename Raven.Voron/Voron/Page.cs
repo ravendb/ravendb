@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
+using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Impl.Paging;
-using Voron.Trees;
 
 namespace Voron
 {

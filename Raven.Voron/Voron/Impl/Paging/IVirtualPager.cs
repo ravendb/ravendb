@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using Voron.Data.BTrees;
 using Voron.Platform.Win32;
-using Voron.Trees;
 
 namespace Voron.Impl.Paging
 {

@@ -1,12 +1,11 @@
-namespace Voron.Trees
-{
-    using Sparrow;
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using Voron.Util;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Sparrow;
 
+namespace Voron.Data.BTrees
+{
     public class TreeCursor : IDisposable
     {
         public LinkedList<TreePage> Pages = new LinkedList<TreePage>();

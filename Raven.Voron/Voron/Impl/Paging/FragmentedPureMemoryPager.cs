@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Voron.Impl.Journal;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Paging

@@ -8,7 +8,6 @@ using System;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Journal

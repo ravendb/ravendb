@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
-namespace Voron.Trees.Compact
+namespace Voron.Data.Compact
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct PrefixTreeRootHeader

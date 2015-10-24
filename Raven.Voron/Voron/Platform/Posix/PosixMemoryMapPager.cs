@@ -3,10 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Raven.Unix.Native;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Trees;
 using Voron.Util;
 using Sparrow;
 

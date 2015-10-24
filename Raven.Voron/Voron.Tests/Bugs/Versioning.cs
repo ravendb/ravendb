@@ -4,8 +4,6 @@
 	using System.IO;
 
 	using Voron.Impl;
-	using Voron.Trees;
-
 	using Xunit;
 
 	public class Versioning : StorageTest

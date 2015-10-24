@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Voron.Debugging;
-using Voron.Trees;
 using Xunit;
 using Xunit.Extensions;
 

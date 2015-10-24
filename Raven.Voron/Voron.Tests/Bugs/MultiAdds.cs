@@ -10,8 +10,6 @@ namespace Voron.Tests.Bugs
 
 	using Voron.Debugging;
 	using Voron.Impl;
-	using Voron.Trees;
-
 	using Xunit;
 
 	public class MultiAdds

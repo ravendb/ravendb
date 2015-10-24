@@ -1,9 +1,9 @@
-﻿using Voron.Impl;
+﻿using System.Runtime.CompilerServices;
+using Voron.Data.BTrees;
+using Voron.Impl;
 
-namespace Voron.Trees
+namespace Voron.Data.Fixed
 {
-    using System.Runtime.CompilerServices;
-
     public unsafe class FixedSizeTreePage
     {
         private readonly byte* _ptr;

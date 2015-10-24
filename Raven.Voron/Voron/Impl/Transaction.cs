@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Impl.FileHeaders;
-using Voron.Trees;
-using Voron.Trees.Fixed;
 
 namespace Voron.Impl
 {

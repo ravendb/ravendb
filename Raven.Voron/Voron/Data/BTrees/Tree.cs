@@ -4,14 +4,14 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Trees.Fixed;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree
     {

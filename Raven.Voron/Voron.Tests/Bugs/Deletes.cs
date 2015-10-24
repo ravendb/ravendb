@@ -7,8 +7,6 @@ namespace Voron.Tests.Bugs
 	using System.Text;
 
 	using Voron.Impl;
-	using Voron.Trees;
-
 	using Xunit;
 
 	public class Deletes : StorageTest

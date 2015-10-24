@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Voron.Data.BTrees;
 
-namespace Voron.Trees.Compact
+namespace Voron.Data.Compact
 {
     public unsafe class PrefixTreeMutableState
     {

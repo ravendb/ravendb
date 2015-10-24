@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Trees;
-using Voron.Trees.Fixed;
 
 namespace Voron.Debugging
 {

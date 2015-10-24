@@ -1,18 +1,18 @@
-﻿using Sparrow;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using Sparrow;
+using Voron.Impl;
+using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
+using Voron.Util;
 // -----------------------------------------------------------------------
 //  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Diagnostics;
-using System.IO;
-using Voron.Impl;
-using Voron.Impl.FileHeaders;
-using Voron.Impl.Paging;
-using Voron.Util;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
 	/* Multi tree behavior
 	 * -------------------

@@ -10,10 +10,10 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Backup

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
-using Voron.Trees;
-using Voron.Trees.Fixed;
 
 namespace Voron.Debugging
 {

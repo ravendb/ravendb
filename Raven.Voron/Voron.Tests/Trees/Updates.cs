@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using Voron.Impl;
-using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Trees

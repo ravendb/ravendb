@@ -1,13 +1,11 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Voron.Debugging;
+using Sparrow;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     public unsafe class TreeRebalancer
     {

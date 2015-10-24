@@ -1,6 +1,6 @@
 using System;
 
-namespace Voron.Trees
+namespace Voron.Data
 {
     public interface IIterator : IDisposable
     {

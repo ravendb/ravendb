@@ -13,7 +13,6 @@ namespace Voron.Tests.Bugs
     using System.Linq;
     using Voron.Impl;
     using Voron.Impl.Paging;
-    using Voron.Trees;
     using Xunit;
 
     public class FlushingToDataFile : StorageTest

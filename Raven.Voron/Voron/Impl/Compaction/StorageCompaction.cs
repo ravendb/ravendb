@@ -5,11 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using Voron.Data.BTrees;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Paging;
-using Voron.Trees;
-using Voron.Trees.Fixed;
 
 namespace Voron.Impl.Compaction
 {

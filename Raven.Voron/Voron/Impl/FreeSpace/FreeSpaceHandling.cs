@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Voron.Trees.Fixed;
+using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace
 {

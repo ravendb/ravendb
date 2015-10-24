@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
-using Voron.Debugging;
 using Voron.Impl;
-using Voron.Impl.Paging;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     public unsafe class TreePageSplitter
     {

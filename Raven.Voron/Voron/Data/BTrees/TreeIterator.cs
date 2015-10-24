@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Voron.Impl;
-using Voron.Util;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
 	public unsafe class TreeIterator : IIterator
 	{

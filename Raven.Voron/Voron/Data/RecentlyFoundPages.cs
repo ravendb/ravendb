@@ -3,9 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 
-namespace Voron.Trees
+using System;
+using Voron.Data.BTrees;
+
+namespace Voron.Data
 {
     public class RecentlyFoundPages
     {

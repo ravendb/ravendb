@@ -2,9 +2,8 @@
 using System.Diagnostics;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
-using Voron.Impl.Paging;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     public unsafe class TreeMutableState
     {

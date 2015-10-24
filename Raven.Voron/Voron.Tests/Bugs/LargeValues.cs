@@ -1,6 +1,4 @@
-﻿using Voron.Trees;
-
-namespace Voron.Tests.Bugs
+﻿namespace Voron.Tests.Bugs
 {
     using System;
     using System.Collections.Generic;

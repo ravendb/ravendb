@@ -5,11 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Voron.Impl;
+using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Xunit;
 using Xunit.Extensions;
-using Raven.Unix.Native;
-using Voron.Trees;
 
 namespace Voron.Tests.Storage
 {

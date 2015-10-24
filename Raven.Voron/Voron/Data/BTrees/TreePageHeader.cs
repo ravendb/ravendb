@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Voron.Trees
+namespace Voron.Data.BTrees
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
 	public struct TreePageHeader

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using Voron.Debugging;
 using Voron.Impl;
-using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Storage

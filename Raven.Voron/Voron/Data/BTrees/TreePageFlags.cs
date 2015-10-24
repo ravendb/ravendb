@@ -1,7 +1,7 @@
-﻿namespace Voron.Trees
-{
-    using System;
+﻿using System;
 
+namespace Voron.Data.BTrees
+{
     [Flags]
     public enum PageFlags : byte
     {

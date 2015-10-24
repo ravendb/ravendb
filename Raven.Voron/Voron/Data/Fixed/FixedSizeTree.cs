@@ -3,18 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Platform;
+using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
-namespace Voron.Trees.Fixed
+namespace Voron.Data.Fixed
 {
     public unsafe partial class FixedSizeTree
     {
