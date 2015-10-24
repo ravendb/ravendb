@@ -97,30 +97,30 @@ namespace Voron.Data.Fixed
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
-            { return Header->FixedSize_NumberOfEntries; }
+            { return Header->NumberOfEntries; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
-            { Header->FixedSize_NumberOfEntries = value; }
+            { Header->NumberOfEntries = value; }
         }
 
         public ushort StartPosition
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
-            { return Header->FixedSize_StartPosition; }
+            { return Header->StartPosition; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
-            { Header->FixedSize_StartPosition = value; }
+            { Header->StartPosition = value; }
         }
 
         public ushort ValueSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
-            { return Header->FixedSize_ValueSize; }
+            { return Header->ValueSize; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
-            { Header->FixedSize_ValueSize = value; }
+            { Header->ValueSize = value; }
         }
 
         public byte* Pointer

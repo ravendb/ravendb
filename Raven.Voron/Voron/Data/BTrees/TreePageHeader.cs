@@ -41,10 +41,10 @@ namespace Voron.Data.BTrees
         public long PageNumber;
 
         [FieldOffset(8)]
-        public ushort FixedSize_StartPosition;
+        public ushort StartPosition;
 
         [FieldOffset(10)]
-        public ushort FixedSize_NumberOfEntries;
+        public ushort NumberOfEntries;
 
         [FieldOffset(12)]
         public PageFlags Flags;
@@ -53,8 +53,6 @@ namespace Voron.Data.BTrees
         public FixedSizeTreePageFlags TreeFlags;
 
         [FieldOffset(14)]
-        public ushort FixedSize_ValueSize;
+        public ushort ValueSize;
     }
-
-
 }
