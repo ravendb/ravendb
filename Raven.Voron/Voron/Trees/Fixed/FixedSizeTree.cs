@@ -376,7 +376,7 @@ namespace Voron.Trees.Fixed
 
         private void AddSeparatorToParentPage(FixedSizeTreePage parentPage, int position, long key, long pageNum)
         {
-            if ((parentPage.NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
+            if ((parentPage.NumberOfEntries + 1) * BranchEntrySize >= parentPage.PageMaxSpace)
             {
                 parentPage = PageSplit(parentPage, key);
                 System.Diagnostics.Debug.Assert(parentPage != null);
