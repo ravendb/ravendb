@@ -22,10 +22,10 @@ namespace Raven.Debug
 
 			var optionSet = new OptionSet
 			{
-				{"pid=", "Process id.", pid => processId = int.Parse(pid)},
-				{"attachTimeout=", "Attaching to process timeout in miliseconds. Default 15000.", timeout => attachTimeout = uint.Parse(timeout)},
-				{"output=", "Output file path.", path => outputFilePath = path},
-				{"stacktrace", "Print stacktraces of the attached process.", x => actionToTake = () => ShowStackTrace(processId, attachTimeout, outputFilePath)}
+				{"pid=", OptionCategory.General, "Process id.", pid => processId = int.Parse(pid)},
+				{"attachTimeout=", OptionCategory.General, "Attaching to process timeout in miliseconds. Default 15000.", timeout => attachTimeout = uint.Parse(timeout)},
+				{"output=", OptionCategory.General, "Output file path.", path => outputFilePath = path},
+				{"stacktrace", OptionCategory.General, "Print stacktraces of the attached process.", x => actionToTake = () => ShowStackTrace(processId, attachTimeout, outputFilePath)}
 			};
 
 			try
@@ -58,8 +58,8 @@ namespace Raven.Debug
 
 			using (DataTarget dataTarget = DataTarget.AttachToProcess(processId, attachTimeout))
 			{
-				var dacLocation = dataTarget.ClrVersions[0].TryGetDacLocation();
-				var runtime = dataTarget.CreateRuntime(dacLocation);
+				var clrInfo = dataTarget.ClrVersions[0];
+				var runtime = clrInfo.CreateRuntime();
 				var control = (IDebugControl)dataTarget.DebuggerInterface;
 				var sysObjs = (IDebugSystemObjects)dataTarget.DebuggerInterface;
 				var nativeFrames = new DEBUG_STACK_FRAME[100];
