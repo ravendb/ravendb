@@ -14,7 +14,7 @@ namespace Raven.Client.Counters
 		{
 			AssertInitialized();
 
-			var requestUriString = String.Format("{0}/cs/{1}/replications/get", Url, Name);
+			var requestUriString = $"{Url}/cs/{Name}/replications/get";
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
@@ -26,7 +26,7 @@ namespace Raven.Client.Counters
 		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
-			var requestUriString = String.Format("{0}/cs/{1}/replications/save", Url, Name);
+			var requestUriString = $"{Url}/cs/{Name}/replications/save";
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 			{
@@ -38,7 +38,7 @@ namespace Raven.Client.Counters
 		public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
 		{
 			AssertInitialized();
-			var requestUriString = String.Format("{0}/cs/{1}/lastEtag?serverId={2}", Url, Name, serverId);
+			var requestUriString = $"{Url}/cs/{Name}/lastEtag?serverId={serverId}";
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{

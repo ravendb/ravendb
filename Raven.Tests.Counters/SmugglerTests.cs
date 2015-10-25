@@ -264,7 +264,7 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-                Assert.Equal(3, summary.Length);//sanity check
+                Assert.Equal(3, summary.Count);//sanity check
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c" && x.GroupName == "g"));
@@ -305,7 +305,7 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-                Assert.Equal(3, summary.Length); //sanity check
+                Assert.Equal(3, summary.Count); //sanity check
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
 			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
 			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));
@@ -335,7 +335,7 @@ namespace Raven.Tests.Counters
 				});
 
 				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
-                Assert.Equal(3, summary.Length); //sanity check
+                Assert.Equal(3, summary.Count); //sanity check
 				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
 				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));

@@ -74,7 +74,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[RavenRoute("cs/{counterStorageName}/debug/")]
-		public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName)
+		public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName,int skip, int take)
 		{
 			var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
 			if (counter == null)
@@ -82,12 +82,19 @@ namespace Raven.Database.Server.Controllers
 
 			using (var reader = counter.CreateReader())
 			{
-				var groupsAndNames = reader.GetCounterGroups().SelectMany(group => reader.GetCountersSummary(group.Name));					
+				var groupsAndNames = reader.GetCounterGroups(0, int.MaxValue)
+					.SelectMany(group => reader.GetCounterSummariesByGroup(group.Name, 0, int.MaxValue)
+						.Select(x => new CounterNameGroupPair
+						{
+							Name = x.CounterName,
+							Group = group.Name
+						}));
 
 				return GetMessageWithObject(new
 				{
 					Stats = counter.CreateStats(),
-					GroupsAndNames = groupsAndNames
+					HasMore = groupsAndNames.Count() > skip + take,
+                    GroupsAndNames = groupsAndNames.Skip(skip).Take(take)
 				});
 			}
 		}
