@@ -47,7 +47,8 @@ namespace Raven.Smuggler.Database.Remote
 			{
 				ApiKey = connectionOptions.ApiKey,
 				DefaultDatabase = connectionOptions.Database,
-				Url = connectionOptions.Url
+				Url = connectionOptions.Url,
+                Credentials = connectionOptions.Credentials
 			};
 
 			if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)

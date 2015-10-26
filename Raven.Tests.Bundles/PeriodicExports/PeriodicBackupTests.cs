@@ -8,13 +8,15 @@ using System;
 using System.Reflection;
 using System.Threading;
 using System.Linq;
-using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
 using Raven.Database.Bundles.PeriodicExports;
 using Raven.Database.Extensions;
-using Raven.Database.Smuggler;
+using Raven.Database.Smuggler.Embedded;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -97,15 +99,18 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-				var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
-				dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(), 
+                    new DatabaseSmugglerFileSource(backupPath), 
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+			    smuggler.Execute();
 
 				using (var session = store.OpenSession())
 				{
 					Assert.Equal("oren", session.Load<User>(1).Name);
 				}
 			}
-			IOExtensions.DeleteDirectory(backupPath);
 		}
 
         [Fact, Trait("Category", "Smuggler")]
@@ -133,15 +138,18 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
-                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+                smuggler.Execute();
 
 				using (var session = store.OpenSession())
 				{
 					Assert.Equal("oren", session.Load<User>(1).Name);
 				}
 			}
-			IOExtensions.DeleteDirectory(backupPath);
 		}
 
         [Fact, Trait("Category", "Smuggler")]
@@ -185,8 +193,12 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-			    var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = {Incremental = true}};
-                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+                smuggler.Execute();
 
 				using (var session = store.OpenSession())
 				{
@@ -194,7 +206,6 @@ namespace Raven.Tests.Bundles.PeriodicExports
 					Assert.Equal("ayende", session.Load<User>(2).Name);
 				}
 			}
-			IOExtensions.DeleteDirectory(backupPath);
 		}
 
 		[Fact, Trait("Category", "Smuggler")]
@@ -253,8 +264,12 @@ namespace Raven.Tests.Bundles.PeriodicExports
 
 			using (var store = NewDocumentStore())
 			{
-				var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
-				dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+                smuggler.Execute();
 
 				using (var session = store.OpenSession())
 				{
@@ -262,7 +277,6 @@ namespace Raven.Tests.Bundles.PeriodicExports
 					Assert.Equal("ayende", session.Load<User>(2).Name);
 				}
 			}
-			IOExtensions.DeleteDirectory(backupPath);
 		}
 	}
 }

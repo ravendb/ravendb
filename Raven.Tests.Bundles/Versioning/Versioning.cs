@@ -8,10 +8,16 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
-using Raven.Smuggler;
+using Raven.Database.Extensions;
+using Raven.Database.Smuggler.Embedded;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
+
 using Xunit;
 
 namespace Raven.Tests.Bundles.Versioning
@@ -479,23 +485,31 @@ namespace Raven.Tests.Bundles.Versioning
 
             var file = Path.GetTempFileName();
 		    try
-			{
-                new SmugglerDatabaseApi().ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
+		    {
+		        var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(), 
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Database = documentStore.DefaultDatabase,
+                        Url = documentStore.Url
+                    }),
+                    new DatabaseSmugglerFileDestination(file));
+
+                smuggler.Execute();
 
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
-                    var importSmuggler = new SmugglerDatabaseApi();
-					importSmuggler.ImportData(
-                        new SmugglerImportOptions<RavenConnectionStringOptions>
-						{
-							FromFile = file,
-							To = new RavenConnectionStringOptions
-							{
-								Url = documentStore2.Url,
-								Credentials = documentStore2.Credentials,
-								DefaultDatabase = documentStore2.DefaultDatabase
-							}
-						}).Wait();
+                    smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerFileSource(file), 
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = documentStore2.DefaultDatabase,
+                            Url = documentStore2.Url,
+                            Credentials = documentStore2.Credentials
+                        }));
+
+                    smuggler.Execute();
 
 					using (var session = documentStore2.OpenSession())
 					{
@@ -515,10 +529,7 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 			finally
 			{
-                if (File.Exists(file))
-				{
-                    File.Delete(file);
-				}
+                IOExtensions.DeleteFile(file);
 			}
 		}
 
