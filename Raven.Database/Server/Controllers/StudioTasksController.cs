@@ -24,6 +24,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
@@ -196,6 +197,10 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
+					else if (e is OperationVetoedException)
+					{
+						status.ExceptionDetails = "The versioning bundle is enabled. You should set the versioning flag ShouldDisableVersioningBundle to true in order to do the import";
+					}
                     else
                     {
                         status.ExceptionDetails = e.ToString();
