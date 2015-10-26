@@ -118,7 +118,7 @@ namespace Raven.Smuggler.Database.Files
 			throw new NotSupportedException();
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
+		public Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

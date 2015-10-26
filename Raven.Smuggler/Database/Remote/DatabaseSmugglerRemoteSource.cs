@@ -180,7 +180,7 @@ namespace Raven.Smuggler.Database.Remote
 			return transformers.ToList();
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
+		public Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

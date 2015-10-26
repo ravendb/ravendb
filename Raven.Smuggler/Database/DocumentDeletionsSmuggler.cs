@@ -33,16 +33,24 @@ namespace Raven.Smuggler.Database
 					return;
 				}
 
-				var enumerator = await Source
-					.ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, _maxEtags.LastDocDeleteEtag.IncrementBy(1), cancellationToken)
+			    var maxEtag = _maxEtags.LastDocDeleteEtag?.IncrementBy(1);
+
+                var deletions = await Source
+					.ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, maxEtag, cancellationToken)
 					.ConfigureAwait(false);
 
-				while (await enumerator.MoveNextAsync().ConfigureAwait(false))
-				{
-					await actions
-						.WriteDocumentDeletionAsync(enumerator.Current, cancellationToken)
-						.ConfigureAwait(false);
-				}
+                var lastEtag = state.LastDocDeleteEtag;
+
+			    foreach (var deletion in deletions)
+			    {
+                    await actions
+                        .WriteDocumentDeletionAsync(deletion.Key, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    lastEtag = deletion.Value;
+                }
+
+			    state.LastDocDeleteEtag = lastEtag;
 			}
 		}
 	}

@@ -43,7 +43,7 @@ namespace Raven.Smuggler.Database
 
 		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int pageSize, CancellationToken cancellationToken);
 
-		Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
+		Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
 
 		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken);
 

@@ -28,6 +28,7 @@ namespace Raven.Database.Smuggler.Embedded
 		{
 			SmuggleType.Index,
 			SmuggleType.Document,
+            SmuggleType.DocumentDeletion,
 			SmuggleType.Transformer,
 			SmuggleType.Identity,
 			SmuggleType.None
@@ -131,16 +132,16 @@ namespace Raven.Database.Smuggler.Embedded
 			return new CompletedTask<List<TransformerDefinition>>(transformers);
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
+		public Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
 		{
-			var results = new List<string>();
+			var results = new List<KeyValuePair<string, Etag>>();
 			_database.TransactionalStorage.Batch(accessor =>
 			{
 				foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, fromEtag, maxEtag, int.MaxValue))
-					results.Add(listItem.Key);
+					results.Add(new KeyValuePair<string, Etag>(listItem.Key, listItem.Etag));
 			});
 
-			return new CompletedTask<IAsyncEnumerator<string>>(new AsyncEnumeratorBridge<string>(results.GetEnumerator()));
+			return new CompletedTask<List<KeyValuePair<string, Etag>>>(results);
 		}
 
 		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)

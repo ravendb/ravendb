@@ -68,8 +68,8 @@ namespace Raven.Smuggler.Database.Streams
 
 		public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()
 		{
-			throw new NotSupportedException();
-		}
+            return new DatabaseSmugglerStreamDocumentDeletionActions(_writer);
+        }
 
 		public IDatabaseSmugglerIdentityActions IdentityActions()
 		{

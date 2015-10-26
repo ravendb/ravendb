@@ -144,7 +144,7 @@ namespace Raven.Smuggler.Database.Streams
 
 		public bool SupportsReadingHiLoDocuments => false;
 
-		public bool SupportsDocumentDeletions => false;
+		public bool SupportsDocumentDeletions => true;
 
 		public bool SupportsPaging => false;
 
@@ -173,12 +173,24 @@ namespace Raven.Smuggler.Database.Streams
 			return new CompletedTask<List<TransformerDefinition>>(results);
 		}
 
-		public Task<IAsyncEnumerator<string>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
+        public Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken)
+        {
+            var results = new List<KeyValuePair<string, Etag>>();
+            while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
 
-		public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
+                var deletion = RavenJToken.ReadFrom(_reader);
+
+                var key = deletion.Value<string>("Key");
+
+                results.Add(new KeyValuePair<string, Etag>(key, null));
+            }
+
+            return new CompletedTask<List<KeyValuePair<string, Etag>>>(results);
+        }
+
+        public Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
 		{
 			var results = new List<KeyValuePair<string, long>>();
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
