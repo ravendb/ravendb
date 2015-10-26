@@ -13,8 +13,10 @@ using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -634,24 +636,35 @@ namespace Raven.Tests.Smuggler
                     var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
                     var endEtag = startEtag.IncrementBy(2);
 
-                    var documentSmuggler = new DocumentSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerNotifications(),
-                        new DatabaseSmugglerEmbeddedSource(store.SystemDatabase),
-                        new DatabaseSmugglerStreamDestination(stream), new DatabaseLastEtagsInfo { LastDocsEtag = endEtag });
+                    var options = new DatabaseSmugglerOptions();
+                    var notifications = new DatabaseSmugglerNotifications();
 
                     var state = new DatabaseSmugglerOperationState { LastDocsEtag = startEtag };
 
-                    await documentSmuggler.SmuggleAsync(state, CancellationToken.None);
+                    using (var source = new DatabaseSmugglerEmbeddedSource(store.SystemDatabase))
+                    using (var destination = new DatabaseSmugglerStreamDestination(stream))
+                    {
+                        await source.InitializeAsync(options, CancellationToken.None);
+                        await destination.InitializeAsync(options, notifications, CancellationToken.None);
+
+                        var documentSmuggler = new DocumentSmuggler(
+                            options,
+                            notifications,
+                            source,
+                            destination, new DatabaseLastEtagsInfo { LastDocsEtag = endEtag });
+
+                        await documentSmuggler.SmuggleAsync(state, CancellationToken.None);
+                    }
 
                     stream.Position = 0;
 
-                    using (var reader = new StreamReader(stream))
+                    using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true))
+                    using (var reader = new StreamReader(gZipStream))
                     {
                         var json = await reader.ReadToEndAsync();
 
                         // read exported content
-                        var exportedDocs = RavenJArray.Parse(json);
+                        var exportedDocs = RavenJObject.Parse(json).Value<RavenJArray>("Docs");
                         Assert.Equal(2, exportedDocs.Count());
 
                         Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
@@ -665,25 +678,36 @@ namespace Raven.Tests.Smuggler
                     var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
                     Etag endEtag = null;
 
-                    var documentSmuggler = new DocumentSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerNotifications(),
-                        new DatabaseSmugglerEmbeddedSource(store.SystemDatabase),
-                        new DatabaseSmugglerStreamDestination(stream), new DatabaseLastEtagsInfo { LastDocsEtag = endEtag });
+                    var options = new DatabaseSmugglerOptions();
+                    var notifications = new DatabaseSmugglerNotifications();
 
                     var state = new DatabaseSmugglerOperationState { LastDocsEtag = startEtag };
 
-                    await documentSmuggler.SmuggleAsync(state, CancellationToken.None);
+                    using (var source = new DatabaseSmugglerEmbeddedSource(store.SystemDatabase))
+                    using (var destination = new DatabaseSmugglerStreamDestination(stream))
+                    {
+                        await source.InitializeAsync(options, CancellationToken.None);
+                        await destination.InitializeAsync(options, notifications, CancellationToken.None);
+
+                        var documentSmuggler = new DocumentSmuggler(
+                            options,
+                            notifications,
+                            source,
+                            destination, new DatabaseLastEtagsInfo { LastDocsEtag = endEtag });
+
+                        await documentSmuggler.SmuggleAsync(state, CancellationToken.None);
+                    }
 
                     stream.Position = 0;
 
-                    using (var reader = new StreamReader(stream))
+                    using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true))
+                    using (var reader = new StreamReader(gZipStream))
                     {
                         var json = await reader.ReadToEndAsync();
 
                         // read exported content
-                        var exportedDocs = RavenJArray.Parse(json);
-                        Assert.Equal(2, exportedDocs.Count());
+                        var exportedDocs = RavenJObject.Parse(json).Value<RavenJArray>("Docs");
+                        Assert.Equal(5, exportedDocs.Count());
 
                         Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
                         Assert.Equal("01000000-0000-0001-0000-00000000000B", exportedDocs.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
@@ -701,8 +725,6 @@ namespace Raven.Tests.Smuggler
 
                 Etag user6DeletionEtag = null, user9DeletionEtag = null;
 
-                WaitForUserToContinueTheTest(store);
-
                 store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
                     user6DeletionEtag = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "users/6").Etag;
@@ -712,26 +734,35 @@ namespace Raven.Tests.Smuggler
 
                 using (var stream = new MemoryStream())
                 {
+                    var options = new DatabaseSmugglerOptions();
+                    var notifications = new DatabaseSmugglerNotifications();
 
+                    var state = new DatabaseSmugglerOperationState { LastDocDeleteEtag = user6DeletionEtag };
 
-                    var documentSmuggler = new DocumentSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerNotifications(),
-                        new DatabaseSmugglerEmbeddedSource(store.SystemDatabase),
-                        new DatabaseSmugglerStreamDestination(stream), new DatabaseLastEtagsInfo { LastDocsEtag = user9DeletionEtag });
+                    using (var source = new DatabaseSmugglerEmbeddedSource(store.SystemDatabase))
+                    using (var destination = new DatabaseSmugglerStreamDestination(stream))
+                    {
+                        await source.InitializeAsync(options, CancellationToken.None);
+                        await destination.InitializeAsync(options, notifications, CancellationToken.None);
 
-                    var state = new DatabaseSmugglerOperationState { LastDocsEtag = user6DeletionEtag };
+                        var documentDeletionsSmuggler = new DocumentDeletionsSmuggler(
+                            options,
+                            notifications,
+                            source,
+                            destination, new DatabaseLastEtagsInfo { LastDocDeleteEtag = user9DeletionEtag });
 
-                    await documentSmuggler.SmuggleAsync(state, CancellationToken.None);
+                        await documentDeletionsSmuggler.SmuggleAsync(state, CancellationToken.None);
+                    }
 
                     stream.Position = 0;
 
-                    using (var reader = new StreamReader(stream))
+                    using (var gZipStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true))
+                    using (var reader = new StreamReader(gZipStream))
                     {
                         var json = await reader.ReadToEndAsync();
 
                         // read exported content
-                        var exportJson = RavenJArray.Parse(json);
+                        var exportJson = RavenJObject.Parse(json);
                         var docsKeys = exportJson.Value<RavenJArray>("DocsDeletions")
                             .Select(x => x.Value<string>("Key"))
                             .ToArray();
@@ -895,7 +926,7 @@ namespace Raven.Tests.Smuggler
 
                 // Export the first batch
                 var smuggler = new DatabaseSmuggler(
-                    new DatabaseSmugglerOptions(), 
+                    new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerRemoteSource(
                         new DatabaseSmugglerRemoteConnectionOptions
                         {
@@ -903,7 +934,7 @@ namespace Raven.Tests.Smuggler
                             Database = store.DefaultDatabase
                         }),
                     new DatabaseSmugglerFileDestination(
-                        outputDirectory, 
+                        outputDirectory,
                         new DatabaseSmugglerFileDestinationOptions
                         {
                             Incremental = true
@@ -915,22 +946,22 @@ namespace Raven.Tests.Smuggler
                 Assert.True(!string.IsNullOrWhiteSpace(exportResult.FilePath));
 
                 // Import the first batch
-               var importSmuggler = new DatabaseSmuggler(
-                    new DatabaseSmugglerOptions
-                    {
-                        BatchSize = 1
-                    }, 
-                    new DatabaseSmugglerFileSource(outputDirectory), 
-                    new DatabaseSmugglerRemoteDestination(
-                        new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = "http://localhost:" + serverPort,
-                            Database = newDatabase
-                        },
-                        new DatabaseSmugglerRemoteDestinationOptions
-                        {
-                            ContinuationToken = continuationToken
-                        }));
+                var importSmuggler = new DatabaseSmuggler(
+                     new DatabaseSmugglerOptions
+                     {
+                         BatchSize = 1
+                     },
+                     new DatabaseSmugglerFileSource(outputDirectory),
+                     new DatabaseSmugglerRemoteDestination(
+                         new DatabaseSmugglerRemoteConnectionOptions
+                         {
+                             Url = "http://localhost:" + serverPort,
+                             Database = newDatabase
+                         },
+                         new DatabaseSmugglerRemoteDestinationOptions
+                         {
+                             ContinuationToken = continuationToken
+                         }));
 
                 await importSmuggler.ExecuteAsync();
 
