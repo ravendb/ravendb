@@ -9,10 +9,13 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -45,44 +48,41 @@ namespace Raven.Tests.Smuggler
 
                     session.SaveChanges();
                 }
-                var smugglerApi = new DatabaseDataDumper(store.DocumentDatabase);
-                smugglerApi.Options.TransformScript =
+
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
                     @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
 					}";
-                await smugglerApi.ExportData(
-                    new SmugglerExportOptions<RavenConnectionStringOptions>
-                    {
-                        ToFile = backupPath,
-                        From = new EmbeddedRavenConnectionStringOptions
-                        {
-                            DefaultDatabase = store.DefaultDatabase
-                        }
-                    });
+
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
+                    new DatabaseSmugglerFileDestination(backupPath));
+
+                await smuggler.ExecuteAsync();
             }
 
             using (var documentStore = NewDocumentStore())
             {
-                var smugglerApi = new DatabaseDataDumper(documentStore.DocumentDatabase);
-                smugglerApi.Options.TransformScript =
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
                     @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
 					}";
-                await smugglerApi.ImportData(
-                    new SmugglerImportOptions<RavenConnectionStringOptions>
-                    {
-                        FromFile = backupPath,
-                        To = new EmbeddedRavenConnectionStringOptions
-                        {
-                            DefaultDatabase = documentStore.DefaultDatabase
-                        }
-                    });
+
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerEmbeddedDestination(documentStore.DocumentDatabase));
+
+                await smuggler.ExecuteAsync();
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -113,10 +113,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -160,10 +160,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -208,10 +208,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -220,16 +220,19 @@ namespace Raven.Tests.Smuggler
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                 Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
-                var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { StripReplicationInformation = true });
-                smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-                {
-                    ToFile = backupPath,
-                    From = new RavenConnectionStringOptions
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions
+                    {
+                        StripReplicationInformation = true
+                    },
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                     {
                         Url = store.Url,
-                        DefaultDatabase = "N1"
-                    }
-                }).Wait(TimeSpan.FromSeconds(15));
+                        Database = "N1"
+                    }),
+                    new DatabaseSmugglerFileDestination(backupPath));
+
+                smuggler.Execute();
 
                 store
                     .DatabaseCommands
@@ -238,21 +241,22 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N2",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
-                smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-                {
-                    FromFile = backupPath,
-                    To = new RavenConnectionStringOptions
+                smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
                     {
-                        DefaultDatabase = "N2",
-                        Url = store.Url
-                    }
-                }).Wait(TimeSpan.FromSeconds(15));
+                        Url = store.Url,
+                        Database = "N2"
+                    }));
+
+                smuggler.Execute();
 
                 commands = store.DatabaseCommands.ForDatabase("N2");
                 doc = commands.Get("keys/1");
@@ -266,21 +270,22 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N3",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
-                smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-                {
-                    FromFile = backupPath,
-                    To = new RavenConnectionStringOptions
+                smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(backupPath),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
                     {
-                        DefaultDatabase = "N3",
-                        Url = store.Url
-                    }
-                }).Wait(TimeSpan.FromSeconds(15));
+                        Url = store.Url,
+                        Database = "N3"
+                    }));
+
+                smuggler.Execute();
 
                 commands = store.DatabaseCommands.ForDatabase("N3");
                 doc = commands.Get("keys/1");
@@ -302,23 +307,30 @@ namespace Raven.Tests.Smuggler
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationSource));
                     Assert.True(doc.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
-                    var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions { StripReplicationInformation = true });
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToStream = stream, From = new RavenConnectionStringOptions { DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
+                        {
+                            StripReplicationInformation = true
+                        },
+                        new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
+                        new DatabaseSmugglerStreamDestination(stream));
+
+                    smuggler.Execute();
                 }
 
                 stream.Position = 0;
 
                 using (var store = NewDocumentStore())
                 {
-                    var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions { StripReplicationInformation = true });
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-                    {
-                        FromStream = stream,
-                        To = new RavenConnectionStringOptions
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
                         {
-                            DefaultDatabase = store.DefaultDatabase,
-                        }
-                    }).Wait(TimeSpan.FromSeconds(15));
+                            StripReplicationInformation = true
+                        },
+                        new DatabaseSmugglerStreamSource(stream),
+                        new DatabaseSmugglerEmbeddedDestination(store.DocumentDatabase));
+
+                    smuggler.Execute();
 
                     var commands = store.DatabaseCommands;
                     var doc = commands.Get("keys/1");
@@ -330,15 +342,15 @@ namespace Raven.Tests.Smuggler
 
                 using (var store = NewDocumentStore(activeBundles: "Replication"))
                 {
-                    var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions { StripReplicationInformation = true });
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-                    {
-                        FromStream = stream,
-                        To = new RavenConnectionStringOptions
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
                         {
-                            DefaultDatabase = store.DefaultDatabase,
-                        }
-                    }).Wait(TimeSpan.FromSeconds(15));
+                            StripReplicationInformation = true
+                        },
+                        new DatabaseSmugglerStreamSource(stream),
+                        new DatabaseSmugglerEmbeddedDestination(store.DocumentDatabase));
+
+                    smuggler.Execute();
 
                     var commands = store.DatabaseCommands;
                     var doc = commands.Get("keys/1");

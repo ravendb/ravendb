@@ -5,14 +5,18 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client.Bundles.Versioning;
-using Raven.Database.Smuggler;
+using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
+
 using Xunit;
 
 namespace Raven.Tests.Smuggler
@@ -40,17 +44,16 @@ namespace Raven.Tests.Smuggler
 
 					countOfDocuments = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
-					var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions());
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Url = store.Url,
+                            Database = store.DefaultDatabase
+                        }),
+                        new DatabaseSmugglerStreamDestination(stream));
 
-					await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						ToStream = stream,
-						From = new RavenConnectionStringOptions()
-						{
-							Url = store.Url,
-							DefaultDatabase = store.DefaultDatabase
-						}
-					});
+				    await smuggler.ExecuteAsync();
 				}
 
 				stream.Position = 0;
@@ -69,20 +72,19 @@ namespace Raven.Tests.Smuggler
 						session.SaveChanges();
 					}
 
-					var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-					{
-						ShouldDisableVersioningBundle = true
-					});
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
+                        {
+                            ShouldDisableVersioningBundle = true
+                        },
+                        new DatabaseSmugglerStreamSource(stream), 
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Url = store.Url,
+                            Database = store.DefaultDatabase
+                        }));
 
-					await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>()
-					{
-						FromStream = stream,
-						To = new RavenConnectionStringOptions()
-						{
-							Url = store.Url,
-							DefaultDatabase = store.DefaultDatabase
-						}
-					});
+                    await smuggler.ExecuteAsync();
 
 					var countOfDocsAfterImport = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
@@ -128,16 +130,12 @@ namespace Raven.Tests.Smuggler
 
 					countOfDocuments = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
-					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions());
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
+                        new DatabaseSmugglerStreamDestination(stream));
 
-					await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						ToStream = stream,
-						From = new RavenConnectionStringOptions()
-						{
-							DefaultDatabase = store.DefaultDatabase
-						}
-					});
+				    await smuggler.ExecuteAsync();
 				}
 
 				stream.Position = 0;
@@ -156,19 +154,12 @@ namespace Raven.Tests.Smuggler
 						session.SaveChanges();
 					}
 
-					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions
-					{
-						ShouldDisableVersioningBundle = true
-					});
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions { ShouldDisableVersioningBundle = true },
+                        new DatabaseSmugglerStreamSource(stream), 
+                        new DatabaseSmugglerEmbeddedDestination(store.DocumentDatabase));
 
-					await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>()
-					{
-						FromStream = stream,
-						To = new RavenConnectionStringOptions()
-						{
-							DefaultDatabase = store.DefaultDatabase
-						}
-					});
+                    await smuggler.ExecuteAsync();
 
 					var countOfDocsAfterImport = store.DatabaseCommands.GetStatistics().CountOfDocuments;
 
@@ -233,24 +224,13 @@ namespace Raven.Tests.Smuggler
 						MaxRevisions = 5
 					}), new RavenJObject());
 
-					var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions()
-					{
-						ShouldDisableVersioningBundle = true
-					});
 
-					await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>()
-					{
-						From = new RavenConnectionStringOptions()
-						{
-							Url = store.Url,
-							DefaultDatabase = store.DefaultDatabase
-						},
-						To = new RavenConnectionStringOptions()
-						{
-							Url = store.Url,
-							DefaultDatabase = "Import"
-						}
-					});
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions { ShouldDisableVersioningBundle = true },
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions { Url = store.Url, Database = store.DefaultDatabase }),
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions { Url = store.Url, Database = "Import" }));
+
+                    await smuggler.ExecuteAsync();
 
 					var countOfDocsAfterImport = store.DatabaseCommands.ForDatabase("Import").GetStatistics().CountOfDocuments;
 

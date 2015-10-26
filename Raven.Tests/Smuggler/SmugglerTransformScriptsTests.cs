@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Smuggler;
+
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -54,46 +54,49 @@ namespace Raven.Tests.Smuggler
 
 	                session.SaveChanges();
 	            }
-                var smugglerApi = new SmugglerDatabaseApi();
-		        smugglerApi.Options.TransformScript =
-			        @"function(doc) { 
+
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
+                    @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
 					}";
-		        await smugglerApi.ExportData(
-                    new SmugglerExportOptions<RavenConnectionStringOptions>
-			        {
-				        ToFile = file,
-				        From = new RavenConnectionStringOptions
-				        {
-					        Url = store.Url,
-					        DefaultDatabase = store.DefaultDatabase
-				        }
-			        });
+
+	            var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store.Url,
+                        Database = store.DefaultDatabase
+                    }),
+                    new DatabaseSmugglerFileDestination(file));
+
+	            await smuggler.ExecuteAsync();
 	        }
 
 	        using (var documentStore = NewRemoteDocumentStore())
 	        {
-                var smugglerApi = new SmugglerDatabaseApi();
-		        smugglerApi.Options.TransformScript =
-			        @"function(doc) { 
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
+                    @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
 						return doc;
 					}";
-		        await smugglerApi.ImportData(
-                    new SmugglerImportOptions<RavenConnectionStringOptions>
-			        {
-				        FromFile = file,
-				        To = new RavenConnectionStringOptions
-				        {
-					        Url = documentStore.Url,
-					        DefaultDatabase = documentStore.DefaultDatabase
-				        }
-			        });
+
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerFileSource(file), 
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = documentStore.Url,
+                        Database = documentStore.DefaultDatabase
+                    }));
+
+	            await smuggler.ExecuteAsync();
 
 	            using (var session = documentStore.OpenSession())
 	            {
@@ -122,42 +125,45 @@ namespace Raven.Tests.Smuggler
 
 	                session.SaveChanges();
 	            }
-                var smugglerApi = new SmugglerDatabaseApi();
-		        smugglerApi.Options.TransformScript =
-			        @"function(doc) { 
+
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
+                    @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
 					}";
-		        await smugglerApi.ExportData(
-                    new SmugglerExportOptions<RavenConnectionStringOptions>
-			        {
-				        From = new RavenConnectionStringOptions
-				        {
-					        Url = store.Url,
-					        DefaultDatabase = store.DefaultDatabase
-				        },
-				        ToFile = file,
-			        });
-	        }
+
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store.Url,
+                        Database = store.DefaultDatabase
+                    }),
+                    new DatabaseSmugglerFileDestination(file));
+
+                await smuggler.ExecuteAsync();
+            }
 
 	        using (var store = NewRemoteDocumentStore())
 	        {
-                var smugglerApi = new SmugglerDatabaseApi();
-		        smugglerApi.Options.TransformScript =
-			        @"function(doc) { 
+                var options = new DatabaseSmugglerOptions();
+                options.TransformScript =
+                    @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
 					}";
-		        await smugglerApi.ImportData(
-                    new SmugglerImportOptions<RavenConnectionStringOptions>
-			        {
-				        To = new RavenConnectionStringOptions
-				        {
-					        Url = store.Url,
-					        DefaultDatabase = store.DefaultDatabase
-				        },
-				        FromFile = file,
-			        });
+
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerFileSource(file),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Database = store.DefaultDatabase,
+                        Url = store.Url
+                    }));
+
+                await smuggler.ExecuteAsync();
 
 	            using (var session = store.OpenSession())
 	            {

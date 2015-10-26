@@ -3,15 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
+using System;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database.Smuggler;
-using Raven.Json.Linq;
+using Raven.Database.Smuggler.Embedded;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Smuggler
@@ -36,15 +40,16 @@ namespace Raven.Tests.Smuggler
 				{
 					using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
 					{
-						var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions());
+					    var smuggler = new DatabaseSmuggler(
+                            new DatabaseSmugglerOptions(), 
+                            new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase), 
+                            new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = "http://localhost:8078",
+                                Database = "TargetDB"
+                            }));
 
-						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							To = new RavenConnectionStringOptions
-							{
-								Url = "http://localhost:8078", DefaultDatabase = "TargetDB"
-							}
-						});
+					    await smuggler.ExecuteAsync();
 
 						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
 						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
@@ -66,6 +71,8 @@ namespace Raven.Tests.Smuggler
 		[Fact]
 		public async Task ShouldSupportIncremental()
 		{
+            throw new NotImplementedException();
+
 			using (var store = NewDocumentStore())
 			{
 				await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
@@ -81,19 +88,19 @@ namespace Raven.Tests.Smuggler
 				{
 					using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
 					{
-						var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions()
-						{
-							Incremental = true
-						});
+						//var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions()
+						//{
+						//	Incremental = true
+						//});
 
-						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							To = new RavenConnectionStringOptions
-							{
-								Url = "http://localhost:8078",
-								DefaultDatabase = "TargetDB"
-							}
-						});
+						//await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						//{
+						//	To = new RavenConnectionStringOptions
+						//	{
+						//		Url = "http://localhost:8078",
+						//		DefaultDatabase = "TargetDB"
+						//	}
+						//});
 
 						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
 						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
@@ -106,14 +113,14 @@ namespace Raven.Tests.Smuggler
 							await session.SaveChangesAsync();
 						}
 
-						await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							To = new RavenConnectionStringOptions
-							{
-								Url = "http://localhost:8078",
-								DefaultDatabase = "TargetDB"
-							}
-						});
+						//await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						//{
+						//	To = new RavenConnectionStringOptions
+						//	{
+						//		Url = "http://localhost:8078",
+						//		DefaultDatabase = "TargetDB"
+						//	}
+						//});
 
 						using (var session = targetStore.OpenAsyncSession())
 						{

@@ -19,7 +19,7 @@ namespace Raven.Smuggler.Database
 	{
 		public const int NumberOfRetries = 3;
 
-		private readonly DatabaseSmugglerOptions _options;
+		internal readonly DatabaseSmugglerOptions _options;
 
 		private readonly IDatabaseSmugglerSource _source;
 

@@ -1019,6 +1019,10 @@
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj">
+      <Project>{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}</Project>
+      <Name>Raven.Tests.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>

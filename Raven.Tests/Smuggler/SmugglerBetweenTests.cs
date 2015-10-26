@@ -3,18 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -42,12 +43,22 @@ namespace Raven.Tests.Smuggler
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						var smugglerApi = new SmugglerDatabaseApi();
-                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
-							To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
-						});
+					    var smuggler = new DatabaseSmuggler(
+                            new DatabaseSmugglerOptions(), 
+                            new DatabaseSmugglerRemoteSource(
+                                new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8079",
+                                    Database = "Database1"
+                                }), 
+                            new DatabaseSmugglerRemoteDestination(
+                                new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8078",
+                                    Database = "Database2"
+                                }));
+
+					    await smuggler.ExecuteAsync();
                     
                         await AssertDatabaseHasIndex<UsersIndex>(store2);
                         await AssertDatabaseHasTransformer<UsersTransformer>(store2);
@@ -64,6 +75,8 @@ namespace Raven.Tests.Smuggler
         [Fact]
         public async Task ShouldSupportIncremental()
         {
+            throw new NotImplementedException();
+
             using (var server1 = GetNewServer(port: 8079))
             using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
@@ -78,16 +91,16 @@ namespace Raven.Tests.Smuggler
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-						{
-							Incremental = true,
-						});
+						//var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+						//{
+						//	Incremental = true,
+						//});
 
-                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-						});
+                        //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						//{
+						//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+						//	To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
+						//});
 
 						using (var session = store1.OpenAsyncSession("Database1"))
 						{
@@ -104,11 +117,12 @@ namespace Raven.Tests.Smuggler
                             await session2.SaveChangesAsync();
                         }
 
-                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						{
-							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-						});
+                        //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+						//{
+						//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+						//	To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
+						//});
+
 					    WaitForIndexing(store2);
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
@@ -124,7 +138,9 @@ namespace Raven.Tests.Smuggler
 	    [Fact]
 	    public async Task ShouldSupportIncrementalFromTwoServers()
 	    {
-		    using (var server1 = GetNewServer(port: 8079))
+            throw new NotImplementedException();
+
+            using (var server1 = GetNewServer(port: 8079))
 		    using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
 		    {
 			    using (var session = store1.OpenAsyncSession("Database1"))
@@ -147,22 +163,22 @@ namespace Raven.Tests.Smuggler
 				    {
 						using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
 						{
-							var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-							{
-								Incremental = true,
-							});
+							//var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
+							//{
+							//	Incremental = true,
+							//});
 
-                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-							{
-								From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-								To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-							});
+                            //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+							//{
+							//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+							//	To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
+							//});
 
-                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-							{
-								From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
-								To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-							});  
+                            //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+							//{
+							//	From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
+							//	To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
+							//});  
 					    
 						    using (var session3 = store3.OpenAsyncSession("Database3"))
 						    {

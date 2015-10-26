@@ -105,7 +105,7 @@ namespace Raven.Smuggler.Database.Files
 			}
 		}
 
-		private DatabaseSmugglerOperationState ReadLastEtagsFromFile(string etagFileLocation)
+		internal DatabaseSmugglerOperationState ReadLastEtagsFromFile(string etagFileLocation)
 		{
 			if (File.Exists(etagFileLocation) == false)
 				return null;
