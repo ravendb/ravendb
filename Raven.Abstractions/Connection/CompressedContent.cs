@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Connection
     {
         private readonly HttpContent originalContent;
         private readonly string encodingType;
+
         public HttpContent OriginalContent
         {
             get { return originalContent; }
@@ -86,6 +87,7 @@ namespace Raven.Abstractions.Connection
         {
             if (originalContent != null)
                 originalContent.Dispose();
+
             base.Dispose(disposing);
         }
     }

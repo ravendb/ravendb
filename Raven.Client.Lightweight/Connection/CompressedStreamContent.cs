@@ -33,25 +33,25 @@ namespace Raven.Client.Connection
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			try
-			{
-                using (var uncloseableStream = new UndisposableStream(stream))
-                using (var bufferedStream = new BufferedStream(uncloseableStream))
+            using (var uncloseableStream = new UndisposableStream(stream))
+            using (var bufferedStream = new BufferedStream(uncloseableStream))
+            {
+                Stream innerStream = bufferedStream;
+                try
                 {
-                    Stream innerStream = bufferedStream;
 
                     if (disableRequestCompression == false)
-                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);
+                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);                
 
                     await data.CopyToAsync(innerStream).ConfigureAwait(false);
                     await innerStream.FlushAsync().ConfigureAwait(false);
                 }
-			}
-			finally
-			{
-				if (disableRequestCompression == false)
-					stream.Dispose();
-			}
+			    finally
+			    {
+				    if (disableRequestCompression == false)
+                        innerStream.Dispose();
+			    }
+            }
 		}
 
 		protected override bool TryComputeLength(out long length)

@@ -240,7 +240,7 @@ namespace Raven.Client.Connection.Implementation
 						e.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
 
-					responseException = e;
+                    responseException = e;
 				}
 
 				if (Response.StatusCode == HttpStatusCode.Forbidden)
@@ -672,18 +672,21 @@ namespace Raven.Client.Connection.Implementation
         {
             writeCalled = true;
 
-            HttpContent content = new JsonContent(tokenToWrite);
-            if (!factory.DisableRequestCompression)
-                content = new CompressedContent(content, "gzip");
+	        return SendRequestInternal(() => 
+            {                    
+                HttpContent content = new JsonContent(tokenToWrite);
+                if (!factory.DisableRequestCompression)
+                    content = new CompressedContent(content, "gzip");
 
-	        return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
-	        {
-                Content = content,
-		        Headers =
-		        {
-			        TransferEncodingChunked = true
-		        }
-	        });
+                return new HttpRequestMessage(new HttpMethod(Method), Url)
+                {
+                    Content = content,
+                    Headers =
+                    {
+                        TransferEncodingChunked = true
+                    }
+                };
+            });
         }
 
 		public Task WriteAsync(Stream streamToWrite)
