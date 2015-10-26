@@ -695,7 +695,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 						stream = File.OpenRead(importOptions.FromFile);
 						ownStream = true;
-				    }
+					}
 					await ImportData(importOptions, stream).ConfigureAwait(false);
 				}
 				finally
@@ -781,62 +781,62 @@ namespace Raven.Abstractions.Smuggler
 				throw new InvalidDataException("StartObject was expected");
 
 			var exportCounts = new Dictionary<string, int>();
-			var exportSectionRegistar = new Dictionary<string, Func<int>>();
+			var exportSectionRegistar = new Dictionary<string, Func<Task<int>>>();
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-            exportSectionRegistar.Add("Indexes", () =>
+            exportSectionRegistar.Add("Indexes", async() =>
             {
                 Operations.ShowProgress("Begin reading indexes");
-                var indexCount = ImportIndexes(jsonReader).Result;
+                var indexCount = await ImportIndexes(jsonReader).ConfigureAwait(false);
                 Operations.ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
                 return indexCount;
             });
 
-			exportSectionRegistar.Add("Docs", () =>
+			exportSectionRegistar.Add("Docs", async() =>
 			{
 				Operations.ShowProgress("Begin reading documents");
-				var documentCount = ImportDocuments(jsonReader).Result;
+				var documentCount = await ImportDocuments(jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
 				return documentCount;
 			});
 
-			exportSectionRegistar.Add("Attachments", () =>
+			exportSectionRegistar.Add("Attachments", async() =>
 			{
 				Operations.ShowProgress("Begin reading attachments");
-				var attachmentCount = ImportAttachments(importOptions.To, jsonReader).Result;
+				var attachmentCount = await ImportAttachments(importOptions.To, jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
 				return attachmentCount;
 			});
 
-			exportSectionRegistar.Add("Transformers", () =>
+			exportSectionRegistar.Add("Transformers", async() =>
 			{
 				Operations.ShowProgress("Begin reading transformers");
-				var transformersCount = ImportTransformers(jsonReader).Result;
+				var transformersCount = await ImportTransformers(jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading transformers, total: {0}", transformersCount));
 				return transformersCount;
 			});
 
-			exportSectionRegistar.Add("DocsDeletions", () =>
+			exportSectionRegistar.Add("DocsDeletions", async() =>
 		{
 				Operations.ShowProgress("Begin reading deleted documents");
-				var deletedDocumentsCount = ImportDeletedDocuments(jsonReader).Result;
+				var deletedDocumentsCount = await ImportDeletedDocuments(jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading deleted documents, total: {0}", deletedDocumentsCount));
 				return deletedDocumentsCount;
 			});
 
-			exportSectionRegistar.Add("AttachmentsDeletions", () =>
+			exportSectionRegistar.Add("AttachmentsDeletions", async() =>
 			{
 				Operations.ShowProgress("Begin reading deleted attachments");
-				var deletedAttachmentsCount = ImportDeletedAttachments(jsonReader).Result;
+				var deletedAttachmentsCount = await ImportDeletedAttachments(jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading deleted attachments, total: {0}", deletedAttachmentsCount));
 				return deletedAttachmentsCount;
 			});
 
-			exportSectionRegistar.Add("Identities", () =>
+			exportSectionRegistar.Add("Identities", async() =>
 			{
 				Operations.ShowProgress("Begin reading identities");
-				var identitiesCount = ImportIdentities(jsonReader).Result;
+				var identitiesCount = await ImportIdentities(jsonReader).ConfigureAwait(false);
 				Operations.ShowProgress(string.Format("Done with reading identities, total: {0}", identitiesCount));
 				return identitiesCount;
 			});
@@ -849,7 +849,7 @@ namespace Raven.Abstractions.Smuggler
 
 			if (jsonReader.TokenType != JsonToken.PropertyName)
 				throw new InvalidDataException("PropertyName was expected");
-				Func<int> currentAction;
+				Func<Task<int>> currentAction;
 				var currentSection = jsonReader.Value.ToString();
 				if (exportSectionRegistar.TryGetValue(currentSection, out currentAction) == false)
 				{
@@ -864,7 +864,7 @@ namespace Raven.Abstractions.Smuggler
 			if (jsonReader.TokenType != JsonToken.StartArray)
 				throw new InvalidDataException("StartArray was expected");
 
-				exportCounts[currentSection] = currentAction();
+				if (currentAction != null) exportCounts[currentSection] = await currentAction().ConfigureAwait(false);
 			}
 
 			sw.Stop();
