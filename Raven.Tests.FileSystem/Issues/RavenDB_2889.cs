@@ -7,14 +7,11 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Smuggler;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Smuggler;
-using Raven.Tests.Common;
-using Raven.Tests.FileSystem.Synchronization;
 
 using Xunit;
 

@@ -6,7 +6,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
 using Raven.Smuggler;

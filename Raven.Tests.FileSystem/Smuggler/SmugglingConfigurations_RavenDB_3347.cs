@@ -6,8 +6,8 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Helpers;
