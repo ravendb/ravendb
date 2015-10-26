@@ -1,51 +1,78 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
-using System.Transactions;
-using Raven.Abstractions.Util;
-using Raven.Client.Embedded;
-using Raven.Database.Extensions;
-using Raven.Tests.Issues.Prefetcher;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 
-namespace Raven.Tryouts
+namespace ConsoleApplication4
 {
-	static class Program
+	class Program
 	{
-		static void Main(string[] args)
+		public class Location
 		{
-		    for (int i = 0; i < 10; i++)
-		    {
-		        Console.WriteLine(i);
+			public long Latitude { get; set; }
 
-		        using (var x = new RavenDB_3581())
-		        {
-                    x.DisposeShouldCleanFutureBatches();
-		        }
-		    }
+			public long Longitude { get; set; }
 		}
 
-		private static long MeasureRunSync(EmbeddableDocumentStore store)
+		public class City
 		{
-			var rand = new Random(123);
-			var sw = Stopwatch.StartNew();
-			for (int i = 0; i < 100; i++)
+			public string Name { get; set; }
+			public Location LatLng { get; set; }
+		}
+
+		public class City_SpacialIndex : AbstractIndexCreationTask<City>
+		{
+			public City_SpacialIndex()
 			{
-				using (var session = store.OpenSession())
-				{
-					for (int j = 0; j < 15; j++)
-					{
-						var index = rand.Next(1, 1000);
-						var id = index % 2 == 0 ? "foobar/" + index : "foobar/A";
-                        var doc = session.Load<dynamic>(id);
-						if (doc != null && doc.Foo != index)
-							throw new Exception("Got bad data -> got " + doc.Foo + ", but should be " + index);
-					}
-				}
+				Map = city => from e in city
+							  select new
+							  {
+								  Name = e.Name,
+								  __ = SpatialGenerate("Coordinates", e.LatLng.Latitude, e.LatLng.Longitude)
+							  };
 			}
-			sw.Stop();
-			Console.WriteLine(sw.ElapsedMilliseconds);
-			return sw.ElapsedMilliseconds;
 		}
+
+		private static void Main(string[] args)
+		{
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost.fiddler:8080",
+				DefaultDatabase = "Cities"
+			}.Initialize())
+			{
+				double londonLat = 51.520097;
+				double londonLng = -0.123571;
+				new City_SpacialIndex().Execute(store);
+
+				//				try
+				//				{
+				for (int j = 0; j < 10; j++)
+				{
+					Parallel.For(1, 10, async (i) =>
+					{
+						using (var session = store.OpenAsyncSession())
+						{
+							var results = await session.Advanced.AsyncDocumentQuery<dynamic, City_SpacialIndex>()
+								.WithinRadiusOf("Coordinates", 1000.0, londonLat, londonLng)
+								.SortByDistance()
+								.Take(20)
+								.ToListAsync();
+
+							if (results == null || results.Count == 0)
+								throw new Exception("FooBar!");
+						}
+					});
+					
+				}
+				//				}
+				//				catch (Exception e)
+				//				{
+				//					Debugger.Launch();
+				//				}
+			}
+		}
+
 	}
 }
