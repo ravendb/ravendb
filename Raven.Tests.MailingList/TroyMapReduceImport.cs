@@ -1,11 +1,15 @@
 ﻿using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Database.Smuggler;
+
 using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Database.Smuggler.Embedded;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Streams;
+
 using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
@@ -18,10 +22,14 @@ namespace Raven.Tests.MailingList
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
             {
-                var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
                 using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
                 {
-                    await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream });
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerStreamSource(stream),
+                        new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+                    await smuggler.ExecuteAsync();
                 }
 
                 using (var s = store.OpenSession())

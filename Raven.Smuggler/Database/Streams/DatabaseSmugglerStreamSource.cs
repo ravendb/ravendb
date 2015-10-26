@@ -27,7 +27,7 @@ namespace Raven.Smuggler.Database.Streams
 	{
 		private readonly Stream _stream;
 
-		private CountingStream _sizeStream;
+	    private CountingStream _sizeStream;
 
 		private StreamReader _streamReader;
 
@@ -35,12 +35,15 @@ namespace Raven.Smuggler.Database.Streams
 
 		private DatabaseSmugglerOptions _options;
 
-		public DatabaseSmugglerStreamSource(Stream stream)
+	    private readonly bool _leaveOpen;
+
+	    public DatabaseSmugglerStreamSource(Stream stream, bool leaveOpen = true)
 		{
-			_stream = stream;
+		    _stream = stream;
+		    _leaveOpen = leaveOpen;
 		}
 
-		public string DisplayName { get; set; }
+	    public string DisplayName { get; set; }
 
 		public bool SupportsMultipleSources => false;
 
@@ -286,6 +289,9 @@ namespace Raven.Smuggler.Database.Streams
 			_streamReader?.Dispose();
 
 			_sizeStream?.Dispose();
+
+            if (_leaveOpen == false)
+                _stream?.Dispose();
 		}
 
 		private class YieldJsonResults<T> : IAsyncEnumerator<T>

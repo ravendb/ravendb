@@ -1,11 +1,12 @@
-using System;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -22,7 +23,15 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			{
 				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
-                    new SmugglerDatabaseApi().ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream, To = new RavenConnectionStringOptions { Url = store.Url } }).Wait(TimeSpan.FromSeconds(15));
+				    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(), 
+                        new DatabaseSmugglerStreamSource(stream), 
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Url = store.Url
+                        }));
+
+				    smuggler.Execute();
 				}
 
 				using (var session = store.OpenSession())

@@ -6,13 +6,14 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Smuggler;
-using Raven.Json.Linq;
+using Raven.Database.Smuggler.Embedded;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -23,18 +24,26 @@ namespace Raven.Tests.MailingList
 	{
         [Fact, Trait("Category", "Smuggler")]
 		public async Task CanImportFromDumpFile()
-		{
-		    var file = Path.GetTempFileName();
+        {
+            var file = Path.Combine(NewDataPath(forceCreateDir: true), "backup.ravendump");
 			using (var store = NewDocumentStoreWithData())
 			{
-                var dumper = new DatabaseDataDumper(store.SystemDatabase);
-                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file });
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(), 
+                    new DatabaseSmugglerEmbeddedSource(store.SystemDatabase), 
+                    new DatabaseSmugglerFileDestination(file));
+
+			    await smuggler.ExecuteAsync();
 			}
 
 			using (var store = NewDocumentStore())
 			{
-                var dumper = new DatabaseDataDumper(store.SystemDatabase);
-                await dumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file });
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(file), 
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+                await smuggler.ExecuteAsync();
 
 				using (var session = store.OpenSession())
 				{
@@ -51,8 +60,12 @@ namespace Raven.Tests.MailingList
 
 			using (var store = NewDocumentStoreWithData())
 			{
-                var dumper = new DatabaseDataDumper(store.SystemDatabase);
-                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file });
+                var smuggler = new DatabaseSmuggler(
+                   new DatabaseSmugglerOptions(),
+                   new DatabaseSmugglerEmbeddedSource(store.SystemDatabase),
+                   new DatabaseSmugglerFileDestination(file));
+
+                await smuggler.ExecuteAsync();
 
 				using (var session = store.OpenSession())
 				{
@@ -64,7 +77,13 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-                new DatabaseDataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file }).Wait();
+                smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(file),
+                    new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
+
+			    await smuggler.ExecuteAsync();
+
 				using (var session = store.OpenSession())
 				{
 					// Original person has been restored.

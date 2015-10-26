@@ -170,7 +170,7 @@ namespace Raven.Smuggler.Database.Files
 
 		private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
 		{
-			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path))
+			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path), leaveOpen: false)
 			{
 				DisplayName = Path.GetFileName(path)
 			};
