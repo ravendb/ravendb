@@ -4,7 +4,7 @@ class counter {
 	serverValues = ko.observableArray<serverValue>();
     localServerId = ko.observable<string>();
     lastUpdateByServer = ko.observable<string>();
-    total  = ko.observable<number>(0);
+    total = ko.observable<number>(0);
     numOfServers = ko.observable<number>(0);
 
     constructor(dto: counterDto) {

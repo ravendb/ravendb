@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Counters;
 using Raven.Database.Config;
+using Raven.Database.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
@@ -24,6 +26,7 @@ namespace Raven.Tests.Counters
 	{
 		protected readonly Lazy<IDocumentStore> ravenStore;
 		private readonly ConcurrentDictionary<string, int> storeCount;
+		private readonly List<IDisposable> disposables = new List<IDisposable>();
 		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
 		protected RavenBaseCountersTest()
@@ -34,7 +37,19 @@ namespace Raven.Tests.Counters
 			ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
 			DefaultCounterStorageName += Guid.NewGuid();
 			storeCount = new ConcurrentDictionary<string, int>();
-		}			
+		}
+
+		protected CounterStorage NewCounterStorage()
+		{
+			var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
+			{
+				RunInMemory = true
+			});
+
+			disposables.Add(newCounterStorage);
+			return newCounterStorage;
+		}
+
 
 		protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
 		{
@@ -89,6 +104,8 @@ namespace Raven.Tests.Counters
 				foreach(var server in servers)
 					IOExtensions.DeleteDirectory(server.Configuration.DataDirectory); //for failover tests that have runInMemory = false
 				IOExtensions.DeleteDirectory("Counters");
+
+				disposables.ForEach(d => d.Dispose());
 				base.Dispose();
 			}
 			catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed

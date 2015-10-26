@@ -493,7 +493,7 @@ namespace Raven.Database.Smuggler
 
 				var existingCounterGroupsAndNames = await target.Admin.GetCounterStorageNameAndGroups(token: CancellationToken).ConfigureAwait(false);
 				var counterSummaries = await source.Admin.GetCounterStorageSummary(token: CancellationToken).ConfigureAwait(false);
-				ShowProgress(String.Format("Fetched counter data from source (there is data about {0} counters)",counterSummaries.Length));
+				ShowProgress(String.Format("Fetched counter data from source (there is data about {0} counters)",counterSummaries.Count));
 
 				foreach (var summary in counterSummaries)
 				{

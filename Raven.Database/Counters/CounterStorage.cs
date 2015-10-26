@@ -301,7 +301,17 @@ namespace Raven.Database.Counters
 		public class Reader : IDisposable
 		{
 			private readonly Transaction transaction;
-			private readonly Tree counters, tombstonesByDate, groupToCounters, tombstonesGroupToCounters, counterIdWithNameToGroup, etagsToCounters, countersToEtag, serversLastEtag, replicationSources, metadata;
+			private readonly Tree counters,
+				tombstonesByDate, 
+				groupToCounters, 
+				tombstonesGroupToCounters, 
+				counterIdWithNameToGroup, 
+				etagsToCounters, 
+				countersToEtag, 
+				serversLastEtag, 
+				replicationSources, 
+				metadata;
+
 			private readonly CounterStorage parent;
 
 			[CLSCompliant(false)]
@@ -366,7 +376,7 @@ namespace Raven.Database.Counters
 					{
 						using (var iterator = groupToCounters.MultiRead(it.CurrentKey))
 						{
-							if (iterator.Seek(Slice.BeforeAllKeys) == false || (skip > 0 && iterator.Skip(skip) == false))
+							if (iterator.Seek(Slice.BeforeAllKeys) == false || (skip > 0 && !iterator.Skip(skip)))
 							{
 								skip = 0;
 								continue;
@@ -397,7 +407,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public List<CounterSummary> GetCountersSummary(string groupName, int skip = 0, int take = int.MaxValue)
+			public List<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
 			{
 				ThrowIfDisposed();
 				var countersDetails = GetCountersDetails(groupName, skip).Take(take);
@@ -499,7 +509,25 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public IEnumerable<CounterGroup> GetCounterGroups()
+			public long GetGroupCount()
+			{
+				ThrowIfDisposed();
+				long count = 0;
+				using (var it = groupToCounters.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) == false)
+						return 0;
+
+					do
+					{
+						count ++;
+					} while (it.MoveNext());
+
+				}
+				return count;
+			}
+
+			public IEnumerable<CounterGroup> GetCounterGroups(int skip, int take)
 			{
 				ThrowIfDisposed();
 				using (var it = groupToCounters.Iterate())
@@ -507,14 +535,18 @@ namespace Raven.Database.Counters
 					if (it.Seek(Slice.BeforeAllKeys) == false)
 						yield break;
 
+					if (skip > 0 && !it.Skip(skip))
+						yield break;
+
+					var taken = 0;
 					do
-					{
+					{						
 						yield return new CounterGroup
 						{
 							Name = it.CurrentKey.ToString(),
 							Count = groupToCounters.MultiCount(it.CurrentKey)
 						};
-					} while (it.MoveNext());
+					} while (it.MoveNext() && taken++ < take);
 				}
 			}
 
@@ -536,7 +568,8 @@ namespace Raven.Database.Counters
 				{
 					it.RequiredPrefix = counterIdSlice;
 					var seekResult = it.Seek(it.RequiredPrefix);
-					//should always be true
+										
+					// ReSharper disable once RedundantBoolCompare
 					Debug.Assert(seekResult == true);
 
 					var serverIdBuffer = new byte[parent.sizeOfGuid];
@@ -1287,14 +1320,11 @@ namespace Raven.Database.Counters
 					buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
 
-			public void Commit(bool notifyParent = true)
+			public void Commit()
 			{
 				transaction.Commit();
 				parent.LastWrite = SystemTime.UtcNow;
-				if (notifyParent)
-				{
-					parent.Notify();
-				}
+				parent.Notify();
 			}
 
 			public void Dispose()

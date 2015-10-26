@@ -73,13 +73,13 @@ namespace Raven.Tests.Counters
 
 				using (var counterStore = new CounterStore
 				{
-					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Url = $"{server.DocumentStore.Url}:{server.Configuration.Port}",
 					Name = DefaultCounterStorageName
 				})
 				{
 					counterStore.Initialize(true);
 					var summary = await counterStore.Admin.GetCounterStorageSummary(DefaultCounterStorageName);
-                    Assert.Equal(2, summary.Length);
+                    Assert.Equal(2, summary.Count);
                     Assert.NotNull(summary.SingleOrDefault(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C"));
 					Assert.NotNull(summary.SingleOrDefault(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2"));
 				}
