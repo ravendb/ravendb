@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Database.Server.Connections;
+using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.WebApi.Handlers
 {
@@ -28,8 +31,8 @@ namespace Raven.Database.Server.WebApi.Handlers
 				return Compress(response);
 			}
 
-			// Read in the input stream, then decompress in to the outputstream.
-			// Doing this asynronously, but not really required at this point
+			// Read in the input stream, then decompress in to the output stream.
+			// Doing this asynchronously, but not really required at this point
 			// since we end up waiting on it right after this.
 			Stream outputStream = new MemoryStream();
 			await request.Content.ReadAsStreamAsync().ContinueWith(t =>
@@ -83,81 +86,6 @@ namespace Raven.Database.Server.WebApi.Handlers
 			}
 
 			return response;
-		}
-
-		public class CompressedContent : HttpContent
-		{
-			private readonly HttpContent originalContent;
-			private readonly string encodingType;
-		    public HttpContent OriginalContent
-		    {
-		        get { return originalContent; }
-		    }
-
-		    public CompressedContent(HttpContent content, string encodingType)
-			{
-				if (content == null)
-				{
-					throw new ArgumentNullException("content");
-				}
-
-				if (encodingType == null)
-				{
-					throw new ArgumentNullException("encodingType");
-				}
-
-				originalContent = content;
-				this.encodingType = encodingType.ToLowerInvariant();
-
-				if (this.encodingType != "gzip" && this.encodingType != "deflate")
-				{
-					throw new InvalidOperationException(string.Format("Encoding '{0}' is not supported. Only supports gzip or deflate encoding.", this.encodingType));
-				}
-
-				// copy the headers from the original content
-				foreach (KeyValuePair<string, IEnumerable<string>> header in originalContent.Headers)
-				{
-					Headers.TryAddWithoutValidation(header.Key, header.Value);
-				}
-
-				Headers.ContentEncoding.Add(encodingType);
-			}
-
-			protected override bool TryComputeLength(out long length)
-			{
-				length = -1;
-
-				return false;
-			}
-
-			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				Stream compressedStream = null;
-
-				if (encodingType == "gzip")
-				{
-					compressedStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
-				}
-				else if (encodingType == "deflate")
-				{
-					compressedStream = new DeflateStream(stream, CompressionMode.Compress, leaveOpen: true);
-				}
-
-				return originalContent.CopyToAsync(compressedStream).ContinueWith(tsk =>
-				{
-					if (compressedStream != null)
-					{
-						compressedStream.Dispose();
-					}
-				});
-			}
-
-			protected override void Dispose(bool disposing)
-			{
-				if (originalContent != null)
-					originalContent.Dispose();
-				base.Dispose(disposing);
-			}
 		}
 	}
 }
