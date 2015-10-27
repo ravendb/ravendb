@@ -39,9 +39,14 @@
 			<i class=" fa fa-pencil"></i>
 		</a>
 	</div>
-	<button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
-		<span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
-	</button>
+    <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
+        <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+    </button>
+    <div class="btn-group">
+        <button class="btn btn-default" title="Export CSV" data-bind="click: exportCsv, enable: isExportEnabled">
+            <i class="fa fa-file-excel-o"></i>
+        </button>
+    </div>
 </div>
 <br />
 

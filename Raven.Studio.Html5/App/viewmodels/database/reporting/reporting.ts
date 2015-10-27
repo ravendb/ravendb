@@ -26,11 +26,55 @@ class reporting extends viewModelBase {
     queryDuration = ko.observable<string>();
 	appUrls: computedAppUrls;
 	isCacheDisable = ko.observable<boolean>(false);
-    
+    isExportEnabled = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() > 0 : false);
+
     constructor() {
         super();
         this.appUrls = appUrl.forCurrentDatabase();
-	}
+    }
+
+    exportCsv() {
+        if (this.isExportEnabled() === false)
+            return false;
+        var objArray = JSON.stringify(this.reportResults().getAllCachedItems());
+        var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+
+        if (array[0] === undefined)
+            return false;
+
+        var str = '';
+
+        var line = '';
+        for (var index in array[0]) {
+            if (index === "__metadata")
+                continue;
+            if (line != '') line += ','
+
+            line += index;
+        }
+
+        str += line + '\r\n';
+
+        for (var i = 0; i < array.length; i++) {
+            line = '';
+            for (var index in array[i]) {
+                if (index === "__metadata")
+                    continue;
+                if (line != '') line += ','
+
+                line += array[i][index];
+            }
+
+            str += line + '\r\n';
+        }
+
+        var uriContent = encodeURIComponent(str);
+        var link = document.createElement('a');
+        link["download"] = this.selectedIndexName() ? "Reporting_" + this.selectedIndexName() + ".csv" : "reporting.csv";
+        link.href = 'data:,' + uriContent;
+        link.click();
+        return true;
+    }
 
 	attached() {
 		super.attached();
@@ -93,6 +137,9 @@ class reporting extends viewModelBase {
         this.selectedField(null);
         this.addedValues([]);
         this.availableFields([]);
+        if (!!this.reportResults()) {
+            this.reportResults(null);
+        }
     }
 
     mapSortToType(sort: string) {
