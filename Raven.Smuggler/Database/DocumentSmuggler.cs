@@ -80,69 +80,69 @@ namespace Raven.Smuggler.Database
 								while (await documents.MoveNextAsync().ConfigureAwait(false))
 								{
 									hasDocs = true;
-									var document = documents.Current;
 
-									var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-									var key = document["@metadata"].Value<string>("@id");
+									var currentDocument = documents.Current;
+									var currentEtag = Etag.Parse(currentDocument.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+									var currentKey = currentDocument["@metadata"].Value<string>("@id");
 
-									Notifications.OnDocumentRead(this, key);
+									Notifications.OnDocumentRead(this, currentKey);
 
-									if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+									if (maxEtag != null && currentEtag.CompareTo(maxEtag) > 0)
 									{
 										reachedMaxEtag = true;
 										break;
 									}
 
-									fromEtag = tempLastEtag;
+									fromEtag = currentEtag;
 
-									if (Options.MatchFilters(document) == false)
+									if (Options.MatchFilters(currentDocument) == false)
 									{
 										if (affectedCollections.Count <= 0)
 											continue;
 
-										if (document.ContainsKey("@metadata") == false)
+										if (currentDocument.ContainsKey("@metadata") == false)
 											continue;
 
-										if (key == null || key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => key.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+										if (currentKey == null || currentKey.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => currentKey.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
 											continue;
 									}
 
-									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+									if (Options.ShouldExcludeExpired && Options.ExcludeExpired(currentDocument, now))
 										continue;
 
 									if (string.IsNullOrEmpty(Options.TransformScript) == false)
-										document = await TransformDocumentAsync(document).ConfigureAwait(false);
+										currentDocument = await TransformDocumentAsync(currentDocument).ConfigureAwait(false);
 
 									// If document is null after a transform we skip it. 
-									if (document == null)
+									if (currentDocument == null)
 										continue;
 
-									var metadata = document["@metadata"] as RavenJObject;
+									var metadata = currentDocument["@metadata"] as RavenJObject;
 									if (metadata != null)
 									{
 										if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
 											continue;
 
 										if (Options.StripReplicationInformation)
-											document["@metadata"] = SmugglerHelper.StripReplicationInformationFromMetadata(metadata);
+											currentDocument["@metadata"] = SmugglerHelper.StripReplicationInformationFromMetadata(metadata);
 
 										if (Options.ShouldDisableVersioningBundle)
-											document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+											currentDocument["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
 
-										document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+										currentDocument["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
 									}
 
 									try
 									{
-										await actions.WriteDocumentAsync(document, cancellationToken).ConfigureAwait(false);
-									    Notifications.OnDocumentWrite(this, key);
+										await actions.WriteDocumentAsync(currentDocument, cancellationToken).ConfigureAwait(false);
+									    Notifications.OnDocumentWrite(this, currentKey);
 									}
 									catch (Exception e)
 									{
 										if (Options.IgnoreErrorsAndContinue == false)
 											throw;
 
-										Notifications.ShowProgress("EXPORT of a document {0} failed. Message: {1}", document, e.Message);
+										Notifications.ShowProgress("EXPORT of a document {0} failed. Message: {1}", currentDocument, e.Message);
 									}
 
 									totalCount++;
@@ -157,8 +157,8 @@ namespace Raven.Smuggler.Database
 									{
 										if (Destination.SupportsOperationState)
 										{
-											if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-												state.LastDocsEtag = tempLastEtag;
+											if (currentEtag.CompareTo(state.LastDocsEtag) > 0)
+												state.LastDocsEtag = currentEtag;
 
 											await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
 										}
