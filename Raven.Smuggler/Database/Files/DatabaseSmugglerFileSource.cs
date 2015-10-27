@@ -168,7 +168,12 @@ namespace Raven.Smuggler.Database.Files
 			throw new NotSupportedException();
 		}
 
-		private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+	        return new CompletedTask();
+	    }
+
+	    private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)
 		{
 			var source = new DatabaseSmugglerStreamSource(File.OpenRead(path), leaveOpen: false)
 			{

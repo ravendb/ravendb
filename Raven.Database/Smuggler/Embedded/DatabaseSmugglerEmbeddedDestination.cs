@@ -78,5 +78,10 @@ namespace Raven.Database.Smuggler.Embedded
 		{
 			throw new NotSupportedException();
 		}
-	}
+
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+	        return new CompletedTask();
+	    }
+    }
 }

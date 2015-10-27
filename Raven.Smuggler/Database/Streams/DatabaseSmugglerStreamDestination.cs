@@ -91,7 +91,12 @@ namespace Raven.Smuggler.Database.Streams
 			throw new NotSupportedException();
 		}
 
-		public void Dispose()
+	    public virtual Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+        }
+
+	    public void Dispose()
 		{
 			_writer?.WriteEndObject();
             _writer?.Flush();

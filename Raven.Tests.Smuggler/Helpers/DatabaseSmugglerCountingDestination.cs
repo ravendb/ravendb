@@ -94,7 +94,12 @@ namespace Raven.Tests.Smuggler.Helpers
 			throw new NotSupportedException();
 		}
 
-		private class DatabaseSmugglerCountingIndexActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIndexActions
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+        }
+
+	    private class DatabaseSmugglerCountingIndexActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIndexActions
 		{
 			public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
 			{

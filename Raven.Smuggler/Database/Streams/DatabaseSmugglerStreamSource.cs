@@ -284,7 +284,12 @@ namespace Raven.Smuggler.Database.Streams
 			return SkipAsync(cancellationToken);
 		}
 
-		private Task SkipAsync(CancellationToken cancellationToken)
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+        }
+
+	    private Task SkipAsync(CancellationToken cancellationToken)
 		{
 			while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
 			{

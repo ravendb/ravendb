@@ -29,5 +29,7 @@ namespace Raven.Smuggler.Database
 		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken);
 
 		Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
+
+	    Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
 	}
 }

@@ -31,7 +31,9 @@ namespace Raven.Smuggler.Database.Files
 
 		private readonly DatabaseSmugglerFileDestinationOptions _options;
 
-		public DatabaseSmugglerFileDestination(string path, DatabaseSmugglerFileDestinationOptions options = null)
+	    private string _outputFilePath;
+
+	    public DatabaseSmugglerFileDestination(string path, DatabaseSmugglerFileDestinationOptions options = null)
 			: base(Stream.Null, leaveOpen: false)
 		{
 			_path = path;
@@ -68,6 +70,7 @@ namespace Raven.Smuggler.Database.Files
 				}
 			}
 
+		    _outputFilePath = filePath;
 			_stream = File.Create(filePath);
 
 			await base.InitializeAsync(options, notifications, cancellationToken).ConfigureAwait(false);
@@ -92,7 +95,13 @@ namespace Raven.Smuggler.Database.Files
 			return new CompletedTask();
 		}
 
-		private static void WriteLastEtagsToFile(DatabaseSmugglerOperationState state, string etagFileLocation)
+	    public override Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+	        state.FilePath = _outputFilePath;
+	        return base.AfterExecuteAsync(state);
+	    }
+
+	    private static void WriteLastEtagsToFile(DatabaseSmugglerOperationState state, string etagFileLocation)
 		{
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{

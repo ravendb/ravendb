@@ -62,5 +62,7 @@ namespace Raven.Smuggler.Database
 		Task SkipAttachmentsAsync(CancellationToken cancellationToken);
 
 		Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken);
+
+	    Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
 	}
 }

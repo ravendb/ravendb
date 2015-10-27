@@ -201,5 +201,10 @@ namespace Raven.Database.Smuggler.Embedded
 		{
 			return new CompletedTask();
 		}
+
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+        }
 	}
 }

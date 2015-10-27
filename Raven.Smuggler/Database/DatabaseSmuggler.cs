@@ -72,7 +72,10 @@ namespace Raven.Smuggler.Database
 				foreach (var source in sources)
 					await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
 
-				return state;
+			    await _source.AfterExecuteAsync(state).ConfigureAwait(false);
+                await _source.AfterExecuteAsync(state).ConfigureAwait(false);
+
+                return state;
 			}
 		}
 

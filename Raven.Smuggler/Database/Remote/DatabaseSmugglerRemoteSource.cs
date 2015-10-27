@@ -223,5 +223,10 @@ namespace Raven.Smuggler.Database.Remote
 		{
 			return new CompletedTask();
 		}
+
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+        }
 	}
 }

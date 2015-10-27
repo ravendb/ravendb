@@ -195,5 +195,10 @@ namespace Raven.Smuggler.Database.Remote
 			stopwatch.Stop();
 			justIndexingWait.Stop();
 		}
+
+	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+	    {
+            return new CompletedTask();
+	    }
 	}
 }
