@@ -25,8 +25,8 @@ namespace Raven.Abstractions.Util.Streams
 
         public BufferPoolMemoryStream()
         {
-            _buffer = new byte[64];
-            _bufferPool = null;
+            _bufferPool = BufferSharedPools.MicroByteArray;
+            _buffer = _bufferPool.Allocate();          
         }
 
         protected override void Dispose(bool disposing)
