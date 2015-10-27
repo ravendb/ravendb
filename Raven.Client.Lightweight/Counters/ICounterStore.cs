@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
+using Raven.Client.Connection;
 using Raven.Client.Counters.Changes;
 using Raven.Client.Counters.Replication;
 
@@ -17,6 +18,8 @@ namespace Raven.Client.Counters
 		string Name { get; }
 
 		string Url { get; }
+
+		HttpJsonRequestFactory JsonRequestFactory { get; set; }
 
 		CountersConvention CountersConvention { get; set; }
 

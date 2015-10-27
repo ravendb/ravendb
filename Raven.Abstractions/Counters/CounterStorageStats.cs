@@ -14,7 +14,9 @@ namespace Raven.Abstractions.Counters
 
         public long GroupsCount { get; set; }
 
-        public long LastCounterEtag { get; set; }
+		public long TombstonesCount { get; set; }
+
+		public long LastCounterEtag { get; set; }
 
         public int ReplicationTasksCount { get; set; }
 

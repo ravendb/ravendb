@@ -439,6 +439,26 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		[RavenRoute("cs/{counterStorageName}/purge-tombstones")]
+		[HttpPost]
+		public HttpResponseMessage PurgeTombstones()
+		{
+			CounterStorage.MetricsCounters.ClientRequests.Mark();
+
+			while (true)
+			{
+				using (var writer = CounterStorage.CreateWriter())
+				{
+					if (writer.PurgeOutdatedTombstones() == false)
+						break;
+
+					writer.Commit();
+				}
+			}
+
+			return GetEmptyMessage();
+		}
+
 		// ReSharper disable once UnusedParameter.Local
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private HttpResponseMessage VerifyGroupAndCounterName(string groupName, string counterName)

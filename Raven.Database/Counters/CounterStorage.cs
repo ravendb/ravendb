@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
@@ -47,6 +48,7 @@ namespace Raven.Database.Counters
 
 		private long lastEtag;
 		private long lastCounterId;
+		private Timer purgeTombstonesTimer;
 		public event Action CounterUpdated = () => { };
 
 		public string CounterStorageUrl { get; private set; }
@@ -84,7 +86,7 @@ namespace Raven.Database.Counters
 			sizeOfGuid = sizeof(Guid);
 
 			Initialize();
-			//purgeTombstonesTimer = new Timer(BackgroundActionsCallback, null, TimeSpan.Zero, TimeSpan.FromHours(1));
+			purgeTombstonesTimer = new Timer(BackgroundActionsCallback, null, TimeSpan.Zero, TimeSpan.FromHours(1));
 		}
 
 		private void Initialize()
@@ -146,17 +148,24 @@ namespace Raven.Database.Counters
 
 		private void BackgroundActionsCallback(object state)
 		{
-			while (true)
+			try
 			{
-				using (var writer = CreateWriter())
+				while (true)
 				{
-					if (writer.PurgeOutdatedTombstones() == false)
-						break;
+					using (var writer = CreateWriter())
+					{
+						if (writer.PurgeOutdatedTombstones(tombstoneRetentionTime) == false)
+							break;
 
-					writer.Commit();
+						writer.Commit();
+					}
 				}
 			}
-		}
+			catch (Exception e)
+			{
+				Log.Info("Failed to purge outdated tombstones. going to try again in an hour.", e.Message);
+			}
+        }
 
 		string IResourceStore.Name
 		{
@@ -208,6 +217,7 @@ namespace Raven.Database.Counters
 					Url = CounterStorageUrl,
 					CountersCount = reader.GetCountersCount(),
 					GroupsCount = reader.GetGroupsCount(),
+					TombstonesCount = reader.GetTombsotnesCount(),
 					LastCounterEtag = lastEtag,
 					ReplicationTasksCount = replicationTask.GetActiveTasksCount(),
 					CounterStorageSize = SizeHelper.Humane(Environment.Stats().UsedDataFileSizeInBytes),
@@ -294,6 +304,9 @@ namespace Raven.Database.Counters
 			if (metricsCounters != null)
 				exceptionAggregator.Execute(metricsCounters.Dispose);
 
+			if (purgeTombstonesTimer != null)
+				purgeTombstonesTimer.Dispose();
+
 			exceptionAggregator.ThrowIfNeeded();
 		}
 
@@ -336,6 +349,23 @@ namespace Raven.Database.Counters
 					} while (it.MoveNext());
 				}
 				return countersCount;
+			}
+
+			public long GetTombsotnesCount()
+			{
+				ThrowIfDisposed();
+				long tombsotnesCount = 0;
+				using (var it = tombstonesGroupToCounters.Iterate())
+				{
+					if (it.Seek(Slice.BeforeAllKeys) == false)
+						return tombsotnesCount;
+
+					do
+					{
+						tombsotnesCount += tombstonesGroupToCounters.MultiCount(it.CurrentKey);
+					} while (it.MoveNext());
+				}
+				return tombsotnesCount;
 			}
 
 			public long GetGroupsCount()
@@ -1010,14 +1040,14 @@ namespace Raven.Database.Counters
 			{
 				var tombstoneNameSlice = GetFullCounterNameSlice(counterIdBuffer, parent.tombstoneId, ValueSign.Positive);
 				var tombstone = counters.Read(tombstoneNameSlice);
-				if (tombstone == null)
-					return;
-
-				//delete the tombstone from the tombstones tree
-				tombstone.Reader.Read(buffer.TombstoneTicks.Value, 0, sizeof(long));
-				Array.Reverse(buffer.TombstoneTicks.Value);
-				var slice = new Slice(buffer.TombstoneTicks.Value);
-				dateToTombstones.MultiDelete(slice, tombstoneNameSlice);
+				if (tombstone != null)
+				{
+					//delete the tombstone from the tombstones tree
+					tombstone.Reader.Read(buffer.TombstoneTicks.Value, 0, sizeof (long));
+					Array.Reverse(buffer.TombstoneTicks.Value);
+					var slice = new Slice(buffer.TombstoneTicks.Value);
+					dateToTombstones.MultiDelete(slice, tombstoneNameSlice);
+				}
 
 				//Update the tombstone in the counters tree
 				counters.Delete(tombstoneNameSlice);
@@ -1206,30 +1236,41 @@ namespace Raven.Database.Counters
 				metadata.Delete(BackupStatus.RavenBackupStatusDocumentKey);
 			}
 
-			public bool PurgeOutdatedTombstones()
+			public bool PurgeOutdatedTombstones(TimeSpan? tombstoneRetentionTime = null)
 			{
 				ThrowIfDisposed();
-				var timeAgo = DateTime.Now.AddTicks(-parent.tombstoneRetentionTime.Ticks);
+				//if we're not provided with tombstoneRetentionTime, delete all the tombstones from the beginning of time
+				var timeAgo = tombstoneRetentionTime == null ? DateTime.MinValue : DateTime.Now.AddTicks(-tombstoneRetentionTime.Value.Ticks);
+				//var timeAgo = DateTime.Now.AddTicks(-tombstoneRetentionTime.Value.Ticks);
 				EndianBitConverter.Big.CopyBytes(timeAgo.Ticks, buffer.TombstoneTicks.Value, 0);
 				var tombstone = new Slice(buffer.TombstoneTicks.Value);
 				var deletedTombstonesInBatch = parent.deletedTombstonesInBatch;
+
+				var keysToDelete = new List<Tuple<Slice, Slice>>();
 				using (var it = dateToTombstones.Iterate())
 				{
-					it.RequiredPrefix = tombstone;
-					if (it.Seek(it.RequiredPrefix) == false)
+					//it.RequiredPrefix = tombstone;
+					if (it.Seek(tombstone) == false)
 						return false;
 
 					do
 					{
-						using (var iterator = dateToTombstones.MultiRead(it.CurrentKey))
+						
+						using (var innerIterator = dateToTombstones.MultiRead(it.CurrentKey))
 						{
-							var valueReader = iterator.CurrentKey.CreateReader();
-							valueReader.Read(buffer.CounterId, 0, iterator.CurrentKey.Size - sizeof(long));
-							DeleteCounterById(buffer.CounterId);
-							dateToTombstones.MultiDelete(it.CurrentKey, iterator.CurrentKey);
+							do
+							{
+								innerIterator.Seek(Slice.BeforeAllKeys);
+								var valueReader = innerIterator.CurrentKey.CreateReader();
+								valueReader.Read(buffer.CounterId, 0, innerIterator.CurrentKey.Size - sizeof (char) - parent.sizeOfGuid);
+								DeleteCounterById(buffer.CounterId);
+								keysToDelete.Add(new Tuple<Slice, Slice>(it.CurrentKey, innerIterator.CurrentKey));
+							} while (innerIterator.MoveNext() && --deletedTombstonesInBatch > 0);
 						}
-					} while (it.MoveNext() && --deletedTombstonesInBatch > 0);
+						
+                    } while (it.MoveNext() && --deletedTombstonesInBatch > 0);
 				}
+				keysToDelete.ForEach(x => dateToTombstones.MultiDelete(x.Item1, x.Item2));
 
 				return true;
 			}
@@ -1243,15 +1284,16 @@ namespace Raven.Database.Counters
 					var seek = it.Seek(it.RequiredPrefix);
 					Debug.Assert(seek == true);
 
-					var counterNameSlice = GetCounterNameSlice(it.CurrentKey.Size, it.CurrentKey.CreateReader());
 					var valueReader = it.CreateReaderForCurrent();
 					var groupNameSlice = valueReader.AsSlice();
-
-					tombstonesGroupToCounters.MultiDelete(groupNameSlice, counterNameSlice);
+					var counterNameWithIdSlice = GetCounterNameSlice(counterIdBuffer, it.CurrentKey.Size, it.CurrentKey.CreateReader());
+					tombstonesGroupToCounters.MultiDelete(groupNameSlice, counterNameWithIdSlice);
 					counterIdWithNameToGroup.Delete(it.CurrentKey);
 				}
 
 				//remove all counters values for all servers
+
+				var counterKeysToDelete = new List<Slice>();
 				using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = counterIdSlice;
@@ -1263,22 +1305,25 @@ namespace Raven.Database.Counters
 						var counterKey = it.CurrentKey;
 						RemoveOldEtagIfNeeded(counterKey);
 						countersToEtag.Delete(counterKey);
-						counters.Delete(counterKey);
+						counterKeysToDelete.Add(counterKey);
 					} while (it.MoveNext());
 				}
-			}
+				counterKeysToDelete.ForEach(x => counters.Delete(x));
+            }
 
-			private static Slice GetCounterNameSlice(ushort currentKeySize, ValueReader currentReader)
+			private Slice GetCounterNameSlice(byte[] counterIdBuffer, ushort currentKeySize, ValueReader currentReader)
 			{
 				var counterNameSize = currentKeySize - sizeof(long);
-				//EnsureBufferSize(ref buffer.CounterNameBuffer, counterNameSize);
-				//var currentReader = it.CurrentKey.CreateReader();
 				currentReader.Skip(sizeof(long));
-				//currentReader.Read(buffer.CounterNameBuffer, 0, counterNameSize);
 				int used;
 				var counterNameBuffer = currentReader.ReadBytes(counterNameSize, out used);
-				var counterNameSlice = new Slice(counterNameBuffer, (ushort)counterNameSize);
-				return counterNameSlice;
+				var counterNameWithIdSize = used + sizeof(long);
+				EnsureBufferSize(ref buffer.CounterNameWithId, counterNameWithIdSize);
+				var sliceWriter = new SliceWriter(buffer.CounterNameWithId);
+				sliceWriter.Write(counterNameBuffer);
+				sliceWriter.Write(counterIdBuffer);
+				var counterNameWithIdSlice = sliceWriter.CreateSlice(counterNameWithIdSize);
+				return counterNameWithIdSlice;
 			}
 
 			private static void EnsureBufferSize(ref byte[] buffer, int requiredBufferSize)
@@ -1305,7 +1350,7 @@ namespace Raven.Database.Counters
 			private void ThrowIfDisposed()
 			{
 				if (transaction.IsDisposed)
-					throw new ObjectDisposedException("CounterStorage::Reader", "The reader should not be used after being disposed.");
+					throw new ObjectDisposedException("CounterStorage::Writer", "The writer should not be used after being disposed.");
 			}
 		}
 

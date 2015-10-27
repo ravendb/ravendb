@@ -79,6 +79,7 @@
     <Compile Include="CounterFailoverTests.cs" />
     <Compile Include="CounterLoadBalancingTests.cs" />
     <Compile Include="CounterReplicationTests.cs" />
+    <Compile Include="PurgeTombstones.cs" />
     <Compile Include="CountersChangesTests.cs" />
     <Compile Include="CounterStatsTests.cs" />
     <Compile Include="CountersTopologyViewTests.cs" />
