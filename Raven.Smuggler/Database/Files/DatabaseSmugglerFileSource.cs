@@ -52,7 +52,9 @@ namespace Raven.Smuggler.Database.Files
 
 		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
-			if (File.Exists(_path))
+            _sources.Clear();
+
+            if (File.Exists(_path))
 			{
 				_sources.Add(await CreateSourceAsync(options, _path, cancellationToken).ConfigureAwait(false));
 				return;

@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -73,7 +74,7 @@ namespace Raven.Smuggler.Database
 					await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
 
 			    await _source.AfterExecuteAsync(state).ConfigureAwait(false);
-                await _source.AfterExecuteAsync(state).ConfigureAwait(false);
+                await _destination.AfterExecuteAsync(state).ConfigureAwait(false);
 
                 return state;
 			}
@@ -159,7 +160,10 @@ namespace Raven.Smuggler.Database
 				};
 			}
 
-			return state;
+            Debug.Assert(state.LastDocsEtag != null);
+            Debug.Assert(state.LastDocDeleteEtag != null);
+
+            return state;
 		}
 	}
 }

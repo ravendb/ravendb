@@ -995,6 +995,9 @@ namespace Raven.Tests.Smuggler
                 // Export the second batch.
                 exportResult = await smuggler.ExecuteAsync();
 
+                importSmuggler.Notifications.OnDocumentRead += (sender, key) => Console.WriteLine("Read document: " + key);
+                importSmuggler.Notifications.OnDocumentWrite += (sender, key) => Console.WriteLine("Wrote document: " + key);
+
                 // Importing the second batch effectively skipping the batch already imported.
                 await importSmuggler.ExecuteAsync();
 

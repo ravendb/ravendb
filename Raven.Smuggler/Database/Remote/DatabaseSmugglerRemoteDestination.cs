@@ -21,7 +21,7 @@ namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteDestination : DatabaseSmugglerRemoteBase, IDatabaseSmugglerDestination
 	{
-		private readonly DocumentStore _store;
+		private DocumentStore _store;
 
 		private readonly DatabaseSmugglerRemoteDestinationOptions _options;
 
@@ -31,12 +31,18 @@ namespace Raven.Smuggler.Database.Remote
 
 		private readonly bool _ownsStore;
 
-		public DatabaseSmugglerRemoteDestination(DocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
+	    private readonly Func<DocumentStore> _storeFactory;
+
+	    public DatabaseSmugglerRemoteDestination(DocumentStore store, DatabaseSmugglerRemoteDestinationOptions options = null)
 		{
 			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
 
-			_store = store;
-			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression; // TODO [ppekrol] should it be reverted to the original value?
+			_storeFactory = () =>
+			{
+                store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression; // TODO [ppekrol] should it be reverted to the original value?
+			    return store;
+			};
+			
 			_ownsStore = false;
 		}
 
@@ -44,16 +50,21 @@ namespace Raven.Smuggler.Database.Remote
 		{
 			_options = options ?? new DatabaseSmugglerRemoteDestinationOptions();
 
-			_store = new DocumentStore
-			{
-				ApiKey = connectionOptions.ApiKey,
-				DefaultDatabase = connectionOptions.Database,
-				Url = connectionOptions.Url,
-                Credentials = connectionOptions.Credentials
-			};
+		    _storeFactory = () =>
+		    {
+                var store = new DocumentStore
+                {
+                    ApiKey = connectionOptions.ApiKey,
+                    DefaultDatabase = connectionOptions.Database,
+                    Url = connectionOptions.Url,
+                    Credentials = connectionOptions.Credentials
+                };
 
-			if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
-				_store.ConnectionStringName = connectionOptions.ConnectionStringName;
+                if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
+                    store.ConnectionStringName = connectionOptions.ConnectionStringName;
+
+		        return store;
+		    };
 
 			_ownsStore = true;
 		}
@@ -72,8 +83,9 @@ namespace Raven.Smuggler.Database.Remote
 		{
 			_globalOptions = options;
 			_notifications = notifications;
+            _store = _storeFactory();
 
-			if (_ownsStore)
+            if (_ownsStore)
 				_store.Initialize(ensureDatabaseExists: false);
 
 			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression;
@@ -118,7 +130,7 @@ namespace Raven.Smuggler.Database.Remote
 				{
 					var continuationDocument = await _store
 						.AsyncDatabaseCommands
-						.GetAsync(continuationDocId)
+						.GetAsync(continuationDocId, cancellationToken)
 						.ConfigureAwait(false);
 
 					if (continuationDocument != null)

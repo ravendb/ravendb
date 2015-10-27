@@ -43,7 +43,7 @@ namespace Raven.Smuggler.Database
 					return;
 				}
 
-				var lastEtag = state.LastDocsEtag;
+			    var fromEtag = state.LastDocsEtag.IncrementBy(1);
 				var maxEtag = _maxEtags.LastDocsEtag;
 				var now = SystemTime.UtcNow;
 				var totalCount = 0;
@@ -75,7 +75,7 @@ namespace Raven.Smuggler.Database
 						{
 							var pageSize = Source.SupportsPaging ? Math.Min(Options.BatchSize, maxRecords) : int.MaxValue;
 
-							using (var documents = await Source.ReadDocumentsAsync(lastEtag, pageSize, cancellationToken).ConfigureAwait(false))
+							using (var documents = await Source.ReadDocumentsAsync(fromEtag, pageSize, cancellationToken).ConfigureAwait(false))
 							{
 								while (await documents.MoveNextAsync().ConfigureAwait(false))
 								{
@@ -93,7 +93,7 @@ namespace Raven.Smuggler.Database
 										break;
 									}
 
-									lastEtag = tempLastEtag;
+									fromEtag = tempLastEtag;
 
 									if (Options.MatchFilters(document) == false)
 									{
@@ -135,6 +135,7 @@ namespace Raven.Smuggler.Database
 									try
 									{
 										await actions.WriteDocumentAsync(document, cancellationToken).ConfigureAwait(false);
+									    Notifications.OnDocumentWrite(this, key);
 									}
 									catch (Exception e)
 									{
@@ -178,15 +179,15 @@ namespace Raven.Smuggler.Database
 								// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 								// (This code provides support for legacy RavenDB version: 1.0)
 								var databaseStatistics = await Source.GetStatisticsAsync(cancellationToken).ConfigureAwait(false);
-								var lastEtagComparable = new ComparableByteArray(lastEtag);
+								var lastEtagComparable = new ComparableByteArray(fromEtag);
 								if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 								{
-									lastEtag = EtagUtil.Increment(lastEtag, pageSize);
-									if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
+									fromEtag = EtagUtil.Increment(fromEtag, pageSize);
+									if (fromEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
 									{
-										lastEtag = databaseStatistics.LastDocEtag;
+										fromEtag = databaseStatistics.LastDocEtag;
 									}
-									Notifications.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+									Notifications.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", fromEtag);
 									continue;
 								}
 							}
@@ -217,23 +218,23 @@ namespace Raven.Smuggler.Database
 
 						if (Destination.SupportsOperationState)
 						{
-							if (lastEtag.CompareTo(state.LastDocsEtag) > 0)
-								state.LastDocsEtag = lastEtag;
+							if (fromEtag.CompareTo(state.LastDocsEtag) > 0)
+								state.LastDocsEtag = fromEtag;
 
 							await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
 						}
 
-						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-						state.LastDocsEtag = lastEtag;
+						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, fromEtag);
+						state.LastDocsEtag = fromEtag;
 						return;
 					}
 					catch (Exception e)
 					{
 						Notifications.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, fromEtag);
 						throw new SmugglerExportException(e.Message, e)
 						{
-							LastEtag = lastEtag,
+							LastEtag = fromEtag,
 						};
 					}
 				} while (Source.SupportsPaging);

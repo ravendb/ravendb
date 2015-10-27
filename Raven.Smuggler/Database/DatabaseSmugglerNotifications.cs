@@ -6,7 +6,9 @@ namespace Raven.Smuggler.Database
 	{
 		public EventHandler<string> OnDocumentRead = (sender, key) => { };
 
-		public EventHandler<string> OnProgress = (sender, message) => { };
+        public EventHandler<string> OnDocumentWrite = (sender, key) => { };
+
+        public EventHandler<string> OnProgress = (sender, message) => { };
 
 		public void ShowProgress(string format, params object[] args)
 		{

@@ -11,7 +11,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
@@ -25,7 +24,7 @@ namespace Raven.Smuggler.Database.Remote
 {
 	public class DatabaseSmugglerRemoteSource : DatabaseSmugglerRemoteBase, IDatabaseSmugglerSource
 	{
-		private readonly DocumentStore _store;
+		private DocumentStore _store;
 
 		private DatabaseSmugglerOptions _options;
 
@@ -42,29 +41,35 @@ namespace Raven.Smuggler.Database.Remote
 
 		private readonly bool _ownsStore;
 
-		public DatabaseSmugglerRemoteSource(DatabaseSmugglerRemoteConnectionOptions connectionOptions)
-		{
-			_store = new DocumentStore
-			{
-				ApiKey = connectionOptions.ApiKey,
-				DefaultDatabase = connectionOptions.Database,
-				Url = connectionOptions.Url,
-                Credentials = connectionOptions.Credentials
-			};
+	    private readonly Func<DocumentStore> _storeFactory;
 
-			if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
-				_store.ConnectionStringName = connectionOptions.ConnectionStringName;
+        public DatabaseSmugglerRemoteSource(DatabaseSmugglerRemoteConnectionOptions connectionOptions)
+        {
+            _storeFactory = () =>
+            {
+                var store = new DocumentStore
+                {
+                    ApiKey = connectionOptions.ApiKey,
+                    DefaultDatabase = connectionOptions.Database,
+                    Url = connectionOptions.Url,
+                    Credentials = connectionOptions.Credentials
+                };
 
-			_ownsStore = true;
-		}
+                if (string.IsNullOrWhiteSpace(connectionOptions.ConnectionStringName) == false)
+                    store.ConnectionStringName = connectionOptions.ConnectionStringName;
 
-		public DatabaseSmugglerRemoteSource(DocumentStore store)
-		{
-			_store = store;
-			_ownsStore = false;
-		}
+                return store;
+            };
+            _ownsStore = true;
+        }
 
-		public void Dispose()
+        public DatabaseSmugglerRemoteSource(DocumentStore store)
+        {
+            _storeFactory = () => store;
+            _ownsStore = false;
+        }
+
+        public void Dispose()
 		{
 			if (_ownsStore)
 				_store?.Dispose();
@@ -78,7 +83,9 @@ namespace Raven.Smuggler.Database.Remote
 
 		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
+		    _typeIndex = 0;
 			_options = options;
+		    _store = _storeFactory();
 
 			if (_ownsStore)
 				_store.Initialize(ensureDatabaseExists: false);
