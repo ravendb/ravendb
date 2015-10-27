@@ -678,20 +678,33 @@ namespace Raven.Client.FileSystem
 
 		        AddHeaders(metadata, request);
 				AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
-
+	            Stream sentStream;
+	            if (source.CanSeek == false)
+	            {
+                    sentStream = new MemoryStream();
+	                source.CopyTo(sentStream);
+	            }
+	            else
+	            {
+	                sentStream = source;
+	            }
 		        var response = await request.ExecuteRawRequestAsync((netStream, t) =>
 				{
-		        try
-		        {
-						source.CopyTo(netStream);
-						netStream.Flush();
+		            try
+		            {
+		                if (sentStream.CanSeek)
+		                {
+                            sentStream.Seek(0, SeekOrigin.Begin);
+		                }
+                        sentStream.CopyTo(netStream);
+				        netStream.Flush();
 
-						t.TrySetResult(null);
-					}
-					catch (Exception e)
-					{
-						t.TrySetException(e);
-					}
+				        t.TrySetResult(null);
+			        }
+			        catch (Exception e)
+			        {
+				        t.TrySetException(e);
+			        }
 				}).ConfigureAwait(false);
 
 		        if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
