@@ -21,6 +21,7 @@ import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import indexPriority = require("models/database/index/indexPriority");
 import tryRecoverCorruptedIndexes = require("commands/database/index/tryRecoverCorruptedIndexes");
+import indexLockAllConfirm = require("viewmodels/database/indexes/indexLockAllConfirm");
 
 class indexes extends viewModelBase {
 
@@ -34,8 +35,9 @@ class indexes extends viewModelBase {
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
-	corruptedIndexes: KnockoutComputed<index[]>;
-	searchText = ko.observable<string>();
+    corruptedIndexes: KnockoutComputed<index[]>;
+    lockModeCommon: KnockoutComputed<string>;
+    searchText = ko.observable<string>();
 
     constructor() {
         super();
@@ -56,7 +58,21 @@ class indexes extends viewModelBase {
 			this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
 
 			return corrupted.distinct();
-	    });
+        });
+
+        this.lockModeCommon = ko.computed(() => {
+            var allIndexes = this.getAllIndexes();
+            if (allIndexes.length === 0)
+                return "None";
+
+            var firstLockMode = allIndexes[0].lockMode();
+            for (var i = 1; i < allIndexes.length; i++) {
+                if (allIndexes[i].lockMode() != firstLockMode) {
+                    return "Mixed";
+                }
+            }
+            return firstLockMode;
+        });
     }
 
     canActivate(args) {
@@ -422,9 +438,19 @@ class indexes extends viewModelBase {
 		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
 	}
 
-	tryRecoverCorruptedIndexes() {
-		new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
-	}
+    tryRecoverCorruptedIndexes() {
+        new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+    }
+
+    setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
+        if (this.lockModeCommon() === lockModeString)
+            return false;
+
+        var lockModeTitle = "Do you want to " + lockModeStrForTitle + " ALL Indexes?";
+
+        var indexLockAllVm = new indexLockAllConfirm(lockModeString, this.activeDatabase(), this.getAllIndexes(), lockModeTitle);
+        app.showDialog(indexLockAllVm);
+    }
 }
 
 export = indexes;

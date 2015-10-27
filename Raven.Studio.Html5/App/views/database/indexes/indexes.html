@@ -77,6 +77,26 @@
             </ul>
         </div>
         <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to all indexes">
+                <i class="fa fa-unlock-alt"></i><span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li data-bind="click: setLockModeAllIndexes.bind($root, 'Unlock', 'Unlock')">
+                    <a href="#" title="Unlock All Indexes" data-bind="css: {'index-lock-mode-disabled': lockModeCommon() === 'Unlock'}">Unlock All Indexes</a>
+                </li>
+                <li class="divider"></li>
+                <li data-bind="click: setLockModeAllIndexes.bind($root, 'SideBySide', 'Lock Side By Side')">
+                    <a href="#" title="Lock (Side By Side) All Indexes" data-bind="css: {'index-lock-mode-disabled': lockModeCommon() === 'SideBySide'}">Lock (Side By Side) All Indexes</a>
+                </li>
+                <li data-bind="click: setLockModeAllIndexes.bind($root, 'LockedIgnore', 'Lock')">
+                    <a href="#" title="Lock All Indexes" data-bind="css: {'index-lock-mode-disabled': lockModeCommon() === 'LockedIgnore'}">Lock All Indexes</a>
+                </li>
+                <li data-bind="click: setLockModeAllIndexes.bind($root, 'LockedError', 'Locked Error')">
+                    <a href="#" title="Lock All Indexes (Error)" data-bind="css: {'index-lock-mode-disabled': lockModeCommon() === 'LockedError'}">Lock All Indexes (Error)</a>
+                </li>
+            </ul>
+        </div>
+        <div class="btn-group">
             <a class="btn btn-default" title="Index merge suggestions" data-bind="attr: { href: appUrls.megeSuggestions }">
                 <i class="fa fa-compress"></i>
             </a>
