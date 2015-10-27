@@ -633,8 +633,8 @@ namespace Raven.Tests.Smuggler
 
                 using (var stream = new MemoryStream())
                 {
-                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
-                    var endEtag = startEtag.IncrementBy(2);
+                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-6);
+                    var endEtag = startEtag.IncrementBy(3);
 
                     var options = new DatabaseSmugglerOptions();
                     var notifications = new DatabaseSmugglerNotifications();
@@ -675,7 +675,7 @@ namespace Raven.Tests.Smuggler
 
                 using (var stream = new MemoryStream())
                 {
-                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
+                    var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-6);
                     Etag endEtag = null;
 
                     var options = new DatabaseSmugglerOptions();
