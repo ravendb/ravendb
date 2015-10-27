@@ -25,7 +25,7 @@ namespace Raven.Smuggler.Database
 
 		Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
 
-		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken);
+		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken);
 
 		Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken);
 

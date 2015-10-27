@@ -125,9 +125,9 @@ namespace Raven.Smuggler.Database.Streams
 			});
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken)
 		{
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(fromEtag, _reader, cancellationToken));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new YieldJsonResults<RavenJObject>(afterEtag, _reader, cancellationToken));
 		}
 
 		public Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
@@ -314,15 +314,15 @@ namespace Raven.Smuggler.Database.Streams
 		private class YieldJsonResults<T> : IAsyncEnumerator<T>
 			where T : RavenJToken
 		{
-			private readonly Etag _fromEtag;
+			private readonly Etag _afterEtag;
 
 			private readonly JsonTextReader _reader;
 
 			private readonly CancellationToken _cancellationToken;
 
-			public YieldJsonResults(Etag fromEtag, JsonTextReader reader, CancellationToken cancellationToken)
+			public YieldJsonResults(Etag afterEtag, JsonTextReader reader, CancellationToken cancellationToken)
 			{
-				_fromEtag = fromEtag;
+				_afterEtag = afterEtag;
 				_reader = reader;
 				_cancellationToken = cancellationToken;
 			}
@@ -343,7 +343,7 @@ namespace Raven.Smuggler.Database.Streams
 					var document = (RavenJObject)RavenJToken.ReadFrom(_reader);
 
 					var etag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-					if (EtagUtil.IsGreaterThan(_fromEtag, etag))
+					if (EtagUtil.IsGreaterThanOrEqual(_afterEtag, etag))
 						continue;
 
 					Current = document as T;

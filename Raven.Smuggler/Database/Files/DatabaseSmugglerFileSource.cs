@@ -90,7 +90,7 @@ namespace Raven.Smuggler.Database.Files
 			throw new NotSupportedException();
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken)
 		{
 			throw new NotSupportedException();
 		}

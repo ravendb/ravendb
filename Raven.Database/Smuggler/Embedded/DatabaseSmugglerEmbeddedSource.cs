@@ -53,6 +53,7 @@ namespace Raven.Database.Smuggler.Embedded
 
 		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
+		    _typeIndex = 0;
 			_options = options;
 
             await InitializeBatchSizeAsync(_database, _options).ConfigureAwait(false);
@@ -89,10 +90,10 @@ namespace Raven.Database.Smuggler.Embedded
 			return new CompletedTask<DatabaseLastEtagsInfo>(result);
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
+		public Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken)
 		{
 			const int dummy = 0;
-			var enumerator = _database.Documents.GetDocumentsAsJson(dummy, Math.Min(_options.BatchSize, pageSize), fromEtag, CancellationToken.None)
+			var enumerator = _database.Documents.GetDocumentsAsJson(dummy, Math.Min(_options.BatchSize, pageSize), afterEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();

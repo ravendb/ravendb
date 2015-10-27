@@ -75,8 +75,6 @@ namespace Raven.Tests.Smuggler
         [Fact]
         public async Task ShouldSupportIncremental()
         {
-            throw new NotImplementedException();
-
             using (var server1 = GetNewServer(port: 8079))
             using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
@@ -91,18 +89,26 @@ namespace Raven.Tests.Smuggler
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						//var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-						//{
-						//	Incremental = true,
-						//});
+                        var smuggler = new DatabaseSmuggler(
+                            new DatabaseSmugglerOptions(),
+                            new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = "http://localhost:8079",
+                                Database = "Database1"
+                            }),
+                            new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = "http://localhost:8078",
+                                Database = "Database2"
+                            }, 
+                            new DatabaseSmugglerRemoteDestinationOptions
+                            {
+                                ContinuationToken = "Token"
+                            }));
 
-                        //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						//{
-						//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-						//	To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-						//});
+					    await smuggler.ExecuteAsync();
 
-						using (var session = store1.OpenAsyncSession("Database1"))
+                        using (var session = store1.OpenAsyncSession("Database1"))
 						{
 							var oren = await session.LoadAsync<User>("users/1");
 							oren.Name += " Changed";
@@ -117,13 +123,9 @@ namespace Raven.Tests.Smuggler
                             await session2.SaveChangesAsync();
                         }
 
-                        //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						//{
-						//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-						//	To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-						//});
+                        await smuggler.ExecuteAsync();
 
-					    WaitForIndexing(store2);
+                        WaitForIndexing(store2);
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
                             Assert.Equal(3, await session2.Query<User>().CountAsync());
@@ -138,8 +140,6 @@ namespace Raven.Tests.Smuggler
 	    [Fact]
 	    public async Task ShouldSupportIncrementalFromTwoServers()
 	    {
-            throw new NotImplementedException();
-
             using (var server1 = GetNewServer(port: 8079))
 		    using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
 		    {
@@ -163,24 +163,45 @@ namespace Raven.Tests.Smuggler
 				    {
 						using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
 						{
-							//var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-							//{
-							//	Incremental = true,
-							//});
+                            var smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8079",
+                                    Database = "Database1"
+                                }),
+                                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8077",
+                                    Database = "Database3"
+                                },
+                                new DatabaseSmugglerRemoteDestinationOptions
+                                {
+                                    ContinuationToken = "Token1"
+                                }));
 
-                            //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-							//{
-							//	From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-							//	To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-							//});
+						    await smuggler.ExecuteAsync();
 
-                            //await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-							//{
-							//	From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
-							//	To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-							//});  
-					    
-						    using (var session3 = store3.OpenAsyncSession("Database3"))
+                            smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8078",
+                                    Database = "Database2"
+                                }),
+                                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:8077",
+                                    Database = "Database3"
+                                },
+                                new DatabaseSmugglerRemoteDestinationOptions
+                                {
+                                    ContinuationToken = "Token2"
+                                }));
+
+						    await smuggler.ExecuteAsync();
+
+                            using (var session3 = store3.OpenAsyncSession("Database3"))
 						    {
 							    Assert.Equal(2, await session3.Query<User>().CountAsync());
 							    Assert.Equal("Oren Eini Server 2", (await session3.LoadAsync<User>("users/1")).Name);

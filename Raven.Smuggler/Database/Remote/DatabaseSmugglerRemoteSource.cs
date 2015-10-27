@@ -114,11 +114,11 @@ namespace Raven.Smuggler.Database.Remote
 			});
 		}
 
-		public async Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAsync(Etag fromEtag, int pageSize, CancellationToken cancellationToken)
+		public async Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken)
 		{
 			return await _store
 				.AsyncDatabaseCommands
-				.StreamDocsAsync(fromEtag, pageSize: pageSize, token: cancellationToken)
+				.StreamDocsAsync(afterEtag, pageSize: pageSize, token: cancellationToken)
 				.ConfigureAwait(false);
 
 			//TODO [ppekrol] legacy support

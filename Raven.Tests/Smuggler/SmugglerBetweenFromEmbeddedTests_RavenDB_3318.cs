@@ -71,8 +71,6 @@ namespace Raven.Tests.Smuggler
 		[Fact]
 		public async Task ShouldSupportIncremental()
 		{
-            throw new NotImplementedException();
-
 			using (var store = NewDocumentStore())
 			{
 				await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
@@ -88,19 +86,20 @@ namespace Raven.Tests.Smuggler
 				{
 					using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
 					{
-						//var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions()
-						//{
-						//	Incremental = true
-						//});
+					    var smuggler = new DatabaseSmuggler(
+                            new DatabaseSmugglerOptions(),
+                            new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
+                            new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = "http://localhost:8078",
+                                Database = "TargetDB"
+                            }, 
+                            new DatabaseSmugglerRemoteDestinationOptions
+                            {
+                                ContinuationToken = "Token"
+                            }));
 
-						//await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						//{
-						//	To = new RavenConnectionStringOptions
-						//	{
-						//		Url = "http://localhost:8078",
-						//		DefaultDatabase = "TargetDB"
-						//	}
-						//});
+					    await smuggler.ExecuteAsync();
 
 						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
 						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
@@ -113,16 +112,9 @@ namespace Raven.Tests.Smuggler
 							await session.SaveChangesAsync();
 						}
 
-						//await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-						//{
-						//	To = new RavenConnectionStringOptions
-						//	{
-						//		Url = "http://localhost:8078",
-						//		DefaultDatabase = "TargetDB"
-						//	}
-						//});
+                        await smuggler.ExecuteAsync();
 
-						using (var session = targetStore.OpenAsyncSession())
+                        using (var session = targetStore.OpenAsyncSession())
 						{
 							var changedUser = await session.LoadAsync<SmugglerBetweenTests.User>("users/1");
 							Assert.NotNull(changedUser);
