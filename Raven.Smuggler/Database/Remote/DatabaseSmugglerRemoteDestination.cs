@@ -19,7 +19,7 @@ using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler.Database.Remote
 {
-	public class DatabaseSmugglerRemoteDestination : IDatabaseSmugglerDestination
+	public class DatabaseSmugglerRemoteDestination : DatabaseSmugglerRemoteBase, IDatabaseSmugglerDestination
 	{
 		private readonly DocumentStore _store;
 
@@ -79,7 +79,9 @@ namespace Raven.Smuggler.Database.Remote
 			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression;
 
             await ServerValidation.ValidateThatServerIsUpAndDatabaseExistsAsync(_store, cancellationToken).ConfigureAwait(false);
-		}
+
+            await InitializeBatchSizeAsync(_store, _globalOptions).ConfigureAwait(false);
+        }
 
 		public IDatabaseSmugglerIndexActions IndexActions()
 		{

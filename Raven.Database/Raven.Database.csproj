@@ -509,6 +509,7 @@
     <Compile Include="ShiftReduceParserCode.cs" />
     <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
     <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->
+    <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedBase.cs" />
     <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDestination.cs" />
     <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDocumentActions.cs" />
     <Compile Include="Smuggler\Embedded\DatabaseSmugglerEmbeddedDocumentDeletionActions.cs" />

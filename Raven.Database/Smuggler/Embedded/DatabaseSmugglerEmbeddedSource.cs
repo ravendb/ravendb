@@ -18,7 +18,7 @@ using Raven.Smuggler.Database;
 
 namespace Raven.Database.Smuggler.Embedded
 {
-	public class DatabaseSmugglerEmbeddedSource : IDatabaseSmugglerSource
+	public class DatabaseSmugglerEmbeddedSource : DatabaseSmugglerEmbeddedBase, IDatabaseSmugglerSource
 	{
 		private readonly DocumentDatabase _database;
 
@@ -51,10 +51,11 @@ namespace Raven.Database.Smuggler.Embedded
 
 		public IReadOnlyList<IDatabaseSmugglerSource> Sources => null;
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+		public async Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
 		{
 			_options = options;
-			return new CompletedTask();
+
+            await InitializeBatchSizeAsync(_database, _options).ConfigureAwait(false);
 		}
 
 		public Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken)

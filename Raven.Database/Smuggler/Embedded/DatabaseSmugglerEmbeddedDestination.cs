@@ -13,8 +13,8 @@ using Raven.Smuggler.Database;
 
 namespace Raven.Database.Smuggler.Embedded
 {
-	public class DatabaseSmugglerEmbeddedDestination : IDatabaseSmugglerDestination
-	{
+	public class DatabaseSmugglerEmbeddedDestination : DatabaseSmugglerEmbeddedBase, IDatabaseSmugglerDestination
+    {
 		private readonly DocumentDatabase _database;
 
 		private DatabaseSmugglerOptions _globalOptions;
@@ -32,10 +32,11 @@ namespace Raven.Database.Smuggler.Embedded
 
 		public bool SupportsWaitingForIndexing => false;
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
+		public async Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			_globalOptions = options;
-			return new CompletedTask();
+
+		    await InitializeBatchSizeAsync(_database, _globalOptions).ConfigureAwait(false);
 		}
 
 		public IDatabaseSmugglerIndexActions IndexActions()

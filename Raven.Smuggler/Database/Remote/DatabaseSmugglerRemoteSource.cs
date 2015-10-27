@@ -23,7 +23,7 @@ using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler.Database.Remote
 {
-	public class DatabaseSmugglerRemoteSource : IDatabaseSmugglerSource
+	public class DatabaseSmugglerRemoteSource : DatabaseSmugglerRemoteBase, IDatabaseSmugglerSource
 	{
 		private readonly DocumentStore _store;
 
@@ -85,36 +85,7 @@ namespace Raven.Smuggler.Database.Remote
 
 		    await ServerValidation.ValidateThatServerIsUpAndDatabaseExistsAsync(_store, cancellationToken).ConfigureAwait(false);
 
-			await InitializeBatchSizeAsync().ConfigureAwait(false);
-		}
-
-		private async Task InitializeBatchSizeAsync()
-		{
-			if (_store.HasJsonRequestFactory == false)
-				return;
-
-			var url = _store.Url.ForDatabase(_store.DefaultDatabase) + "/debug/config";
-			try
-			{
-				using (var request = _store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, _store.DatabaseCommands.PrimaryCredentials, _store.Conventions)))
-				{
-					var configuration = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-
-					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-					if (maxNumberOfItemsToProcessInSingleBatch <= 0)
-						return;
-
-					var current = _options.BatchSize;
-					_options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
-				}
-			}
-			catch (ErrorResponseException e)
-			{
-				if (e.StatusCode == HttpStatusCode.Forbidden) // let it continue with the user defined batch size
-					return;
-
-				throw;
-			}
+			await InitializeBatchSizeAsync(_store, _options).ConfigureAwait(false);
 		}
 
 		public async Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken)
