@@ -19,6 +19,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler.Database.Remote
 {
@@ -82,7 +83,7 @@ namespace Raven.Smuggler.Database.Remote
 			if (_ownsStore)
 				_store.Initialize(ensureDatabaseExists: false);
 
-			// TODO [ppekrol] validate database existance
+		    await ServerValidation.ValidateThatServerIsUpAndDatabaseExistsAsync(_store, cancellationToken).ConfigureAwait(false);
 
 			await InitializeBatchSizeAsync().ConfigureAwait(false);
 		}

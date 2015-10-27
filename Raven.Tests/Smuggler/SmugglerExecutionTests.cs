@@ -110,7 +110,7 @@ namespace Raven.Tests.Smuggler
                     var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
                     {
                         Url = store.Url,
-                        Database = "DoesNotExist"
+                        Database = store.DefaultDatabase
                     };
 
                     var smuggler = new DatabaseSmuggler(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileSource(path), new DatabaseSmugglerRemoteDestination(connectionOptions));

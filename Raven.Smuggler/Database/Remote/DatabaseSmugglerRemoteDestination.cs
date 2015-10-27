@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler.Database.Remote
 {
@@ -67,7 +68,7 @@ namespace Raven.Smuggler.Database.Remote
 
 		public bool SupportsWaitingForIndexing => true;
 
-		public Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
+		public async Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
 		{
 			_globalOptions = options;
 			_notifications = notifications;
@@ -77,9 +78,7 @@ namespace Raven.Smuggler.Database.Remote
 
 			_store.JsonRequestFactory.DisableRequestCompression = _options.DisableCompression;
 
-			// TODO [ppekrol] validate database existance
-
-			return new CompletedTask();
+            await ServerValidation.ValidateThatServerIsUpAndDatabaseExistsAsync(_store, cancellationToken).ConfigureAwait(false);
 		}
 
 		public IDatabaseSmugglerIndexActions IndexActions()
