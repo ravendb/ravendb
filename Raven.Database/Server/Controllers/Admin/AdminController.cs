@@ -885,7 +885,10 @@ namespace Raven.Database.Server.Controllers.Admin
 					process.WaitForExit();
 
 					if (process.ExitCode != 0)
-						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode + Environment.NewLine + "Message: " + output);
+					{
+						Log.Error("Could not read stacktraces. Message: " + output);
+						throw new InvalidOperationException("Could not read stacktraces. Please refer to logs for more details.");
+					}
 
 					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
 					{
@@ -895,7 +898,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				catch (Exception ex)
 				{
 					var streamWriter = new StreamWriter(stacktraceStream);
-					jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+					jsonSerializer.Serialize(streamWriter, new { Error = ex.Message });
 					streamWriter.Flush();
 				}
 				finally
