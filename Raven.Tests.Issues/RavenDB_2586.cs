@@ -6,6 +6,7 @@
 using System;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Remote;
@@ -34,14 +35,12 @@ namespace Raven.Tests.Issues
                         Database = "DB2"
                     }));
 
-				var aggregateException = Assert.Throws<AggregateException>(() => smuggler.Execute());
-				var exception = aggregateException.ExtractSingleInnerException();
+				var exception = Assert.Throws<SmugglerException>(() => smuggler.Execute());
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB1' on server"));
 
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DB1");
 
-                aggregateException = Assert.Throws<AggregateException>(() => smuggler.Execute());
-                exception = aggregateException.ExtractSingleInnerException();
+                exception = Assert.Throws<SmugglerException>(() => smuggler.Execute());
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB2' on server"));
 			}
 		}
