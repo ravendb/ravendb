@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -86,5 +87,8 @@ namespace Raven.Client
 		/// Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
+
+		IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+			where TTransformer : AbstractTransformerCreationTask, new();
 	}
 }

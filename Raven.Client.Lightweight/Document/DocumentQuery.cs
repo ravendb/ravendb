@@ -1,4 +1,5 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿using Raven.Client.Indexes;
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -69,7 +70,58 @@ namespace Raven.Client.Document
 	        base.SetResultTransformer(resultsTransformer);
 	        return this;
 	    }
-
+				public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+			where TTransformer : AbstractTransformerCreationTask, new()
+		{
+		var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
+#if !SILVERLIGHT
+ theDatabaseCommands,
+#endif
+ theAsyncDatabaseCommands,
+																 indexName,
+																 fieldsToFetch,
+																 projectionFields,
+																 queryListeners,
+																 isMapReduce)
+		{
+			pageSize = pageSize,
+			queryText = new StringBuilder(queryText.ToString()),
+			start = start,
+			timeout = timeout,
+			cutoff = cutoff,
+			cutoffEtag = cutoffEtag,
+			queryStats = queryStats,
+			theWaitForNonStaleResults = theWaitForNonStaleResults,
+			sortByHints = sortByHints,
+			orderByFields = orderByFields,
+			allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+			groupByFields = groupByFields,
+			aggregationOp = aggregationOp,
+			negate = negate,
+			transformResultsFunc = transformResultsFunc,
+			includes = new HashSet<string>(includes),
+			isSpatialQuery = isSpatialQuery,
+			spatialFieldName = spatialFieldName,
+			queryShape = queryShape,
+			spatialRelation = spatialRelation,
+			spatialUnits = spatialUnits,
+			distanceErrorPct = distanceErrorPct,
+			rootTypes = { typeof(TTransformerResult) },
+			defaultField = defaultField,
+			beforeQueryExecutionAction = beforeQueryExecutionAction,
+			afterQueryExecutedCallback = afterQueryExecutedCallback,
+			highlightedFields = new List<HighlightedField>(highlightedFields),
+			highlighterPreTags = highlighterPreTags,
+			highlighterPostTags = highlighterPostTags,
+			resultsTransformer = new TTransformer().TransformerName,
+			queryInputs = queryInputs,
+			disableEntitiesTracking = disableEntitiesTracking,
+			disableCaching = disableCaching,
+			lastEquality = lastEquality,
+			defaultOperator = defaultOperator
+		};
+		return documentQuery;
+	}
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
