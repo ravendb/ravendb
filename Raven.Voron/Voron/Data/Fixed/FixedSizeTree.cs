@@ -193,14 +193,14 @@ namespace Voron.Data.Fixed
 
         private void ResetStartPosition(FixedSizeTreePage page)
         {
-            if (page.StartPosition == Constants.TreePageHeaderSize)
+            if (page.StartPosition == Constants.FixedSizeTreePageHeaderSize)
                 return;
 
             // we need to move it back, then add the new item
-            UnmanagedMemory.Move(page.Pointer + Constants.TreePageHeaderSize,
+            UnmanagedMemory.Move(page.Pointer + Constants.FixedSizeTreePageHeaderSize,
                 page.Pointer + page.StartPosition,
                 page.NumberOfEntries * (page.IsLeaf ? _entrySize : BranchEntrySize));
-            page.StartPosition = (ushort)Constants.TreePageHeaderSize;
+            page.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
         }
 
         private FixedSizeTreePage FindPageFor(long key)
@@ -266,7 +266,7 @@ namespace Voron.Data.Fixed
             {
                 parentPage = NewPage(FixedSizeTreePageFlags.Branch);
                 parentPage.NumberOfEntries = 1;
-                parentPage.StartPosition = (ushort)Constants.TreePageHeaderSize;
+                parentPage.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
                 parentPage.ValueSize = _valSize;
 
                 largePtr->RootPageNumber = parentPage.PageNumber;
@@ -282,7 +282,7 @@ namespace Voron.Data.Fixed
             if (page.IsLeaf) // simple case of splitting a leaf pageNum
             {
                 var newPage = NewPage(FixedSizeTreePageFlags.Leaf);
-                newPage.StartPosition = (ushort)Constants.TreePageHeaderSize;
+                newPage.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
                 newPage.ValueSize = _valSize;
                 newPage.NumberOfEntries = 0;
                 largePtr->PageCount++;
@@ -318,7 +318,7 @@ namespace Voron.Data.Fixed
             else // branch page
             {
                 var newPage = NewPage(FixedSizeTreePageFlags.Branch);
-                newPage.StartPosition = (ushort)Constants.TreePageHeaderSize;
+                newPage.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
                 newPage.ValueSize = _valSize;
                 newPage.NumberOfEntries = 0;
                 largePtr->PageCount++;
@@ -375,7 +375,7 @@ namespace Voron.Data.Fixed
 
         private void AddSeparatorToParentPage(FixedSizeTreePage parentPage, int position, long key, long pageNum)
         {
-            if ((parentPage.NumberOfEntries + 1) * BranchEntrySize >= parentPage.PageMaxSpace)
+        	if ((parentPage.NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
             {
                 parentPage = PageSplit(parentPage, key);
                 System.Diagnostics.Debug.Assert(parentPage != null);
@@ -432,7 +432,7 @@ namespace Voron.Data.Fixed
                     allocatePage.PageNumber = allocatePage.PageNumber;
                     allocatePage.NumberOfEntries = newEntriesCount;
                     allocatePage.ValueSize = _valSize;
-                    allocatePage.StartPosition = (ushort)Constants.TreePageHeaderSize;
+                    allocatePage.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
                     Memory.Copy(allocatePage.Pointer + allocatePage.StartPosition, tmp.TempPagePointer,
                         newSize);
 
