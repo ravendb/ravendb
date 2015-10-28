@@ -111,7 +111,7 @@ namespace Raven.Abstractions.Database.Smuggler
                 }
             }
 
-            SmugglerExportException lastException = null;
+            SmugglerException lastException = null;
 
 	        bool ownedStream = exportOptions.ToStream == null;
 	        var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
@@ -122,7 +122,7 @@ namespace Raven.Abstractions.Database.Smuggler
             }
             catch (WebException e)
             {
-                throw new SmugglerExportException("Failed to query server for supported features. Reason : " + e.Message)
+                throw new SmugglerException("Failed to query server for supported features. Reason : " + e.Message)
                 {
                     LastEtag = Etag.Empty,
                     File = result.FilePath
@@ -146,7 +146,7 @@ namespace Raven.Abstractions.Database.Smuggler
 						await ExportConfigurations(archive).ConfigureAwait(false);
 					}
                 }
-                catch (SmugglerExportException ex)
+                catch (SmugglerException ex)
                 {
                     result.LastFileEtag = ex.LastEtag;
                     ex.File = result.FilePath;
@@ -240,7 +240,7 @@ namespace Raven.Abstractions.Database.Smuggler
 			    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
 			    Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 
-			    exceptionHappened = new SmugglerExportException(e.Message, e)
+			    exceptionHappened = new SmugglerException(e.Message, e)
 			    {
 				    LastEtag = lastEtag,
 			    };
@@ -330,7 +330,7 @@ namespace Raven.Abstractions.Database.Smuggler
         {
             var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions).ConfigureAwait(false);
             if (string.IsNullOrEmpty(serverVersion))
-                throw new SmugglerExportException("Server version is not available.");
+                throw new SmugglerException("Server version is not available.");
 
             var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerFilesApiBase>()).ProductVersion;
             var subServerVersion = serverVersion.Substring(0, 4);
@@ -338,7 +338,7 @@ namespace Raven.Abstractions.Database.Smuggler
 
             var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
             if (intServerVersion < 40)
-                throw new SmugglerExportException(string.Format("This smuggler version requires a v4.0 or higher server. Smuggler version: {0}.", subSmugglerVersion));
+                throw new SmugglerException(string.Format("This smuggler version requires a v4.0 or higher server. Smuggler version: {0}.", subSmugglerVersion));
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
@@ -525,7 +525,7 @@ namespace Raven.Abstractions.Database.Smuggler
             }
             catch (WebException e)
             {
-                throw new SmugglerExportException("Failed to query server for supported features. Reason : " + e.Message)
+                throw new SmugglerException("Failed to query server for supported features. Reason : " + e.Message)
                 {
                     LastEtag = Etag.Empty,
                 };
@@ -646,7 +646,7 @@ namespace Raven.Abstractions.Database.Smuggler
                 Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
                 Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalFiles, lastEtag);
 
-                exceptionHappened = new SmugglerExportException(e.Message, e)
+                exceptionHappened = new SmugglerException(e.Message, e)
                 {
                     LastEtag = lastEtag,
                 };

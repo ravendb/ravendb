@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
@@ -103,7 +104,13 @@ namespace Raven.Database.Smuggler.Embedded
 
 		public Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
 		{
-			throw new NotSupportedException();
+		    var document = _database.Documents.Get(key);
+            if (document == null)
+                return new CompletedTask<RavenJObject>((RavenJObject)null);
+
+            JsonDocument.EnsureIdInMetadata(document);
+
+            return new CompletedTask<RavenJObject>(document.ToJson());
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
@@ -207,5 +214,9 @@ namespace Raven.Database.Smuggler.Embedded
 	    {
             return new CompletedTask();
         }
+
+	    public void OnException(SmugglerException exception)
+	    {
+	    }
 	}
 }

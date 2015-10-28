@@ -155,6 +155,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
+      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
+      <Name>Raven.Abstractions.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

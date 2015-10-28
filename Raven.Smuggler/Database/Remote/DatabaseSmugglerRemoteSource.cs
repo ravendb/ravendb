@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -131,7 +132,11 @@ namespace Raven.Smuggler.Database.Remote
 				.GetAsync(key, cancellationToken)
 				.ConfigureAwait(false);
 
-			return document.ToJson(checkForId: true);
+		    if (document == null)
+                return null;
+
+            JsonDocument.EnsureIdInMetadata(document);
+		    return document.ToJson();
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
@@ -235,5 +240,9 @@ namespace Raven.Smuggler.Database.Remote
 	    {
             return new CompletedTask();
         }
+
+	    public void OnException(SmugglerException exception)
+	    {
+	    }
 	}
 }

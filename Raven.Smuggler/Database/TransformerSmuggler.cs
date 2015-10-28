@@ -50,7 +50,7 @@ namespace Raven.Smuggler.Database
 						}
 
 						if (Options.IgnoreErrorsAndContinue == false)
-							throw new SmugglerExportException(e.Message, e);
+							throw new SmugglerException(e.Message, e);
 
 						Notifications.ShowProgress("Failed fetching transformers. {0} retries remaining. Message: {1}", retries, e.Message);
 						continue;
@@ -75,7 +75,7 @@ namespace Raven.Smuggler.Database
 						catch (Exception e)
 						{
 							if (Options.IgnoreErrorsAndContinue == false)
-								throw new SmugglerExportException(e.Message, e);
+								throw new SmugglerException(e.Message, e);
 
 							Notifications.ShowProgress("Failed to export transformer {0}. Message: {1}", transformer, e.Message);
 						}

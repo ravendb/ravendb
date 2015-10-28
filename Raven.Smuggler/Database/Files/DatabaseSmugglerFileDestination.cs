@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -99,6 +100,12 @@ namespace Raven.Smuggler.Database.Files
 	    {
 	        state.FilePath = _outputFilePath;
 	        return base.AfterExecuteAsync(state);
+	    }
+
+	    public override void OnException(SmugglerException exception)
+	    {
+	        exception.File = _outputFilePath;
+	        base.OnException(exception);
 	    }
 
 	    private static void WriteLastEtagsToFile(DatabaseSmugglerOperationState state, string etagFileLocation)

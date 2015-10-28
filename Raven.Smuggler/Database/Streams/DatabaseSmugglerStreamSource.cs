@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
@@ -288,6 +289,10 @@ namespace Raven.Smuggler.Database.Streams
 	    {
             return new CompletedTask();
         }
+
+	    public void OnException(SmugglerException exception)
+	    {
+	    }
 
 	    private Task SkipAsync(CancellationToken cancellationToken)
 		{

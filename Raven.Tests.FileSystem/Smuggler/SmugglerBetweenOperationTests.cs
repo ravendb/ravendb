@@ -211,7 +211,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 						await smugglerApi.Between(options);
 						Assert.False(true, "Expected error to happen during this Between operation, but it didn't happen :-(");
 					}
-					catch (SmugglerExportException inner)
+					catch (SmugglerException inner)
 					{
 						lastEtag = inner.LastEtag;
 					}

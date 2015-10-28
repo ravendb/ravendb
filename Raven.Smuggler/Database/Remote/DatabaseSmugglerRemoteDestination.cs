@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
@@ -211,6 +212,10 @@ namespace Raven.Smuggler.Database.Remote
 	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
 	    {
             return new CompletedTask();
+	    }
+
+	    public void OnException(SmugglerException exception)
+	    {
 	    }
 	}
 }

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
@@ -173,6 +174,10 @@ namespace Raven.Smuggler.Database.Files
 	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
 	    {
 	        return new CompletedTask();
+	    }
+
+	    public void OnException(SmugglerException exception)
+	    {
 	    }
 
 	    private static async Task<IDatabaseSmugglerSource> CreateSourceAsync(DatabaseSmugglerOptions options, string path, CancellationToken cancellationToken)

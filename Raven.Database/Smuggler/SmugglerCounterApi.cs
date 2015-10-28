@@ -69,7 +69,7 @@ namespace Raven.Database.Smuggler
 		/// <exception cref="UnauthorizedAccessException">The caller does not have the required permission.-or- specified a file that is read-only. </exception>
 		/// <exception cref="DirectoryNotFoundException">The specified path is invalid (for example, it is on an unmapped drive). </exception>
 		/// <exception cref="IOException">An I/O error occurred while creating the file. </exception>
-		/// <exception cref="SmugglerExportException">Encapsulates exception that happens when actually exporting data. See InnerException for details.</exception>
+		/// <exception cref="SmugglerException">Encapsulates exception that happens when actually exporting data. See InnerException for details.</exception>
 		public async Task<CounterOperationState> ExportData(SmugglerExportOptions<CounterConnectionStringOptions> exportOptions)
 		{
 			if(exportOptions.From == null)
@@ -90,7 +90,7 @@ namespace Raven.Database.Smuggler
 				ShowProgress("Starting full export...");
 			}
 
-			SmugglerExportException lastException = null;
+			SmugglerException lastException = null;
 
 			var ownedStream = exportOptions.ToStream == null;
 			var stream = exportOptions.ToStream ?? File.Create(exportOptions.ToFile);
@@ -123,7 +123,7 @@ namespace Raven.Database.Smuggler
 						else
 							await ExportFullData(counterStore, jsonWriter).WithCancellation(CancellationToken).ConfigureAwait(false);
 					}
-					catch (SmugglerExportException e)
+					catch (SmugglerException e)
 					{
 						Debug.Assert(e.Data.Keys.Cast<string>().Contains("LastEtag"));
 						result.LastWrittenEtag = (long) e.Data["LastEtag"];

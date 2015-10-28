@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Smuggler.Database
 {
@@ -31,5 +32,7 @@ namespace Raven.Smuggler.Database
 		Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
 
 	    Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
+
+	    void OnException(SmugglerException exception);
 	}
 }

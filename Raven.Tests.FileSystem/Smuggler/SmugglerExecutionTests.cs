@@ -232,7 +232,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 								}
 							});
 					}
-                    catch (SmugglerExportException inner)
+                    catch (SmugglerException inner)
 					{
 						exportResult = new ExportFilesResult
 						{

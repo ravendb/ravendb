@@ -272,7 +272,6 @@
     <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
-    <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\StorageNotSupportedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />

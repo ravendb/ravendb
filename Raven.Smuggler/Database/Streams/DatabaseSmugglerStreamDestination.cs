@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -95,6 +96,10 @@ namespace Raven.Smuggler.Database.Streams
 	    {
             return new CompletedTask();
         }
+
+	    public virtual void OnException(SmugglerException exception)
+	    {
+	    }
 
 	    public void Dispose()
 		{

@@ -5,12 +5,14 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Server;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -112,8 +114,17 @@ namespace Raven.SlowTests.Issues
 			}
 
 			var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
-            var smugglerApi = new SmugglerDatabaseApi { Options = { Incremental = true } };
-            await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupFolder.FullName, To = connection });
+
+            var smuggler = new DatabaseSmuggler(
+                new DatabaseSmugglerOptions(),
+                new DatabaseSmugglerFileSource(backupFolder.FullName),
+                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                {
+                    Url = documentStore.Url,
+                    Database = "DestDB"
+                }));
+
+            await smuggler.ExecuteAsync();
 
 			using (var session = documentStore.OpenSession())
 			{

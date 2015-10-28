@@ -54,29 +54,39 @@ namespace Raven.Smuggler.Database
 			using (_source)
 			using (_destination)
 			{
-				await _source
-					.InitializeAsync(_options, cancellationToken)
-					.ConfigureAwait(false);
+			    try
+			    {
+                    await _source
+                    .InitializeAsync(_options, cancellationToken)
+                    .ConfigureAwait(false);
 
-				await _destination
-					.InitializeAsync(_options, _notifications, cancellationToken)
-					.ConfigureAwait(false);
+                    await _destination
+                        .InitializeAsync(_options, _notifications, cancellationToken)
+                        .ConfigureAwait(false);
 
-				var state = await GetOperationStateAsync(_options, _source, _destination, cancellationToken).ConfigureAwait(false);
+                    var state = await GetOperationStateAsync(_options, _source, _destination, cancellationToken).ConfigureAwait(false);
 
-				var sources = _source.SupportsMultipleSources
-					? _source.Sources
-					: new List<IDatabaseSmugglerSource> { _source };
+                    var sources = _source.SupportsMultipleSources
+                        ? _source.Sources
+                        : new List<IDatabaseSmugglerSource> { _source };
 
-				Notifications.ShowProgress("Found {0} sources.", sources.Count);
+                    Notifications.ShowProgress("Found {0} sources.", sources.Count);
 
-				foreach (var source in sources)
-					await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
+                    foreach (var source in sources)
+                        await ProcessSourceAsync(source, state, cancellationToken).ConfigureAwait(false);
 
-			    await _source.AfterExecuteAsync(state).ConfigureAwait(false);
-                await _destination.AfterExecuteAsync(state).ConfigureAwait(false);
+                    await _source.AfterExecuteAsync(state).ConfigureAwait(false);
+                    await _destination.AfterExecuteAsync(state).ConfigureAwait(false);
 
-                return state;
+                    return state;
+                }
+			    catch (SmugglerException e)
+			    {
+			        _source.OnException(e);
+			        _destination.OnException(e);
+
+			        throw;
+			    }
 			}
 		}
 

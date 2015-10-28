@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
@@ -98,6 +99,10 @@ namespace Raven.Tests.Smuggler.Helpers
 	    {
             return new CompletedTask();
         }
+
+	    public void OnException(SmugglerException exception)
+	    {
+	    }
 
 	    private class DatabaseSmugglerCountingIndexActions : DatabaseSmugglerCountingActionsBase, IDatabaseSmugglerIndexActions
 		{

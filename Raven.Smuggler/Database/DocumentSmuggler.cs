@@ -232,9 +232,9 @@ namespace Raven.Smuggler.Database
 					{
 						Notifications.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
 						Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, afterEtag);
-						throw new SmugglerExportException(e.Message, e)
+						throw new SmugglerException(e.Message, e)
 						{
-							LastEtag = afterEtag,
+							LastEtag = afterEtag
 						};
 					}
 				} while (Source.SupportsPaging);

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Smuggler.Database;
 
@@ -82,6 +83,10 @@ namespace Raven.Database.Smuggler.Embedded
 	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
 	    {
 	        return new CompletedTask();
+	    }
+
+	    public void OnException(SmugglerException exception)
+	    {
 	    }
     }
 }
