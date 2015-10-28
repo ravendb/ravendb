@@ -43,13 +43,13 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("Prefix cannot be empty");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Delete, async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/types/{2}",
 					url, timeSeriesName, type);
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
-					return request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token).ConfigureAwait(false);
 		}
@@ -116,13 +116,13 @@ namespace Raven.Client.TimeSeries
 				throw new InvalidOperationException("Data is invalid");
 
 			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
-			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, (url, timeSeriesName) =>
+			await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post,async (url, timeSeriesName) =>
 			{
 				var requestUriString = string.Format(CultureInfo.InvariantCulture, "{0}ts/{1}/delete-key/{2}?key={3}",
 					url, timeSeriesName, type, Uri.EscapeDataString(key));
 				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
-					return request.ReadResponseJsonAsync().WithCancellation(token);
+					return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				}
 			}, token).ConfigureAwait(false);
 		}

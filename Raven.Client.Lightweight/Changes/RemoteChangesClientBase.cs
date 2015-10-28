@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -177,7 +178,7 @@ namespace Raven.Client.Changes
                 var sendTask = lastSendTask;
                 if (sendTask != null)
                 {
-                    sendTask.ContinueWith(_ =>
+                    return sendTask.ContinueWith(_ =>
                     {
                         Send(command, value);
                     });
