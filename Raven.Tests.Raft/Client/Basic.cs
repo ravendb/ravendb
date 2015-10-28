@@ -14,6 +14,7 @@ using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
@@ -369,7 +370,7 @@ namespace Raven.Tests.Raft.Client
 			response = await httpClient.PostAsync(url + "/indexes/set-priority/index1", new JsonContent());
 			assertion(response);
 
-			response = await httpClient.PostAsync(url + "/c-sharp-index-definition/index1", new JsonContent());
+			response = await httpClient.GetAsync(url + "/c-sharp-index-definition/index1");
 			assertion(response);
 		}
 
@@ -411,8 +412,8 @@ namespace Raven.Tests.Raft.Client
 			response = await httpClient.PutAsync(url.Doc("keys/1"), new JsonContent());
 			assertion(response);
 
-			response = await httpClient.PostAsync(url.Doc("keys/1"), new JsonContent());
-			assertion(response);
+			response = await httpClient.PostAsync(url+ "/docs", new JsonContent());
+            assertion(response);
 
 			response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url.Doc("keys/1")));
 			assertion(response);
