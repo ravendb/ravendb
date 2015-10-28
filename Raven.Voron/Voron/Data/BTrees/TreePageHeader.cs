@@ -76,8 +76,10 @@ namespace Voron.Data.BTrees
         [FieldOffset(13)]
         public RawDataPageFlags RawDataFlags;
 
-        [FieldOffset(14)]
-        public fixed ushort SpaceUsage [NumberOfPagesInSmallSection];
+        [FieldOffset(14)] public int NumberOfEntriesInSection;
+
+        [FieldOffset(18)]
+        public fixed ushort AvailableSpace [NumberOfPagesInSmallSection];
     }
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
