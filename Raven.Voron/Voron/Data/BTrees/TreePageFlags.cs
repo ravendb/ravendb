@@ -10,7 +10,7 @@ namespace Voron.Data.BTrees
         VariableSizeTreePage = 4,
         FixedSizeTreePage = 8,
         ZFastTreePage = 16,
-        Reserved1 = 32,
+        RawData = 32,
         Reserved2 = 64,
         Reserved3 = 128,
     }
@@ -31,5 +31,14 @@ namespace Voron.Data.BTrees
         Branch = 1,
         Leaf = 2,
         Value = 4,
+    }
+
+    [Flags]
+    public enum RawDataPageFlags : byte
+    {
+        None = 0,
+        Header = 1,
+        Small = 2,
+        Large = 4,
     }
 }
