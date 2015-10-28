@@ -7,12 +7,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Common;
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
-using Raven.Tests.Core.Smuggler;
 
 using Xunit;
 
@@ -37,40 +38,38 @@ namespace Raven.Tests.Issues
 
 				using (var stream = new MemoryStream())
 				{
-					var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-					{
-						Filters =
-						{
-							new FilterSetting
-							{
-								Path = "@metadata.Raven-Entity-Name",
-								ShouldMatch = true,
-								Values = { "People" }
-							}
-						}
-					});
+                    var options = new DatabaseSmugglerOptions();
+                    options.Filters.Add(new FilterSetting
+                    {
+                        Path = "@metadata.Raven-Entity-Name",
+                        ShouldMatch = true,
+                        Values = { "People" }
+                    });
 
-					await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						From = new RavenConnectionStringOptions
-						{
-							DefaultDatabase = store1.DefaultDatabase,
-							Url = store1.Url
-						},
-						ToStream = stream
-					});
+				    var smuggler = new DatabaseSmuggler(
+                        options, 
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store1.DefaultDatabase,
+                            Url = store1.Url
+                        }), 
+                        new DatabaseSmugglerStreamDestination(stream));
+
+
+				    await smuggler.ExecuteAsync();
 
 					stream.Position = 0;
 
-					await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-					{
-						FromStream = stream,
-						To = new RavenConnectionStringOptions
-						{
-							DefaultDatabase = store2.DefaultDatabase,
-							Url = store2.Url
-						}
-					});
+				    smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerStreamSource(stream),
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store2.DefaultDatabase,
+                            Url = store2.Url
+                        }));
+
+				    await smuggler.ExecuteAsync();
 				}
 
 				WaitForIndexing(store2);
@@ -112,32 +111,29 @@ namespace Raven.Tests.Issues
 
 				using (var stream = new MemoryStream())
 				{
-					var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-					{
-						Filters =
-						{
-							new FilterSetting
-							{
-								Path = "@metadata.Raven-Entity-Name",
-								ShouldMatch = true,
-								Values = { "People" }
-							}
-						}
-					});
+                    var options = new DatabaseSmugglerOptions();
+                    options.Filters.Add(new FilterSetting
+                    {
+                        Path = "@metadata.Raven-Entity-Name",
+                        ShouldMatch = true,
+                        Values = { "People" }
+                    });
 
-					await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-					{
-						From = new RavenConnectionStringOptions
-						{
-							DefaultDatabase = store1.DefaultDatabase,
-							Url = store1.Url
-						},
-						To = new RavenConnectionStringOptions
-						{
-							DefaultDatabase = store2.DefaultDatabase,
-							Url = store2.Url
-						}
-					});
+                    var smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store1.DefaultDatabase,
+                            Url = store1.Url
+                        }),
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store2.DefaultDatabase,
+                            Url = store2.Url
+                        }));
+
+
+				    await smuggler.ExecuteAsync();
 				}
 
 				WaitForIndexing(store2);

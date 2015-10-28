@@ -6,10 +6,11 @@
 using System.IO;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client.Exceptions;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -65,26 +66,31 @@ namespace Raven.Tests.Issues
 
 				using (var stream = new MemoryStream())
 				{
-					var smuggler = new SmugglerDatabaseApi();
-					await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-											  {
-												  From = new RavenConnectionStringOptions
-														 {
-															 Url = store2.Url,
-															 DefaultDatabase = store2.DefaultDatabase
-														 },
-												  ToStream = stream
-											  });
+				    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(), 
+                        new DatabaseSmugglerRemoteSource(
+                            new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = store2.Url,
+                                Database = store2.DefaultDatabase
+                            }),
+                        new DatabaseSmugglerStreamDestination(stream));
 
-					await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-										{
-											FromStream = stream,
-											To = new RavenConnectionStringOptions
-												 {
-													 DefaultDatabase = "Northwind",
-													 Url = store2.Url
-												 }
-										});
+				    await smuggler.ExecuteAsync();
+
+				    stream.Position = 0;
+
+				    smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(), 
+                        new DatabaseSmugglerStreamSource(stream), 
+                        new DatabaseSmugglerRemoteDestination(
+                            new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Database = "Northwind",
+                                Url = store2.Url
+                            }));
+
+                    await smuggler.ExecuteAsync();
 				}
 
 				Assert.Throws<ConflictException>(() =>

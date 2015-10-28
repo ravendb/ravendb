@@ -4,14 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Smuggler;
-using Raven.Client.Extensions;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -25,30 +22,26 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-                var smugglerApi = new SmugglerDatabaseApi();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store.Url,
+                        Database = "DB1"
+                    }), new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store.Url,
+                        Database = "DB2"
+                    }));
 
-                var options = new SmugglerBetweenOptions<RavenConnectionStringOptions>
-				              {
-									From = new RavenConnectionStringOptions
-					                {
-						                Url = store.Url, 
-										DefaultDatabase = "DB1"
-					                },
-									To = new RavenConnectionStringOptions
-					                {
-										Url = store.Url, 
-										DefaultDatabase = "DB2"
-					                }
-				              };
-
-				var aggregateException = Assert.Throws<AggregateException>(() => smugglerApi.Between(options).Wait());
+				var aggregateException = Assert.Throws<AggregateException>(() => smuggler.Execute());
 				var exception = aggregateException.ExtractSingleInnerException();
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB1' on server"));
 
 				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DB1");
 
-				aggregateException = Assert.Throws<AggregateException>(() => smugglerApi.Between(options).Wait());
-				exception = aggregateException.ExtractSingleInnerException();
+                aggregateException = Assert.Throws<AggregateException>(() => smuggler.Execute());
+                exception = aggregateException.ExtractSingleInnerException();
 				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB2' on server"));
 			}
 		}

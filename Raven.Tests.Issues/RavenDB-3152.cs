@@ -1,17 +1,21 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Data;
+using Raven.Abstractions.Database.Smuggler.Common;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
-using Raven.Smuggler;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -72,33 +76,28 @@ namespace Raven.Tests.Issues
 					}
 				}
 
-				SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-					Incremental = false
-				});
-				smugglerApi.Options.Filters.Add(new FilterSetting
-				{
-					Path = "Name",
-					ShouldMatch = true,
-					Values = { "worker/22", "worker/333" }
-				});
+			    var options = new DatabaseSmugglerOptions();
+                options.Filters.Add(new FilterSetting
+                {
+                    Path = "Name",
+                    ShouldMatch = true,
+                    Values = { "worker/22", "worker/333" }
+                });
 
-				await smugglerApi.Between(
-					new SmugglerBetweenOptions<RavenConnectionStringOptions>
-					{
-						From = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba1"
-						},
-						To = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba2"
-						}
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba1"
+                    }),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba2"
+                    }));
 
-					});
+			    await smuggler.ExecuteAsync();
 
 				using (var store2 = new DocumentStore
 				{
@@ -176,33 +175,31 @@ namespace Raven.Tests.Issues
 					}
 				}
 
-				SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-					Incremental = false
-				});
-				smugglerApi.Options.Filters.Add(new FilterSetting
-				{
-					Path = "Name",
-					ShouldMatch = true,
-					Values = { "worker/22", "worker/333" }
-				});
+			    var options = new DatabaseSmugglerOptions
+			    {
+			        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes
+			    };
+                options.Filters.Add(new FilterSetting
+                {
+                    Path = "Name",
+                    ShouldMatch = true,
+                    Values = { "worker/22", "worker/333" }
+                });
 
-				await smugglerApi.Between(
-					new SmugglerBetweenOptions<RavenConnectionStringOptions>
-					{
-						From = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba1"
-						},
-						To = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba2"
-						}
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba1"
+                    }),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba2"
+                    }));
 
-					});
+                await smuggler.ExecuteAsync();
 
 				using (var store2 = new DocumentStore
 				{
@@ -231,35 +228,34 @@ namespace Raven.Tests.Issues
 				}.Initialize())
 				{
 					StoreWorkerseDba1(store1);
-
 				}
-				 smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-					Incremental = true
-				});
-				smugglerApi.Options.Filters.Add(new FilterSetting
-				{
-					Path = "Name",
-					ShouldMatch = true,
-					Values = { "worker/22", "worker/33" }
-				});
 
-				await smugglerApi.Between(
-					new SmugglerBetweenOptions<RavenConnectionStringOptions>
-					{
-						From = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba1"
-						},
-						To = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba2"
-						}
+                options = new DatabaseSmugglerOptions
+                {
+                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes
+                };
+                options.Filters.Add(new FilterSetting
+                {
+                    Path = "Name",
+                    ShouldMatch = true,
+                    Values = { "worker/22", "worker/33" }
+                });
 
-					});
+                smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba1"
+                    }),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba2"
+                    }));
+
+                await smuggler.ExecuteAsync();
+
 				using (var store2 = new DocumentStore
 				{
 					Url = server.SystemDatabase.Configuration.ServerUrl,
@@ -325,33 +321,34 @@ namespace Raven.Tests.Issues
 					}
 				}
 
-				SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-					Incremental = true
-				});
-				smugglerApi.Options.Filters.Add(new FilterSetting
-				{
-					Path = "Name",
-					ShouldMatch = true,
-					Values = { "worker/21", "worker/33" }
-				});
+                var options = new DatabaseSmugglerOptions
+                {
+                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes
+                };
+                options.Filters.Add(new FilterSetting
+                {
+                    Path = "Name",
+                    ShouldMatch = true,
+                    Values = { "worker/21", "worker/33" }
+                });
 
-				await smugglerApi.ExportData(
-					new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						ToFile = file,
-						From = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba1"
-						}
-					});
-	
+                var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = server.SystemDatabase.Configuration.ServerUrl,
+                        Database = "Dba1"
+                    }),
+                    new DatabaseSmugglerFileDestination(
+                        file, 
+                        new DatabaseSmugglerFileDestinationOptions
+                        {
+                            Incremental = true
+                        }));
+
+			    await smuggler.ExecuteAsync();
 
 				//check file after first export
-
-
 
 				using (var store1 = new DocumentStore
 				{
@@ -367,27 +364,7 @@ namespace Raven.Tests.Issues
 
 				//Second time Export 
 
-				smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-				{
-					OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-					Incremental = true
-				});
-				smugglerApi.Options.Filters.Add(new FilterSetting
-				{
-					Path = "Name",
-					ShouldMatch = true,
-					Values = { "worker/21", "worker/33" }
-				});
-				await smugglerApi.ExportData(
-					new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						ToFile = file,
-						From = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba1"
-						}
-					});
+			    await smuggler.ExecuteAsync();
 
 				using (var store2 = new DocumentStore
 				{
@@ -397,21 +374,22 @@ namespace Raven.Tests.Issues
 				}.Initialize())
 				{
 
-					 smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-					{
-						OperateOnTypes = ItemType.Documents | ItemType.Indexes,
-						Incremental = true
-					});
-					
-					await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-					{
-						FromFile = file,
-						To = new RavenConnectionStringOptions
-						{
-							Url = server.SystemDatabase.Configuration.ServerUrl,
-							DefaultDatabase = "Dba2"
-						}
-					});
+                    options = new DatabaseSmugglerOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes
+                    };
+
+				    smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerFileSource(file),
+                        new DatabaseSmugglerRemoteDestination(
+                            new DatabaseSmugglerRemoteConnectionOptions
+                            {
+                                Url = server.SystemDatabase.Configuration.ServerUrl,
+                                Database = "Dba2"
+                            }));
+
+				    await smuggler.ExecuteAsync();
 
 					using (var session = store2.OpenSession())
 					{

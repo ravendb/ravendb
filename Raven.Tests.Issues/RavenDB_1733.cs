@@ -6,10 +6,11 @@
 using System.IO;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
-using Raven.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -37,38 +38,30 @@ namespace Raven.Tests.Issues
 				{
 					store.DatabaseCommands.Put("docs/1", null, testObject, new RavenJObject());
 
-					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions
-					{
-						TransformScript = EmptyTransform
-					});
+				    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
+                        {
+                            TransformScript = EmptyTransform
+                        }, 
+                        new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase), 
+                        new DatabaseSmugglerStreamDestination(stream));
 
-					await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
-					{
-						From = new EmbeddedRavenConnectionStringOptions
-								{
-									DefaultDatabase = store.DefaultDatabase
-								},
-						ToStream = stream
-					});
+				    await smuggler.ExecuteAsync();
 				}
 
 				stream.Position = 0;
 
 				using (var store = NewDocumentStore())
 				{
-					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions
-					{
-						TransformScript = EmptyTransform
-					});
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions
+                        {
+                            TransformScript = EmptyTransform
+                        },
+                        new DatabaseSmugglerStreamSource(stream), 
+                        new DatabaseSmugglerEmbeddedDestination(store.DocumentDatabase));
 
-					await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
-					{
-						FromStream = stream,
-						To = new EmbeddedRavenConnectionStringOptions
-						{
-							DefaultDatabase = store.DefaultDatabase
-						}
-					});
+                    await smuggler.ExecuteAsync();
 
 					var doc = store.DatabaseCommands.Get("docs/1").DataAsJson;
 					Assert.NotNull(doc);
