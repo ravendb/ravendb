@@ -131,7 +131,7 @@ namespace Raven.Smuggler.Database.Remote
 				.GetAsync(key, cancellationToken)
 				.ConfigureAwait(false);
 
-			return document.ToJson();
+			return document.ToJson(checkForId: true);
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
