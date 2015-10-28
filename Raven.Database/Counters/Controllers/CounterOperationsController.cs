@@ -33,7 +33,7 @@ namespace Raven.Database.Counters.Controllers
 	{
 		[RavenRoute("cs/{counterStorageName}/sinceEtag")]
 		[HttpGet]
-		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024)
+		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip, int take)
 		{
 			List<CounterState> deltas;
 			using (var reader = CounterStorage.CreateReader())
@@ -381,7 +381,7 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
+		public HttpResponseMessage GetCounterSummariesByGroup(int skip, int take, string group)
 		{
 			if (skip < 0)
 				return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
@@ -423,7 +423,52 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterStorageName}/getCounter")]
+	    [RavenRoute("cs/{counterStorageName}/by-prefix")]
+	    [HttpGet]
+	    public HttpResponseMessage GetCountersByPrefix(string groupName, int skip, int take, string counterNamePrefix = null)
+	    {
+	        if (string.IsNullOrWhiteSpace(groupName))
+	            return GetMessageWithObject(new
+	            {
+                    Message = $"{nameof(groupName)} is a required parameter, thus it must not be null or empty"
+	            },HttpStatusCode.BadRequest);
+
+	        HttpResponseMessage messageWithObject;
+	        if (!ValidateSkipAndTake(skip, take, out messageWithObject))
+                return messageWithObject;
+
+	        using (var reader = CounterStorage.CreateReader())
+	        {
+	            var counterSummaries = reader.GetCountersByPrefix(groupName, counterNamePrefix, skip, take).ToList();
+	            return GetMessageWithObject(counterSummaries);
+	        }
+	    }
+
+	    private bool ValidateSkipAndTake(int skip, int take, out HttpResponseMessage messageWithObject)
+	    {
+	        messageWithObject = null;
+
+            if (skip < 0)
+	        {
+	            messageWithObject = GetMessageWithObject(new
+	            {
+	                Message = $"{nameof(skip)} must not be negative number."
+	            }, HttpStatusCode.BadRequest);
+	            return false;
+	        }
+
+	        if (take <= 0)
+	        {
+	            messageWithObject = GetMessageWithObject(new
+	            {
+	                Message = $"{nameof(take)} is a required parameter and must not be less or equal to zero"
+	            }, HttpStatusCode.BadRequest);
+	            return false;
+	        }
+	        return true;
+	    }
+
+	    [RavenRoute("cs/{counterStorageName}/getCounter")]
 		[HttpGet]
 		public HttpResponseMessage GetCounter(string groupName, string counterName)
 		{

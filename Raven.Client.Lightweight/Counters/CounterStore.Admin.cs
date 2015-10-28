@@ -158,7 +158,7 @@ namespace Raven.Client.Counters
 				}
 			}
 
-			public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
+			public async Task<IReadOnlyList<string>> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
@@ -167,7 +167,7 @@ namespace Raven.Client.Counters
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<string[]>(parent.JsonSerializer);
+					return response.ToObject<IReadOnlyList<string>>(parent.JsonSerializer);
 				}
 			}
 			 

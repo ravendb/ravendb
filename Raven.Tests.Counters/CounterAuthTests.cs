@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -58,10 +59,10 @@ namespace Raven.Tests.Counters
 			})
 			{
 				store.Initialize();
-				var storageNames = new string[0];
+				IReadOnlyList<string> storageNames = null;
 				Assert.DoesNotThrow(() => storageNames = AsyncHelpers.RunSync(() => store.Admin.GetCounterStoragesNamesAsync()));
 				
-                Assert.Equal(1, storageNames.Length);
+                Assert.Equal(1, storageNames.Count);
 			}
 		}
 

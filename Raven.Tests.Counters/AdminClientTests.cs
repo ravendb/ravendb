@@ -18,7 +18,7 @@ namespace Raven.Tests.Counters
 				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName);
 
 				var counterStorageNames = await store.Admin.GetCounterStoragesNamesAsync();
-                Assert.Equal(1, counterStorageNames.Length);
+                Assert.Equal(1, counterStorageNames.Count);
                 Assert.Contains(CounterStorageName, counterStorageNames);
 			}
 		}
