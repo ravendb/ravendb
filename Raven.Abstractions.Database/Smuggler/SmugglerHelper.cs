@@ -23,10 +23,10 @@ namespace Raven.Abstractions.Database.Smuggler
 				return null;
 
 			if (metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
-				metadata.Add(Constants.RavenReplicationConflictDocumentForcePut, true);
+				metadata[Constants.RavenReplicationConflictDocumentForcePut] = true;
 
 			if (metadata.ContainsKey(Constants.RavenReplicationConflict))
-				metadata.Add(Constants.RavenReplicationConflictSkipResolution, true);
+                metadata[Constants.RavenReplicationConflictSkipResolution] = true;
 
 			return metadata;
 		}
@@ -34,7 +34,7 @@ namespace Raven.Abstractions.Database.Smuggler
 		public static RavenJToken DisableVersioning(RavenJObject metadata)
 		{
 			if (metadata != null)
-				metadata.Add(Constants.RavenIgnoreVersioning, true);
+				metadata[Constants.RavenIgnoreVersioning] = true;
 
 			return metadata;
 		}
