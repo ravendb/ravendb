@@ -756,67 +756,52 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, metadataOnly, token), token);
 		}
 
-		private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
-														   Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default (CancellationToken))
-		{
-			var path = operationMetadata.Url + "/queries/?";
-			if (metadataOnly)
-				path += "&metadata-only=true";
-			if (includes != null && includes.Length > 0)
-			{
-				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
-			}
-			if (string.IsNullOrEmpty(transformer) == false)
-				path += "&transformer=" + transformer;
+        private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
+                                                           Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
+        {
+            var path = operationMetadata.Url + "/queries/?";
+            if (metadataOnly)
+                path += "&metadata-only=true";
+            if (includes != null && includes.Length > 0)
+            {
+                path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+            }
+            if (string.IsNullOrEmpty(transformer) == false)
+                path += "&transformer=" + transformer;
 
-			if (transformerParameters != null)
-			{
-				path = transformerParameters.Aggregate(path,
-											 (current, transformerParam) =>
-											 current + ("&" + string.Format("tp-{0}={1}", transformerParam.Key, transformerParam.Value)));
-			}
+            if (transformerParameters != null)
+            {
+                path = transformerParameters.Aggregate(path,
+                                             (current, transformerParam) =>
+                                             current + ("&" + string.Format("tp-{0}={1}", transformerParam.Key, transformerParam.Value)));
+            }
 
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
+            var metadata = new RavenJObject();
+            AddTransactionInformation(metadata);
 
-			var uniqueIds = new HashSet<string>(keys);
-			HttpJsonRequest request = null;
+            var uniqueIds = new HashSet<string>(keys);
+            // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+            // we are fine with that, requests to load > 128 items are going to be rare
+            var isGet = uniqueIds.Sum(x => x.Length) < 1024;
+            var method = isGet ? "GET" : "POST";
+            if (isGet)
+            {
+                path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+            }
 
-			try
-			{
-				// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-				// we are fine with that, requests to load > 128 items are going to be rare
-				if (uniqueIds.Sum(x => x.Length) < 1024)
-				{
-					path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-					request =
-						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", metadata, operationMetadata.Credentials,
-																								 convention)
-																	 .AddOperationHeaders(OperationsHeaders));
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            {
+                if (isGet == false)
+                {
+                    await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);
+                }
 
-					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-														HandleReplicationStatusChanges);
+                var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result, token).ConfigureAwait(false);
+            }
+        }
 
-					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result, token).ConfigureAwait(false);
-				}
-				request = jsonRequestFactory.CreateHttpJsonRequest(
-                                                new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
-											            .AddOperationHeaders(OperationsHeaders));
-                               
-				await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);                
-
-				var responseResult = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, responseResult, token).ConfigureAwait(false);
-			}
-			finally
-			{
-				if (request != null)
-					request.Dispose();
-			}
-		}
-
-		private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
+        private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
 														   Dictionary<string, RavenJToken> transformerParameters, RavenJToken result, CancellationToken token = default (CancellationToken))
 		{
 			ErrorResponseException responseException;
