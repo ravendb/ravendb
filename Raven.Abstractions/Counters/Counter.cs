@@ -34,6 +34,8 @@ namespace Raven.Abstractions.Counters
 
         public long Value { get; set; }
 
+        public string ServerName { get; set; }
+
         public long Etag { get; set; }
     }
 }

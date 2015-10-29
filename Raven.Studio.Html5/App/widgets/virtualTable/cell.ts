@@ -17,7 +17,7 @@ class cell {
 
     update(data: any) {
         if (this.isNumber(data)) {
-            data = data.toLocaleString();
+            data = data.toLocaleString('en-US');
         }
         this.data(data);
     }
