@@ -139,7 +139,7 @@ define(['durandal/system', 'jquery'], function (system, $) {
 	}
 
 	return App = {
-		duration: 1000 * .23, // seconds
+		duration: 1000 * .13, // seconds
 		create: function (settings) {
 			settings = ensureSettings(settings);
 			return doTrans(settings);
