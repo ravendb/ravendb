@@ -737,7 +737,8 @@ namespace Raven.Client.Document
 			set
 			{
 				maxNumberOfCachedRequests = value;
-                jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
+                if (initialized == true)
+                    jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
 			}
 		}
 
