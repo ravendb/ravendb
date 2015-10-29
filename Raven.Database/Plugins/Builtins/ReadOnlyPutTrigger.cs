@@ -23,7 +23,7 @@ namespace Raven.Database.Plugins.Builtins
             var isOldReadOnly = old.Metadata.Value<bool>(Constants.RavenReadOnly);
             
             if (isOldReadOnly)
-                return VetoResult.Deny(string.Format("You cannot update document '{0}' when both of them, new and existing one, are marked as readonly. To update this document change '{1}' flag to 'False' or remove it entirely.", key, Constants.RavenReadOnly));
+                return VetoResult.Deny($"You cannot update document '{key}' when both of them, new and existing one, are marked as readonly. To update this document change '{Constants.RavenReadOnly}' flag to 'False' or remove it entirely.");
 
             return VetoResult.Allowed;
         }

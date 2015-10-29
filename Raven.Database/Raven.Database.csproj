@@ -613,7 +613,6 @@
     <Compile Include="Counters\Controllers\BaseCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
-    <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
     <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />

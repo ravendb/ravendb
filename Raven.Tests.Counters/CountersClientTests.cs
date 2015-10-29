@@ -12,7 +12,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Counters
 {
-	public class CountersBasicClientTests : RavenBaseCountersTest
+	public class CountersClientTests : RavenBaseCountersTest
 	{
 		private const string CounterStorageName = "FooBarCounterStore";
 		private const string CounterName = "FooBarCounter";
@@ -61,7 +61,7 @@ namespace Raven.Tests.Counters
 			{
 				using (var counterStore = new CounterStore
 				{
-					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Url = $"{server.DocumentStore.Url}:{server.Configuration.Port}",
 					Name = DefaultCounterStorageName					
 				})
 				{
@@ -78,7 +78,7 @@ namespace Raven.Tests.Counters
 				})
 				{
 					counterStore.Initialize(true);
-					var summary = await counterStore.Admin.GetCounterStorageSummary(DefaultCounterStorageName);
+					var summary = await counterStore.Admin.GetCountersByStorage(DefaultCounterStorageName);
                     Assert.Equal(2, summary.Count);
                     Assert.NotNull(summary.SingleOrDefault(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C"));
 					Assert.NotNull(summary.SingleOrDefault(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2"));
@@ -86,7 +86,76 @@ namespace Raven.Tests.Counters
 			}
 		}
 
-		[Theory]
+	    [Fact]
+	    public async Task GetCountersByPrefix_with_null_prefix_should_work()
+	    {
+            const string counterGroupName = "FooBarGroup";
+            using (var store = NewRemoteCountersStore(CounterStorageName))
+	        {
+                await store.ChangeAsync(counterGroupName, CounterName + 'A', 1);
+                await store.ChangeAsync(counterGroupName, CounterName + 'B', 2);
+                await store.ChangeAsync(counterGroupName, CounterName + 'C', 3);
+
+	            var summaries = await store.Advanced.GetCountersByPrefix(counterGroupName);
+                Assert.Equal(3, summaries.Count);
+                Assert.Contains(CounterName + 'A', summaries.Select(x => x.CounterName));
+                Assert.Contains(CounterName + 'B', summaries.Select(x => x.CounterName));
+                Assert.Contains(CounterName + 'C', summaries.Select(x => x.CounterName));
+
+                Assert.Equal(1, summaries.First(x => x.CounterName.Equals(CounterName + 'A')).Total);
+                Assert.Equal(2, summaries.First(x => x.CounterName.Equals(CounterName + 'B')).Total);
+                Assert.Equal(3, summaries.First(x => x.CounterName.Equals(CounterName + 'C')).Total);
+            }
+        }
+
+        [Fact]
+        public async Task GetCountersByPrefix_with_non_null_prefix_should_work()
+        {
+            const string counterGroupName = "FooBarGroup";
+            using (var store = NewRemoteCountersStore(CounterStorageName))
+            {
+                await store.ChangeAsync(counterGroupName, CounterName + "AA", 3);
+                await store.ChangeAsync(counterGroupName, CounterName + "AB", 2);
+                await store.ChangeAsync(counterGroupName, CounterName + "BA", 1);
+
+                var summaries = await store.Advanced
+                    .GetCountersByPrefix(counterGroupName, 
+                            counterNamePrefix: CounterName + "A");
+
+                Assert.Equal(2, summaries.Count);
+                Assert.Contains(CounterName + "AA", summaries.Select(x => x.CounterName));
+                Assert.Contains(CounterName + "AB", summaries.Select(x => x.CounterName));
+                Assert.DoesNotContain(CounterName + "BA", summaries.Select(x => x.CounterName));
+
+                Assert.Equal(2, summaries.First(x => x.CounterName.Equals(CounterName + "AB")).Total);
+                Assert.Equal(3, summaries.First(x => x.CounterName.Equals(CounterName + "AA")).Total);
+            }
+        }
+
+        [Fact]
+        public async Task GetCountersByPrefix_with_non_null_prefix_and_paging_should_work()
+        {
+            const string counterGroupName = "FooBarGroup";
+            using (var store = NewRemoteCountersStore(CounterStorageName))
+            {
+                await store.ChangeAsync(counterGroupName, CounterName + "AA", 3);
+                await store.ChangeAsync(counterGroupName, CounterName + "AB", 2);
+                await store.ChangeAsync(counterGroupName, CounterName + "BA", 1);
+
+                var summaries = await store.Advanced
+                    .GetCountersByPrefix(counterGroupName,
+                            counterNamePrefix: CounterName + "A",skip:1,take:1);
+
+                Assert.Equal(1, summaries.Count);
+                Assert.DoesNotContain(CounterName + "AA", summaries.Select(x => x.CounterName));
+                Assert.Contains(CounterName + "AB", summaries.Select(x => x.CounterName));
+                Assert.DoesNotContain(CounterName + "BA", summaries.Select(x => x.CounterName));
+
+                Assert.Equal(2, summaries.First(x => x.CounterName.Equals(CounterName + "AB")).Total);
+            }
+        }
+
+        [Theory]
 		[InlineData(2)]
 		[InlineData(-2)]
 		public async Task CountrsReset_should_work(int delta)
