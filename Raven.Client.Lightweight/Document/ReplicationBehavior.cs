@@ -160,8 +160,12 @@ namespace Raven.Client.Document
 		    {
 			    var json = await request.ReadResponseJsonAsync();
 			    var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
-				log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
-				
+
+                if ( log.IsDebugEnabled )
+                {
+                    log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
+                }
+								
 			    return new ReplicatedEtagInfo
 			    {
 				    DestinationUrl = destinationUrl,

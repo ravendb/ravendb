@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Abstractions.Util.Streams;
 
 namespace Raven.Abstractions.Connection
 {
@@ -38,27 +39,32 @@ namespace Raven.Abstractions.Connection
 
 		public bool IsOutputHumanReadable { get; set; }
 
-		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
 		    if (HasNoData())
 		        return new CompletedTask<bool>(true);
 
-			var writer = new StreamWriter(stream, DefaultEncoding);
-			if (string.IsNullOrEmpty(Jsonp) == false)
-			{
-				writer.Write(Jsonp);
-				writer.Write("(");
-			}
+            using ( var undisposableStream = new UndisposableStream(stream) )
+            using ( var bufferedStream = new BufferedStream(undisposableStream))
+            {
+                var writer = new StreamWriter(stream, DefaultEncoding);
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                {
+                    writer.Write(Jsonp);
+                    writer.Write("(");
+                }
 
-			Data.WriteTo(new JsonTextWriter(writer)
-			{
-				Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
-			}, Default.Converters);
+                Data.WriteTo(new JsonTextWriter(writer)
+                {
+                    Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
+                }, Default.Converters);
 
-			if (string.IsNullOrEmpty(Jsonp) == false)
-				writer.Write(")");
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                    writer.Write(")");
 
-			writer.Flush();
+                writer.Flush();
+            }
+
             return new CompletedTask<bool>(true);
 		}
 

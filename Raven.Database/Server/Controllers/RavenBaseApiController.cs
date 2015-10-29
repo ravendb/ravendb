@@ -128,7 +128,8 @@ namespace Raven.Database.Server.Controllers
 		public async Task<T> ReadJsonObjectAsync<T>()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
+            using (var buffered = new BufferedStream(stream))
+            using (var gzipStream = new GZipStream(buffered, CompressionMode.Decompress))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			{
 				using (var jsonReader = new JsonTextReader(streamReader))
@@ -143,7 +144,8 @@ namespace Raven.Database.Server.Controllers
 		public async Task<RavenJObject> ReadJsonAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
 		}
@@ -151,7 +153,8 @@ namespace Raven.Database.Server.Controllers
 		public async Task<RavenJArray> ReadJsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJArray.Load(jsonReader);
 		}
@@ -159,14 +162,16 @@ namespace Raven.Database.Server.Controllers
 		public async Task<string> ReadStringAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 				return streamReader.ReadToEnd();
 		}
 
 		public async Task<RavenJArray> ReadBsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			using (var jsonReader = new BsonReader(stream))
+            using (var buffered = new BufferedStream(stream))
+			using (var jsonReader = new BsonReader(buffered))
 			{
 				var jObject = RavenJObject.Load(jsonReader);
 				return new RavenJArray(jObject.Values<RavenJToken>());

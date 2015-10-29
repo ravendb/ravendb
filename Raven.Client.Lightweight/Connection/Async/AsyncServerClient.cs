@@ -800,11 +800,12 @@ namespace Raven.Client.Connection.Async
 					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result, token).ConfigureAwait(false);
 				}
-				request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
-																 .AddOperationHeaders(OperationsHeaders));
+				request = jsonRequestFactory.CreateHttpJsonRequest(
+                                                new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
+											            .AddOperationHeaders(OperationsHeaders));
+                               
+				await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);                
 
-				await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);
 				var responseResult = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, responseResult, token).ConfigureAwait(false);
 			}

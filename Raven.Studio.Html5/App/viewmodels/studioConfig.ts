@@ -137,7 +137,7 @@ class studioConfig extends viewModelBase {
             saveTask
                 .done((saveResult: bulkDocumentDto[]) => {
                     this.configDocument(newDocument);
-                    this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                    this.configDocument().__metadata['etag'] = saveResult[0].Etag;
                     deferred.resolve();
                 })
                 .fail(() => deferred.reject());

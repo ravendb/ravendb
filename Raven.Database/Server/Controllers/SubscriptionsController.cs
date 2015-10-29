@@ -180,8 +180,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			var sentDocuments = false;
 
-			using (var streamWriter = new StreamWriter(stream))
-			using (var writer = new JsonTextWriter(streamWriter))
+            var bufferStream = new BufferedStream(stream, 1024 * 64);
+            using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
 			{
 				var options = subscriptions.GetBatchOptions(id);
 
@@ -303,6 +303,8 @@ namespace Raven.Database.Server.Controllers
 
 					writer.WriteEndObject();
 					writer.Flush();
+
+                    bufferStream.Flush();
 				}
 			}
 

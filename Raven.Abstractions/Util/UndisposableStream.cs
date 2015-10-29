@@ -1,11 +1,6 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="us.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-using System.IO;
+﻿using System.IO;
 
-namespace Raven.Database.Storage.Voron
+namespace Raven.Abstractions.Util
 {
 	public class UndisposableStream : Stream
 	{

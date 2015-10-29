@@ -276,6 +276,7 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTaskContext.cs" />
+    <Compile Include="FileSystem\Util\RandomProvider.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
@@ -1155,7 +1156,6 @@
     <Compile Include="Storage\Voron\StorageActions\StorageActionsBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
-    <Compile Include="Storage\Voron\UndisposableStream.cs" />
     <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
@@ -1173,7 +1173,6 @@
     <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
-    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

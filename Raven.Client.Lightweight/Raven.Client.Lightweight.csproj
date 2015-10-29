@@ -180,7 +180,6 @@
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
     <Compile Include="Extensions\AsyncExtensions.cs" />
     <Compile Include="FileSystem\Extensions\ExceptionExtensions.cs" />
-    <Compile Include="Util\BlockingStream.cs" />
     <Compile Include="Util\IDisposableAsync.cs" />
     <Compile Include="Util\ListenableStream.cs" />
     <Compile Include="FileSystem\AsyncFilesServerClient.cs" />

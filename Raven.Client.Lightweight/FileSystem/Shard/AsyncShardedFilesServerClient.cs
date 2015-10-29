@@ -300,18 +300,18 @@ namespace Raven.Client.FileSystem.Shard
 			return await client.DownloadAsync(filename, metadataRef, from, to).ConfigureAwait(false);
         }
 
-        public Task<string> UploadAsync(string filename, Stream source, long? size = null)
+        public Task<string> UploadAsync(string filename, Stream source)
 		{
-            return UploadAsync(filename, new RavenJObject(), source, size);
+            return UploadAsync(filename, new RavenJObject(), source);
 		}
 
-        public async Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source, long? size = null)
+        public async Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source)
 		{
             var resolutionResult = Strategy.ShardResolutionStrategy.GetShardIdForUpload(filename, metadata);
 
             var client = TryGetClient(resolutionResult.ShardId);
 
-			await client.UploadAsync(resolutionResult.NewFileName, source, metadata, size).ConfigureAwait(false);
+			await client.UploadAsync(resolutionResult.NewFileName, source, metadata).ConfigureAwait(false);
 
             return resolutionResult.NewFileName;
 		}
