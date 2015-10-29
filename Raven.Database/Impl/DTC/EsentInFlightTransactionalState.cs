@@ -93,72 +93,54 @@ namespace Raven.Database.Impl.DTC
             }
         }
 
-        public override void Commit(string id)
-        {
-            EsentTransactionContext context;
-            if (transactionContexts.TryGetValue(id, out context) == false)
-                throw new InvalidOperationException("There is no transaction with id: " + id + " ready to commit. Did you call PrepareTransaction?");
+		public override void Commit(string id)
+		{
+			EsentTransactionContext context;
+			if (transactionContexts.TryGetValue(id, out context) == false)
+				throw new InvalidOperationException("There is no transaction with id: " + id + " ready to commit. Did you call PrepareTransaction?");
 
-            lock (context)
-            {
-                //using(context.Session) - disposing the session is actually done in the rollback, which is always called
-                using (context.EnterSessionContext())
-                {
-                    if (context.DocumentIdsToTouch != null)
-                    {
-                        using (storage.SetTransactionContext(context))
-                        {
-                            storage.Batch(accessor =>
-                            {
-                                foreach (var docId in context.DocumentIdsToTouch)
-                                {
-                                    _database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+			lock (context)
+			{
+				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
+				using (context.EnterSessionContext())
+				{
+					context.Transaction.Commit(txMode);
 
-                                    Etag preTouchEtag;
-                                    Etag afterTouchEtag;
-                                    accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
-                                }
-                            });
-                        }
-                    }
+					if (context.DocumentIdsToTouch != null)
+					{
+						using (_database.DocumentLock.Lock())
+						{
+							using (storage.DisableBatchNesting())
+							{
+								storage.Batch(accessor =>
+								{
+									foreach (var docId in context.DocumentIdsToTouch)
+									{
+										_database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
+										try
+										{
+											Etag preTouchEtag;
+											Etag afterTouchEtag;
+											accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
+										}
+										catch (ConcurrencyException)
+										{
+											log.Info("Concurrency exception when touching {0}", docId);
 
-                    context.Transaction.Commit(txMode);
+										}
+									}
+								});
+							}
+						}
+					}
 
-                    if (context.DocumentIdsToTouch != null)
-                    {
-                        using (_database.DocumentLock.Lock())
-                        {
-                            using (storage.DisableBatchNesting())
-                            {
-                                storage.Batch(accessor =>
-                                {
-                                    foreach (var docId in context.DocumentIdsToTouch)
-                                    {
-                                        _database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
-                                        try
-                                        {
-                                            Etag preTouchEtag;
-                                            Etag afterTouchEtag;
-                                            accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
-                                        }
-                                        catch (ConcurrencyException)
-                                        {
-                                            log.Info("Concurrency exception when touching {0}", docId);
-
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    }
-
-                    foreach (var afterCommit in context.ActionsAfterCommit)
-                    {
-                        afterCommit();
-                    }
-                }
-            }
-        }
+					foreach (var afterCommit in context.ActionsAfterCommit)
+					{
+						afterCommit();
+					}
+				}
+			}
+		}
 
         public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
         {
