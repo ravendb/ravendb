@@ -1,19 +1,21 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
+
+using NDesk.Options;
+
 using Newtonsoft.Json;
 
 namespace Raven.Debug
 {
-	using Microsoft.Diagnostics.Runtime;
-	using Microsoft.Diagnostics.Runtime.Interop;
-	using NDesk.Options;
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Text;
-
-	class Program
+	public class Program
 	{
-		static void Main(string[] args)
+		public static int Main(string[] args)
 		{
 			int processId = -1;
 			uint attachTimeout = 15000;
@@ -33,20 +35,30 @@ namespace Raven.Debug
 				if (args.Length == 0)
 				{
 					PrintUsage(optionSet);
-					return;
-				}
+                    return -2;
+                }
 
 				optionSet.Parse(args);
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine(e.Message);
+				Console.Error.WriteLine(e.Message);
 				PrintUsage(optionSet);
-				return;
+			    return -2;
 			}
 
-			if (actionToTake != null)
-				actionToTake();
+		    try
+		    {
+                if (actionToTake != null)
+                    actionToTake();
+            }
+		    catch (Exception e)
+		    {
+                Console.Error.WriteLine(e.ToString());
+		        return -1;
+		    }
+
+		    return 0;
 		}
 
 		private static void ShowStackTrace(int processId, uint attachTimeout, string outputPath)
