@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -288,8 +288,7 @@ namespace Raven.Client.Changes
             switch (type)
             {
                 case "Disconnect":
-                    if (connection != null)
-                        connection.Dispose();
+                    connection?.Dispose();
                     RenewConnection();
                     break;
                 case "Initialized":

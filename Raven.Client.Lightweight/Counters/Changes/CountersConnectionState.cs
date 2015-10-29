@@ -24,32 +24,29 @@ namespace Raven.Client.Counters.Changes
 		public void Send(ChangeNotification changeNotification)
         {
 			var onCounterChangeNotification = OnChangeNotification;
-			if (onCounterChangeNotification != null)
-				onCounterChangeNotification(changeNotification);
+		    onCounterChangeNotification?.Invoke(changeNotification);
         }
 
 		public event Action<StartingWithNotification> OnCountersStartingWithNotification = (x) => { };
 		public void Send(StartingWithNotification changeNotification)
 		{
-			var onCounterChangeNotification = OnCountersStartingWithNotification;
-			if (onCounterChangeNotification != null)
-				onCounterChangeNotification(changeNotification);
+            var onCounterChangeNotification = OnCountersStartingWithNotification;
+		    onCounterChangeNotification?.Invoke(changeNotification);
 		}
 
-		public event Action<InGroupNotification> OnCountersInGroupNotification = (x) => { };
+	    private StartingWithNotification lastNotification = null;
+        public event Action<InGroupNotification> OnCountersInGroupNotification = (x) => { };
 		public void Send(InGroupNotification changeNotification)
 		{
 			var onCounterChangeNotification = OnCountersInGroupNotification;
-			if (onCounterChangeNotification != null)
-				onCounterChangeNotification(changeNotification);
+		    onCounterChangeNotification?.Invoke(changeNotification);
 		}
 
 		public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
 		public void Send(BulkOperationNotification bulkOperationNotification)
         {
 			var onBulkOperationNotification = OnBulkOperationNotification;
-			if (onBulkOperationNotification != null)
-				onBulkOperationNotification(bulkOperationNotification);
+		    onBulkOperationNotification?.Invoke(bulkOperationNotification);
         }
     }
 }

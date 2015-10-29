@@ -23,11 +23,19 @@
 
 	public class StartingWithNotification : ChangeNotification
 	{
-		
-	}
+        public override string ToString()
+        {
+            var sign = Delta >= 0 ? "+" : "";
+            return $"StartingWithNotification({GroupName}:{CounterName}{sign}{Delta},Total={Total})";
+        }
+    }
 
 	public class InGroupNotification : ChangeNotification
-	{
-
-	}
+    {
+        public override string ToString()
+        {
+            var sign = Delta >= 0 ? "+" : "";
+            return $"InGroupNotification({GroupName}:{CounterName}{sign}{Delta},Total={Total})";
+        }
+    }
 }

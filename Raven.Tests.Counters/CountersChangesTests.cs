@@ -71,13 +71,14 @@ namespace Raven.Tests.Counters
 				Assert.Equal(CounterName, counterChange1.CounterName);
 				Assert.Equal(CounterChangeAction.Add, counterChange1.Action);
 				Assert.Equal(2, counterChange1.Total);
+                
+                var notificationTask2 = changes.Task.Result
+                 .ForCountersStartingWith(GroupName, CounterName)
+                 .Timeout(TimeSpan.FromSeconds(300))
+                 .Skip(1).Take(1).ToTask();
 
-				var notificationTask2 = changes.Task.Result
-					.ForCountersStartingWith(GroupName, CounterName)
-					.Timeout(TimeSpan.FromSeconds(300))
-					.Take(1).ToTask();
 
-				changes.WaitForAllPendingSubscriptions();
+                changes.WaitForAllPendingSubscriptions();
 				await store.DecrementAsync(GroupName, CounterName2);
 
 				var counterChange2 = await notificationTask2;
