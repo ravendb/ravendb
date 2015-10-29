@@ -857,14 +857,14 @@ namespace Raven.Database.Server.Controllers.Admin
 					if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
 					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
 
-					var process = new Process
+                    var process = new Process
 					{
 						StartInfo = new ProcessStartInfo
 						{
 							Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
 							FileName = ravenDebugExe,
 							WindowStyle = ProcessWindowStyle.Normal,
-							LoadUserProfile = true,
+							LoadUserProfile = false,
 							RedirectStandardError = true,
 							RedirectStandardOutput = true,
 							UseShellExecute = false
