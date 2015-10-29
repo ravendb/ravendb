@@ -1349,7 +1349,7 @@ more responsive application.
 		}
         public void UnregisterMissing(string id)
         {
-            knownMissingIds.RemoveWhere(r=> r == id);
+            knownMissingIds.Remove(id);
         }
 
         public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
