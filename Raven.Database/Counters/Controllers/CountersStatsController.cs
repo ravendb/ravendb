@@ -25,11 +25,17 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/replications/stats")]
 		[HttpGet]
-		public HttpResponseMessage ReplicationStats()
+		public HttpResponseMessage ReplicationStats(int skip, int take)
 		{
+			if(take == 0)
+				return GetMessageWithObject(new
+				{
+					Message = "Take parameter is missing or zero. It is a required operator and should have non-zero value."
+				},HttpStatusCode.BadRequest);
+
 			return GetMessageWithObject(new CounterStorageReplicationStats
 				{
-					Stats = CounterStorage.ReplicationTask.DestinationStats.Values.ToList()
+					Stats = CounterStorage.ReplicationTask.DestinationStats.Values.Skip(skip).Take(take).ToList()
 				});
 		}
     }

@@ -83,3 +83,8 @@ interface counterBulkOperationNotificationDto{
     BatchType: string;
     Message: string;
 }
+
+interface IGroupAndCounterName {
+    groupName: string;
+    counterName: string;
+}

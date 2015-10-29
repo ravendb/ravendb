@@ -153,6 +153,7 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterNameGroupPair.cs" />
     <Compile Include="Counters\CounterState.cs" />
     <Compile Include="Counters\CounterBackupRequest.cs" />
@@ -165,7 +166,6 @@
     <Compile Include="Counters\CountersReplicationDocument.cs" />
     <Compile Include="Counters\CounterSummary.cs" />
     <Compile Include="Counters\CounterUtils.cs" />
-    <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
     <Compile Include="Counters\Notifications\ChangeNotification.cs" />
     <Compile Include="Counters\Notifications\CounterStorageNotification.cs" />
@@ -304,6 +304,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />

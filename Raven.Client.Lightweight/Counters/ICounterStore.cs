@@ -42,7 +42,7 @@ namespace Raven.Client.Counters
 
 		Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken));
 
-		Task<List<CounterStorageReplicationStats>> GetCounterReplicationStatsAsync(CancellationToken token = default (CancellationToken));
+		Task<IReadOnlyList<CounterStorageReplicationStats>> GetCounterReplicationStatsAsync(CancellationToken token = default (CancellationToken), int skip = 0, int take = 1024);
 
 
 		Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken));

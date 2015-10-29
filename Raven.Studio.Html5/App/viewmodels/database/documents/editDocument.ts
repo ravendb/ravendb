@@ -60,6 +60,7 @@ class editDocument extends viewModelBase {
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     newLineToggle = '\\n';
+    isSystemDocumentByDocTitle = ko.observable(false);
     
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -122,9 +123,15 @@ class editDocument extends viewModelBase {
         this.docTitle = ko.computed(() => {
             if (this.isInDocMode() == true) {
                 if (this.isCreatingNewDocument() === true) {
+                    this.isSystemDocumentByDocTitle(false);
                     return 'New Document';
                 } else {
                     var editedDocId = this.editedDocId();
+
+                    if (editedDocId.indexOf("Raven/") === 0)
+                        this.isSystemDocumentByDocTitle(true);
+                    else
+                        this.isSystemDocumentByDocTitle(false);
 
                     if (!!editedDocId) {
                         var lastIndexInEditedDocId = editedDocId.lastIndexOf('/') + 1;

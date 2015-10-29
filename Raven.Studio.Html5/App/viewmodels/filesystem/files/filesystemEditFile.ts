@@ -1,8 +1,6 @@
 ﻿import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import ace = require("ace/ace");
-
 import filesystem = require("models/filesystem/filesystem");
 import getFileCommand = require("commands/filesystem/getFileCommand");
 import updateFileMetadataCommand = require("commands/filesystem/updateFileMetadataCommand");
@@ -189,7 +187,6 @@ class filesystemEditFile extends viewModelBase {
     }
 
     appendRecentFile(fileId: string) {
-
         var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName == this.filesystemForEditedFile.name);
         if (existingRecentFilesStore) {
             var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
@@ -199,11 +196,9 @@ class filesystemEditFile extends viewModelBase {
                 }
                 existingRecentFilesStore.recentFiles.unshift(fileId);
             }
-
         } else {
             filesystemEditFile.recentDocumentsInFilesystem.push({ filesystemName: this.filesystemForEditedFile.name, recentFiles: ko.observableArray([fileId]) });
         }
-
     }
 
     private stringify(obj: any) {

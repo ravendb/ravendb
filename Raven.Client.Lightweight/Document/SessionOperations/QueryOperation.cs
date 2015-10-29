@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -9,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
@@ -83,9 +83,8 @@ namespace Raven.Client.Document.SessionOperations
 				return;
 
 			var value = match.Groups[1].Value;
-			throw new InvalidOperationException(
-				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" +
-			Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
+
+            throw new InvalidOperationException("Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" + Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
 		}
 
 		private void StartTiming()
@@ -95,10 +94,10 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogQuery()
 		{
-			if (log.IsDebugEnabled)
-				log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
+            if (log.IsDebugEnabled)
+			log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
 										  indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
-		}
+            }
 
 		public IDisposable EnterQueryContext()
 		{
@@ -171,9 +170,10 @@ namespace Raven.Client.Document.SessionOperations
 			var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
 			if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-			    projectionFields != null && projectionFields.Length == 1 && // We are projecting one field only (although that could be derived from the
-			    // previous check, one could never be too careful
-			    ((metadata != null && result.Count == 2) || (metadata == null && result.Count == 1)) // there are no more props in the result object
+                // We are projecting one field only (although that could be derived from the
+                // previous check, one could never be too careful
+                projectionFields != null && projectionFields.Length == 1 && 
+                HasSingleValidProperty(result, metadata) // there are no more props in the result object
 				)
 			{
 				return (T)(object)documentId;
@@ -188,7 +188,7 @@ namespace Raven.Client.Document.SessionOperations
 				// we need to make an additional check, since it is possible that a value was explicitly stated
 				// for the identity property, in which case we don't want to override it.
 				var identityProperty = sessionOperations.Conventions.GetIdentityProperty(typeof(T));
-				if (identityProperty == null ||
+				if (identityProperty != null &&
 				    (result[identityProperty.Name] == null ||
 				     result[identityProperty.Name].Type == JTokenType.Null))
 				{
@@ -198,6 +198,33 @@ namespace Raven.Client.Document.SessionOperations
 
 			return deserializedResult;
 		}
+
+	    private bool HasSingleValidProperty(RavenJObject result, RavenJObject metadata)
+	    {
+	        if (metadata == null && result.Count == 1)
+	            return true;// { Foo: val }
+
+	        if ((metadata != null && result.Count == 2))
+	            return true; // { @metadata: {}, Foo: val }
+
+            if ((metadata != null && result.Count == 3))
+            {
+                var entityName = metadata.Value<string>(Constants.RavenEntityName);
+
+                var idPropName = sessionOperations.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
+
+                if (result.ContainsKey(idPropName))
+                {
+                    // when we try to project the id by name
+                    var token = result.Value<RavenJToken>(idPropName);
+
+                    if(token == null || token.Type == JTokenType.Null)
+                        return true; // { @metadata: {}, Foo: val, Id: null }
+                }
+            }
+
+	        return false;
+	    }
 
 
 		private T DeserializedResult<T>(RavenJObject result)
@@ -243,45 +270,42 @@ namespace Raven.Client.Document.SessionOperations
 				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
 				{
 					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
-									  sp.ElapsedMilliseconds));
+					throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.", sp.ElapsedMilliseconds));
 				}
 
 				if (log.IsDebugEnabled)
-					log.Debug(
+				log.Debug(
 						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
-				return false;
+                            indexQuery.Query,
+                            indexName,
+                            sessionOperations.StoreIdentifier,
+                            result.IndexEtag);
+                return false;
 			}
 			if (waitForNonStaleResults && result.IsStale)
 			{
 				if (sp.Elapsed > timeout)
 				{
 					sp.Stop();
-					throw new TimeoutException(
-						string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-									  sp.ElapsedMilliseconds));
+
+					throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
 				}
 
 				if (log.IsDebugEnabled)
-					log.Debug(
+				log.Debug(
 						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query,
-						indexName,
-						sessionOperations.StoreIdentifier,
-						result.IndexEtag);
-				return false;
+                            indexQuery.Query,
+                            indexName,
+                            sessionOperations.StoreIdentifier,
+                            result.IndexEtag);
+                return false;
 			}
 			currentQueryResults = result;
 			currentQueryResults.EnsureSnapshot();
 			if (log.IsDebugEnabled)
-				log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
+			log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
 											  result.TotalResults, result.IsStale ? "stale " : "");
-			return true;
+            return true;
 		}
 	}
 }

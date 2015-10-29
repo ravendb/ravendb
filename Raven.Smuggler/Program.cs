@@ -123,7 +123,7 @@ namespace Raven.Smuggler
 			databaseOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
 			databaseOptionSet.Add("operate-on-types:", OptionCategory.SmugglerDatabase, "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
 		                                               "Default is all items." + Environment.NewLine +
-		                                               "Usage example: Indexes,Documents,Attachments", value =>
+		                                               "Usage example: Indexes,Documents,Attachments,RemoveAnalyzers", value =>
 		                                               {
 			                                               try
 			                                               {

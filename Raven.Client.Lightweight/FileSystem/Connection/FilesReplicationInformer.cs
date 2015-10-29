@@ -116,11 +116,21 @@ namespace Raven.Client.FileSystem.Connection
 				}
 
                 if (document == null)
+                {
+                    lastReplicationUpdate = SystemTime.UtcNow;
                     return;
+                }
 
-                ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+                if (IsInvalidDestinationsDocument(document) == false)
+                {
+                    ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+                    UpdateReplicationInformationFromDocument(document);
+                }
+                lastReplicationUpdate = SystemTime.UtcNow;
 
-                UpdateReplicationInformationFromDocument(document);
+
+
+
             }
         }
 

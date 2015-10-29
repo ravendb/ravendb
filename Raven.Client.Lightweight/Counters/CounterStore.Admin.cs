@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,31 +21,69 @@ namespace Raven.Client.Counters
 			internal CounterStoreAdminOperations(CounterStore parent)
 			{
 				this.parent = parent;
-			}			
+			}
 
-			public async Task<CounterNameGroupPair[]> GetCounterStorageNameAndGroups(string counterStorageName = null, CancellationToken token = default(CancellationToken))
+			public async Task<IReadOnlyList<CounterNameGroupPair>> GetAllCounterStorageNameAndGroups(string counterStorageName = null,
+				CancellationToken token = default(CancellationToken))
+			{
+				var nameGroupPairs = new List<CounterNameGroupPair>();
+				var taken = 0;
+				IReadOnlyList<CounterNameGroupPair> nameGroupPairsTaken;
+				do
+				{
+					nameGroupPairsTaken = await GetCounterStorageNameAndGroups(counterStorageName, token, taken).ConfigureAwait(false);
+					taken += nameGroupPairsTaken.Count;
+					if (nameGroupPairsTaken.Count > 0)
+						nameGroupPairs.AddRange(nameGroupPairsTaken);
+				} while (nameGroupPairsTaken.Count > 0);
+
+				return nameGroupPairs.ToList();
+			}
+
+			public async Task<IReadOnlyList<CounterNameGroupPair>> GetCounterStorageNameAndGroups(string counterStorageName = null, 
+				CancellationToken token = default(CancellationToken),
+				int skip = 0, int take = 1024)
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=groups-names", parent.Url, counterStorageName ?? parent.Name);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName ?? parent.Name}?op=groups-names&skip={skip}&take={take}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<CounterNameGroupPair[]>(parent.JsonSerializer);
+					return response.ToObject<List<CounterNameGroupPair>>(parent.JsonSerializer);
 				}
 			}
 
-			public async Task<CounterSummary[]> GetCounterStorageSummary(string counterStorageName = null, CancellationToken token = default(CancellationToken))
+			public async Task<IReadOnlyList<CounterSummary>> GetAllCounterStorageSummaries(string counterStorageName = null,
+				CancellationToken token = default(CancellationToken))
+			{
+				var summaries = new List<CounterSummary>();
+				var taken = 0;
+				IReadOnlyList<CounterSummary> summariesTaken;
+                do
+				{
+					summariesTaken = await GetCountersByStorage(counterStorageName, token, taken).ConfigureAwait(false);
+					taken += summariesTaken.Count;
+					if(summariesTaken.Count > 0)
+						summaries.AddRange(summariesTaken);
+				} while (summariesTaken.Count > 0);
+
+				return summaries.ToArray();
+			}
+
+			public async Task<IReadOnlyList<CounterSummary>> GetCountersByStorage(string counterStorageName, 
+				CancellationToken token = default(CancellationToken),
+				int skip = 0,int take = 1024)
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/admin/cs/{1}?op=summary", parent.Url, counterStorageName ?? parent.Name);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName ?? parent.Name}?op=summary&skip={skip}&take={take}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<CounterSummary[]>(parent.JsonSerializer);
+					return response.ToObject<List<CounterSummary>>(parent.JsonSerializer);
 				}
 			}
 
@@ -62,9 +102,9 @@ namespace Raven.Client.Counters
 				CancellationToken token = default(CancellationToken))
 			{
 				if (counterStorageDocument == null)
-					throw new ArgumentNullException("counterStorageDocument");
+					throw new ArgumentNullException(nameof(counterStorageDocument));
 
-				if (counterStorageName == null) throw new ArgumentNullException("counterStorageName");
+				if (counterStorageName == null) throw new ArgumentNullException(nameof(counterStorageName));
 
 				parent.AssertInitialized();
 
@@ -83,7 +123,7 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.Conflict)
-							throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
+							throw new InvalidOperationException($"Cannot create counter storage with the name '{counterStorageName}' because it already exists. Use shouldUpateIfExists = true flag in case you want to update an existing counter storage", e);
 
 						throw;
 					}
@@ -101,7 +141,7 @@ namespace Raven.Client.Counters
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = string.Format("{0}/admin/cs/{1}?hard-delete={2}", parent.Url, counterStorageName, hardDelete);
+				var requestUriString = $"{parent.Url}/admin/cs/{counterStorageName}?hard-delete={hardDelete}";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 				{
@@ -112,22 +152,22 @@ namespace Raven.Client.Counters
 					catch (ErrorResponseException e)
 					{
 						if (e.StatusCode == HttpStatusCode.NotFound)
-							throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterStorageName));
+							throw new InvalidOperationException($"Counter storage with specified name ({counterStorageName}) doesn't exist");
 						throw;
 					}
 				}
 			}
 
-			public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
+			public async Task<IReadOnlyList<string>> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 
-				var requestUriString = String.Format("{0}/cs", parent.Url);
+				var requestUriString = $"{parent.Url}/cs";
 
 				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 				{
 					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.ToObject<string[]>(parent.JsonSerializer);
+					return response.ToObject<IReadOnlyList<string>>(parent.JsonSerializer);
 				}
 			}
 			 
