@@ -199,6 +199,7 @@
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />
     <Compile Include="UniqueConstraints\Bugs\TroyMapReduce.cs" />
+    <Compile Include="UniqueConstraints\Bugs\ValerioBorioni.cs" />
     <Compile Include="UniqueConstraints\Bugs\viscious.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
     <Compile Include="UniqueConstraints\DeleteTests.cs" />
