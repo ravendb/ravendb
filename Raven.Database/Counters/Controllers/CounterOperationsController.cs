@@ -29,15 +29,15 @@ using BatchType = Raven.Abstractions.Counters.Notifications.BatchType;
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CounterOperationsController : BaseCountersApiController
-    {
-        [RavenRoute("cs/{counterStorageName}/sinceEtag")]
-        [HttpGet]
-        public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip = 0, int take = 1024)
-        {
-            List<CounterState> deltas;
-            using (var reader = CounterStorage.CreateReader())
-                deltas = reader.GetCountersSinceEtag(etag + 1, skip, take).ToList();
+	public class CounterOperationsController : BaseCountersApiController
+	{
+		[RavenRoute("cs/{counterStorageName}/sinceEtag")]
+		[HttpGet]
+		public HttpResponseMessage GetCounterStatesSinceEtag(long etag, int skip, int take)
+		{
+			List<CounterState> deltas;
+			using (var reader = CounterStorage.CreateReader())
+				deltas = reader.GetCountersSinceEtag(etag + 1, skip, take).ToList();
 
             return GetMessageWithObject(deltas);
         }
@@ -75,16 +75,16 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
-        [RavenRoute("cs/{counterStorageName}/groups")]
-        [HttpGet]
-        public HttpResponseMessage GetCounterGroups()
-        {
-            using (var reader = CounterStorage.CreateReader())
-            {
-                CounterStorage.MetricsCounters.ClientRequests.Mark();
-                return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups().ToList());
-            }
-        }
+		[RavenRoute("cs/{counterStorageName}/groups")]
+		[HttpGet]
+		public HttpResponseMessage GetCounterGroups(int skip, int take)
+		{
+			using (var reader = CounterStorage.CreateReader())
+			{
+				CounterStorage.MetricsCounters.ClientRequests.Mark();
+				return Request.CreateResponse(HttpStatusCode.OK, reader.GetCounterGroups(skip, take).ToList());
+			}
+		}
 
         [RavenRoute("cs/{counterStorageName}/batch")]
         [HttpPost]
@@ -342,54 +342,54 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
-        [RavenRoute("cs/{counterStorageName}/delete-by-group")]
-        [HttpDelete]
-        public HttpResponseMessage DeleteByGroup(string groupName)
-        {
-            groupName = groupName ?? string.Empty;
-            var deletedCount = 0;
+	    [RavenRoute("cs/{counterStorageName}/delete-by-group")]
+	    [HttpDelete]
+	    public HttpResponseMessage DeleteByGroup(string groupName)
+	    {
+	        groupName = groupName ?? string.Empty;
+	        var deletedCount = 0;
 
-            while (true)
-            {
-                var changeNotifications = new List<ChangeNotification>();
-                using (var writer = CounterStorage.CreateWriter())
-                {
+	        while (true)
+	        {
+	            var changeNotifications = new List<ChangeNotification>();
+	            using (var writer = CounterStorage.CreateWriter())
+	            {
 
-                    var countersDetails = writer.GetCountersDetails(groupName).Take(1024).ToList();
-                    if (countersDetails.Count == 0)
-                        break;
+	                var countersDetails = writer.GetCountersDetails(groupName).Take(1024).ToList();
+	                if (countersDetails.Count == 0)
+	                    break;
 
-                    foreach (var c in countersDetails)
-                    {
-                        writer.DeleteCounterInternal(c.Group, c.Name);
-                        changeNotifications.Add(new ChangeNotification
-                        {
-                            GroupName = c.Group,
-                            CounterName = c.Name,
-                            Action = CounterChangeAction.Delete,
-                            Delta = 0,
-                            Total = 0
-                        });
-                    }
-                    writer.Commit();
+	                foreach (var c in countersDetails)
+	                {
+	                    writer.DeleteCounterInternal(c.Group, c.Name);
+	                    changeNotifications.Add(new ChangeNotification
+	                    {
+	                        GroupName = c.Group,
+	                        CounterName = c.Name,
+	                        Action = CounterChangeAction.Delete,
+	                        Delta = 0,
+	                        Total = 0
+	                    });
+	                }
+	                writer.Commit();
 
-                    deletedCount += changeNotifications.Count;
-                }
+	                deletedCount += changeNotifications.Count;
+	            }
 
-                CounterStorage.MetricsCounters.ClientRequests.Mark();
-                changeNotifications.ForEach(change =>
-                {
-                    CounterStorage.Publisher.RaiseNotification(change);
-                    CounterStorage.MetricsCounters.Deletes.Mark();
-                });
-            }
+	            CounterStorage.MetricsCounters.ClientRequests.Mark();
+	            changeNotifications.ForEach(change =>
+	            {
+	                CounterStorage.Publisher.RaiseNotification(change);
+	                CounterStorage.MetricsCounters.Deletes.Mark();
+	            });
+	        }
 
             return GetMessageWithObject(deletedCount);
         }
 
         [RavenRoute("cs/{counterStorageName}/counters")]
         [HttpGet]
-        public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
+        public HttpResponseMessage GetCounterSummariesByGroup(int skip, int take, string group)
         {
             if (skip < 0)
                 return GetMessageWithString("Skip must be non-negative number", HttpStatusCode.BadRequest);
@@ -400,7 +400,7 @@ namespace Raven.Database.Counters.Controllers
             using (var reader = CounterStorage.CreateReader())
             {
                 group = group ?? string.Empty;
-                var counters = reader.GetCountersSummary(group, skip, take);
+                var counters = reader.GetCounterSummariesByGroup(group, skip, take);
                 return GetMessageWithObject(counters);
             }
         }
@@ -431,21 +431,66 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [RavenRoute("cs/{counterStorageName}/getCounter")]
-        [HttpGet]
-        public HttpResponseMessage GetCounter(string groupName, string counterName)
-        {
-            var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
-            if (verificationResult != null)
-                return verificationResult;
+        [RavenRoute("cs/{counterStorageName}/by-prefix")]
+	    [HttpGet]
+	    public HttpResponseMessage GetCountersByPrefix(string groupName, int skip, int take, string counterNamePrefix = null)
+	    {
+	        if (string.IsNullOrWhiteSpace(groupName))
+	            return GetMessageWithObject(new
+	            {
+                    Message = $"{nameof(groupName)} is a required parameter, thus it must not be null or empty"
+	            },HttpStatusCode.BadRequest);
 
-            CounterStorage.MetricsCounters.ClientRequests.Mark();
-            using (var reader = CounterStorage.CreateReader())
-            {
-                var result = reader.GetCounter(groupName, counterName);
-                return GetMessageWithObject(result);
-            }
-        }
+	        HttpResponseMessage messageWithObject;
+	        if (!ValidateSkipAndTake(skip, take, out messageWithObject))
+                return messageWithObject;
+
+	        using (var reader = CounterStorage.CreateReader())
+	        {
+	            var counterSummaries = reader.GetCountersByPrefix(groupName, counterNamePrefix, skip, take).ToList();
+	            return GetMessageWithObject(counterSummaries);
+	        }
+	    }
+
+	    private bool ValidateSkipAndTake(int skip, int take, out HttpResponseMessage messageWithObject)
+	    {
+	        messageWithObject = null;
+
+            if (skip < 0)
+	        {
+	            messageWithObject = GetMessageWithObject(new
+	            {
+	                Message = $"{nameof(skip)} must not be negative number."
+	            }, HttpStatusCode.BadRequest);
+	            return false;
+	        }
+
+	        if (take <= 0)
+	        {
+	            messageWithObject = GetMessageWithObject(new
+	            {
+	                Message = $"{nameof(take)} is a required parameter and must not be less or equal to zero"
+	            }, HttpStatusCode.BadRequest);
+	            return false;
+	        }
+	        return true;
+	    }
+
+	    [RavenRoute("cs/{counterStorageName}/getCounter")]
+		[HttpGet]
+		public HttpResponseMessage GetCounter(string groupName, string counterName)
+		{
+			var verificationResult = VerifyGroupAndCounterName(groupName, counterName);
+			if (verificationResult != null)
+				return verificationResult;
+
+			CounterStorage.MetricsCounters.ClientRequests.Mark();
+			using (var reader = CounterStorage.CreateReader())
+			{
+				var result = reader.GetCounter(groupName, counterName);
+				return GetMessageWithObject(result);
+			}
+		}
 
         [RavenRoute("cs/{counterStorageName}/purge-tombstones")]
         [HttpPost]

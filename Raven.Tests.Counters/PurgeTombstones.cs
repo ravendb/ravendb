@@ -1,11 +1,8 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Database.Counters;
-using Raven.Database.Extensions;
 using Xunit;
 using Xunit.Extensions;
 

@@ -42,14 +42,14 @@ namespace Raven.Client.Counters
 		public void Initialize(bool ensureDefaultCounterExists = false)
 		{
 			if(isInitialized)
-				throw new InvalidOperationException(string.Format("CounterStore already initialized. (name = {0})", Name));
+				throw new InvalidOperationException($"CounterStore already initialized. (name = {Name})");
 
 			isInitialized = true;
 			SecurityExtensions.InitializeSecurity(CountersConvention, JsonRequestFactory, Url, Credentials.Credentials);
 
 			if (ensureDefaultCounterExists)
 			{
-				if (String.IsNullOrWhiteSpace(Name))
+				if (string.IsNullOrWhiteSpace(Name))
 					throw new InvalidOperationException("Name is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
 
 				var existingCounterStorageNames = AsyncHelpers.RunSync(() => Admin.GetCounterStoragesNamesAsync());
@@ -87,7 +87,7 @@ namespace Raven.Client.Counters
 			
 			AssertInitialized();
 
-			var tenantUrl = Url + "/cs/" + counterStorage;
+			var tenantUrl = $"{Url}/cs/{counterStorage}";
 
 			using (NoSynchronizationContext.Scope())
 			{
@@ -109,15 +109,13 @@ namespace Raven.Client.Counters
 		internal void AssertInitialized()
 		{
 			if (!isInitialized)
-				throw new InvalidOperationException(string.Format("You cannot access the counters commands before initializing the counter store. Did you forget calling Initialize()? (Counter store name = {0})", Name));
+				throw new InvalidOperationException("You cannot access the counters commands before initializing the counter store. " +
+				                                    $"Did you forget calling Initialize()? (Counter store name = {Name})");
 		}
 
 		private readonly Lazy<BatchOperationsStore> batch;
 
-		public BatchOperationsStore Batch
-		{
-			get { return batch.Value; }
-		}
+		public BatchOperationsStore Batch => batch.Value;
 
 		public OperationCredentials Credentials { get; set; }
 
@@ -148,13 +146,8 @@ namespace Raven.Client.Counters
 			});
 		}
 
-		public CounterReplicationInformer ReplicationInformer
-		{
-			get
-			{
-				return replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, CountersConvention));
-			}
-		}
+		public CounterReplicationInformer ReplicationInformer => 
+			replicationInformer ?? (replicationInformer = new CounterReplicationInformer(JsonRequestFactory, this, CountersConvention));
 
 		public void Dispose()
 		{

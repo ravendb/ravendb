@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
@@ -28,21 +29,40 @@ namespace Raven.Database.Counters.Controllers
     {
 	    [HttpGet]
 		[RavenRoute("admin/cs/{*counterStorageName}")]
-	    public async Task<HttpResponseMessage> Get()
+	    public async Task<HttpResponseMessage> Get(int skip, int take)
 	    {
 		    var op = GetQueryStringValue("op");
 		    if (string.IsNullOrWhiteSpace(op))
 			    return GetMessageWithString("mandatory 'op' query parameter is missing", HttpStatusCode.BadRequest);
 
+		    HttpResponseMessage message;
+		    if (!ValidateSkipAndTake(skip, take, out message))
+				return message;
+
 		    if (op.Equals("groups-names", StringComparison.InvariantCultureIgnoreCase))
-				return await GetNamesAndGroups(CounterName).ConfigureAwait(false);
+			    return await GetNamesAndGroups(CounterName, skip, take).ConfigureAwait(false);
 		    if (op.Equals("summary", StringComparison.InvariantCultureIgnoreCase))
-				return await GetSummary(CounterName).ConfigureAwait(false);
+				return await GetSummary(CounterName, skip, take).ConfigureAwait(false);
 
 			return GetMessageWithString("'op' query parameter is invalid - must be either group-names or summary", HttpStatusCode.BadRequest);
 	    }
 
-	    private async Task<HttpResponseMessage> GetNamesAndGroups(string id)
+		private bool ValidateSkipAndTake(int skip, int take, out HttpResponseMessage message)
+		{
+			message = null;
+			if (skip < 0 || take <= 0)
+			{
+				message = GetMessageWithObject(new
+				{
+					Message = @"Skip and take are required operators. Also, they must be non-negative and take must not be equal to zero."
+				}, HttpStatusCode.BadRequest);
+				return false;
+			}
+
+			return true;
+		}
+
+		private async Task<HttpResponseMessage> GetNamesAndGroups(string id, int skip, int take)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
 			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
@@ -70,27 +90,27 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.NotFound);
 			}
 
-			var counterSummaries = new List<CounterNameGroupPair>();
+			var counterNameGroupPairs = new List<CounterNameGroupPair>();
 			using (var reader = counterStorage.CreateReader())
 			{
-				var groupsAndNames = reader.GetCounterGroups()
-					.SelectMany(group => reader.GetCountersSummary(group.Name)
+				var groupsAndNames = reader.GetCounterGroups(0,int.MaxValue)
+					.SelectMany(group => reader.GetCounterSummariesByGroup(group.Name,0, int.MaxValue)
 					.Select(x => new CounterNameGroupPair
 					{
 						Name = x.CounterName,
 						Group = group.Name
-					}));
+					})).Skip(skip).Take(take);
 
-				counterSummaries.AddRange(groupsAndNames);
+				counterNameGroupPairs.AddRange(groupsAndNames);
 			}
 
-			return GetMessageWithObject(counterSummaries);
+			return GetMessageWithObject(counterNameGroupPairs);
 		}
 
-	    private async Task<HttpResponseMessage> GetSummary(string id)
+	    private async Task<HttpResponseMessage> GetSummary(string counterStorageId,int shouldSkip,int shouldTake)
 		{
 			MessageWithStatusCode nameFormateErrorMsg;
-			if (IsValidName(id, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
+			if (IsValidName(counterStorageId, Counters.Configuration.Counter.DataDirectory, out nameFormateErrorMsg) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -106,24 +126,61 @@ namespace Raven.Database.Counters.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var counterStorage = await CountersLandlord.GetResourceInternal(id).ConfigureAwait(false);
+			var counterStorage = await CountersLandlord.GetResourceInternal(counterStorageId).ConfigureAwait(false);
 			if (counterStorage == null)
 			{
 				return GetMessageWithObject(new
 				{
-					Message = string.Format("Didn't find counter storage (name = {0})", id)
+					Message = string.Format("Didn't find counter storage (name = {0})", counterStorageId)
 				}, HttpStatusCode.NotFound);
 			}
 
 			var counterSummaries = new List<CounterSummary>();
 			using (var reader = counterStorage.CreateReader())
 			{
-				counterSummaries.AddRange(
-				  reader.GetCounterGroups()
-						.SelectMany(x => reader.GetCountersSummary(x.Name)));
+				int skipped = 0;
+				int taken = 0;
+				foreach (var group in reader.GetCounterGroups(0, int.MaxValue))
+				{
+					int leftToSkip = (shouldSkip - skipped);
+					if (leftToSkip > group.Count)
+					{
+						skipped += (int)group.Count;
+						continue;
+					}
+
+					if (taken >= shouldTake)
+						break;
+
+					int toTake;
+					if (leftToSkip <= group.Count)
+					{
+						toTake = (int)group.Count - leftToSkip;
+						toTake = AdjustToTake(shouldTake, taken, toTake);
+
+						counterSummaries.AddRange(reader.GetCounterSummariesByGroup(group.Name, leftToSkip, toTake));
+						taken += toTake;
+						skipped += leftToSkip;
+						continue;
+					}
+
+					toTake = (int)group.Count;
+					toTake = AdjustToTake(shouldTake, taken, toTake);
+
+					counterSummaries.AddRange(reader.GetCounterSummariesByGroup(group.Name, 0, toTake));
+					taken += toTake;
+				}
 			}
 
 			return GetMessageWithObject(counterSummaries);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static int AdjustToTake(int shouldTake, int taken, int toTake)
+		{
+			if (taken + toTake > shouldTake)
+				toTake = shouldTake - taken;
+			return toTake;
 		}
 
 		[HttpPut]
