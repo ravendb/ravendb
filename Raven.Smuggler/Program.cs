@@ -15,6 +15,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Database.Smuggler;
 using Raven.Smuggler.Helpers;
@@ -354,7 +355,7 @@ namespace Raven.Smuggler
 							case SmugglerAction.Import:
 								smugglerCounterApi.Options.Destination.Url = url;
 								smugglerCounterApi.Options.Destination.CounterStoreId = counterStorageName;
-								break;
+                                break;
 							case SmugglerAction.Between:
 								smugglerCounterApi.Options.Source.Url = url;
 								smugglerCounterApi.Options.Destination.Url = url;
@@ -377,14 +378,18 @@ namespace Raven.Smuggler
 				{
 					Console.WriteLine(e.InnerException != null ? e.InnerException.SimplifyError() : e.SimplifyError());
 				}
-                else
+				else if (e is OperationVetoedException)
+				{
+					Console.WriteLine("You are trying to import into database with versioning bundle enabled, use the flag: disable - versioning - during - import in the command line parameters\r\n");
+				}
+				else
 				{
 					var errorResponseException = e as ErrorResponseException;
-					Console.WriteLine(errorResponseException != null ? 
+					Console.WriteLine(errorResponseException != null ?
 						String.Format("{0} \n\r {1}", errorResponseException.SimplifyError(), errorResponseException.Response) : e.Message);
 				}
-			
-                Environment.Exit(-1);
+
+	            Environment.Exit(-1);
             }            
         }
 

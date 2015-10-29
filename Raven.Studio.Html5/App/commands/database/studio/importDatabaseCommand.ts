@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 
 class importDatabaseCommand extends commandBase {
 
-    constructor(private fileData: FormData, private batchSize: number, private includeExpiredDocuments: boolean, private stripReplicationInformation: boolean, private operateOnTypes: ImportItemType[], private filters: filterSettingDto[], private transformScript: string, private db: database) {
+    constructor(private fileData: FormData, private batchSize: number, private includeExpiredDocuments: boolean, private stripReplicationInformation: boolean, private shouldDisableVersioningBundle: boolean, private operateOnTypes: ImportItemType[], private filters: filterSettingDto[], private transformScript: string, private db: database) {
         super();
     }
 
@@ -14,6 +14,7 @@ class importDatabaseCommand extends commandBase {
             batchSize: this.batchSize,
             includeExpiredDocuments: this.includeExpiredDocuments,
             stripReplicationInformation: this.stripReplicationInformation,
+			shouldDisableVersioningBundle: this.shouldDisableVersioningBundle,
             operateOnTypes: this.operateOnTypes.reduce((first: ImportItemType, second: ImportItemType) => first | second, 0),
             filtersPipeDelimited: this.filters.map(f => f.Path + ";;;" + f.Values[0] + ";;;" + f.ShouldMatch).join("|||") || "",
             transformScript: this.transformScript || ""

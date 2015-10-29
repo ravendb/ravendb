@@ -24,6 +24,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
@@ -118,7 +119,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[RavenRoute("studio-tasks/import")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 			{
@@ -158,6 +159,7 @@ for(var customFunction in customFunctions) {{
 						smugglerOptions.BatchSize = batchSize;
 						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
 					    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
+						smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
 						smugglerOptions.OperateOnTypes = operateOnTypes;
 						smugglerOptions.TransformScript = transformScript;
 						smugglerOptions.CancelToken = cts;
@@ -196,6 +198,10 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
+					else if (e is OperationVetoedException)
+					{
+						status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
+					}
                     else
                     {
                         status.ExceptionDetails = e.ToString();
