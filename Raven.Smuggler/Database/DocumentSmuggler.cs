@@ -103,7 +103,15 @@ namespace Raven.Smuggler.Database
 										if (currentDocument.ContainsKey("@metadata") == false)
 											continue;
 
-										if (currentKey == null || currentKey.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false || affectedCollections.Any(x => currentKey.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
+                                        if (currentKey == null)
+                                            continue;
+
+									    var isHilo = currentKey.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase);
+
+                                        if (isHilo && Source.SupportsReadingHiLoDocuments)
+                                            continue;
+
+										if (isHilo == false || affectedCollections.Any(x => currentKey.EndsWith("/" + x, StringComparison.OrdinalIgnoreCase)) == false)
 											continue;
 									}
 
