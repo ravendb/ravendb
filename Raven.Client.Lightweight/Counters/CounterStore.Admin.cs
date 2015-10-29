@@ -63,7 +63,7 @@ namespace Raven.Client.Counters
 				IReadOnlyList<CounterSummary> summariesTaken;
                 do
 				{
-					summariesTaken = await GetCounterStorageSummary(counterStorageName, token, taken).ConfigureAwait(false);
+					summariesTaken = await GetCountersByStorage(counterStorageName, token, taken).ConfigureAwait(false);
 					taken += summariesTaken.Count;
 					if(summariesTaken.Count > 0)
 						summaries.AddRange(summariesTaken);
@@ -72,7 +72,7 @@ namespace Raven.Client.Counters
 				return summaries.ToArray();
 			}
 
-			public async Task<IReadOnlyList<CounterSummary>> GetCounterStorageSummary(string counterStorageName = null, 
+			public async Task<IReadOnlyList<CounterSummary>> GetCountersByStorage(string counterStorageName, 
 				CancellationToken token = default(CancellationToken),
 				int skip = 0,int take = 1024)
 			{

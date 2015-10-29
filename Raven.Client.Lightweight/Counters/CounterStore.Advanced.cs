@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
@@ -22,7 +23,13 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}
 
-		    public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, int skip = 0, int take = 1024, string counterNamePrefix = null, CancellationToken token = default(CancellationToken))
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		    public async Task<IReadOnlyList<CounterSummary>> GetCounters(int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
+		    {
+		        return await parent.Admin.GetCountersByStorage(null,token,skip,take).ConfigureAwait(false);
+		    }
+
+            public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, int skip = 0, int take = 1024, string counterNamePrefix = null, CancellationToken token = default(CancellationToken))
 		    {
                 if(string.IsNullOrWhiteSpace(groupName))
                     throw new ArgumentNullException(nameof(groupName));

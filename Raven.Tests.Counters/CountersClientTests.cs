@@ -61,7 +61,7 @@ namespace Raven.Tests.Counters
 			{
 				using (var counterStore = new CounterStore
 				{
-					Url = string.Format("{0}:{1}", server.DocumentStore.Url, server.Configuration.Port),
+					Url = $"{server.DocumentStore.Url}:{server.Configuration.Port}",
 					Name = DefaultCounterStorageName					
 				})
 				{
@@ -78,7 +78,7 @@ namespace Raven.Tests.Counters
 				})
 				{
 					counterStore.Initialize(true);
-					var summary = await counterStore.Admin.GetCounterStorageSummary(DefaultCounterStorageName);
+					var summary = await counterStore.Admin.GetCountersByStorage(DefaultCounterStorageName);
                     Assert.Equal(2, summary.Count);
                     Assert.NotNull(summary.SingleOrDefault(x => x.Total == 1 && x.GroupName == "G" && x.CounterName == "C"));
 					Assert.NotNull(summary.SingleOrDefault(x => x.Total == -1 && x.GroupName == "G" && x.CounterName == "C2"));
@@ -97,7 +97,6 @@ namespace Raven.Tests.Counters
                 await store.ChangeAsync(counterGroupName, CounterName + 'C', 3);
 
 	            var summaries = await store.Advanced.GetCountersByPrefix(counterGroupName);
-
                 Assert.Equal(3, summaries.Count);
                 Assert.Contains(CounterName + 'A', summaries.Select(x => x.CounterName));
                 Assert.Contains(CounterName + 'B', summaries.Select(x => x.CounterName));

@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client.Counters;
 using Raven.Database.Counters;
@@ -41,11 +42,11 @@ namespace Raven.Tests.Counters
 			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
 			{
 				await SetupCounters(store, groupCount, counterInEachGroupCount);
-				var withoutPaging = await store.Admin.GetCounterStorageSummary();
+				var withoutPaging = await store.Advanced.GetCounters();
 
 				for (int i = 0; i < counterInEachGroupCount * groupCount; i++)
 				{
-					var withPaging = await store.Admin.GetCounterStorageSummary(skip: i, take: 1);
+					var withPaging = await store.Advanced.GetCounters(i, 1);
 					Assert.Equal(1, withPaging.Count);
 
 					var expected = withoutPaging.Skip(i).Take(1).First();
