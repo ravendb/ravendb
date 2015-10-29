@@ -303,6 +303,26 @@ namespace Voron
 			return stringValue;
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    public string ReadAllAsString()
+	    {
+	        return ReadAsString(Length);
+	    }
+
+	    public string ReadAsString(int length)
+	    {
+	        int used;
+	        var stringBytes = ReadBytes(length, out used);
+	        return Encoding.UTF8.GetString(stringBytes, 0, length);
+	    }
+
+	    public Slice ReadAsSlice(ushort sliceLength)
+	    {
+	        int used;
+	        var sliceBytes = ReadBytes(sliceLength, out used);
+            return new Slice(sliceBytes, sliceLength);
+        }
+
 	    public byte[] ReadBytes(int length, out int used)
 		{
 			int size = Math.Min(length, _len - _pos);
