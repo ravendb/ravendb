@@ -113,13 +113,6 @@ namespace Raven.Database.Smuggler.Embedded
             return new CompletedTask<RavenJObject>(document.ToJson());
 		}
 
-		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
-
-		public bool SupportsReadingDatabaseStatistics => false;
-
 		public bool SupportsReadingHiLoDocuments => true;
 
 		public bool SupportsDocumentDeletions => true;

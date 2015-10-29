@@ -30,10 +30,6 @@ namespace Raven.Smuggler.Database
 
 		Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken);
 
-		Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken);
-
-		bool SupportsReadingDatabaseStatistics { get; }
-
 		bool SupportsReadingHiLoDocuments { get; }
 
 		bool SupportsDocumentDeletions { get; }

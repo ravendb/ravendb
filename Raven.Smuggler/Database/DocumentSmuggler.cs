@@ -180,25 +180,6 @@ namespace Raven.Smuggler.Database
 
 							if (hasDocs)
 								continue;
-
-							if (Source.SupportsReadingDatabaseStatistics)
-							{
-								// The server can filter all the results. In this case, we need to try to go over with the next batch.
-								// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
-								// (This code provides support for legacy RavenDB version: 1.0)
-								var databaseStatistics = await Source.GetStatisticsAsync(cancellationToken).ConfigureAwait(false);
-								var lastEtagComparable = new ComparableByteArray(afterEtag);
-								if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-								{
-									afterEtag = EtagUtil.Increment(afterEtag, pageSize);
-									if (afterEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
-									{
-										afterEtag = databaseStatistics.LastDocEtag;
-									}
-									Notifications.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", afterEtag);
-									continue;
-								}
-							}
 						}
 
 						if (Source.SupportsReadingHiLoDocuments)

@@ -101,13 +101,6 @@ namespace Raven.Smuggler.Database.Files
 			throw new NotSupportedException();
 		}
 
-		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
-
-		public bool SupportsReadingDatabaseStatistics => false;
-
 		public bool SupportsReadingHiLoDocuments => false;
 
 		public bool SupportsDocumentDeletions => false;

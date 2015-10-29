@@ -121,8 +121,6 @@ namespace Raven.Smuggler.Database.Remote
 				.AsyncDatabaseCommands
 				.StreamDocsAsync(afterEtag, pageSize: pageSize, token: cancellationToken)
 				.ConfigureAwait(false);
-
-			//TODO [ppekrol] legacy support
 		}
 
 		public async Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken)
@@ -138,13 +136,6 @@ namespace Raven.Smuggler.Database.Remote
             JsonDocument.EnsureIdInMetadata(document);
 		    return document.ToJson();
 		}
-
-		public Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
-		{
-			return _store.AsyncDatabaseCommands.GetStatisticsAsync(cancellationToken);
-		}
-
-		public bool SupportsReadingDatabaseStatistics => true;
 
 		public bool SupportsReadingHiLoDocuments => true;
 
@@ -171,8 +162,6 @@ namespace Raven.Smuggler.Database.Remote
 
 		public async Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken)
 		{
-			// TODO [ppekrol] legacy support
-
 			var start = 0;
 			const int PageSize = 1024;
 			long totalIdentitiesCount;
