@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import generalUtils = require("common/generalUtils");
@@ -41,7 +41,7 @@ class indexStats extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#indexStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#indexStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();

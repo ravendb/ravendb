@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -157,10 +157,10 @@ namespace Raven.StorageExporter
                     foreach (var identityInfo in filteredIdentities)
                         {
                             new RavenJObject
-						        {
-							        { "Key", identityInfo.Key }, 
-							        { "Value", identityInfo.Value }
-						        }.WriteTo(jsonWriter);
+                                {
+                                    { "Key", identityInfo.Key }, 
+                                    { "Value", identityInfo.Value }
+                                }.WriteTo(jsonWriter);
                         }
                 currentIdentitiesCount += identities.Count();
                 ReportProgress("identities", currentIdentitiesCount, totalIdentities);
@@ -168,21 +168,21 @@ namespace Raven.StorageExporter
             } while (totalIdentities > currentIdentitiesCount);
         }
 
-		public bool FilterIdentity(string identityName)
-		{
-			if ("Raven/Etag".Equals(identityName, StringComparison.OrdinalIgnoreCase))
-				return false;
+        public bool FilterIdentity(string identityName)
+        {
+            if ("Raven/Etag".Equals(identityName, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-			if ("IndexId".Equals(identityName, StringComparison.OrdinalIgnoreCase))
-				return false;
+            if ("IndexId".Equals(identityName, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-			if (Constants.RavenSubscriptionsPrefix.Equals(identityName, StringComparison.OrdinalIgnoreCase))
-				return false;
+            if (Constants.RavenSubscriptionsPrefix.Equals(identityName, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-			return false;
-		}
+            return false;
+        }
 
-		private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
+        private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
         {
             if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
             {

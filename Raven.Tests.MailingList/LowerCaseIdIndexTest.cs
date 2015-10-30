@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -8,13 +8,13 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class LowerCaseIdIndexTest : RavenTestBase
+    public class LowerCaseIdIndexTest : RavenTestBase
     {
-		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-		{
-		}
+        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+        {
+        }
 
-		[Fact]
+        [Fact]
         public void CanIndexAndQuery()
         {
             using (var store = NewDocumentStore())
@@ -115,86 +115,86 @@ namespace Raven.Tests.MailingList
 
 
 
-		public class Resource
-		{
-			public string id { get; set; }
-			public string Name { get; set; }
-			public List<DenormalizedReference> ResourceGroups { get; set; }
-		}
+        public class Resource
+        {
+            public string id { get; set; }
+            public string Name { get; set; }
+            public List<DenormalizedReference> ResourceGroups { get; set; }
+        }
 
-		public class ResourceGroup
-		{
-			public string id { get; set; }
-			public string Name { get; set; }
-			public List<DenormalizedReference> Resources { get; set; }
-			public List<DenormalizedReference> ResourceUserGroups { get; set; }
-		}
+        public class ResourceGroup
+        {
+            public string id { get; set; }
+            public string Name { get; set; }
+            public List<DenormalizedReference> Resources { get; set; }
+            public List<DenormalizedReference> ResourceUserGroups { get; set; }
+        }
 
-		public class ResourceUserGroup
-		{
-			public string id { get; set; }
-			public string Name { get; set; }
-			public List<DenormalizedReference> ResourceGroups { get; set; }
-			public List<DenormalizedReference> Users { get; set; }
-		}
+        public class ResourceUserGroup
+        {
+            public string id { get; set; }
+            public string Name { get; set; }
+            public List<DenormalizedReference> ResourceGroups { get; set; }
+            public List<DenormalizedReference> Users { get; set; }
+        }
 
-		public class User
-		{
-			public string id { get; set; } //Id is ok
-			public string Name { get; set; }
-			public List<DenormalizedReference> ResourceUserGroups { get; set; }
-		}
+        public class User
+        {
+            public string id { get; set; } //Id is ok
+            public string Name { get; set; }
+            public List<DenormalizedReference> ResourceUserGroups { get; set; }
+        }
 
-		public class DenormalizedReference
-		{
-			public string id { get; set; }
-			public string Name { get; set; }
-		}
+        public class DenormalizedReference
+        {
+            public string id { get; set; }
+            public string Name { get; set; }
+        }
 
-		public class UserToResource_Index : AbstractIndexCreationTask<User, UserToResource_Index.ResourceToUserIndexData>
-		{
-			public class ResourceToUserIndexData
-			{
-				public string UserId { get; set; }
-				public string Name { get; set; }
-				public IEnumerable<string> Resources { get; set; }
-			}
-
-
-			//Map user to Resources 
-			//User -> 1 or more resourceUserGroups -> 1 or more resourceGroups -> 1 or more Resources
-			public UserToResource_Index()
-			{
-				//Map = Usr => Usr.SelectMany(u => Enumerable.Select(u.ResourceUserGroups, x => LoadDocument<ResourceUserGroup>(x.id).ResourceGroups), (u, rgs) => new {u, rgs})
-				//	.SelectMany(@t => Enumerable.Select(@t.rgs, y => LoadDocument<ResourceGroup>(y.id).Resources), (@t, rs) => new ResourceToUserIndexData
-				//{
-				//	UserId = @t.u.id,
-				//	Name = @t.u.Name,
-				//	Resources = rs.Select(r => r.id).GroupBy(x => x).Select(x => x.Key)
-				//});
+        public class UserToResource_Index : AbstractIndexCreationTask<User, UserToResource_Index.ResourceToUserIndexData>
+        {
+            public class ResourceToUserIndexData
+            {
+                public string UserId { get; set; }
+                public string Name { get; set; }
+                public IEnumerable<string> Resources { get; set; }
+            }
 
 
-				Map = Usr => from u in Usr
-							 from rgs in Enumerable.Select<DenormalizedReference, List<DenormalizedReference>>(u.ResourceUserGroups, x => LoadDocument<ResourceUserGroup>(x.id).ResourceGroups)
-							 from rs in Enumerable.Select<DenormalizedReference, List<DenormalizedReference>>(rgs, y => LoadDocument<ResourceGroup>(y.id).Resources)
-							 select new ResourceToUserIndexData
-							 {
-								 UserId = u.id,
-								 Name = u.Name,
-								 Resources = rs.Select(r => r.id).GroupBy(x => x).Select(x => x.Key)
-							 };
+            //Map user to Resources 
+            //User -> 1 or more resourceUserGroups -> 1 or more resourceGroups -> 1 or more Resources
+            public UserToResource_Index()
+            {
+                //Map = Usr => Usr.SelectMany(u => Enumerable.Select(u.ResourceUserGroups, x => LoadDocument<ResourceUserGroup>(x.id).ResourceGroups), (u, rgs) => new {u, rgs})
+                //	.SelectMany(@t => Enumerable.Select(@t.rgs, y => LoadDocument<ResourceGroup>(y.id).Resources), (@t, rs) => new ResourceToUserIndexData
+                //{
+                //	UserId = @t.u.id,
+                //	Name = @t.u.Name,
+                //	Resources = rs.Select(r => r.id).GroupBy(x => x).Select(x => x.Key)
+                //});
 
-				//reducing... group by UserId to remove duplicates
-				Reduce = docs => from doc in docs
-								 group doc by doc.UserId into g
-								 select new
-								 {
-									 UserId = g.Key,
-									 Name = g.Select(x => x.Name).First(),
-									 Resources = g.SelectMany(x => x.Resources).GroupBy(x => x).Select(x => x.Key),
-								 };
-			}
-		}
+
+                Map = Usr => from u in Usr
+                             from rgs in Enumerable.Select<DenormalizedReference, List<DenormalizedReference>>(u.ResourceUserGroups, x => LoadDocument<ResourceUserGroup>(x.id).ResourceGroups)
+                             from rs in Enumerable.Select<DenormalizedReference, List<DenormalizedReference>>(rgs, y => LoadDocument<ResourceGroup>(y.id).Resources)
+                             select new ResourceToUserIndexData
+                             {
+                                 UserId = u.id,
+                                 Name = u.Name,
+                                 Resources = rs.Select(r => r.id).GroupBy(x => x).Select(x => x.Key)
+                             };
+
+                //reducing... group by UserId to remove duplicates
+                Reduce = docs => from doc in docs
+                                 group doc by doc.UserId into g
+                                 select new
+                                 {
+                                     UserId = g.Key,
+                                     Name = g.Select(x => x.Name).First(),
+                                     Resources = g.SelectMany(x => x.Resources).GroupBy(x => x).Select(x => x.Key),
+                                 };
+            }
+        }
 
     }    
 }

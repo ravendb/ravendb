@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createCounterStorageCommand = require("commands/counter/createCounterStorageCommand");

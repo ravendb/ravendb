@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,35 +9,35 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MetadataIssues : RavenTest
-	{
-		public class RavenA
-		{
-			public string SomeProp { get; set; }
-		}
+    public class MetadataIssues : RavenTest
+    {
+        public class RavenA
+        {
+            public string SomeProp { get; set; }
+        }
 
-		[Fact]
-		public void CanWorkWithMetadata()
-		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					var a1 = new RavenA { SomeProp = "findme" };
-					session.Store(a1);
+        [Fact]
+        public void CanWorkWithMetadata()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var a1 = new RavenA { SomeProp = "findme" };
+                    session.Store(a1);
 
-					session.Advanced.GetMetadataFor(a1)["METAPROP"] = "metadata";
+                    session.Advanced.GetMetadataFor(a1)["METAPROP"] = "metadata";
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					var a1 = session.Query<RavenA>().Where(a => a.SomeProp == "findme").FirstOrDefault();
+                using (var session = store.OpenSession())
+                {
+                    var a1 = session.Query<RavenA>().Where(a => a.SomeProp == "findme").FirstOrDefault();
 
-					Assert.Equal("metadata", session.Advanced.GetMetadataFor(a1)["METAPROP"]);
-				}
-			}
-		}
-	}
+                    Assert.Equal("metadata", session.Advanced.GetMetadataFor(a1)["METAPROP"]);
+                }
+            }
+        }
+    }
 }

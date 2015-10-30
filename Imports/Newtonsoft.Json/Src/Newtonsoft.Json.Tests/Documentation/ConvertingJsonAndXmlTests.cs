@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -141,10 +141,10 @@ namespace Newtonsoft.Json.Tests.Documentation
         {
             #region ForceJsonArray
             string xml = @"<person id='1'>
-			  <name>Alan</name>
-			  <url>http://www.google.com</url>
-			  <role>Admin1</role>
-			</person>";
+              <name>Alan</name>
+              <url>http://www.google.com</url>
+              <role>Admin1</role>
+            </person>";
 
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
@@ -160,10 +160,10 @@ namespace Newtonsoft.Json.Tests.Documentation
             //}
 
             xml = @"<person xmlns:json='http://james.newtonking.com/projects/json' id='1'>
-			  <name>Alan</name>
-			  <url>http://www.google.com</url>
-			  <role json:Array='true'>Admin</role>
-			</person>";
+              <name>Alan</name>
+              <url>http://www.google.com</url>
+              <role json:Array='true'>Admin</role>
+            </person>";
 
             doc = new XmlDocument();
             doc.LoadXml(xml);

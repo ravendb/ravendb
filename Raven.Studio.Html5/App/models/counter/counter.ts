@@ -1,4 +1,4 @@
-﻿import counterServerValue = require('models/counter/counterServerValue');
+import counterServerValue = require('models/counter/counterServerValue');
 
 class counter {
     id = ko.observable('');

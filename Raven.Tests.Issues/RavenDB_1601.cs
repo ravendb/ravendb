@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1601.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -90,7 +90,7 @@ PutDocument(docId, type);",
 var docId = 'Skills/'+ this.Skill;
 var type = LoadDocument(docId);
 if(type == null)
-	return;
+    return;
 var opCounterId = 'opCounter';
 var opCounter = LoadDocument(opCounterId) || {};
 opCounter.Deletes++;
@@ -186,7 +186,7 @@ PutDocument(docId, type);",
 var docId = 'AnimalTypes/'+ this.Type;
 var type = LoadDocument(docId);
 if(type == null)
-	return;
+    return;
 var opCounterId = 'opCounter';
 var opCounter = LoadDocument(opCounterId) || {};
 opCounter.Deletes++;
@@ -331,7 +331,7 @@ PutDocument(docId, type);",
 var docId = 'AnimalTypes/'+ key;
 var type = LoadDocument(docId);
 if(type == null)
-	return;
+    return;
 var opCounterId = 'opCounter';
 var opCounter = LoadDocument(opCounterId) || {};
 opCounter.Deletes++;
@@ -465,41 +465,41 @@ PutDocument(docId, type);
                     s.SaveChanges();
                 }
 
-				var patcher = new ScriptedJsonPatcher(store.SystemDatabase);
-				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.SystemDatabase, new HashSet<string> { "dogs" }))
-				{
-					patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
-					{
-						Script =
-	@"var opCounterId = 'opCounter';
-	var opCounter = LoadDocument(opCounterId) || {};
-	opCounter.Index++;
-	PutDocument(opCounterId, opCounter);
-	opCounter = LoadDocument(opCounterId)
-	opCounter.Deletes++;
-	PutDocument(opCounterId, opCounter);
-	"
-					});
+                var patcher = new ScriptedJsonPatcher(store.SystemDatabase);
+                using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.SystemDatabase, new HashSet<string> { "dogs" }))
+                {
+                    patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
+                    {
+                        Script =
+    @"var opCounterId = 'opCounter';
+    var opCounter = LoadDocument(opCounterId) || {};
+    opCounter.Index++;
+    PutDocument(opCounterId, opCounter);
+    opCounter = LoadDocument(opCounterId)
+    opCounter.Deletes++;
+    PutDocument(opCounterId, opCounter);
+    "
+                    });
 
-					store.SystemDatabase.TransactionalStorage.Batch(accessor =>
-					{
-						foreach (var operation in scope.GetOperations())
-						{
-							switch (operation.Type)
-							{
-								case ScriptedJsonPatcher.OperationType.Put:
-									store.SystemDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
-												 operation.Document.Metadata, null);
-									break;
-								case ScriptedJsonPatcher.OperationType.Delete:
-									store.SystemDatabase.Documents.Delete(operation.DocumentKey, null, null);
-									break;
-								default:
-									throw new ArgumentOutOfRangeException("operation.Type");
-							}
-						}
-					});
-				}
+                    store.SystemDatabase.TransactionalStorage.Batch(accessor =>
+                    {
+                        foreach (var operation in scope.GetOperations())
+                        {
+                            switch (operation.Type)
+                            {
+                                case ScriptedJsonPatcher.OperationType.Put:
+                                    store.SystemDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+                                                 operation.Document.Metadata, null);
+                                    break;
+                                case ScriptedJsonPatcher.OperationType.Delete:
+                                    store.SystemDatabase.Documents.Delete(operation.DocumentKey, null, null);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException("operation.Type");
+                            }
+                        }
+                    });
+                }
 
                 using (var s = store.OpenSession())
                 {

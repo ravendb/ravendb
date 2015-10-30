@@ -1,4 +1,4 @@
-﻿interface changesApiEventQueue {
+interface changesApiEventQueue {
     ownerId: string;
     name: string;
     lastHeartbeatMs: number;

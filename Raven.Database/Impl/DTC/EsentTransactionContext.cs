@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="EsentTransactionContext.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,53 +10,53 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Impl.DTC
 {
-	public class EsentTransactionContext : IDisposable
-	{
-		private readonly IntPtr sessionContext;
-	    public HashSet<string> DocumentIdsToTouch; 
+    public class EsentTransactionContext : IDisposable
+    {
+        private readonly IntPtr sessionContext;
+        public HashSet<string> DocumentIdsToTouch; 
 
-		public EsentTransactionContext(Session session, IntPtr context, DateTime createdAt)
-		{
-			sessionContext = context;
-			Session = session;
-			CreatedAt = createdAt;
-			using (EnterSessionContext())
-			{
-				Transaction = new Transaction(Session);
-			}
+        public EsentTransactionContext(Session session, IntPtr context, DateTime createdAt)
+        {
+            sessionContext = context;
+            Session = session;
+            CreatedAt = createdAt;
+            using (EnterSessionContext())
+            {
+                Transaction = new Transaction(Session);
+            }
 
-			ActionsAfterCommit = new List<Action>();
-		}
+            ActionsAfterCommit = new List<Action>();
+        }
 
-		public List<Action> ActionsAfterCommit { get; private set; }
-		public Session Session { get; private set; }
-		public DateTime CreatedAt { get; private set; }
-		public Transaction Transaction { get; private set; }
-	    public bool AlreadyInContext { get; private set; }
+        public List<Action> ActionsAfterCommit { get; private set; }
+        public Session Session { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+        public Transaction Transaction { get; private set; }
+        public bool AlreadyInContext { get; private set; }
 
-		public IDisposable EnterSessionContext()
-		{
-		    if (AlreadyInContext)
-		        return new DisposableAction(() => { });
+        public IDisposable EnterSessionContext()
+        {
+            if (AlreadyInContext)
+                return new DisposableAction(() => { });
 
-			Api.JetSetSessionContext(Session, sessionContext);
-		    AlreadyInContext = true;
-			return new DisposableAction(() =>
-			{
-			    Api.JetResetSessionContext(Session);
-			    AlreadyInContext = false;
-			});
-		}
+            Api.JetSetSessionContext(Session, sessionContext);
+            AlreadyInContext = true;
+            return new DisposableAction(() =>
+            {
+                Api.JetResetSessionContext(Session);
+                AlreadyInContext = false;
+            });
+        }
 
-		public void AfterCommit(Action action)
-		{
-			ActionsAfterCommit.Add(action);
-		}
+        public void AfterCommit(Action action)
+        {
+            ActionsAfterCommit.Add(action);
+        }
 
-		public void Dispose()
-		{
-		    if (Session == null)
-		        return;
+        public void Dispose()
+        {
+            if (Session == null)
+                return;
 
             using (EnterSessionContext())
             {
@@ -64,7 +64,7 @@ namespace Raven.Database.Impl.DTC
                     Transaction.Dispose();
             }
             if(Session != null)
-				Session.Dispose();
-		}
-	}
+                Session.Dispose();
+        }
+    }
 }

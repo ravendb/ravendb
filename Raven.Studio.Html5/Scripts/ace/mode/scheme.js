@@ -43,7 +43,7 @@ var MatchingParensOutdent = require("./matching_parens_outdent").MatchingParensO
 
 var Mode = function() {
     this.HighlightRules = SchemeHighlightRules;
-	this.$outdent = new MatchingParensOutdent();
+    this.$outdent = new MatchingParensOutdent();
 };
 oop.inherits(Mode, TextMode);
 

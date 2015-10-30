@@ -13,57 +13,57 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DecimalPrecision : RavenTest
-	{
-		[Fact]
-		public void CanDetectHighPrecision_Decimal()
-		{
-			using(var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("Precision",
-				                                new IndexDefinition
-				                                {
-													Map = "from doc in docs select new { doc.M }"
-				                                });
+    public class DecimalPrecision : RavenTest
+    {
+        [Fact]
+        public void CanDetectHighPrecision_Decimal()
+        {
+            using(var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("Precision",
+                                                new IndexDefinition
+                                                {
+                                                    Map = "from doc in docs select new { doc.M }"
+                                                });
 
 
-				using(var session = store.OpenSession())
-				{
+                using(var session = store.OpenSession())
+                {
 
-					session.Store
-						(
-							new Foo
-							{
-								D = 1.33d,
-								F = 1.33f,
-								M = 1.33m
-							}
-						);
+                    session.Store
+                        (
+                            new Foo
+                            {
+                                D = 1.33d,
+                                F = 1.33f,
+                                M = 1.33m
+                            }
+                        );
 
-					session.SaveChanges();
+                    session.SaveChanges();
 
-					var count = session.Query<Foo>("Precision")
-						.Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
-						.Where(x => x.M < 1.331m)
-						.Count();
+                    var count = session.Query<Foo>("Precision")
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
+                        .Where(x => x.M < 1.331m)
+                        .Count();
 
-					Assert.Equal(1, count);
+                    Assert.Equal(1, count);
 
-					count = session.Query<Foo>("Precision")
-						.Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
-						.Where(x => x.M > 1.331m)
-						.Count();
+                    count = session.Query<Foo>("Precision")
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue))
+                        .Where(x => x.M > 1.331m)
+                        .Count();
 
-					Assert.Equal(0, count);
-				}
-			}
-		}
+                    Assert.Equal(0, count);
+                }
+            }
+        }
 
-		public class Foo
-		{
-			public decimal M { get; set; }
-			public float F { get; set; }
-			public double D { get; set; }
-		}
-	}
+        public class Foo
+        {
+            public decimal M { get; set; }
+            public float F { get; set; }
+            public double D { get; set; }
+        }
+    }
 }

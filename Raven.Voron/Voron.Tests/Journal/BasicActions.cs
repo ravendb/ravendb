@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ForceLogFlushes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,9 +17,9 @@ namespace Voron.Tests.Journal
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+            options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 
-	        options.ManualFlushing = true;
+            options.ManualFlushing = true;
         }
 
         [PrefixesFact]

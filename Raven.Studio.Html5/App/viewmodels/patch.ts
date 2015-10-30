@@ -39,16 +39,16 @@ class patch extends viewModelBase {
     patchDocument = ko.observable<patchDocument>();
 
     beforePatch: KnockoutComputed<string>;
-	beforePatchDoc = ko.observable<string>();
-	beforePatchMeta = ko.observable<string>();
-	beforePatchDocMode = ko.observable<boolean>(true);
-	beforePatchEditor: AceAjax.Editor;
+    beforePatchDoc = ko.observable<string>();
+    beforePatchMeta = ko.observable<string>();
+    beforePatchDocMode = ko.observable<boolean>(true);
+    beforePatchEditor: AceAjax.Editor;
 
-	afterPatch = ko.observable<string>();
-	afterPatchDoc = ko.observable<string>();
-	afterPatchMeta = ko.observable<string>();
-	afterPatchDocMode = ko.observable<boolean>(true);
-	afterPatchEditor: AceAjax.Editor;
+    afterPatch = ko.observable<string>();
+    afterPatchDoc = ko.observable<string>();
+    afterPatchMeta = ko.observable<string>();
+    afterPatchDocMode = ko.observable<boolean>(true);
+    afterPatchEditor: AceAjax.Editor;
 
     loadedDocuments = ko.observableArray<string>();
     putDocuments = ko.observableArray<any>();
@@ -65,7 +65,7 @@ class patch extends viewModelBase {
 
         aceEditorBindingHandler.install();
 
-		// When we programmatically change the document text or meta text, push it into the editor.
+        // When we programmatically change the document text or meta text, push it into the editor.
         this.beforePatchDocMode.subscribe(() => {
             if (this.beforePatchEditor) { 
                 var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
@@ -83,7 +83,7 @@ class patch extends viewModelBase {
             owner: this
         });
 
-		this.afterPatchDocMode.subscribe(() => {
+        this.afterPatchDocMode.subscribe(() => {
             if (this.afterPatchEditor) {
                 var text = this.afterPatchDocMode() ? this.afterPatchDoc() : this.afterPatchMeta();
                 this.afterPatchEditor.getSession().setValue(text);
@@ -106,7 +106,7 @@ class patch extends viewModelBase {
             .subscribe(indexName => this.fetchIndexFields(indexName));
     }
 
-	compositionComplete() {
+    compositionComplete() {
         super.compositionComplete();
 
         var beforePatchEditorElement = $("#beforePatchEditor");
@@ -114,7 +114,7 @@ class patch extends viewModelBase {
             this.beforePatchEditor = ko.utils.domData.get(beforePatchEditorElement[0], "aceEditor");
         }
 
-		var afterPatchEditorElement = $("#afterPatchEditor");
+        var afterPatchEditorElement = $("#afterPatchEditor");
         if (afterPatchEditorElement.length > 0) {
             this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
         }
@@ -145,8 +145,8 @@ class patch extends viewModelBase {
                     .done(document => {
                         this.documentKey(document.__metadata.id);
                         this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
-		                this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
-	                });
+                        this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
+                    });
             } else {
                 this.clearDocumentPreview();
             }
@@ -155,7 +155,7 @@ class patch extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
@@ -185,7 +185,7 @@ class patch extends viewModelBase {
             var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
             loadDocTask.done(document => {
                 this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
-				this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
+                this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
             }).fail(this.clearDocumentPreview());
         } else {
             this.clearDocumentPreview();
@@ -194,9 +194,9 @@ class patch extends viewModelBase {
 
     private clearDocumentPreview() {
         this.beforePatchDoc('');
-	    this.beforePatchMeta('');
+        this.beforePatchMeta('');
         this.afterPatchDoc('');
-	    this.afterPatchMeta('');
+        this.afterPatchMeta('');
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
@@ -332,7 +332,7 @@ class patch extends viewModelBase {
             .done((result: bulkDocumentDto[]) => {
                 var testResult = new document(result[0].AdditionalData['Document']);
                 this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
-				this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
+                this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
                 this.updateActions(result[0].AdditionalData['Actions']);
                 this.outputLog(result[0].AdditionalData["Debug"]);
             })
@@ -416,8 +416,8 @@ class patch extends viewModelBase {
         new executePatchCommand(bulkDocs, this.activeDatabase(), false)
             .execute()
             .done((result: bulkDocumentDto[]) => {
-				this.afterPatchDoc("");
-		        this.afterPatchMeta("");
+                this.afterPatchDoc("");
+                this.afterPatchMeta("");
                 if (this.patchDocument().patchOnOption() === 'Document') {
                     this.loadDocumentToTest(this.patchDocument().selectedItem());
                 }
@@ -448,20 +448,20 @@ class patch extends viewModelBase {
         return null;
     }
 
-	activateBeforeDoc() {
-		this.beforePatchDocMode(true);
-	}
+    activateBeforeDoc() {
+        this.beforePatchDocMode(true);
+    }
 
-	activateBeforeMeta() {
-		this.beforePatchDocMode(false);
-	}
+    activateBeforeMeta() {
+        this.beforePatchDocMode(false);
+    }
 
-	activateAfterDoc() {
-		this.afterPatchDocMode(true);
-	}
+    activateAfterDoc() {
+        this.afterPatchDocMode(true);
+    }
 
-	activateAfterMeta() {
-		this.afterPatchDocMode(false);
+    activateAfterMeta() {
+        this.afterPatchDocMode(false);
     }
 
     indexFields = ko.observableArray<string>();

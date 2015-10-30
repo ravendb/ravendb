@@ -1,11 +1,11 @@
-﻿using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System;
 using NetTopologySuite.Features;
 
 // From: https://code.google.com/p/nettopologysuite/source/browse/#svn%2Ftrunk%2FNetTopologySuite.IO%2FNetTopologySuite.IO.GeoJSON
 namespace Raven.Tests.Spatial.JsonConverters.GeoJson
 {
-	/// <summary>
+    /// <summary>
     /// Converts IAttributesTable object to its JSON representation.
     /// </summary>
     public class AttributesTableConverter : JsonConverter

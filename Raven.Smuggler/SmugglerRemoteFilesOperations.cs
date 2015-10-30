@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -86,26 +86,26 @@ namespace Raven.Smuggler
             return PrimaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
 
-	    public virtual async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
-	    {
-		    var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take);
+        public virtual async Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take)
+        {
+            var names = await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(start, take);
 
-			var results = new List<KeyValuePair<string, RavenJObject>>(names.Length);
+            var results = new List<KeyValuePair<string, RavenJObject>>(names.Length);
 
-		    foreach (var name in names)
-		    {
-			    results.Add(new KeyValuePair<string, RavenJObject>(name, await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>(name)));
-		    }
+            foreach (var name in names)
+            {
+                results.Add(new KeyValuePair<string, RavenJObject>(name, await PrimaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<RavenJObject>(name)));
+            }
 
-		    return results;
-	    }
+            return results;
+        }
 
-	    public virtual Task PutConfig(string name, RavenJObject value)
-	    {
-		    return PrimaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
-	    }
+        public virtual Task PutConfig(string name, RavenJObject value)
+        {
+            return PrimaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
+        }
 
-	    public virtual void Initialize(SmugglerFilesOptions options)
+        public virtual void Initialize(SmugglerFilesOptions options)
         {
             this.Options = options;
         }
@@ -142,27 +142,27 @@ namespace Raven.Smuggler
             throw new NotSupportedException();
         }
 
-	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
-	    {
-			if (metadata != null)
-			{
-				metadata.Remove(SynchronizationConstants.RavenSynchronizationHistory);
-				metadata.Remove(SynchronizationConstants.RavenSynchronizationSource);
-				metadata.Remove(SynchronizationConstants.RavenSynchronizationVersion);
-			}
+        public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+        {
+            if (metadata != null)
+            {
+                metadata.Remove(SynchronizationConstants.RavenSynchronizationHistory);
+                metadata.Remove(SynchronizationConstants.RavenSynchronizationSource);
+                metadata.Remove(SynchronizationConstants.RavenSynchronizationVersion);
+            }
 
-			return metadata;
-	    }
+            return metadata;
+        }
 
-	    public RavenJObject DisableVersioning(RavenJObject metadata)
-	    {
-		    if (metadata != null)
-		    {
-			    metadata.Add(Constants.RavenIgnoreVersioning, true);
-		    }
+        public RavenJObject DisableVersioning(RavenJObject metadata)
+        {
+            if (metadata != null)
+            {
+                metadata.Add(Constants.RavenIgnoreVersioning, true);
+            }
 
-		    return metadata;
-	    }
+            return metadata;
+        }
     }
 
 
@@ -204,9 +204,9 @@ namespace Raven.Smuggler
             return this.SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync<ExportFilesDestinations>(ExportFilesDestinations.RavenDocumentKey, destinations);
         }
 
-	    public override Task PutConfig(string name, RavenJObject value)
-	    {
-			return SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
-	    }
+        public override Task PutConfig(string name, RavenJObject value)
+        {
+            return SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync(name, value);
+        }
     }
 }

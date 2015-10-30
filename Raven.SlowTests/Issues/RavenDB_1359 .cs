@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1359 .cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,65 +20,65 @@ using Xunit;
 
 namespace Raven.SlowTests.Issues
 {
-	public class RavenDB_1359 : RavenTest
-	{
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-		{
-			configuration.EnableResponseLoggingForEmbeddedDatabases = true;
-		}
+    public class RavenDB_1359 : RavenTest
+    {
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.EnableResponseLoggingForEmbeddedDatabases = true;
+        }
 
-		[Fact]
-		public void IndexThatLoadAttachmentsShouldIndexAllDocuments()
-		{
-			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false)) // the problem occurred only on Esent
-			{
-				var indexWithAttachments = new RavenDB1316.Attachment_Indexing();
-				indexWithAttachments.Execute(store);
+        [Fact]
+        public void IndexThatLoadAttachmentsShouldIndexAllDocuments()
+        {
+            using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false)) // the problem occurred only on Esent
+            {
+                var indexWithAttachments = new RavenDB1316.Attachment_Indexing();
+                indexWithAttachments.Execute(store);
 
-				store.DatabaseCommands.PutAttachment("attachment", null,
-				                                     new MemoryStream(Encoding.UTF8.GetBytes("this is a test")),
-				                                     new RavenJObject());
-				var tasks = new List<Task>();
+                store.DatabaseCommands.PutAttachment("attachment", null,
+                                                     new MemoryStream(Encoding.UTF8.GetBytes("this is a test")),
+                                                     new RavenJObject());
+                var tasks = new List<Task>();
 
-				// here we have to do a big document upload because the problem occurred only when 
-				// DefaultBackgroundTaskExecuter.ExecuteAllInterleaved method was performed during indexing process
+                // here we have to do a big document upload because the problem occurred only when 
+                // DefaultBackgroundTaskExecuter.ExecuteAllInterleaved method was performed during indexing process
 
-				for (var i = 0; i < 5; i++)
-				{
-					tasks.Add(Task.Factory.StartNew(() =>
-					{
-						for (var j = 0; j < 1000; j++)
-						{
-							using (var session = store.OpenSession())
-							{
-								session.Store(new RavenDB1316.Item
-								{
-									Name = "A",
-									Content = "attachment"
-								});
-								session.Store(new RavenDB1316.Item
-								{
-									Name = "B",
-									Content = "attachment"
-								});
-								session.Store(new RavenDB1316.Item
-								{
-									Name = "C",
-									Content = "attachment"
-								});
-								session.SaveChanges();
-							}
-						}
-					}));
-				}
+                for (var i = 0; i < 5; i++)
+                {
+                    tasks.Add(Task.Factory.StartNew(() =>
+                    {
+                        for (var j = 0; j < 1000; j++)
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                session.Store(new RavenDB1316.Item
+                                {
+                                    Name = "A",
+                                    Content = "attachment"
+                                });
+                                session.Store(new RavenDB1316.Item
+                                {
+                                    Name = "B",
+                                    Content = "attachment"
+                                });
+                                session.Store(new RavenDB1316.Item
+                                {
+                                    Name = "C",
+                                    Content = "attachment"
+                                });
+                                session.SaveChanges();
+                            }
+                        }
+                    }));
+                }
 
-				Task.WaitAll(tasks.ToArray());
+                Task.WaitAll(tasks.ToArray());
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				IndexStats indexStats =
-					store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == indexWithAttachments.IndexName);
-			}
-		}
-	}
+                IndexStats indexStats =
+                    store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == indexWithAttachments.IndexName);
+            }
+        }
+    }
 }

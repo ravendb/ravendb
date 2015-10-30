@@ -1,78 +1,78 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Voron.Trees
 {
-	public unsafe class EmptyIterator : IIterator
-	{
-		public bool Seek(Slice key)
-		{
-			return false;
-		}
+    public unsafe class EmptyIterator : IIterator
+    {
+        public bool Seek(Slice key)
+        {
+            return false;
+        }
 
-		public Slice CurrentKey
-		{
-			get { throw new InvalidOperationException("No current page"); }
-		}
+        public Slice CurrentKey
+        {
+            get { throw new InvalidOperationException("No current page"); }
+        }
 
-		public int GetCurrentDataSize()
-		{
-			throw new InvalidOperationException("No current page");
-		}
+        public int GetCurrentDataSize()
+        {
+            throw new InvalidOperationException("No current page");
+        }
 
-		public bool Skip(int count)
-		{
-			throw new InvalidOperationException("No records");
-		}
+        public bool Skip(int count)
+        {
+            throw new InvalidOperationException("No records");
+        }
 
-		public ValueReader CreateReaderForCurrent()
-		{
-			throw new InvalidOperationException("No current page");
-		}
+        public ValueReader CreateReaderForCurrent()
+        {
+            throw new InvalidOperationException("No current page");
+        }
 
-		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-		{
-			throw new InvalidOperationException("No current page");
-		}
+        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
+        {
+            throw new InvalidOperationException("No current page");
+        }
 
-	    public event Action<IIterator> OnDispoal;
+        public event Action<IIterator> OnDispoal;
 
-	    public IEnumerable<string> DumpValues()
-		{
-			yield break;
-		}
+        public IEnumerable<string> DumpValues()
+        {
+            yield break;
+        }
 
-		public unsafe NodeHeader* Current
-		{
-			get
-			{
-				throw new InvalidOperationException("No current page");
-			}
-		}
+        public unsafe NodeHeader* Current
+        {
+            get
+            {
+                throw new InvalidOperationException("No current page");
+            }
+        }
 
-		public Slice MaxKey { get; set; }
+        public Slice MaxKey { get; set; }
 
-		public Slice RequiredPrefix
-		{
-			get;
-			set;
-		}
+        public Slice RequiredPrefix
+        {
+            get;
+            set;
+        }
 
-		public bool MoveNext()
-		{
-			return false;
-		}
+        public bool MoveNext()
+        {
+            return false;
+        }
 
-		public bool MovePrev()
-		{
-			return false;
-		}
+        public bool MovePrev()
+        {
+            return false;
+        }
 
-		public void Dispose()
-		{
-		    var action = OnDispoal;
-		    if (action != null)
-		        action(this);
-		}
-	}
+        public void Dispose()
+        {
+            var action = OnDispoal;
+            if (action != null)
+                action(this);
+        }
+    }
 }

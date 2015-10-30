@@ -12,41 +12,41 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.FileSystem
 {
-	public class MtaFactAttribute : FactAttribute
-	{
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			return base.EnumerateTestCommands(method)
-				.Select(x => new MTAThreadTimeoutCommand(x, method));
-		}
+    public class MtaFactAttribute : FactAttribute
+    {
+        protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+        {
+            return base.EnumerateTestCommands(method)
+                .Select(x => new MTAThreadTimeoutCommand(x, method));
+        }
 
-		public class MTAThreadTimeoutCommand : DelegatingTestCommand
-		{
-			private readonly IMethodInfo _testMethod;
+        public class MTAThreadTimeoutCommand : DelegatingTestCommand
+        {
+            private readonly IMethodInfo _testMethod;
 
-			public MTAThreadTimeoutCommand(ITestCommand innerComand, IMethodInfo testMethod)
-				: base(innerComand)
-			{
-				_testMethod = testMethod;
-			}
+            public MTAThreadTimeoutCommand(ITestCommand innerComand, IMethodInfo testMethod)
+                : base(innerComand)
+            {
+                _testMethod = testMethod;
+            }
 
-			public override MethodResult Execute(object testClass)
-			{
-				var task = Task.Factory.StartNew(() =>
-				{
-					try
-					{
-						using (testClass as IDisposable)
-							return InnerCommand.Execute(testClass);
-					}
-					catch (Exception ex)
-					{
-						return new FailedResult(_testMethod, ex, DisplayName);
-					}
-				});
+            public override MethodResult Execute(object testClass)
+            {
+                var task = Task.Factory.StartNew(() =>
+                {
+                    try
+                    {
+                        using (testClass as IDisposable)
+                            return InnerCommand.Execute(testClass);
+                    }
+                    catch (Exception ex)
+                    {
+                        return new FailedResult(_testMethod, ex, DisplayName);
+                    }
+                });
 
-				return task.Result;
-			}
-		}
-	}
+                return task.Result;
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿import getStatisticsCommand = require("commands/getDatabaseStatsCommand");
+import getStatisticsCommand = require("commands/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 

@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Client;
 using Raven.Client.Changes;
@@ -141,12 +141,12 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         private class MockReplicationInformerBase : IReplicationInformerBase
-		{
+        {
 #pragma warning disable 67
-			public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+            public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
 #pragma warning restore 67
 
-			public int DelayTimeInMiliSec
+            public int DelayTimeInMiliSec
             {
                 get
                 {

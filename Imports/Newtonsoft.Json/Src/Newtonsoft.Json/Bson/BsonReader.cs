@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -505,41 +505,41 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         {
             switch (type)
             {
-				case BsonType.NumberDecimal:
-					SetToken(JsonToken.Float, ReadDecimal());
-					break;
-				case BsonType.Number:
+                case BsonType.NumberDecimal:
+                    SetToken(JsonToken.Float, ReadDecimal());
+                    break;
+                case BsonType.Number:
                     double d = ReadDouble();
 
-		            if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
-		            {
-			            try
-			            {
-				            if (double.IsNaN(d))
-				            {
-					            SetToken(JsonToken.Float, d);
-				            }
-				            else
-				            {
-					            SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
-				            }
-			            }
-			            catch (Exception)
-			            {
-				            if (_floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
-					            SetToken(JsonToken.Float, d);
-				            else
-					            throw;
-			            }
-		            }
-		            else
-		            {
-			            SetToken(JsonToken.Float, d);
-		            }
+                    if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
+                    {
+                        try
+                        {
+                            if (double.IsNaN(d))
+                            {
+                                SetToken(JsonToken.Float, d);
+                            }
+                            else
+                            {
+                                SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            if (_floatParseHandling == FloatParseHandling.PreferDecimalFallbackToDouble)
+                                SetToken(JsonToken.Float, d);
+                            else
+                                throw;
+                        }
+                    }
+                    else
+                    {
+                        SetToken(JsonToken.Float, d);
+                    }
                     break;
-				case BsonType.RavenDBCustomFloat:
-					SetToken(JsonToken.Float, ReadSingle());
-					break;
+                case BsonType.RavenDBCustomFloat:
+                    SetToken(JsonToken.Float, ReadSingle());
+                    break;
                 case BsonType.String:
                 case BsonType.Symbol:
                     SetToken(JsonToken.String, ReadLengthString());
@@ -851,17 +851,17 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
             return _reader.ReadDouble();
         }
 
-		private float ReadSingle()
-		{
-			MovePosition(4);
-			return _reader.ReadSingle();
-		}
+        private float ReadSingle()
+        {
+            MovePosition(4);
+            return _reader.ReadSingle();
+        }
 
-		private decimal ReadDecimal()
-		{
-			MovePosition(16);
-			return _reader.ReadDecimal();
-		}
+        private decimal ReadDecimal()
+        {
+            MovePosition(16);
+            return _reader.ReadDecimal();
+        }
 
 
         private int ReadInt32()

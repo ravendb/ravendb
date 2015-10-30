@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="VoronTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -69,14 +69,14 @@ namespace Performance.Comparison.Voron
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return Read(string.Format("[Voron] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return ReadParallel(string.Format("[Voron] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
@@ -95,8 +95,8 @@ namespace Performance.Comparison.Voron
         {
             NewStorage();
 
-	        var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(dataPath);
-	        using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(dataPath);
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 var enumerator = data.GetEnumerator();
                 //return WriteInternal(operation, itemsPerTransaction, numberOfTransactions, perfTracker, env, enumerator);
@@ -264,7 +264,7 @@ namespace Performance.Comparison.Voron
                     {
                         v += reads;
                     }
-	             
+                 
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
                 return v;

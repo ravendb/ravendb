@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -34,29 +34,29 @@ namespace Raven.Database.Server.Controllers
             {
                 RavenJArray jsonCommandArray;
 
-	            try
-	            {
-		            jsonCommandArray = await ReadJsonArrayAsync();
-	            }
-	            catch (InvalidOperationException e)
-	            {
-					Log.DebugException("Failed to deserialize document batch request." , e);
-					return GetMessageWithObject(new
-					{
-						Message = "Could not understand json, please check its validity."
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-		            
-	            }
-	            catch (InvalidDataException e)
-	            {
-					Log.DebugException("Failed to deserialize document batch request." , e);
-		            return GetMessageWithObject(new
-		            {
-			            e.Message
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-	            }
+                try
+                {
+                    jsonCommandArray = await ReadJsonArrayAsync();
+                }
+                catch (InvalidOperationException e)
+                {
+                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    return GetMessageWithObject(new
+                    {
+                        Message = "Could not understand json, please check its validity."
+                    }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+                    
+                }
+                catch (InvalidDataException e)
+                {
+                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    return GetMessageWithObject(new
+                    {
+                        e.Message
+                    }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+                }
 
-	            cts.Token.ThrowIfCancellationRequested();
+                cts.Token.ThrowIfCancellationRequested();
 
                 var transactionInformation = GetRequestTransaction();
                 var commands =
@@ -97,9 +97,9 @@ namespace Raven.Database.Server.Controllers
             if (indexDefinition.IsMapReduce)
                 throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
 
-			// we don't use using because execution is async
-			var cts = new CancellationTokenSource();
-			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            // we don't use using because execution is async
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
             return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, timeout);
@@ -111,33 +111,33 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> BulkPatch(string id)
         {
             RavenJArray patchRequestJson;
-	        try
-			{
-				patchRequestJson = await ReadJsonArrayAsync();
-			}
-			catch (InvalidOperationException e)
-			{
-				Log.DebugException("Failed to deserialize document batch request." , e);
-				return GetMessageWithObject(new
-				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+            try
+            {
+                patchRequestJson = await ReadJsonArrayAsync();
+            }
+            catch (InvalidOperationException e)
+            {
+                Log.DebugException("Failed to deserialize document batch request." , e);
+                return GetMessageWithObject(new
+                {
+                    Message = "Could not understand json, please check its validity."
+                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 
-			}
-			catch (InvalidDataException e)
-			{
-				Log.DebugException("Failed to deserialize document batch request." , e);
-				return GetMessageWithObject(new
-				{
-					e.Message
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-			}
+            }
+            catch (InvalidDataException e)
+            {
+                Log.DebugException("Failed to deserialize document batch request." , e);
+                return GetMessageWithObject(new
+                {
+                    e.Message
+                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+            }
 
-			// we don't use using because execution is async
-			var cts = new CancellationTokenSource();
-			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            // we don't use using because execution is async
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
 
             var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options), id, timeout);
@@ -148,37 +148,37 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/bulk_docs/{*id}")]
         public async Task<HttpResponseMessage> BulkEval(string id)
         {
-	        RavenJObject advPatchRequestJson;
+            RavenJObject advPatchRequestJson;
 
-	        try
-	        {
-				advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
-			}
-			catch (InvalidOperationException e)
-			{
-				Log.DebugException("Failed to deserialize document batch request." , e);
-				return GetMessageWithObject(new
-				{
-					Message = "Could not understand json, please check its validity."
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+            try
+            {
+                advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+            }
+            catch (InvalidOperationException e)
+            {
+                Log.DebugException("Failed to deserialize document batch request." , e);
+                return GetMessageWithObject(new
+                {
+                    Message = "Could not understand json, please check its validity."
+                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 
-			}
-			catch (InvalidDataException e)
-			{
-				Log.DebugException("Failed to deserialize document batch request." , e);
-				return GetMessageWithObject(new
-				{
-					e.Message
-				}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-			}
+            }
+            catch (InvalidDataException e)
+            {
+                Log.DebugException("Failed to deserialize document batch request." , e);
+                return GetMessageWithObject(new
+                {
+                    e.Message
+                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+            }
 
-			// we don't use using because execution is async
-			var cts = new CancellationTokenSource();
-			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            // we don't use using because execution is async
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
 
-	        var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
+            var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
             return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options), id, timeout);
         }
 
@@ -187,13 +187,13 @@ namespace Raven.Database.Server.Controllers
             if (string.IsNullOrEmpty(index))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-	        var option = new BulkOperationOptions
-	        {
-		        AllowStale = GetAllowStale(),
-		        MaxOpsPerSec = GetMaxOpsPerSec(),
-		        StaleTimeout = GetStaleTimeout(),
-		        RetrieveDetails = GetRetrieveDetails()
-	        };
+            var option = new BulkOperationOptions
+            {
+                AllowStale = GetAllowStale(),
+                MaxOpsPerSec = GetMaxOpsPerSec(),
+                StaleTimeout = GetStaleTimeout(),
+                RetrieveDetails = GetRetrieveDetails()
+            };
 
             var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
@@ -205,8 +205,8 @@ namespace Raven.Database.Server.Controllers
                 status.State = batchOperation(index, indexQuery, option);
             }).ContinueWith(t =>
             {
-				if (timeout != null)
-					timeout.Dispose();
+                if (timeout != null)
+                    timeout.Dispose();
 
                 if (t.IsFaulted == false)
                 {

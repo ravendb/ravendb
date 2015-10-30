@@ -1,4 +1,4 @@
-﻿import index = require("models/index");
+import index = require("models/index");
 import saveTransformerCommand = require("commands/saveTransformerCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/database");

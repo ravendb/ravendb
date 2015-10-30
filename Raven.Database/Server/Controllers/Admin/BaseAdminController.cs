@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,8 +13,8 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
-	public abstract class BaseAdminController : RavenDbApiController
-	{
+    public abstract class BaseAdminController : RavenDbApiController
+    {
         protected virtual WindowsBuiltInRole[] AdditionalSupportedRoles
         {
             get
@@ -105,5 +105,5 @@ namespace Raven.Database.Server.Controllers.Admin
             public string Message;
             public HttpStatusCode ErrorCode = HttpStatusCode.OK;
         }
-	}
+    }
 }

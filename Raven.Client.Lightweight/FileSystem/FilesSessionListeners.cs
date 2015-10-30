@@ -1,4 +1,4 @@
-﻿using Raven.Client.FileSystem.Listeners;
+using Raven.Client.FileSystem.Listeners;
 using System.Linq;
 
 namespace Raven.Client.FileSystem

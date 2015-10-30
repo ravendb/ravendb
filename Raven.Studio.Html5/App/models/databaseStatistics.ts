@@ -5,7 +5,7 @@ class databaseStatistics {
     countOfDocumentsText = ko.observable<string>();
     countOfIndexesText = ko.observable<string>();
     staleFilteredIndexesCountText = ko.observable<string>();
-	countOfFilteredIndexesText = ko.observable<string>();
+    countOfFilteredIndexesText = ko.observable<string>();
     staleIndexesCountText = ko.observable<string>();
     errorsCountText = ko.observable<string>();
     
@@ -17,7 +17,7 @@ class databaseStatistics {
         this.countOfIndexesText(this.getItemCountText(dto.CountOfIndexes, "", ""));
         this.staleIndexesCountText(dto.StaleIndexes.length.toLocaleString());
 
-		this.countOfFilteredIndexesText(this.getItemCountText(dto.CountOfIndexesExcludingDisabledAndAbandoned, "index", "es"));
+        this.countOfFilteredIndexesText(this.getItemCountText(dto.CountOfIndexesExcludingDisabledAndAbandoned, "index", "es"));
         this.staleFilteredIndexesCountText(dto.CountOfStaleIndexesExcludingDisabledAndAbandoned.toLocaleString() + " stale");
         this.errorsCountText(this.getItemCountText(dto.Errors.length, "error", "s"));
     }

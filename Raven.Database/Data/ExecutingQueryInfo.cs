@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 
@@ -15,7 +15,7 @@ namespace Raven.Database.Data
 
         public long QueryId { get; private set; }
 
-		[JsonIgnore]
+        [JsonIgnore]
         public CancellationTokenSource TokenSource { get; private set; }
 
         public TimeSpan Duration

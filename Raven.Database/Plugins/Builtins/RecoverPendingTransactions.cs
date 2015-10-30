@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RecoverPendingTransactions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -35,35 +35,35 @@ namespace Raven.Database.Plugins.Builtins
                         var recoveryInformation = item.Data.Value<byte[]>("RecoveryInformation");
 
                         if(database.InFlightTransactionalState.RecoverTransaction(transactionId, changes) == false)
-							continue;
+                            continue;
                    
                         Guid resourceId;
                         if (Guid.TryParse(resourceManagerId, out resourceId) == false || 
                             recoveryInformation == null)
                         {
-	                        try
-	                        {
-		                        database.InFlightTransactionalState.Prepare(transactionId, null, null);
-	                        }
-	                        catch (Exception e)
-	                        {
-		                        logger.WarnException(
-			                        "Failed to prepare transaction " + transactionId +
-			                        " on database restart, transaction was aborted", e);
-	                        }
+                            try
+                            {
+                                database.InFlightTransactionalState.Prepare(transactionId, null, null);
+                            }
+                            catch (Exception e)
+                            {
+                                logger.WarnException(
+                                    "Failed to prepare transaction " + transactionId +
+                                    " on database restart, transaction was aborted", e);
+                            }
                             continue;
                         }
-						try
-						{
-							database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
-						}
-						catch (Exception e)
-						{
-							logger.WarnException(
-								"Failed to prepare transaction " + transactionId +
-								" on database restart, transaction was aborted", e);
-							continue;
-						}
+                        try
+                        {
+                            database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.WarnException(
+                                "Failed to prepare transaction " + transactionId +
+                                " on database restart, transaction was aborted", e);
+                            continue;
+                        }
                         resourceManagerIds.Add(resourceId);
                         recovery.Add(() =>
                         {

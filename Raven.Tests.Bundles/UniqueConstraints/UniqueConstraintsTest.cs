@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 
 using Raven.Bundles.UniqueConstraints;
@@ -8,32 +8,32 @@ using Raven.Tests.Common;
 
 namespace Raven.Tests.Bundles.UniqueConstraints
 {
-	public abstract class UniqueConstraintsTest : RavenTest
-	{
-		protected UniqueConstraintsTest()
-		{
-			DocumentStore = NewDocumentStore(port: 8079, configureStore: store =>
-			{
-				store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
-				store.RegisterListener(new UniqueConstraintsStoreListener());
-			});
-		}
+    public abstract class UniqueConstraintsTest : RavenTest
+    {
+        protected UniqueConstraintsTest()
+        {
+            DocumentStore = NewDocumentStore(port: 8079, configureStore: store =>
+            {
+                store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
+                store.RegisterListener(new UniqueConstraintsStoreListener());
+            });
+        }
 
-		protected EmbeddableDocumentStore DocumentStore { get; set; }
-	}
+        protected EmbeddableDocumentStore DocumentStore { get; set; }
+    }
 
-	public class User
-	{
-		public string Id { get; set; }
+    public class User
+    {
+        public string Id { get; set; }
 
-		[UniqueConstraint]
-		public string Email { get; set; }
+        [UniqueConstraint]
+        public string Email { get; set; }
 
-		public string Name { get; set; }
+        public string Name { get; set; }
 
         [UniqueConstraint]
         public string[] TaskIds { get; set; }
-	}
+    }
 
     public class Foo
     {

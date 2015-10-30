@@ -1,16 +1,16 @@
-﻿using XmcdParser;
+using XmcdParser;
 
 namespace FreeDB.Playground
 {
-	public class NullDisksDestination : DisksDestination
-	{
-		public override void Accept(Disk d)
-		{
-			
-		}
+    public class NullDisksDestination : DisksDestination
+    {
+        public override void Accept(Disk d)
+        {
+            
+        }
 
-		public override void Done()
-		{
-		}
-	}
+        public override void Done()
+        {
+        }
+    }
 }

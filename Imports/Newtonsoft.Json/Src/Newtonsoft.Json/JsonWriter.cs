@@ -249,10 +249,10 @@ namespace Raven.Imports.Newtonsoft.Json
         /// </summary>
         public StringEscapeHandling StringEscapeHandling
         {
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return _stringEscapeHandling; }
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			set
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _stringEscapeHandling; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set
             {
                 _stringEscapeHandling = value;
                 OnStringEscapeHandlingChanged();

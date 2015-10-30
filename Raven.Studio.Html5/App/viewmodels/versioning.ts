@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");

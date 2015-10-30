@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -368,15 +368,15 @@ namespace Raven.Imports.Newtonsoft.Json
         /// <param name="value">The <see cref="String"/> value to write.</param>
         public override void WriteValue(string value)
         {
-	        InternalWriteValue(JsonToken.String);
+            InternalWriteValue(JsonToken.String);
 
-	        if (value != null)
-		        WriteEscapedString(value, true);
-	        else
-		        WriteValueInternal(JsonConvert.Null, JsonToken.Null);
+            if (value != null)
+                WriteEscapedString(value, true);
+            else
+                WriteValueInternal(JsonConvert.Null, JsonToken.Null);
         }
 
-	    private void WriteEscapedString(string value, bool quote)
+        private void WriteEscapedString(string value, bool quote)
         {
             EnsureWriteBuffer();
             JavaScriptUtils.WriteEscapedJavaScriptString(_writer, value, _quoteChar, quote, _charEscapeFlags, StringEscapeHandling, ref _writeBuffer);
@@ -710,8 +710,8 @@ namespace Raven.Imports.Newtonsoft.Json
             _writer.Write(ws);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void EnsureWriteBuffer()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureWriteBuffer()
         {
             if (_writeBuffer == null)
                 _writeBuffer = new char[35]; // maximum buffer sized used when writing iso date

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SubscriptionClosedException.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,31 +9,31 @@ using System.Runtime.Serialization;
 
 namespace Raven.Abstractions.Exceptions.Subscriptions
 {
-	[Serializable]
-	public class SubscriptionClosedException : SubscriptionException
-	{
-		public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.Unused;
+    [Serializable]
+    public class SubscriptionClosedException : SubscriptionException
+    {
+        public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.Unused;
 
-		public SubscriptionClosedException()
-			: base(RelevantHttpStatusCode)
-		{
-		}
+        public SubscriptionClosedException()
+            : base(RelevantHttpStatusCode)
+        {
+        }
 
-		public SubscriptionClosedException(string message)
-			: base(message, RelevantHttpStatusCode)
-		{
-		}
+        public SubscriptionClosedException(string message)
+            : base(message, RelevantHttpStatusCode)
+        {
+        }
 
-		public SubscriptionClosedException(string message, Exception inner)
-			: base(message, inner, RelevantHttpStatusCode)
-		{
-		}
+        public SubscriptionClosedException(string message, Exception inner)
+            : base(message, inner, RelevantHttpStatusCode)
+        {
+        }
 
-		protected SubscriptionClosedException(
-			SerializationInfo info,
-			StreamingContext context)
-			: base(info, context)
-		{
-		}
-	}
+        protected SubscriptionClosedException(
+            SerializationInfo info,
+            StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
 }

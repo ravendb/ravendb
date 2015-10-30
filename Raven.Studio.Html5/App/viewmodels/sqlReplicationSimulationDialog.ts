@@ -1,4 +1,4 @@
-﻿/// <reference path="../models/dto.ts" />
+/// <reference path="../models/dto.ts" />
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import simulateSqlReplicationCommand = require("commands/simulateSqlReplicationCommand");
 import database = require("models/database");
@@ -64,7 +64,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     // overrid dialogViewModelBase shortcuts behavior
    attached() {
-	   super.attached();
+       super.attached();
        $("#docIdInput").focus();
        var that = this;
        jwerty.key("esc", e => {

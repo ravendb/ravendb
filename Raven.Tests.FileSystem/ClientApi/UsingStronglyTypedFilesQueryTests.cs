@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using System;
 using System.Collections.Generic;

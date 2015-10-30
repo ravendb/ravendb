@@ -12,39 +12,39 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexWithTwoProperties : RavenTest
-	{
-		[Fact]
-		public void CanCreateIndexByTwoProperties()
-		{
-			using (var store = NewDocumentStore())
-			using (var session = store.OpenSession())
-			{
-				session.Store(new Foo { Id = "1", Value = "foo" });
+    public class IndexWithTwoProperties : RavenTest
+    {
+        [Fact]
+        public void CanCreateIndexByTwoProperties()
+        {
+            using (var store = NewDocumentStore())
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Foo { Id = "1", Value = "foo" });
 
 
-				session.Store(new Foo { Id = "2", Value = "bar" });
+                session.Store(new Foo { Id = "2", Value = "bar" });
 
 
-				session.SaveChanges();
+                session.SaveChanges();
 
-				store.DatabaseCommands.PutIndex(
-					"FeedSync/TwoProperties",
-					new IndexDefinitionBuilder<Foo>
+                store.DatabaseCommands.PutIndex(
+                    "FeedSync/TwoProperties",
+                    new IndexDefinitionBuilder<Foo>
 
 
-					{
-						Map = ids => from id in ids
-										select new { id.Id, id.Value },
-					},
-					true);
-			}
-		}
+                    {
+                        Map = ids => from id in ids
+                                        select new { id.Id, id.Value },
+                    },
+                    true);
+            }
+        }
 
-		public class Foo 
-		{
-			public string Id { get; set; }
-			public string Value { get; set; }
-		}
-	}
+        public class Foo 
+        {
+            public string Id { get; set; }
+            public string Value { get; set; }
+        }
+    }
 }

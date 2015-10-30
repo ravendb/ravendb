@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1829.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -44,8 +44,8 @@ namespace Raven.SlowTests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-				replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
-				replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
+                replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+                replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;
@@ -99,9 +99,9 @@ namespace Raven.SlowTests.Issues
             {
                 TellFirstInstanceToReplicateToSecondInstance();
 
-				var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-				replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
-				replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
+                var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
+                replicationInformerForDatabase.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+                replicationInformerForDatabase.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;
@@ -155,7 +155,7 @@ namespace Raven.SlowTests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1.AsyncDatabaseCommands);
+                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1.AsyncDatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;

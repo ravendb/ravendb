@@ -13,14 +13,14 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
-	public class RobustEnumerator
-	{        
+    public class RobustEnumerator
+    {        
         private readonly Action BeforeMoveNext = () => { };
         private readonly Action CancelMoveNext = () => { };
         private readonly Action<Exception, object> OnError = (_,__) => { };
 
-		private readonly CancellationToken cancellationToken;
-		private readonly int numberOfConsecutiveErrors;
+        private readonly CancellationToken cancellationToken;
+        private readonly int numberOfConsecutiveErrors;
 
         public Stopwatch MoveNextDuration = null;
 
@@ -37,40 +37,40 @@ namespace Raven.Database.Indexing
                 OnError = onError;
         }
 
-		public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IndexingFunc func)
-		{
+        public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, IndexingFunc func)
+        {
             using (var wrapped = new StatefulEnumerableWrapper<dynamic>(input))
-		    {
+            {
                 IEnumerator<dynamic> en;
                 using (en = func(wrapped).GetEnumerator())
                 {
-	                int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
-	                do
-	                {
-		                cancellationToken.ThrowIfCancellationRequested();
-		                var moveSuccessful = MoveNext(en, wrapped);
-		                if (moveSuccessful == false)
-			                break;
-		                if (moveSuccessful == true)
-		                {
-			                maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
+                    int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
+                    do
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var moveSuccessful = MoveNext(en, wrapped);
+                        if (moveSuccessful == false)
+                            break;
+                        if (moveSuccessful == true)
+                        {
+                            maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 
-			                yield return en.Current;
-		                }
-		                else
-		                {
-			                // we explicitly do not dispose the enumerator, since that would not allow us 
-			                // to continue on with the next item in the list.
-			                // Not actually a problem, because we are iterating only over in memory data
-			                // en.Dispose();
+                            yield return en.Current;
+                        }
+                        else
+                        {
+                            // we explicitly do not dispose the enumerator, since that would not allow us 
+                            // to continue on with the next item in the list.
+                            // Not actually a problem, because we are iterating only over in memory data
+                            // en.Dispose();
 
-			                en = func(wrapped).GetEnumerator();
-			                maxNumberOfConsecutiveErrors--;
-		                }
-	                } while (maxNumberOfConsecutiveErrors > 0);
+                            en = func(wrapped).GetEnumerator();
+                            maxNumberOfConsecutiveErrors--;
+                        }
+                    } while (maxNumberOfConsecutiveErrors > 0);
                 }
-			}
-		}
+            }
+        }
 
         public IEnumerable<object> RobustEnumeration(IEnumerator<object> input, List<IndexingFunc> funcs)
         {
@@ -105,26 +105,26 @@ namespace Raven.Database.Indexing
             }
         }
 
-		private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
-		{
-			using (StopwatchScope.For(MoveNextDuration))
-			{
-				try
-				{
-					BeforeMoveNext();
-					var moveNext = en.MoveNext();
-					if (moveNext == false)
-						CancelMoveNext();
+        private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
+        {
+            using (StopwatchScope.For(MoveNextDuration))
+            {
+                try
+                {
+                    BeforeMoveNext();
+                    var moveNext = en.MoveNext();
+                    if (moveNext == false)
+                        CancelMoveNext();
 
-					return moveNext;
-				}
-				catch (Exception e)
-				{
-					OnError(e, innerEnumerator.Current);
-				}
-			}
+                    return moveNext;
+                }
+                catch (Exception e)
+                {
+                    OnError(e, innerEnumerator.Current);
+                }
+            }
 
-			return null;
-		}
-	}
+            return null;
+        }
+    }
 }

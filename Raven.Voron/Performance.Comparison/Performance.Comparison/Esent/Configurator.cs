@@ -1,4 +1,4 @@
-﻿namespace Performance.Comparison.Esent
+namespace Performance.Comparison.Esent
 {
     using System;
     using System.IO;

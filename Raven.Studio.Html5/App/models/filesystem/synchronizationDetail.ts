@@ -1,4 +1,4 @@
-﻿class synchronizationDetail implements documentBase {
+class synchronizationDetail implements documentBase {
 
     fileName = ko.observable<string>();
     DestinationUrl = ko.observable<string>();

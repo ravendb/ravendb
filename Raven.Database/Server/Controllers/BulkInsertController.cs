@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
             {
                 OverwriteExisting = GetOverwriteExisting(),
                 CheckReferencesInIndexes = GetCheckReferencesInIndexes(),
-				SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged()
+                SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged()
             };
 
             var operationId = ExtractOperationId();
@@ -91,14 +91,14 @@ namespace Raven.Database.Server.Controllers
                     CurrentOperationContext.Headers.Value = headers;
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, batchSize => documents += batchSize), operationId, tre.Token, timeout);
                 }
-				catch (InvalidDataException e)
-				{
-					status.Faulted = true;
-					status.State = RavenJObject.FromObject(new { Error = "Could not understand json.", InnerError = e.SimplifyException().Message });
-					status.IsSerializationError = true;
-					error = e;
-				}
-				catch (OperationCanceledException)
+                catch (InvalidDataException e)
+                {
+                    status.Faulted = true;
+                    status.State = RavenJObject.FromObject(new { Error = "Could not understand json.", InnerError = e.SimplifyException().Message });
+                    status.IsSerializationError = true;
+                    error = e;
+                }
+                catch (OperationCanceledException)
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
@@ -115,12 +115,12 @@ namespace Raven.Database.Server.Controllers
                 {
                     status.Completed = true;
                     status.Documents = documents;
-	                CurrentOperationContext.User.Value = null;
-	                CurrentOperationContext.Headers.Value = null;
+                    CurrentOperationContext.User.Value = null;
+                    CurrentOperationContext.Headers.Value = null;
 
-					timeout.Dispose();
+                    timeout.Dispose();
                 }
-			}, tre.Token);
+            }, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
@@ -134,15 +134,15 @@ namespace Raven.Database.Server.Controllers
 
             if (error != null)
             {
-				var httpStatusCode = status.IsSerializationError ? (HttpStatusCode)422 : HttpStatusCode.InternalServerError;
-	            return GetMessageWithObject(new
+                var httpStatusCode = status.IsSerializationError ? (HttpStatusCode)422 : HttpStatusCode.InternalServerError;
+                return GetMessageWithObject(new
                 {
                     error.Message,
                     Error = error.ToString()
-				}, httpStatusCode);
+                }, httpStatusCode);
             }
-	        if (status.IsTimedOut)
-				throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
+            if (status.IsTimedOut)
+                throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
 
             sp.Stop();
 
@@ -219,13 +219,13 @@ namespace Raven.Database.Server.Controllers
                     if (string.IsNullOrEmpty(id))
                         throw new InvalidOperationException("Could not get id from metadata");
 
-	                if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
-		                continue; //its just a token document, should not get written into the database
-								  //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
-								  //during long pauses in the bulk insert operation.
-								  // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
-								  //continuation token and lots of document skips
-								  
+                    if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
+                        continue; //its just a token document, should not get written into the database
+                                  //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
+                                  //during long pauses in the bulk insert operation.
+                                  // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
+                                  //continuation token and lots of document skips
+                                  
                     doc.Remove("@metadata");
 
                     yield return new JsonDocument
@@ -251,7 +251,7 @@ namespace Raven.Database.Server.Controllers
 
             public bool IsTimedOut { get; set; }
 
-			public bool IsSerializationError { get; set; }
+            public bool IsSerializationError { get; set; }
         }
     }
 }

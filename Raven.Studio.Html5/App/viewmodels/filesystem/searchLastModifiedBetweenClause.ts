@@ -1,4 +1,4 @@
-﻿import filesystem = require("models/filesystem/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import datePickerBindingHandler = require("common/datePickerBindingHandler");
 import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 import dialog = require("plugins/dialog");

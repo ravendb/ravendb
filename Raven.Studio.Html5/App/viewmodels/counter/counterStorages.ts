@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require('viewmodels/shell');
 import counterStorage = require("models/counter/counterStorage");

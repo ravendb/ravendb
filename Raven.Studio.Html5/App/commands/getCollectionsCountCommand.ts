@@ -6,8 +6,8 @@ import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 class getCollectionsCountCommand extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private collections: collection[], private ownerDb: database) {
         super();
 

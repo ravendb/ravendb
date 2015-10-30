@@ -1,4 +1,4 @@
-﻿<div id="queryContainer" class="no-outline" tabindex="0">
+<div id="queryContainer" class="no-outline" tabindex="0">
     <ul class="breadcrumb">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
@@ -24,7 +24,7 @@
                     <!-- ko foreach: indexesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
-					<li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
+                    <li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
                     <!-- ko foreach: collectionNamesExceptCurrent -->
                     <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + $data)">
                         <a href="#">

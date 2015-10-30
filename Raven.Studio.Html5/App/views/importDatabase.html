@@ -1,4 +1,4 @@
-﻿<div class="panel panel-default">
+<div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title">Import Database</h3>
     </div>
@@ -9,9 +9,9 @@
             Importing will overwrite any existing documents and indexes.
         </p>
         <div data-bind="with: activeDatabase">
-			<span class="btn btn-primary btn-file" data-bind="disable: isImporting">
-				Choose file <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }" />
-			</span>
+            <span class="btn btn-primary btn-file" data-bind="disable: isImporting">
+                Choose file <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            </span>
             <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root), disable: !$root.hasFileSelected() || isImporting()">
                 <i class="fa fa-upload"></i>
                 Import Database

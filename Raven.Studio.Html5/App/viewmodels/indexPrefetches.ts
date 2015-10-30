@@ -21,7 +21,7 @@ class indexPrefetches extends viewModelBase {
     static prefetchesAllowZoom = false;
 
     attached() {
-		super.attached();
+        super.attached();
         indexPrefetches.prefetchesAllowZoom = false;
         this.modelPolling();
     }

@@ -11,11 +11,11 @@ using Microsoft.Isam.Esent.Utilities;
 
 namespace Raven.Storage.Esent.Dumper
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			new Dbutil().DumpToCsv(args);
-		}
-	}
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            new Dbutil().DumpToCsv(args);
+        }
+    }
 }

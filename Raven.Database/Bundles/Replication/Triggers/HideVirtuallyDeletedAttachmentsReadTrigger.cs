@@ -11,18 +11,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractAttachmentReadTrigger))]
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractAttachmentReadTrigger))]
     [Obsolete("Use RavenFS instead.")]
-	public class HideVirtuallyDeletedAttachmentsReadTrigger : AbstractAttachmentReadTrigger
-	{
-		public override ReadVetoResult AllowRead(string key, Stream data, RavenJObject metadata, ReadOperation operation)
-		{
-			RavenJToken value;
-			if (metadata.TryGetValue("Raven-Delete-Marker", out value))
-				return ReadVetoResult.Ignore;
-			return ReadVetoResult.Allowed;
-		}
-	}
+    public class HideVirtuallyDeletedAttachmentsReadTrigger : AbstractAttachmentReadTrigger
+    {
+        public override ReadVetoResult AllowRead(string key, Stream data, RavenJObject metadata, ReadOperation operation)
+        {
+            RavenJToken value;
+            if (metadata.TryGetValue("Raven-Delete-Marker", out value))
+                return ReadVetoResult.Ignore;
+            return ReadVetoResult.Allowed;
+        }
+    }
 }

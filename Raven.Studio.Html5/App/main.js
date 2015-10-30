@@ -1,4 +1,4 @@
-﻿requirejs.config({
+requirejs.config({
     paths: {
         text: '../Scripts/text',
         durandal: '../Scripts/durandal',
@@ -22,8 +22,8 @@ define('dagre', ['d3/d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
 
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], function (system, app, viewLocator, dialog, composition) {
     //system.debug(true);
-	
-	NProgress.configure({ showSpinner: false });
+    
+    NProgress.configure({ showSpinner: false });
 
     app.title = 'Raven.Studio';
     dialog.MessageBox.setViewUrl('views/dialog.html');
@@ -41,8 +41,8 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
 
         if ("WebSocket" in window || "EventSource" in window) {
             //Show the app by setting the root view model for our application with a transition.
-        	app.setRoot("viewmodels/shell", "entrance");
-        	composition.defaultTransitionName = "fadeIn";
+            app.setRoot("viewmodels/shell", "entrance");
+            composition.defaultTransitionName = "fadeIn";
         } else {
             //The browser doesn't support nor WebSocket nor EventSource. IE 9, Firefox 6, Chrome 6 and below.
             app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);

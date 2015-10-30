@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -54,10 +54,10 @@ namespace Raven.Database.Server.Controllers
 
             var skipAfter = GetQueryStringValue("skipAfter");
 
-			
-			var headers = CurrentOperationContext.Headers.Value;
-			var user = CurrentOperationContext.User.Value;
-	        return new HttpResponseMessage(HttpStatusCode.OK)
+            
+            var headers = CurrentOperationContext.Headers.Value;
+            var user = CurrentOperationContext.User.Value;
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new PushStreamContent((stream, content, transportContext) =>
                     StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, headers, user))
@@ -71,67 +71,67 @@ namespace Raven.Database.Server.Controllers
         }
 
         private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
-			Lazy<NameValueCollection> headers, IPrincipal user)
+            Lazy<NameValueCollection> headers, IPrincipal user)
         {
-			var old = CurrentOperationContext.Headers.Value;
-			var oldUser = CurrentOperationContext.User.Value;
-			try
-			{
-				CurrentOperationContext.Headers.Value = headers;
-				CurrentOperationContext.User.Value = user;
+            var old = CurrentOperationContext.Headers.Value;
+            var oldUser = CurrentOperationContext.User.Value;
+            try
+            {
+                CurrentOperationContext.Headers.Value = headers;
+                CurrentOperationContext.User.Value = user;
 
 
-				var bufferStream = new BufferedStream(stream, 1024 * 64);
-				using (var cts = new CancellationTokenSource())
-				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
-				using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
-				{
-					writer.WriteStartObject();
-					writer.WritePropertyName("Results");
-					writer.WriteStartArray();
+                var bufferStream = new BufferedStream(stream, 1024 * 64);
+                using (var cts = new CancellationTokenSource())
+                using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+                using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    writer.WriteStartArray();
 
-					Action<JsonDocument> addDocument = doc =>
-					{
-						timeout.Delay();
-						doc.ToJson().WriteTo(writer);
-						writer.WriteRaw(Environment.NewLine);
-					};
+                    Action<JsonDocument> addDocument = doc =>
+                    {
+                        timeout.Delay();
+                        doc.ToJson().WriteTo(writer);
+                        writer.WriteRaw(Environment.NewLine);
+                    };
 
-					Database.TransactionalStorage.Batch(accessor =>
-					{
-						// we may be sending a LOT of documents to the user, and most 
-						// of them aren't going to be relevant for other ops, so we are going to skip
-						// the cache for that, to avoid filling it up very quickly
-						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-						{
-							if (string.IsNullOrEmpty(startsWith))
-							{
-								Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
-							}
-							else
-							{
-								var nextPageStartInternal = nextPageStart;
+                    Database.TransactionalStorage.Batch(accessor =>
+                    {
+                        // we may be sending a LOT of documents to the user, and most 
+                        // of them aren't going to be relevant for other ops, so we are going to skip
+                        // the cache for that, to avoid filling it up very quickly
+                        using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                        {
+                            if (string.IsNullOrEmpty(startsWith))
+                            {
+                                Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
+                            }
+                            else
+                            {
+                                var nextPageStartInternal = nextPageStart;
 
-								Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
+                                Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
 
-								nextPageStart = nextPageStartInternal;
-							}
-						}
-					});
+                                nextPageStart = nextPageStartInternal;
+                            }
+                        }
+                    });
 
-					writer.WriteEndArray();
-					writer.WritePropertyName("NextPageStart");
-					writer.WriteValue(nextPageStart);
-					writer.WriteEndObject();
-					writer.Flush();
-					bufferStream.Flush();
-				}
-			}
-			finally
-			{
-				CurrentOperationContext.Headers.Value = old;
-				CurrentOperationContext.User.Value = oldUser;
-			}
+                    writer.WriteEndArray();
+                    writer.WritePropertyName("NextPageStart");
+                    writer.WriteValue(nextPageStart);
+                    writer.WriteEndObject();
+                    writer.Flush();
+                    bufferStream.Flush();
+                }
+            }
+            finally
+            {
+                CurrentOperationContext.Headers.Value = old;
+                CurrentOperationContext.User.Value = oldUser;
+            }
         }
 
         [HttpHead]
@@ -210,15 +210,15 @@ namespace Raven.Database.Server.Controllers
             private readonly IStorageActionsAccessor accessor;
             private readonly CancellationTimeout _timeout;
             private readonly Action<string> outputContentTypeSetter;
-	        private Lazy<NameValueCollection> headers;
-	        private IPrincipal user;
+            private Lazy<NameValueCollection> headers;
+            private IPrincipal user;
 
-	        [CLSCompliant(false)]
+            [CLSCompliant(false)]
             public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
             {
-		        headers = CurrentOperationContext.Headers.Value;
-		        user = CurrentOperationContext.User.Value;
-		        this.req = req;
+                headers = CurrentOperationContext.Headers.Value;
+                user = CurrentOperationContext.User.Value;
+                this.req = req;
                 this.queryOp = queryOp;
                 this.accessor = accessor;
                 _timeout = timeout;
@@ -227,46 +227,46 @@ namespace Raven.Database.Server.Controllers
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-	            var old = CurrentOperationContext.Headers.Value;
-	            var oldUser = CurrentOperationContext.User.Value;
-	            try
-	            {
-		            CurrentOperationContext.User.Value = user;
-		            CurrentOperationContext.Headers.Value = headers;
-					var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
-					using (var bufferedStream = new BufferedStream(stream, bufferSize))
-					using (queryOp)
-					using (accessor)
-					using (_timeout)
-					using (var writer = GetOutputWriter(req, bufferedStream))
-					// we may be sending a LOT of documents to the user, and most 
-					// of them aren't going to be relevant for other ops, so we are going to skip
-					// the cache for that, to avoid filling it up very quickly
-					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-					{
-						outputContentTypeSetter(writer.ContentType);
+                var old = CurrentOperationContext.Headers.Value;
+                var oldUser = CurrentOperationContext.User.Value;
+                try
+                {
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.Headers.Value = headers;
+                    var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
+                    using (var bufferedStream = new BufferedStream(stream, bufferSize))
+                    using (queryOp)
+                    using (accessor)
+                    using (_timeout)
+                    using (var writer = GetOutputWriter(req, bufferedStream))
+                    // we may be sending a LOT of documents to the user, and most 
+                    // of them aren't going to be relevant for other ops, so we are going to skip
+                    // the cache for that, to avoid filling it up very quickly
+                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                    {
+                        outputContentTypeSetter(writer.ContentType);
 
-						writer.WriteHeader();
-						try
-						{
-							queryOp.Execute(o =>
-							{
-								_timeout.Delay();
-								writer.Write(o);
-							});
-						}
-						catch (Exception e)
-						{
-							writer.WriteError(e);
-						}
-					}
-					return Task.FromResult(true);
-	            }
-	            finally
-	            {
-		            CurrentOperationContext.Headers.Value = old;
-		            CurrentOperationContext.User.Value = oldUser;
-	            }
+                        writer.WriteHeader();
+                        try
+                        {
+                            queryOp.Execute(o =>
+                            {
+                                _timeout.Delay();
+                                writer.Write(o);
+                            });
+                        }
+                        catch (Exception e)
+                        {
+                            writer.WriteError(e);
+                        }
+                    }
+                    return Task.FromResult(true);
+                }
+                finally
+                {
+                    CurrentOperationContext.Headers.Value = old;
+                    CurrentOperationContext.User.Value = oldUser;
+                }
             }
 
             protected override bool TryComputeLength(out long length)

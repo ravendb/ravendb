@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2176.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -87,8 +87,8 @@ namespace Raven.Tests.Issues
 
     class FakeLogTransport : IEventsTransport
     {
-		private readonly DateTime _started = SystemTime.UtcNow;
-		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
+        private readonly DateTime _started = SystemTime.UtcNow;
+        public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
         public BlockingCollection<LogEventInfo> Messages { get; private set; }
 
@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
         public bool Connected { get; set; }
 
 #pragma warning disable 67
-		public event Action Disconnected;
+        public event Action Disconnected;
 #pragma warning restore 67
         
         public void SendAsync(object msg)

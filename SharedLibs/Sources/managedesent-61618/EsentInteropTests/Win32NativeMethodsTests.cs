@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Win32NativeMethodsTests.cs" company="Microsoft Corporation">
 //     Copyright (c) Microsoft Corporation.
 // </copyright>

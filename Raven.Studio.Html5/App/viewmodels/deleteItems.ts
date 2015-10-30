@@ -1,4 +1,4 @@
-﻿import document = require("models/document");
+import document = require("models/document");
 import file = require("models/filesystem/file");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");

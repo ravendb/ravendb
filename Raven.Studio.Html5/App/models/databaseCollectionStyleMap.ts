@@ -1,4 +1,4 @@
-﻿interface databaseCollectionStyleMap {
+interface databaseCollectionStyleMap {
     databaseName: string;
     styleMap: any;
 } 

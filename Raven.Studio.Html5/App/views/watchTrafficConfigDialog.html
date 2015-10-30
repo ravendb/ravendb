@@ -1,4 +1,4 @@
-﻿<div class="messageBox" tabindex="-1" style="width: 715px;">
+<div class="messageBox" tabindex="-1" style="width: 715px;">
     <form class="form-horizontal" data-bind="submit: confirmConfig" id="log-config-form" onkeypress="return event.keyCode != 13;">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
@@ -30,16 +30,16 @@
                             <div class="col-sm-9">
                                 <input id="watchedResource" placeholder="Database or File System name" type="text" class="form-control"
                                        data-bind="enable: watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
-								<ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;"
-									data-bind="autoComplete: '#watchedResource', foreach: searchResults">
-									<li role="presentation" data-bind="click:function(){$root.resourceName($data); }">
-										<a role="menuitem" tabindex="-1" href="#">
-											<span role="menuitem" tabindex="-1">
-												<span data-bind="text: $data"></span>
-											</span>
-										</a>
-									</li>
-								</ul>
+                                <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;"
+                                    data-bind="autoComplete: '#watchedResource', foreach: searchResults">
+                                    <li role="presentation" data-bind="click:function(){$root.resourceName($data); }">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span role="menuitem" tabindex="-1">
+                                                <span data-bind="text: $data"></span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-sm-12">

@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import versioningEntry = require("models/filesystem/versioningEntry");
 import getConfigurationByKeyCommand = require('commands/filesystem/getConfigurationByKeyCommand');

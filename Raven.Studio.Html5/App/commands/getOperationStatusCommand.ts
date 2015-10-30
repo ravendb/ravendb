@@ -4,9 +4,9 @@ import resource = require("models/resource");
 class getOperationStatusCommand extends commandBase {
 
     /**
-	* @param db - The database the collection belongs to.
-	* @param operationId - The id of the operation.
-	*/
+    * @param db - The database the collection belongs to.
+    * @param operationId - The id of the operation.
+    */
     constructor(private rs: resource, private operationId: number) {
         super();
 

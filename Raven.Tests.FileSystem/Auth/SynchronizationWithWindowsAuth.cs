@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SynchronizationWithWindowsAuth.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -43,7 +43,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                       Databases = new List<ResourceAccess>
                                                       {
                                                           new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system,
-														  new ResourceAccess {TenantId = fileSystemName}
+                                                          new ResourceAccess {TenantId = fileSystemName}
                                                       }
                                                   }
                                               }

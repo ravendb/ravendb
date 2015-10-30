@@ -1,4 +1,4 @@
-﻿import genUtils = require("common/generalUtils");
+import genUtils = require("common/generalUtils");
 
 class sqlReplicationStats {
      public static ALL_TABLES = 'All Tables'

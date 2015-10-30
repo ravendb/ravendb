@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
@@ -90,7 +90,7 @@ class disableResourceToggleCommand extends commandBase {
     }
 
     private toggleTask(resources: Array<resource>, togglePath: string):JQueryPromise<resource[]> {
-		var _arguments = arguments;
+        var _arguments = arguments;
 
         var args = {
             ids: resources.map(d => d.name),

@@ -21,18 +21,18 @@ using Lucene.Net.Util;
 namespace SpellChecker.Net.Search.Spell
 {
 
-	sealed class SuggestWordQueue : PriorityQueue<SuggestWord>
-	{
+    sealed class SuggestWordQueue : PriorityQueue<SuggestWord>
+    {
 
-		internal SuggestWordQueue(int size)
-		{
-			Initialize(size);
-		}
+        internal SuggestWordQueue(int size)
+        {
+            Initialize(size);
+        }
 
-		public override bool LessThan(SuggestWord a, SuggestWord b)
-		{
-			var val = a.CompareTo(b);
-			return val < 0;
-		}
-	}
+        public override bool LessThan(SuggestWord a, SuggestWord b)
+        {
+            var val = a.CompareTo(b);
+            return val < 0;
+        }
+    }
 }

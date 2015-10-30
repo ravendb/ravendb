@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2808.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -48,11 +48,11 @@ namespace Raven.Tests.Smuggler
                 var smugglerApi = new DatabaseDataDumper(store.DocumentDatabase);
                 smugglerApi.Options.TransformScript =
                     @"function(doc) { 
-						var id = doc['@metadata']['@id']; 
-						if(id === 'foos/1')
-							return null;
-						return doc;
-					}";
+                        var id = doc['@metadata']['@id']; 
+                        if(id === 'foos/1')
+                            return null;
+                        return doc;
+                    }";
                 await smugglerApi.ExportData(
                     new SmugglerExportOptions<RavenConnectionStringOptions>
                     {
@@ -69,11 +69,11 @@ namespace Raven.Tests.Smuggler
                 var smugglerApi = new DatabaseDataDumper(documentStore.DocumentDatabase);
                 smugglerApi.Options.TransformScript =
                     @"function(doc) { 
-						var id = doc['@metadata']['@id']; 
-						if(id === 'foos/1')
-							return null;
-						return doc;
-					}";
+                        var id = doc['@metadata']['@id']; 
+                        if(id === 'foos/1')
+                            return null;
+                        return doc;
+                    }";
                 await smugglerApi.ImportData(
                     new SmugglerImportOptions<RavenConnectionStringOptions>
                     {
@@ -113,10 +113,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -160,10 +160,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -208,10 +208,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N1",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 var commands = store.DatabaseCommands.ForDatabase("N1");
@@ -243,10 +243,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N2",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
@@ -274,10 +274,10 @@ namespace Raven.Tests.Smuggler
                     {
                         Id = "N3",
                         Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
                     });
 
                 smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>

@@ -1,4 +1,4 @@
-﻿import getStatusDebugDataSubscriptionsCommand = require("commands/getStatusDebugDataSubscriptionsCommand");
+import getStatusDebugDataSubscriptionsCommand = require("commands/getStatusDebugDataSubscriptionsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");

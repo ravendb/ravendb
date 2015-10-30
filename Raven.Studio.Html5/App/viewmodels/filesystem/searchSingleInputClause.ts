@@ -1,4 +1,4 @@
-﻿import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
+import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 import dialog = require("plugins/dialog");
 
 class searchSingleInputClause extends searchDialogViewModel {

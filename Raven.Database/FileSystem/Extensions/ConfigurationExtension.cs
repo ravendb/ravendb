@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Text;
@@ -13,8 +13,8 @@ using System.Collections.Generic;
 
 namespace Raven.Database.FileSystem.Extensions
 {
-	public static class ConfigurationExtension
-	{
+    public static class ConfigurationExtension
+    {
         public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
         {
             var value = accessor.GetConfig(key);
@@ -53,5 +53,5 @@ namespace Raven.Database.FileSystem.Extensions
         {
             accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
         }
-	}
+    }
 }

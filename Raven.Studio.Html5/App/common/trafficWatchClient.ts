@@ -1,4 +1,4 @@
-﻿ /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
+ /// <reference path="../../Scripts/typings/jquery/jquery.d.ts" />
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
 import resource = require('models/resource');

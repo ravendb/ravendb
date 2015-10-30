@@ -1,4 +1,4 @@
-﻿using System.Xml;
+using System.Xml;
 using NLog;
 using NLog.Config;
 using Raven.Database.Server;
@@ -7,7 +7,7 @@ using Raven.Tests.Helpers;
 namespace Raven.Tests.FileSystem
 {
     public class RavenFilesTestWithLogs : RavenFilesTestBase
-	{
+    {
         static RavenFilesTestWithLogs()
         {
             if (LogManager.Configuration != null)
@@ -21,5 +21,5 @@ namespace Raven.Tests.FileSystem
                 LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
             }
         }
-	}
+    }
 }

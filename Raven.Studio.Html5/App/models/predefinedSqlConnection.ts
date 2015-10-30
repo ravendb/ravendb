@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import database = require("models/database");
 import testSqlConnectionCommand = require("commands/testSqlConnectionCommand");
 

@@ -9,84 +9,84 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
 {
-	public class HttpRavenRequestFactory
-	{
-		public int? RequestTimeoutInMs { get; set; }
+    public class HttpRavenRequestFactory
+    {
+        public int? RequestTimeoutInMs { get; set; }
 
-		readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
+        readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
 
-		public void ConfigureRequest(RavenConnectionStringOptions options, HttpWebRequest request)
-		{
-			if (RequestTimeoutInMs.HasValue)
-				request.Timeout = RequestTimeoutInMs.Value;
+        public void ConfigureRequest(RavenConnectionStringOptions options, HttpWebRequest request)
+        {
+            if (RequestTimeoutInMs.HasValue)
+                request.Timeout = RequestTimeoutInMs.Value;
 
-			if (options.ApiKey == null)
-			{
-				request.Credentials = options.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				return;
-			}
+            if (options.ApiKey == null)
+            {
+                request.Credentials = options.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+                return;
+            }
 
-			var webRequestEventArgs = new WebRequestEventArgs { Request = request, Credentials = new OperationCredentials(options.ApiKey, options.Credentials)};
+            var webRequestEventArgs = new WebRequestEventArgs { Request = request, Credentials = new OperationCredentials(options.ApiKey, options.Credentials)};
 
-			AbstractAuthenticator existingAuthenticator;
-			if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))
-			{
-				existingAuthenticator.ConfigureRequest(this, webRequestEventArgs);
-			}
-			else
-			{
-				var basicAuthenticator = new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
-				var securedAuthenticator = new SecuredAuthenticator();
+            AbstractAuthenticator existingAuthenticator;
+            if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))
+            {
+                existingAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+            }
+            else
+            {
+                var basicAuthenticator = new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
+                var securedAuthenticator = new SecuredAuthenticator();
 
-				basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
-				securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
-			}
-		}
+                basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+                securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+            }
+        }
 
-		private static Tuple<string, string> GetCacheKey(RavenConnectionStringOptions options)
-		{
-			return Tuple.Create(options.Url, options.ApiKey);
-		}
+        private static Tuple<string, string> GetCacheKey(RavenConnectionStringOptions options)
+        {
+            return Tuple.Create(options.Url, options.ApiKey);
+        }
 
-		public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
-		{
-			return new HttpRavenRequest(url, method, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
-		}
+        public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
+        {
+            return new HttpRavenRequest(url, method, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
+        }
 
-		private Action<HttpWebRequest> HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)
-		{
-			if (options.ApiKey == null)
-				return null;
+        private Action<HttpWebRequest> HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)
+        {
+            if (options.ApiKey == null)
+                return null;
 
-			var oauthSource = webResponse.Headers["OAuth-Source"];
+            var oauthSource = webResponse.Headers["OAuth-Source"];
 
-			var useBasicAuthenticator =
-				string.IsNullOrEmpty(oauthSource) == false &&
-				oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false;
+            var useBasicAuthenticator =
+                string.IsNullOrEmpty(oauthSource) == false &&
+                oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false;
 
-			if (string.IsNullOrEmpty(oauthSource))
-				oauthSource = options.Url + "/OAuth/API-Key";
+            if (string.IsNullOrEmpty(oauthSource))
+                oauthSource = options.Url + "/OAuth/API-Key";
 
-			var authenticator = authenticators.GetOrAdd(
-				GetCacheKey(options),
-				_ =>
-				{
-					if (useBasicAuthenticator)
-					{
-						return new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
-					}
+            var authenticator = authenticators.GetOrAdd(
+                GetCacheKey(options),
+                _ =>
+                {
+                    if (useBasicAuthenticator)
+                    {
+                        return new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
+                    }
 
-					return new SecuredAuthenticator();
-				});
+                    return new SecuredAuthenticator();
+                });
 
-			return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
-		}
+            return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
+        }
 
-		public static IDisposable Expect100Continue(string url)
-		{
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
-			servicePoint.Expect100Continue = true;
-			return new DisposableAction(() => servicePoint.Expect100Continue = false);
-		}
-	}
+        public static IDisposable Expect100Continue(string url)
+        {
+            var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+            servicePoint.Expect100Continue = true;
+            return new DisposableAction(() => servicePoint.Expect100Continue = false);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerRemoteDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -26,331 +26,331 @@ using Raven.Json.Linq;
 namespace Raven.Smuggler
 {
     public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
-	{
-		private readonly Func<DocumentStore> store;
+    {
+        private readonly Func<DocumentStore> store;
 
-		private readonly Func<BulkInsertOperation> operation;
+        private readonly Func<BulkInsertOperation> operation;
 
-		private readonly Func<bool> isDocsStreamingSupported;
+        private readonly Func<bool> isDocsStreamingSupported;
 
-		private readonly Func<bool> isTransformersSupported;
+        private readonly Func<bool> isTransformersSupported;
 
-		private Func<bool> isIdentitiesSmugglingSupported;
+        private Func<bool> isIdentitiesSmugglingSupported;
 
-		const int RetriesCount = 5;
+        const int RetriesCount = 5;
 
-		private DocumentStore Store
-		{
-			get { return store(); }
-		}
+        private DocumentStore Store
+        {
+            get { return store(); }
+        }
 
-		private BulkInsertOperation Operation
-		{
-			get { return operation(); }
-		}
+        private BulkInsertOperation Operation
+        {
+            get { return operation(); }
+        }
 
-		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
+        private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 
-	    public SmugglerDatabaseOptions Options { get; private set; }
+        public SmugglerDatabaseOptions Options { get; private set; }
 
-		public bool LastRequestErrored { get; set; }
+        public bool LastRequestErrored { get; set; }
 
-		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
-		{
-			this.store = store;
-			this.operation = operation;
-			this.isDocsStreamingSupported = isDocsStreamingSupported;
-			this.isTransformersSupported = isTransformersSupported;
-			this.isIdentitiesSmugglingSupported = isIdentitiesSmugglingSupported;
-		}
-
-        [Obsolete("Use RavenFS instead.")]
-		public Task DeleteAttachment(string key)
-		{
-			return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
-		}
-
-		public Task DeleteDocument(string key)
-		{
-			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
-		}
+        public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
+        {
+            this.store = store;
+            this.operation = operation;
+            this.isDocsStreamingSupported = isDocsStreamingSupported;
+            this.isTransformersSupported = isTransformersSupported;
+            this.isIdentitiesSmugglingSupported = isIdentitiesSmugglingSupported;
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
-		{
-			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
-		}
+        public Task DeleteAttachment(string key)
+        {
+            return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
+        }
 
-		public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
-		{
-			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
-		}
-
-		public LastEtagsInfo FetchCurrentMaxEtags()
-		{
-			return new LastEtagsInfo
-			{
-				LastAttachmentsDeleteEtag = null,
-				LastDocDeleteEtag = null,
-				LastAttachmentsEtag = null,
-				LastDocsEtag = null
-			};
-		}
+        public Task DeleteDocument(string key)
+        {
+            return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
-		{
-			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
+        public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+        {
+            throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
+        }
 
-			return attachments.ToList();
-		}
+        public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        {
+            throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
+        }
 
-        [Obsolete("Use RavenFS instead.")]
-		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
-		{
-			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-			if (attachment == null) 
-				return null;
-
-			return attachment.Data().ReadData();
-		}
-
-		public JsonDocument GetDocument(string key)
-		{
-			return Store.DatabaseCommands.Get(key);
-		}
-
-		public async Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
-		{
-			if (isDocsStreamingSupported())
-			{
-				ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-				return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: take);
-			}
-
-			int retries = RetriesCount;
-			while (true)
-			{
-				try
-				{
-					return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: Math.Min(Options.BatchSize, take));
-				}
-				catch (Exception e)
-				{
-					if (retries-- == 0)
-						throw;
-					LastRequestErrored = true;
-					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
-				}
-			}
-		}
-
-		public async Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
-		{
-			var indexes = await Store.AsyncDatabaseCommands.GetIndexesAsync(totalCount, Options.BatchSize);
-			var result = new RavenJArray();
-
-			foreach (var index in indexes)
-			{
-				result.Add(new RavenJObject
-				           {
-					           { "name", index.Name }, 
-							   { "definition", RavenJObject.FromObject(index) }
-				           });
-			}
-
-			return (RavenJArray)RavenJToken.FromObject(result);
-		}
-
-		public Task<DatabaseStatistics> GetStats()
-		{
-			return Store.AsyncDatabaseCommands.GetStatisticsAsync();
-		}
-
-		public async Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
-		{
-			if (isTransformersSupported() == false)
-				return new RavenJArray();
-
-			var transformers = await Store.AsyncDatabaseCommands.GetTransformersAsync(start, Options.BatchSize);
-			var result = new RavenJArray();
-
-			foreach (var transformer in transformers)
-			{
-				result.Add(new RavenJObject
-				           {
-					           { "name", transformer.Name }, 
-							   { "definition", RavenJObject.FromObject(transformer) }
-				           });
-			}
-
-			return result;
-		}
-
-		public async Task<string> GetVersion(RavenConnectionStringOptions server)
-		{
-			var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
-			return buildNumber.ProductVersion;
-		}
-
-		public void PurgeTombstones(OperationState result)
-		{
-			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
-		}
+        public LastEtagsInfo FetchCurrentMaxEtags()
+        {
+            return new LastEtagsInfo
+            {
+                LastAttachmentsDeleteEtag = null,
+                LastDocDeleteEtag = null,
+                LastAttachmentsEtag = null,
+                LastDocsEtag = null
+            };
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public async Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
-		{
-			if (attachmentExportInfo != null)
-			{
-				await Store.AsyncDatabaseCommands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
-			}
-		}
+        public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
+        {
+            var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
 
-		public Task PutDocument(RavenJObject document, int size)
-		{
-			if (document == null)
-				return new CompletedTask();
+            return attachments.ToList();
+        }
 
-			var metadata = document.Value<RavenJObject>("@metadata");
-			var id = metadata.Value<string>("@id");
-			if (String.IsNullOrWhiteSpace(id))
-				throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
+        [Obsolete("Use RavenFS instead.")]
+        public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
+        {
+            var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+            if (attachment == null) 
+                return null;
 
-			document.Remove("@metadata");
+            return attachment.Data().ReadData();
+        }
 
-			Operation.Store(document, metadata, id, size);
+        public JsonDocument GetDocument(string key)
+        {
+            return Store.DatabaseCommands.Get(key);
+        }
 
-			return new CompletedTask();
-		}
+        public async Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+        {
+            if (isDocsStreamingSupported())
+            {
+                ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
+                return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: take);
+            }
 
-		public Task PutIndex(string indexName, RavenJToken index)
-		{
-			if (index != null)
-			{
-				var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
+            int retries = RetriesCount;
+            while (true)
+            {
+                try
+                {
+                    return await Store.AsyncDatabaseCommands.StreamDocsAsync(lastEtag, pageSize: Math.Min(Options.BatchSize, take));
+                }
+                catch (Exception e)
+                {
+                    if (retries-- == 0)
+                        throw;
+                    LastRequestErrored = true;
+                    ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
+                }
+            }
+        }
 
-				return Store.AsyncDatabaseCommands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
-			}
+        public async Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+        {
+            var indexes = await Store.AsyncDatabaseCommands.GetIndexesAsync(totalCount, Options.BatchSize);
+            var result = new RavenJArray();
 
-			return new CompletedTask();
-		}
+            foreach (var index in indexes)
+            {
+                result.Add(new RavenJObject
+                           {
+                               { "name", index.Name }, 
+                               { "definition", RavenJObject.FromObject(index) }
+                           });
+            }
 
-		public async Task PutTransformer(string transformerName, RavenJToken transformer)
-		{
-			if (isTransformersSupported() == false)
-				return;
+            return (RavenJArray)RavenJToken.FromObject(result);
+        }
 
-			if (transformer != null)
-			{
-				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
-				await Store.AsyncDatabaseCommands.PutTransformerAsync(transformerName, transformerDefinition);
-			}
-		}
+        public Task<DatabaseStatistics> GetStats()
+        {
+            return Store.AsyncDatabaseCommands.GetStatisticsAsync();
+        }
 
-		public void ShowProgress(string format, params object[] args)
-		{
-			try
-			{
-				Console.WriteLine(format, args);
-			}
-			catch (FormatException e)
-			{
-				throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
-			}
-		}
+        public async Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+        {
+            if (isTransformersSupported() == false)
+                return new RavenJArray();
 
-		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
-		{
-			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
-		}
+            var transformers = await Store.AsyncDatabaseCommands.GetTransformersAsync(start, Options.BatchSize);
+            var result = new RavenJArray();
 
-	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
-	    {
-			if (metadata != null)
-			{
-				metadata.Remove(Constants.RavenReplicationHistory);
-				metadata.Remove(Constants.RavenReplicationSource);
-				metadata.Remove(Constants.RavenReplicationVersion);
-			}
+            foreach (var transformer in transformers)
+            {
+                result.Add(new RavenJObject
+                           {
+                               { "name", transformer.Name }, 
+                               { "definition", RavenJObject.FromObject(transformer) }
+                           });
+            }
 
-		    return metadata;
-	    }
+            return result;
+        }
 
-	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
-		{
-			Options = databaseOptions;
-			jintHelper.Initialize(databaseOptions);
-		}
+        public async Task<string> GetVersion(RavenConnectionStringOptions server)
+        {
+            var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+            return buildNumber.ProductVersion;
+        }
 
-		public void Configure(SmugglerDatabaseOptions databaseOptions)
-		{
-			if (Store.HasJsonRequestFactory == false)
-				return;
+        public void PurgeTombstones(OperationState result)
+        {
+            throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
+        }
 
-			var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
-			try
-			{
-				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
-				{
-					var configuration = (RavenJObject)request.ReadResponseJson();
+        [Obsolete("Use RavenFS instead.")]
+        public async Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
+        {
+            if (attachmentExportInfo != null)
+            {
+                await Store.AsyncDatabaseCommands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
+            }
+        }
 
-					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-					if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
-						return;
+        public Task PutDocument(RavenJObject document, int size)
+        {
+            if (document == null)
+                return new CompletedTask();
 
-					var current = databaseOptions.BatchSize;
-					databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
-				}
-			}
-			catch (ErrorResponseException e)
-			{
-				if (e.StatusCode == HttpStatusCode.Forbidden) // let it continue with the user defined batch size
-					return;
+            var metadata = document.Value<RavenJObject>("@metadata");
+            var id = metadata.Value<string>("@id");
+            if (String.IsNullOrWhiteSpace(id))
+                throw new InvalidDataException("Error while importing document from the dump: \n\r Missing id in the document metadata. This shouldn't be happening, most likely the dump you are importing from is corrupt");
 
-				throw;
-			}
-		}
+            document.Remove("@metadata");
 
-		public async Task<List<KeyValuePair<string, long>>> GetIdentities()
-		{
-			if (isIdentitiesSmugglingSupported() == false)
-				return new List<KeyValuePair<string, long>>();
+            Operation.Store(document, metadata, id, size);
 
-			int start = 0;
-			const int pageSize = 1024;
-			long totalIdentitiesCount;
-			var identities = new List<KeyValuePair<string, long>>();
+            return new CompletedTask();
+        }
 
-			do
-			{
-				var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
-				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
-				{
-					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
-					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+        public Task PutIndex(string indexName, RavenJToken index)
+        {
+            if (index != null)
+            {
+                var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
 
-					foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
-					{
-						identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
-					}
+                return Store.AsyncDatabaseCommands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+            }
 
-					start += pageSize;
-				}
-			} while (identities.Count < totalIdentitiesCount);
+            return new CompletedTask();
+        }
 
-			return identities;
-		}
+        public async Task PutTransformer(string transformerName, RavenJToken transformer)
+        {
+            if (isTransformersSupported() == false)
+                return;
 
-		public Task SeedIdentityFor(string identityName, long identityValue)
-		{
-			if (isIdentitiesSmugglingSupported() == false)
-				return new CompletedTask();
+            if (transformer != null)
+            {
+                var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+                await Store.AsyncDatabaseCommands.PutTransformerAsync(transformerName, transformerDefinition);
+            }
+        }
 
-			if(identityName != null)
-				return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
+        public void ShowProgress(string format, params object[] args)
+        {
+            try
+            {
+                Console.WriteLine(format, args);
+            }
+            catch (FormatException e)
+            {
+                throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
+            }
+        }
 
-			return new CompletedTask();
-		}
-	}
+        public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+        {
+            return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
+        }
+
+        public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+        {
+            if (metadata != null)
+            {
+                metadata.Remove(Constants.RavenReplicationHistory);
+                metadata.Remove(Constants.RavenReplicationSource);
+                metadata.Remove(Constants.RavenReplicationVersion);
+            }
+
+            return metadata;
+        }
+
+        public void Initialize(SmugglerDatabaseOptions databaseOptions)
+        {
+            Options = databaseOptions;
+            jintHelper.Initialize(databaseOptions);
+        }
+
+        public void Configure(SmugglerDatabaseOptions databaseOptions)
+        {
+            if (Store.HasJsonRequestFactory == false)
+                return;
+
+            var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
+            try
+            {
+                using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+                {
+                    var configuration = (RavenJObject)request.ReadResponseJson();
+
+                    var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+                    if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+                        return;
+
+                    var current = databaseOptions.BatchSize;
+                    databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+                }
+            }
+            catch (ErrorResponseException e)
+            {
+                if (e.StatusCode == HttpStatusCode.Forbidden) // let it continue with the user defined batch size
+                    return;
+
+                throw;
+            }
+        }
+
+        public async Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            if (isIdentitiesSmugglingSupported() == false)
+                return new List<KeyValuePair<string, long>>();
+
+            int start = 0;
+            const int pageSize = 1024;
+            long totalIdentitiesCount;
+            var identities = new List<KeyValuePair<string, long>>();
+
+            do
+            {
+                var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
+                using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+                {
+                    var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
+                    totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+                    foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+                    {
+                        identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+                    }
+
+                    start += pageSize;
+                }
+            } while (identities.Count < totalIdentitiesCount);
+
+            return identities;
+        }
+
+        public Task SeedIdentityFor(string identityName, long identityValue)
+        {
+            if (isIdentitiesSmugglingSupported() == false)
+                return new CompletedTask();
+
+            if(identityName != null)
+                return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
+
+            return new CompletedTask();
+        }
+    }
 }

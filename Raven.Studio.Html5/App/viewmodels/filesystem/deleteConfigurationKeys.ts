@@ -1,4 +1,4 @@
-﻿import configurationKey = require("models/filesystem/configurationKey");
+import configurationKey = require("models/filesystem/configurationKey");
 import filesystem = require("models/filesystem/filesystem");
 import dialog = require("plugins/dialog");
 import deleteConfigurationKeyCommand = require("commands/filesystem/deleteConfigurationKeyCommand");

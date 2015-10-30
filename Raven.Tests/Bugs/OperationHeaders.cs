@@ -15,34 +15,34 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OperationHeaders : RavenTest
-	{
-		[Fact]
-		public void CanPassOperationHeadersUsingEmbedded()
-		{
-			using (var documentStore = NewDocumentStore(configureStore: store => store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (RecordOperationHeaders)))))
-			{
-				RecordOperationHeaders.Hello = null;
-				using(var session = documentStore.OpenSession())
-				{
-					((DocumentSession)session).DatabaseCommands.OperationsHeaders["Hello"] = "World";
-					session.Store(new { Bar = "foo"});
-					session.SaveChanges();
+    public class OperationHeaders : RavenTest
+    {
+        [Fact]
+        public void CanPassOperationHeadersUsingEmbedded()
+        {
+            using (var documentStore = NewDocumentStore(configureStore: store => store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (RecordOperationHeaders)))))
+            {
+                RecordOperationHeaders.Hello = null;
+                using(var session = documentStore.OpenSession())
+                {
+                    ((DocumentSession)session).DatabaseCommands.OperationsHeaders["Hello"] = "World";
+                    session.Store(new { Bar = "foo"});
+                    session.SaveChanges();
 
-					Assert.Equal("World", RecordOperationHeaders.Hello);
-				}
-			}
-		}
+                    Assert.Equal("World", RecordOperationHeaders.Hello);
+                }
+            }
+        }
 
-		public class RecordOperationHeaders : AbstractPutTrigger
-		{
-			public static string Hello;
+        public class RecordOperationHeaders : AbstractPutTrigger
+        {
+            public static string Hello;
 
-			public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-			{
+            public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+            {
                 Hello = CurrentOperationContext.Headers.Value.Value["Hello"];
-				base.OnPut(key, document, metadata, transactionInformation);
-			}
-		}
-	}
+                base.OnPut(key, document, metadata, transactionInformation);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-ï»¿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -50,7 +50,7 @@ namespace Newtonsoft.Json.Tests.TestObjects
         public Store()
         {
             Mottos.Add("Hello World");
-            Mottos.Add("Ã¶Ã¤Ã¼Ã–Ã„Ãœ\\'{new Date(12345);}[222]_Âµ@Â²Â³~");
+            Mottos.Add("öäüÖÄÜ\\'{new Date(12345);}[222]_µ@²³~");
             Mottos.Add(null);
             Mottos.Add(" ");
 

@@ -1,4 +1,4 @@
-﻿import database = require("models/database");
+import database = require("models/database");
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
