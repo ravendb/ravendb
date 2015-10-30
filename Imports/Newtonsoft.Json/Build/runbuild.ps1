@@ -1,4 +1,4 @@
-﻿param(
+param(
     [hashtable] $parameters = @{},
     [hashtable] $properties = @{}
 )

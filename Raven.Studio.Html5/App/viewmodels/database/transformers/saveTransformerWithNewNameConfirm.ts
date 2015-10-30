@@ -1,4 +1,4 @@
-﻿import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
+import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");

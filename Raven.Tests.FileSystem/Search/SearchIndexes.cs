@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,8 +19,8 @@ namespace Raven.Tests.FileSystem.Indexing
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
 
-			string dataDirectoryPath = NewDataPath("WillReindexAfterCrashing");
-			using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
+            string dataDirectoryPath = NewDataPath("WillReindexAfterCrashing");
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
             {
                 var store = server.FilesStore;
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);
@@ -49,7 +49,7 @@ namespace Raven.Tests.FileSystem.Indexing
             watcher.Deleted += (sender, args) => changed = true;
             watcher.EnableRaisingEvents = true;
 
-			using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
+            using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false, requestedStorage: storage))
             {
                 var store = server.FilesStore;
 
@@ -81,7 +81,7 @@ namespace Raven.Tests.FileSystem.Indexing
             var filesystem = Path.GetRandomFileName();
 
             string dataDirectoryPath = NewDataPath("WillReindexAfterCorruption");
-	        
+            
             using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 var store = server.FilesStore;
@@ -139,7 +139,7 @@ namespace Raven.Tests.FileSystem.Indexing
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
 
-			string dataDirectoryPath = NewDataPath("WillReindexAfterRequestedReset");
+            string dataDirectoryPath = NewDataPath("WillReindexAfterRequestedReset");
             using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 var store = server.FilesStore;
@@ -192,7 +192,7 @@ namespace Raven.Tests.FileSystem.Indexing
             int port = 9999;
             var filesystem = Path.GetRandomFileName();
 
-	        string dataDirectoryPath = NewDataPath("WillReindexAfterNoIndexes");
+            string dataDirectoryPath = NewDataPath("WillReindexAfterNoIndexes");
             using (var server = CreateServer(port, dataDirectory: dataDirectoryPath, runInMemory: false))
             {
                 dataDirectoryPath = server.Configuration.Core.DataDirectory;

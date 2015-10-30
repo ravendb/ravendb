@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="UpperCaseNamesTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,15 +10,15 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Common.Triggers
 {
-	public class UpperCaseNamesTrigger : AbstractReadTrigger
-	{
-		public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation)
-		{
-			var name = document["name"];
-			if (name != null)
-			{
-				document["name"] = new RavenJValue(name.Value<string>().ToUpper());
-			}
-		}
-	}
+    public class UpperCaseNamesTrigger : AbstractReadTrigger
+    {
+        public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation)
+        {
+            var name = document["name"];
+            if (name != null)
+            {
+                document["name"] = new RavenJValue(name.Value<string>().ToUpper());
+            }
+        }
+    }
 }

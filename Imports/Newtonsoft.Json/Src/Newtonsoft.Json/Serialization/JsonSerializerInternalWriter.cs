@@ -53,14 +53,14 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         private int _rootLevel;
         private readonly List<object> _serializeStack = new List<object>();
         private JsonSerializerProxy _internalSerializer;
-		private JsonConverterCollection _internalConverters;
+        private JsonConverterCollection _internalConverters;
 
-		Action<object, JsonWriter> beforeClosingObject;
+        Action<object, JsonWriter> beforeClosingObject;
 
-		public JsonSerializerInternalWriter(JsonSerializer serializer, Action<object, JsonWriter> beforeClosingObject)
+        public JsonSerializerInternalWriter(JsonSerializer serializer, Action<object, JsonWriter> beforeClosingObject)
             : base(serializer)
         {
-			this.beforeClosingObject = beforeClosingObject;
+            this.beforeClosingObject = beforeClosingObject;
         }
 
         public void Serialize(JsonWriter jsonWriter, object value, Type objectType)
@@ -71,7 +71,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             _rootContract = (objectType != null) ? Serializer._contractResolver.ResolveContract(objectType) : null;
             _rootLevel = _serializeStack.Count + 1;
 
-			_internalConverters = Serializer.Converters;
+            _internalConverters = Serializer.Converters;
 
             JsonContract contract = GetContractSafe(value);
 
@@ -160,7 +160,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 ((containerProperty != null) ? containerProperty.ItemConverter : null) ??
                 ((containerContract != null) ? containerContract.ItemConverter : null) ??
                 valueContract.Converter ??
-				JsonConverterCache.GetMatchingConverter(_internalConverters, valueContract.UnderlyingType) ??
+                JsonConverterCache.GetMatchingConverter(_internalConverters, valueContract.UnderlyingType) ??
                 valueContract.InternalConverter;
 
             if (converter != null && converter.CanWrite)
@@ -460,8 +460,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 }
             }
 
-			if (beforeClosingObject != null)
-				beforeClosingObject(value, writer);
+            if (beforeClosingObject != null)
+                beforeClosingObject(value, writer);
 
             writer.WriteEndObject();
 
@@ -603,68 +603,68 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             int initialDepth = writer.Top;
 
             int index = 0;
-			IEnumerator enumerator;
-			try
-			{
-				enumerator = values.GetEnumerator();
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Could not get enumerator for property: " + member, e);
-			}
-	        using (enumerator as IDisposable)
-	        {
-		        while (true)
-		        {
-			        try
-			        {
-				        if (enumerator.MoveNext() == false)
-					        break;
-			        }
-			        catch (Exception e)
-			        {
-				        throw new InvalidOperationException("Could not move to next value for property: " + member, e);
+            IEnumerator enumerator;
+            try
+            {
+                enumerator = values.GetEnumerator();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not get enumerator for property: " + member, e);
+            }
+            using (enumerator as IDisposable)
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (enumerator.MoveNext() == false)
+                            break;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not move to next value for property: " + member, e);
 
-			        }
-			        object value;
-			        try
-			        {
-				        value = enumerator.Current;
-			        }
-			        catch (Exception e)
-			        {
-				        throw new InvalidOperationException("Could not get current value for property: " + member, e);
+                    }
+                    object value;
+                    try
+                    {
+                        value = enumerator.Current;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not get current value for property: " + member, e);
 
-			        }
-			        try
-			        {
-						JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
+                    }
+                    try
+                    {
+                        JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
 
-						if (ShouldWriteReference(value, null, valueContract, contract, member))
-						{
-							WriteReference(writer, value);
-						}
-						else
-						{
-							if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
-							{
-								SerializeValue(writer, value, valueContract, null, contract, member);
-							}
-						}
-			        }
-					catch (Exception ex)
-					{
-						if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
-							HandleError(writer, initialDepth);
-						else
-							throw;
-					}
-					finally
-					{
-						index++;
-					}
-		        }
-	        }
+                        if (ShouldWriteReference(value, null, valueContract, contract, member))
+                        {
+                            WriteReference(writer, value);
+                        }
+                        else
+                        {
+                            if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
+                            {
+                                SerializeValue(writer, value, valueContract, null, contract, member);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
+                            HandleError(writer, initialDepth);
+                        else
+                            throw;
+                    }
+                    finally
+                    {
+                        index++;
+                    }
+                }
+            }
 
             writer.WriteEndArray();
 

@@ -10,10 +10,10 @@ using System.Text;
 
 namespace Raven.Database.Data
 {
-	public class DynamicQueryMappingItem
-	{
-		public string QueryFrom { get; set; }
-		public string From { get; set; }
-		public string To {  get; set; }
-	}
+    public class DynamicQueryMappingItem
+    {
+        public string QueryFrom { get; set; }
+        public string From { get; set; }
+        public string To {  get; set; }
+    }
 }

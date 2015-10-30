@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security.Windows;

@@ -14,7 +14,7 @@ class importDatabaseCommand extends commandBase {
             batchSize: this.batchSize,
             includeExpiredDocuments: this.includeExpiredDocuments,
             stripReplicationInformation: this.stripReplicationInformation,
-			shouldDisableVersioningBundle: this.shouldDisableVersioningBundle,
+            shouldDisableVersioningBundle: this.shouldDisableVersioningBundle,
             operateOnTypes: this.operateOnTypes.reduce((first: ImportItemType, second: ImportItemType) => first | second, 0),
             filtersPipeDelimited: this.filters.map(f => f.Path + ";;;" + f.Values[0] + ";;;" + f.ShouldMatch).join("|||") || "",
             transformScript: this.transformScript || ""

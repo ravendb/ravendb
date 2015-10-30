@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MemorySlice.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,11 @@ using Voron.Trees;
 
 namespace Voron
 {
-	public unsafe abstract class MemorySlice
-	{
-		public ushort Size;
-		public ushort KeyLength;
-		public SliceOptions Options;
+    public unsafe abstract class MemorySlice
+    {
+        public ushort Size;
+        public ushort KeyLength;
+        public SliceOptions Options;
 
         protected MemorySlice()
         { }
@@ -31,7 +31,7 @@ namespace Voron
             this.KeyLength = size;
         }
 
-		protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
+        protected MemorySlice(SliceOptions options, ushort size, ushort keyLength)
         {
             this.Options = options;
             this.Size = size;
@@ -39,44 +39,44 @@ namespace Voron
         }
 
 
-		public abstract void CopyTo(byte* dest);
-		public abstract Slice ToSlice();
-		public abstract Slice Skip(ushort bytesToSkip);
-		public abstract void Set(TreeNodeHeader* node);
+        public abstract void CopyTo(byte* dest);
+        public abstract Slice ToSlice();
+        public abstract Slice Skip(ushort bytesToSkip);
+        public abstract void Set(TreeNodeHeader* node);
 
-		protected abstract int CompareData(MemorySlice other, ushort size);
+        protected abstract int CompareData(MemorySlice other, ushort size);
 
-		public bool Equals(MemorySlice other)
-		{
-			return Compare(other) == 0;
-		}
+        public bool Equals(MemorySlice other)
+        {
+            return Compare(other) == 0;
+        }
 
-		public int Compare(MemorySlice other)
-		{
-			Debug.Assert(Options == SliceOptions.Key);
-			Debug.Assert(other.Options == SliceOptions.Key);
+        public int Compare(MemorySlice other)
+        {
+            Debug.Assert(Options == SliceOptions.Key);
+            Debug.Assert(other.Options == SliceOptions.Key);
 
             var srcKey = this.KeyLength;
             var otherKey = other.KeyLength;
             var length = srcKey <= otherKey ? srcKey : otherKey;
 
             var r = CompareData(other, length);
-			if (r != 0)
-				return r;
+            if (r != 0)
+                return r;
 
             return srcKey - otherKey;
-		}
+        }
 
-		public bool StartsWith(MemorySlice other)
-		{
-			if (KeyLength < other.KeyLength)
-				return false;
-			
+        public bool StartsWith(MemorySlice other)
+        {
+            if (KeyLength < other.KeyLength)
+                return false;
+            
             return CompareData(other, other.KeyLength) == 0;
-		}
+        }
 
-		public virtual void PrepareForSearching()
-		{
-		}	
-	}
+        public virtual void PrepareForSearching()
+        {
+        }	
+    }
 }

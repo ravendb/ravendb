@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -14,75 +14,75 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
-	public class SynchronizationStrategy
-	{
-		private readonly SigGenerator sigGenerator;
+    public class SynchronizationStrategy
+    {
+        private readonly SigGenerator sigGenerator;
 
-		private readonly InMemoryRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 
-		private readonly ITransactionalStorage storage;
+        private readonly ITransactionalStorage storage;
 
-		public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
-		{
-			this.storage = storage;
-			this.sigGenerator = sigGenerator;
-			this.configuration = configuration;
-		}
+        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
+        {
+            this.storage = storage;
+            this.sigGenerator = sigGenerator;
+            this.configuration = configuration;
+        }
 
         public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
-		{
-			// prevent synchronization back to source
-			if (file.Metadata.Value<Guid>(SynchronizationConstants.RavenSynchronizationSource) == destinationId)
-				return false;
+        {
+            // prevent synchronization back to source
+            if (file.Metadata.Value<Guid>(SynchronizationConstants.RavenSynchronizationSource) == destinationId)
+                return false;
 
             if (file.FullPath.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
-				return false;
+                return false;
 
             if (file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-				return false;
+                return false;
 
-			if (file.IsFileBeingUploadedOrUploadHasBeenBroken())
-				return false;
+            if (file.IsFileBeingUploadedOrUploadHasBeenBroken())
+                return false;
 
             if (ExistsRenameTombstone(file.FullPath, candidatesToSynchronization))
-				return false;
+                return false;
 
-	        if (file.FullPath.Contains("/revisions/"))
-		        return false;
+            if (file.FullPath.Contains("/revisions/"))
+                return false;
 
-			return true;
-		}
+            return true;
+        }
 
         private static bool ExistsRenameTombstone(string name, IEnumerable<FileHeader> candidatesToSynchronization)
-		{
-			return
-				candidatesToSynchronization.Any(
-					x =>
-					x.Metadata[SynchronizationConstants.RavenDeleteMarker] != null &&
-					x.Metadata.Value<string>(SynchronizationConstants.RavenRenameFile) == name);
-		}
+        {
+            return
+                candidatesToSynchronization.Any(
+                    x =>
+                    x.Metadata[SynchronizationConstants.RavenDeleteMarker] != null &&
+                    x.Metadata.Value<string>(SynchronizationConstants.RavenRenameFile) == name);
+        }
 
         public SynchronizationWorkItem DetermineWork(string file, RavenJObject localMetadata, RavenJObject destinationMetadata, string localServerUrl, out NoSyncReason reason)
-		{
-			reason = NoSyncReason.Unknown;
+        {
+            reason = NoSyncReason.Unknown;
 
-			if (localMetadata == null)
-			{
-				reason = NoSyncReason.SourceFileNotExist;
-				return null;
-			}
+            if (localMetadata == null)
+            {
+                reason = NoSyncReason.SourceFileNotExist;
+                return null;
+            }
 
-			if (destinationMetadata != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] == null)
-			{
-				reason = NoSyncReason.DestinationFileConflicted;
-				return null;
-			}
+            if (destinationMetadata != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] == null)
+            {
+                reason = NoSyncReason.DestinationFileConflicted;
+                return null;
+            }
 
-			if (localMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null)
-			{
-				reason = NoSyncReason.SourceFileConflicted;
-				return null;
-			}
+            if (localMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null)
+            {
+                reason = NoSyncReason.SourceFileConflicted;
+                return null;
+            }
 
             if (localMetadata[SynchronizationConstants.RavenDeleteMarker] != null)
             {
@@ -121,6 +121,6 @@ namespace Raven.Database.FileSystem.Synchronization
             }
 
             return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator, configuration);
-		}
-	}
+        }
+    }
 }

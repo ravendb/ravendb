@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Voron.Debugging;
 using Voron.Impl.Paging;
@@ -6,77 +6,77 @@ using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-	public class PageTableIssue : StorageTest
-	{
-		protected override void Configure(StorageEnvironmentOptions options)
-		{
-			base.Configure(options);
-			options.ManualFlushing = true;
-		}
+    public class PageTableIssue : StorageTest
+    {
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            base.Configure(options);
+            options.ManualFlushing = true;
+        }
 
-		[Fact]
-		public void MissingScratchPagesInPageTable()
-		{
-			var bytes = new byte[1000];
+        [Fact]
+        public void MissingScratchPagesInPageTable()
+        {
+            var bytes = new byte[1000];
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree1 = Env.CreateTree(txw, "foo");
-				var tree2 = Env.CreateTree(txw, "bar");
-				var tree3 = Env.CreateTree(txw, "baz");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree1 = Env.CreateTree(txw, "foo");
+                var tree2 = Env.CreateTree(txw, "bar");
+                var tree3 = Env.CreateTree(txw, "baz");
 
-				tree1.Add("foos/1", new MemoryStream(bytes));
+                tree1.Add("foos/1", new MemoryStream(bytes));
 
-				txw.Commit();
-
-                DebugStuff.RenderAndShow(txw, 1);
-			}
-
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = Env.CreateTree(txw, "bar");
-
-				tree.Add("bars/1", new MemoryStream(bytes));
-
-				txw.Commit();
+                txw.Commit();
 
                 DebugStuff.RenderAndShow(txw, 1);
-			}
+            }
 
-			var bytesToFillFirstJournalCompletely = new byte[8*Env.Options.PageSize];
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(txw, "bar");
 
-			new Random().NextBytes(bytesToFillFirstJournalCompletely);
+                tree.Add("bars/1", new MemoryStream(bytes));
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = Env.CreateTree(txw, "baz");
-
-				// here we have to put a big value to be sure that in next transaction we will put the
-				// updated value into a new journal file - this is the key to expose the issue
-				tree.Add("bazs/1", new MemoryStream(bytesToFillFirstJournalCompletely));
-
-				txw.Commit();
+                txw.Commit();
 
                 DebugStuff.RenderAndShow(txw, 1);
-			}
+            }
 
-			using (var txr = Env.NewTransaction(TransactionFlags.Read))
-			{
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var tree = Env.CreateTree(txw, "foo");
+            var bytesToFillFirstJournalCompletely = new byte[8*Env.Options.PageSize];
 
-					tree.Add("foos/1", new MemoryStream());
+            new Random().NextBytes(bytesToFillFirstJournalCompletely);
 
-					txw.Commit();
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(txw, "baz");
+
+                // here we have to put a big value to be sure that in next transaction we will put the
+                // updated value into a new journal file - this is the key to expose the issue
+                tree.Add("bazs/1", new MemoryStream(bytesToFillFirstJournalCompletely));
+
+                txw.Commit();
+
+                DebugStuff.RenderAndShow(txw, 1);
+            }
+
+            using (var txr = Env.NewTransaction(TransactionFlags.Read))
+            {
+                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var tree = Env.CreateTree(txw, "foo");
+
+                    tree.Add("foos/1", new MemoryStream());
+
+                    txw.Commit();
 
                     DebugStuff.RenderAndShow(txw, 1);
-				}
+                }
 
-				Env.FlushLogToDataFile();
+                Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.CreateTree(txr, "foo").Read("foos/1"));
-			}
-		}
-	}
+                Assert.NotNull(Env.CreateTree(txr, "foo").Read("foos/1"));
+            }
+        }
+    }
 }

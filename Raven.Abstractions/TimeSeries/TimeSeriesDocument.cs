@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.TimeSeries
@@ -16,10 +16,10 @@ namespace Raven.Abstractions.TimeSeries
 
         public bool Disabled { get; set; }
 
-		public TimeSeriesDocument()
+        public TimeSeriesDocument()
         {
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

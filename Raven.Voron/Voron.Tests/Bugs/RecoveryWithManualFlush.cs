@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RecoveryWithManualFlush.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,12 +9,12 @@ using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-	public class RecoveryWithManualFlush : StorageTest
-	{
-		protected override void Configure(StorageEnvironmentOptions options)
-		{
-			options.ManualFlushing = true;
-		}
+    public class RecoveryWithManualFlush : StorageTest
+    {
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.ManualFlushing = true;
+        }
 
         [Fact]
         public void ShouldRecoverFromJournalsAfterFlushWhereLastPageOfFlushedTxHadTheSameNumberAsFirstPageOfNextTxNotFlushedJet()
@@ -112,26 +112,26 @@ namespace Voron.Tests.Bugs
             }
         }
 
-		[Fact]
-		public void StorageRecoveryAfterFlushingToDataFile()
-		{
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.Root.Add			("items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
-				tx.Commit();
-			}
+        [Fact]
+        public void StorageRecoveryAfterFlushingToDataFile()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.Root.Add			("items/1", new MemoryStream(new byte[] { 1, 2, 3 }));
+                tx.Commit();
+            }
 
-			Env.FlushLogToDataFile();
+            Env.FlushLogToDataFile();
 
-			RestartDatabase();
+            RestartDatabase();
 
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				var readResult = tx.Root.Read("items/1");
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var readResult = tx.Root.Read("items/1");
 
-				Assert.NotNull(readResult);
-				Assert.Equal(3, readResult.Reader.Length);
-			}
-		} 
-	}
+                Assert.NotNull(readResult);
+                Assert.Equal(3, readResult.Reader.Length);
+            }
+        } 
+    }
 }

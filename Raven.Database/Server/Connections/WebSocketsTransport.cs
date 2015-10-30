@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -67,50 +67,50 @@ namespace Raven.Database.Server.Connections
             public static readonly DisconnectWebSockets Instance = new DisconnectWebSockets();
             
 
-	        public void HandleLowMemory()
-	        {
-				SoftMemoryRelease();
-	        }
+            public void HandleLowMemory()
+            {
+                SoftMemoryRelease();
+            }
 
-	        public void SoftMemoryRelease()
-	        {
-				var cancellationTokenSource = ravenGcCancellation;
-				ravenGcCancellation = new CancellationTokenSource();
-				cancellationTokenSource.Cancel();
-	        }
+            public void SoftMemoryRelease()
+            {
+                var cancellationTokenSource = ravenGcCancellation;
+                ravenGcCancellation = new CancellationTokenSource();
+                cancellationTokenSource.Cancel();
+            }
 
-	        public LowMemoryHandlerStatistics GetStats()
-	        {
-		        return new LowMemoryHandlerStatistics
-		        {
-			        EstimatedUsedMemory = 0,
-					Name = "DisconnectWebSockets",
-					Metadata = new 
-					{
-						WebsocketTransportsCount = webSocektTransportsCount
-					}
-		        };
-	        }
+            public LowMemoryHandlerStatistics GetStats()
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    EstimatedUsedMemory = 0,
+                    Name = "DisconnectWebSockets",
+                    Metadata = new 
+                    {
+                        WebsocketTransportsCount = webSocektTransportsCount
+                    }
+                };
+            }
         };
 
         static WebSocketTransportFactory()
         {
-			MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
+            MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
         }
 
-		private static int webSocektTransportsCount = 0;
+        private static int webSocektTransportsCount = 0;
 
-	    public static void DecrementWebSocketTransportsCount()
-	    {
-		    Interlocked.Decrement(ref webSocektTransportsCount);
-	    }
+        public static void DecrementWebSocketTransportsCount()
+        {
+            Interlocked.Decrement(ref webSocektTransportsCount);
+        }
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
             try
             {
                 if (RavenGC.GcCollectLock.TryEnterReadLock(5000) == false)
                     throw new TimeoutException("Could not create a new web socket connection. Probably because GC is currently in progress, try again later.");
-				Interlocked.Increment(ref webSocektTransportsCount);
+                Interlocked.Increment(ref webSocektTransportsCount);
                 var localPath = context.Request.Path.Value;
                 if (localPath.EndsWith(ChangesApiWebsocketSuffix))
                 {
@@ -128,7 +128,7 @@ namespace Raven.Database.Server.Connections
                 {
                     return new WebSocketsValidateTransport(options, context, ravenGcCancellation.Token);
                 }
-				Interlocked.Decrement(ref webSocektTransportsCount);
+                Interlocked.Decrement(ref webSocektTransportsCount);
                 return null;
             }
             finally
@@ -258,7 +258,7 @@ namespace Raven.Database.Server.Connections
 
         protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
+            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
         }
 
         public WebSocketsRequestParser WebSocketsRequestParser
@@ -274,7 +274,7 @@ namespace Raven.Database.Server.Connections
             cancellationTokenSource.Cancel();
         }
 
-	    private readonly DateTime _started = SystemTime.UtcNow;
+        private readonly DateTime _started = SystemTime.UtcNow;
         private CancellationTokenSource cancellationTokenSource;
         public TimeSpan Age
         {
@@ -518,7 +518,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
+            return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
         }
 
         protected override void RegisterTransportState()
@@ -543,7 +543,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
+            return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
         }
 
         protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)

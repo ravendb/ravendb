@@ -61,46 +61,46 @@ namespace Raven.Database.Config
         private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
         private static readonly IntPtr SoftMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
-		private static readonly ManualResetEvent StopPosixLowMemThreadEvent = new ManualResetEvent (false);
-		private static readonly ManualResetEvent LowPosixMemorySimulationEvent = new ManualResetEvent (false);
-		public static void StopPosixLowMemThread() { StopPosixLowMemThreadEvent.Set (); }
+        private static readonly ManualResetEvent StopPosixLowMemThreadEvent = new ManualResetEvent (false);
+        private static readonly ManualResetEvent LowPosixMemorySimulationEvent = new ManualResetEvent (false);
+        public static void StopPosixLowMemThread() { StopPosixLowMemThreadEvent.Set (); }
 
         private static readonly IntPtr currentProcessHandle = GetCurrentProcess();
 
 
         static MemoryStatistics()
         {
-			LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>> ();
+            LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>> ();
 
-			if (EnvironmentUtils.RunningOnPosix)
-			{
-				MemoryStatisticsForPosix();
-				return;
-			}
+            if (EnvironmentUtils.RunningOnPosix)
+            {
+                MemoryStatisticsForPosix();
+                return;
+            }
 
-			LowMemorySimulationEvent = CreateEvent (IntPtr.Zero, false, false, null);
-			LowMemoryNotificationHandle = CreateMemoryResourceNotification (LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
+            LowMemorySimulationEvent = CreateEvent (IntPtr.Zero, false, false, null);
+            LowMemoryNotificationHandle = CreateMemoryResourceNotification (LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 
-			var appDomainUnloadEvent = CreateEvent (IntPtr.Zero, true, false, null);
-			AppDomain.CurrentDomain.DomainUnload += (sender, args) => SetEvent (appDomainUnloadEvent);
+            var appDomainUnloadEvent = CreateEvent (IntPtr.Zero, true, false, null);
+            AppDomain.CurrentDomain.DomainUnload += (sender, args) => SetEvent (appDomainUnloadEvent);
 
             if (LowMemoryNotificationHandle == null)
-				throw new Win32Exception ();
+                throw new Win32Exception ();
 
-			new Thread (() => {
+            new Thread (() => {
                 const uint WAIT_FAILED = 0xFFFFFFFF;
                 const uint WAIT_TIMEOUT = 0x00000102;
                 while (true)
                 {
                     var waitForResult = WaitForMultipleObjects(4,
-						new[] { LowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false,
+                        new[] { LowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false,
                         5 * 60 * 1000);
 
                     handleWaitResults:
                     switch (waitForResult)
                     {
                         case 0: // lowMemoryNotificationHandle
-							Log.Warn("Low memory detected, will try to reduce memory usage...");
+                            Log.Warn("Low memory detected, will try to reduce memory usage...");
 
                             RunLowMemoryHandlers();
                             // prevent triggering the event too frequent when the low memory notification object 
@@ -113,97 +113,97 @@ namespace Raven.Database.Config
                             // app domain unload
                             return;
                         case 2: // LowMemorySimulationEvent
-							Log.Warn("Low memory simulation, will try to reduce memory usage...");
+                            Log.Warn("Low memory simulation, will try to reduce memory usage...");
 
                             RunLowMemoryHandlers();
                             break;
                         case 3://SoftMemoryReleaseEvent
-							Log.Warn("Releasing memory before Garbage Collection operation");
+                            Log.Warn("Releasing memory before Garbage Collection operation");
                             RunLowMemoryHandlers();
                             break;
                         case WAIT_TIMEOUT:
                             ClearInactiveHandlers();
                             break;
                         case WAIT_FAILED:
-							Log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+                            Log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
                             break;
                     }
-					Thread.Sleep (TimeSpan.FromSeconds (60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+                    Thread.Sleep (TimeSpan.FromSeconds (60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
                 }
-			}) {
+            }) {
                 IsBackground = true,
                 Name = "Low memory notification thread"
-			}.Start ();
+            }.Start ();
         }
 
-		private static void MemoryStatisticsForPosix()
-		{
-			int clearInactiveHandlersCounter = 0;
-			new Thread(() =>
-			{
-				while (true)
-				{
-					int waitRC = // poll each 5 seconds
-						WaitHandle.WaitAny(new[] { StopPosixLowMemThreadEvent, LowPosixMemorySimulationEvent }, TimeSpan.FromSeconds(5));
-					switch (waitRC)
-					{
-						case 0: // stopLowMemThreadEvent
-							if (Log.IsDebugEnabled)
-								Log.Debug("MemoryStatisticsForPosix : stopLowMemThreadEvent triggered");
-							return;
-						case 1: // lowMemorySimulationEvent
-							LowPosixMemorySimulationEvent.Reset();
-							Log.Warn("Low memory simulation, will try to reduce memory usage...");
-							RunLowMemoryHandlers();
-							break;
-						case WaitHandle.WaitTimeout: // poll available mem
-
-							LowPosixMemorySimulationEvent.Reset();
-							if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
-							{
-								clearInactiveHandlersCounter = 0;
-								ClearInactiveHandlers();
-								break;
-							}
-							sysinfo_t info = new sysinfo_t();
-							if (Syscall.sysinfo(ref info) != 0)
-							{
-								Log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
-							}
-							else
-							{
-								RavenConfiguration configuration = new RavenConfiguration();
-								ulong availableMem = info.AvailableRam;
-								if (availableMem < (ulong)configuration.Memory.LowMemoryForLinuxDetection.Bytes)
-								{
-									clearInactiveHandlersCounter = 0;
-									Log.Warn("Low memory detected, will try to reduce memory usage...");
-									RunLowMemoryHandlers();
-									Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
-								}
-							}
-							break;
-					}
-				}
-			})
-			{
-				IsBackground = true,
-				Name = "Low Posix memory notification thread"
-			}.Start();
-		}
-
-
-		public static void SimulateLowMemoryNotification()
+        private static void MemoryStatisticsForPosix()
         {
-			if (EnvironmentUtils.RunningOnPosix == false)
-				SetEvent (LowMemorySimulationEvent);
+            int clearInactiveHandlersCounter = 0;
+            new Thread(() =>
+            {
+                while (true)
+                {
+                    int waitRC = // poll each 5 seconds
+                        WaitHandle.WaitAny(new[] { StopPosixLowMemThreadEvent, LowPosixMemorySimulationEvent }, TimeSpan.FromSeconds(5));
+                    switch (waitRC)
+                    {
+                        case 0: // stopLowMemThreadEvent
+                            if (Log.IsDebugEnabled)
+                                Log.Debug("MemoryStatisticsForPosix : stopLowMemThreadEvent triggered");
+                            return;
+                        case 1: // lowMemorySimulationEvent
+                            LowPosixMemorySimulationEvent.Reset();
+                            Log.Warn("Low memory simulation, will try to reduce memory usage...");
+                            RunLowMemoryHandlers();
+                            break;
+                        case WaitHandle.WaitTimeout: // poll available mem
+
+                            LowPosixMemorySimulationEvent.Reset();
+                            if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
+                            {
+                                clearInactiveHandlersCounter = 0;
+                                ClearInactiveHandlers();
+                                break;
+                            }
+                            sysinfo_t info = new sysinfo_t();
+                            if (Syscall.sysinfo(ref info) != 0)
+                            {
+                                Log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+                            }
+                            else
+                            {
+                                RavenConfiguration configuration = new RavenConfiguration();
+                                ulong availableMem = info.AvailableRam;
+                                if (availableMem < (ulong)configuration.Memory.LowMemoryForLinuxDetection.Bytes)
+                                {
+                                    clearInactiveHandlersCounter = 0;
+                                    Log.Warn("Low memory detected, will try to reduce memory usage...");
+                                    RunLowMemoryHandlers();
+                                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+                                }
+                            }
+                            break;
+                    }
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "Low Posix memory notification thread"
+            }.Start();
+        }
+
+
+        public static void SimulateLowMemoryNotification()
+        {
+            if (EnvironmentUtils.RunningOnPosix == false)
+                SetEvent (LowMemorySimulationEvent);
                 else
-				LowPosixMemorySimulationEvent.Set ();
+                LowPosixMemorySimulationEvent.Set ();
             }
 
-	    public static void InitiateSoftMemoryRelease()
-	    {
-		    SetEvent(SoftMemoryReleaseEvent);
+        public static void InitiateSoftMemoryRelease()
+        {
+            SetEvent(SoftMemoryReleaseEvent);
         }
 
         private static void RunLowMemoryHandlers()
@@ -247,7 +247,7 @@ namespace Raven.Database.Config
                     }
                     catch (Exception e)
                     {
-						Log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                        Log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
                     }
                 }
                 else
@@ -276,10 +276,10 @@ namespace Raven.Database.Config
         {
             get
             {
-				if (EnvironmentUtils.RunningOnPosix == false)
-				{
+                if (EnvironmentUtils.RunningOnPosix == false)
+                {
                 bool isResourceStateMet;
-					bool succeeded = QueryMemoryResourceNotification(LowMemoryNotificationHandle, out isResourceStateMet);
+                    bool succeeded = QueryMemoryResourceNotification(LowMemoryNotificationHandle, out isResourceStateMet);
 
                 if (!succeeded)
                 {
@@ -289,9 +289,9 @@ namespace Raven.Database.Config
                 return isResourceStateMet;
             }
 
-				return false;
+                return false;
         }
-		}
+        }
 
         public static void RegisterLowMemoryHandler(ILowMemoryHandler handler)
         {

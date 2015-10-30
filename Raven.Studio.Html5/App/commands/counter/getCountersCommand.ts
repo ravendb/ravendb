@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import counterSummary = require("models/counter/counterSummary");
 import counterStorage = require("models/counter/counterStorage");
 import pagedResultSet = require("common/pagedResultSet");

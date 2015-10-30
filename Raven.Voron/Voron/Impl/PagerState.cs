@@ -1,4 +1,4 @@
-﻿namespace Voron.Impl
+namespace Voron.Impl
 {
     using System.Collections.Concurrent;
     using System.Diagnostics;
@@ -10,16 +10,16 @@
 
     public unsafe class PagerState
     {
-	    private readonly AbstractPager _pager;
+        private readonly AbstractPager _pager;
 
-	    public bool DisposeFilesOnDispose = true;
+        public bool DisposeFilesOnDispose = true;
 
-	    public class AllocationInfo
-	    {
-		    public MemoryMappedFile MappedFile;
-		    public byte* BaseAddress;
-		    public long Size;
-	    }
+        public class AllocationInfo
+        {
+            public MemoryMappedFile MappedFile;
+            public byte* BaseAddress;
+            public long Size;
+        }
 
 #if DEBUG_PAGER_STATE
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
@@ -27,17 +27,17 @@
 
         public PagerState(AbstractPager pager)
         {
-	        _pager = pager;
+            _pager = pager;
 #if DEBUG_PAGER_STATE
             Instances[this] = new StackTrace(true);
 #endif
-		}
+        }
 
         private int _refs;
 
         public MemoryMappedFile[] Files;
 
-		public AllocationInfo[] AllocationInfos;
+        public AllocationInfo[] AllocationInfos;
 
         public byte* MapBase { get; set; }
 
@@ -58,18 +58,18 @@
 
         private void ReleaseInternal()
         {
-			if (AllocationInfos != null)
-			{
-				foreach (var allocationInfo in AllocationInfos)
-					_pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
-			}
-
-			if (Files != null && DisposeFilesOnDispose)
+            if (AllocationInfos != null)
             {
-	            foreach (var file in Files)
-					file.Dispose();
+                foreach (var allocationInfo in AllocationInfos)
+                    _pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
+            }
 
-	            Files = null;
+            if (Files != null && DisposeFilesOnDispose)
+            {
+                foreach (var file in Files)
+                    file.Dispose();
+
+                Files = null;
             }
 
             Released = true;
@@ -79,18 +79,18 @@
         public ConcurrentQueue<StackTrace> AddedRefs = new ConcurrentQueue<StackTrace>();
 #endif
 
-		public void AddRef()
+        public void AddRef()
         {
             Interlocked.Increment(ref _refs);
 #if DEBUG_PAGER_STATE
-			AddedRefs.Enqueue(new StackTrace(true));
-			while (AddedRefs.Count > 500)
-			{
-				StackTrace trace;
-				AddedRefs.TryDequeue(out trace);
-			}
+            AddedRefs.Enqueue(new StackTrace(true));
+            while (AddedRefs.Count > 500)
+            {
+                StackTrace trace;
+                AddedRefs.TryDequeue(out trace);
+            }
 #endif
-		}
+        }
 
         [Conditional("VALIDATE")]
         public void DebugVerify(long size)

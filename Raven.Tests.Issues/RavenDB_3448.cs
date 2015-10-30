@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3448.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,56 +17,56 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3448 : ReplicationBase
-	{
-		private class Person
-		{
-			public string Id { get; set; }
+    public class RavenDB_3448 : ReplicationBase
+    {
+        private class Person
+        {
+            public string Id { get; set; }
 
-			public string Name { get; set; }
-		}
+            public string Name { get; set; }
+        }
 
-		[Fact]
-		public async Task SmugglerShouldImportConflictsProperly()
-		{
-			using (var store1 = CreateStore())
-			using (var store2 = CreateStore())
-			{
-				using (var session = store1.OpenSession())
-				{
-					session.Store(new Person());
-					session.SaveChanges();
-				}
+        [Fact]
+        public async Task SmugglerShouldImportConflictsProperly()
+        {
+            using (var store1 = CreateStore())
+            using (var store2 = CreateStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new Person());
+                    session.SaveChanges();
+                }
 
-				using (var session = store2.OpenSession())
-				{
-					session.Store(new Person());
-					session.SaveChanges();
-				}
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new Person());
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store1);
-				WaitForIndexing(store2);
+                WaitForIndexing(store1);
+                WaitForIndexing(store2);
 
-				TellFirstInstanceToReplicateToSecondInstance();
+                TellFirstInstanceToReplicateToSecondInstance();
 
-				WaitForReplication(store2, session =>
-				{
-					try
-					{
-						session.Load<Person>("people/1");
-						return false;
-					}
-					catch (ConflictException)
-					{
-						return true;
-					}
-				});
+                WaitForReplication(store2, session =>
+                {
+                    try
+                    {
+                        session.Load<Person>("people/1");
+                        return false;
+                    }
+                    catch (ConflictException)
+                    {
+                        return true;
+                    }
+                });
 
-				store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
+                store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
-				using (var stream = new MemoryStream())
-				{
-				    var smuggler = new DatabaseSmuggler(
+                using (var stream = new MemoryStream())
+                {
+                    var smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions(), 
                         new DatabaseSmugglerRemoteSource(
                             new DatabaseSmugglerRemoteConnectionOptions
@@ -76,11 +76,11 @@ namespace Raven.Tests.Issues
                             }),
                         new DatabaseSmugglerStreamDestination(stream));
 
-				    await smuggler.ExecuteAsync();
+                    await smuggler.ExecuteAsync();
 
-				    stream.Position = 0;
+                    stream.Position = 0;
 
-				    smuggler = new DatabaseSmuggler(
+                    smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions(), 
                         new DatabaseSmugglerStreamSource(stream), 
                         new DatabaseSmugglerRemoteDestination(
@@ -91,16 +91,16 @@ namespace Raven.Tests.Issues
                             }));
 
                     await smuggler.ExecuteAsync();
-				}
+                }
 
-				Assert.Throws<ConflictException>(() =>
-				{
-					using (var session = store2.OpenSession("Northwind"))
-					{
-						session.Load<Person>("people/1");
-					}
-				});
-			}
-		}
-	}
+                Assert.Throws<ConflictException>(() =>
+                {
+                    using (var session = store2.OpenSession("Northwind"))
+                    {
+                        session.Load<Person>("people/1");
+                    }
+                });
+            }
+        }
+    }
 }

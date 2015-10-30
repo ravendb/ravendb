@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IndexReplacer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -22,278 +22,278 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-	public class IndexReplacer
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class IndexReplacer
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		public DocumentDatabase Database { get; set; }
+        public DocumentDatabase Database { get; set; }
 
-		private readonly ConcurrentDictionary<int, IndexReplaceInformation> indexesToReplace = new ConcurrentDictionary<int, IndexReplaceInformation>();
+        private readonly ConcurrentDictionary<int, IndexReplaceInformation> indexesToReplace = new ConcurrentDictionary<int, IndexReplaceInformation>();
 
-		public IndexReplacer(DocumentDatabase database)
-		{
-			Database = database;
+        public IndexReplacer(DocumentDatabase database)
+        {
+            Database = database;
 
-			database.Notifications.OnDocumentChange += (db, notification, metadata) =>
-			{
-				if (notification.Id == null)
-					return;
+            database.Notifications.OnDocumentChange += (db, notification, metadata) =>
+            {
+                if (notification.Id == null)
+                    return;
 
-				if (notification.Id.StartsWith(Constants.IndexReplacePrefix, StringComparison.OrdinalIgnoreCase) == false)
-					return;
+                if (notification.Id.StartsWith(Constants.IndexReplacePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                    return;
 
-				var replaceIndexName = notification.Id.Substring(Constants.IndexReplacePrefix.Length);
+                var replaceIndexName = notification.Id.Substring(Constants.IndexReplacePrefix.Length);
 
-				if (notification.Type == DocumentChangeTypes.Delete)
-				{
-					HandleIndexReplaceDocumentDelete(replaceIndexName);
-					return;
-				}
+                if (notification.Type == DocumentChangeTypes.Delete)
+                {
+                    HandleIndexReplaceDocumentDelete(replaceIndexName);
+                    return;
+                }
 
-				var document = db.Documents.Get(notification.Id);
-				var replaceIndexId = HandleIndexReplaceDocument(document);
+                var document = db.Documents.Get(notification.Id);
+                var replaceIndexId = HandleIndexReplaceDocument(document);
 
-				if (replaceIndexId != null)
-					ReplaceIndexes(new[] { replaceIndexId.Value });
-			};
+                if (replaceIndexId != null)
+                    ReplaceIndexes(new[] { replaceIndexId.Value });
+            };
 
-			Initialize();
-		}
+            Initialize();
+        }
 
-		private void Initialize()
-		{
-			int nextStart = 0;
-			var documents = Database.Documents.GetDocumentsWithIdStartingWith(Constants.IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
+        private void Initialize()
+        {
+            int nextStart = 0;
+            var documents = Database.Documents.GetDocumentsWithIdStartingWith(Constants.IndexReplacePrefix, null, null, 0, int.MaxValue, Database.WorkContext.CancellationToken, ref nextStart);
 
-			var indexes = new List<int>();
-			foreach (RavenJObject document in documents)
-			{
-				var replaceIndexId = HandleIndexReplaceDocument(document.ToJsonDocument());
-				if (replaceIndexId.HasValue)
-					indexes.Add(replaceIndexId.Value);
-			}
+            var indexes = new List<int>();
+            foreach (RavenJObject document in documents)
+            {
+                var replaceIndexId = HandleIndexReplaceDocument(document.ToJsonDocument());
+                if (replaceIndexId.HasValue)
+                    indexes.Add(replaceIndexId.Value);
+            }
 
-			ReplaceIndexes(indexes);
-		}
+            ReplaceIndexes(indexes);
+        }
 
-		private int? HandleIndexReplaceDocument(JsonDocument document)
-		{
-			if (document == null)
-				return null;
+        private int? HandleIndexReplaceDocument(JsonDocument document)
+        {
+            if (document == null)
+                return null;
 
-			var id = document.Key;
-			var replaceIndexName = id.Substring(Constants.IndexReplacePrefix.Length);
+            var id = document.Key;
+            var replaceIndexName = id.Substring(Constants.IndexReplacePrefix.Length);
 
-			var replaceIndex = Database.IndexStorage.GetIndexInstance(replaceIndexName);
-			if (replaceIndex == null)
-			{
-				DeleteIndexReplaceDocument(id);
-				return null;
-			}
+            var replaceIndex = Database.IndexStorage.GetIndexInstance(replaceIndexName);
+            if (replaceIndex == null)
+            {
+                DeleteIndexReplaceDocument(id);
+                return null;
+            }
 
-			var replaceIndexId = replaceIndex.IndexId;
+            var replaceIndexId = replaceIndex.IndexId;
 
-		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
+            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
             if (!indexDefinition.IsSideBySideIndex)
             {
                 indexDefinition.IsSideBySideIndex = true;
                 Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
             }
 
-			var indexReplaceInformation = document.DataAsJson.JsonDeserialization<IndexReplaceInformation>();
-			indexReplaceInformation.ReplaceIndex = replaceIndexName;
+            var indexReplaceInformation = document.DataAsJson.JsonDeserialization<IndexReplaceInformation>();
+            indexReplaceInformation.ReplaceIndex = replaceIndexName;
 
-			if (string.Equals(replaceIndexName, indexReplaceInformation.IndexToReplace, StringComparison.OrdinalIgnoreCase))
-			{
-				DeleteIndexReplaceDocument(id);
-				return null;
-			}
+            if (string.Equals(replaceIndexName, indexReplaceInformation.IndexToReplace, StringComparison.OrdinalIgnoreCase))
+            {
+                DeleteIndexReplaceDocument(id);
+                return null;
+            }
 
-			if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
-			{
-				var dueTime = indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow;
-				if (dueTime.TotalSeconds < 0) 
-					dueTime = TimeSpan.Zero;
+            if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
+            {
+                var dueTime = indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow;
+                if (dueTime.TotalSeconds < 0) 
+                    dueTime = TimeSpan.Zero;
 
-				indexReplaceInformation.ReplaceTimer = Database.TimerManager.NewTimer(state => InternalReplaceIndexes(new Dictionary<int, IndexReplaceInformation> { { replaceIndexId, indexReplaceInformation } }), dueTime, TimeSpan.FromDays(7));
-			}
+                indexReplaceInformation.ReplaceTimer = Database.TimerManager.NewTimer(state => InternalReplaceIndexes(new Dictionary<int, IndexReplaceInformation> { { replaceIndexId, indexReplaceInformation } }), dueTime, TimeSpan.FromDays(7));
+            }
 
-			indexesToReplace.AddOrUpdate(replaceIndexId, s => indexReplaceInformation, (s, old) =>
-			{
-				if (old.ReplaceTimer != null)
-					Database.TimerManager.ReleaseTimer(old.ReplaceTimer);
+            indexesToReplace.AddOrUpdate(replaceIndexId, s => indexReplaceInformation, (s, old) =>
+            {
+                if (old.ReplaceTimer != null)
+                    Database.TimerManager.ReleaseTimer(old.ReplaceTimer);
 
-				return indexReplaceInformation;
-			});
+                return indexReplaceInformation;
+            });
 
-			return replaceIndexId;
-		}
+            return replaceIndexId;
+        }
 
-		private void DeleteIndexReplaceDocument(string documentKey)
-		{
-			Database.Documents.Delete(documentKey, null, null);
-		}
+        private void DeleteIndexReplaceDocument(string documentKey)
+        {
+            Database.Documents.Delete(documentKey, null, null);
+        }
 
-		private void HandleIndexReplaceDocumentDelete(string replaceIndexName)
-		{
-			var pair = indexesToReplace.FirstOrDefault(x => string.Equals(x.Value.ReplaceIndex, replaceIndexName, StringComparison.OrdinalIgnoreCase));
-			IndexReplaceInformation indexReplaceInformation;
-			if (indexesToReplace.TryRemove(pair.Key, out indexReplaceInformation) && indexReplaceInformation.ReplaceTimer != null)
-				Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
+        private void HandleIndexReplaceDocumentDelete(string replaceIndexName)
+        {
+            var pair = indexesToReplace.FirstOrDefault(x => string.Equals(x.Value.ReplaceIndex, replaceIndexName, StringComparison.OrdinalIgnoreCase));
+            IndexReplaceInformation indexReplaceInformation;
+            if (indexesToReplace.TryRemove(pair.Key, out indexReplaceInformation) && indexReplaceInformation.ReplaceTimer != null)
+                Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
 
             Database.Indexes.DeleteIndex(replaceIndexName);
-		}
+        }
 
-		public void ReplaceIndexes(ICollection<int> indexIds)
-		{
-			if (indexIds.Count == 0 || indexesToReplace.Count == 0)
-				return;
+        public void ReplaceIndexes(ICollection<int> indexIds)
+        {
+            if (indexIds.Count == 0 || indexesToReplace.Count == 0)
+                return;
 
-			var indexes = new Dictionary<int, IndexReplaceInformation>();
+            var indexes = new Dictionary<int, IndexReplaceInformation>();
 
-			foreach (var indexId in indexIds)
-			{
-				IndexReplaceInformation indexReplaceInformation;
-				if (indexesToReplace.TryGetValue(indexId, out indexReplaceInformation) == false)
-					continue;
+            foreach (var indexId in indexIds)
+            {
+                IndexReplaceInformation indexReplaceInformation;
+                if (indexesToReplace.TryGetValue(indexId, out indexReplaceInformation) == false)
+                    continue;
 
-				if (ShouldReplace(indexReplaceInformation, indexId))
-					indexes.Add(indexId, indexReplaceInformation);
-			}
+                if (ShouldReplace(indexReplaceInformation, indexId))
+                    indexes.Add(indexId, indexReplaceInformation);
+            }
 
-			InternalReplaceIndexes(indexes);
-		}
+            InternalReplaceIndexes(indexes);
+        }
 
-		private bool ShouldReplace(IndexReplaceInformation indexReplaceInformation, int indexId)
-		{
-			bool shouldReplace = false;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				if (indexReplaceInformation.Forced
-				    || Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
-					shouldReplace = true; // always replace non-stale or forced indexes
-				else
-				{
-					var replaceIndex = Database.IndexStorage.GetIndexInstance(indexId);
+        private bool ShouldReplace(IndexReplaceInformation indexReplaceInformation, int indexId)
+        {
+            bool shouldReplace = false;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                if (indexReplaceInformation.Forced
+                    || Database.IndexStorage.IsIndexStale(indexId, Database.LastCollectionEtags) == false)
+                    shouldReplace = true; // always replace non-stale or forced indexes
+                else
+                {
+                    var replaceIndex = Database.IndexStorage.GetIndexInstance(indexId);
 
-					var statistics = accessor.Indexing.GetIndexStats(indexId);
-					if (replaceIndex.IsMapReduce)
-					{
-						if (statistics.LastReducedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastReducedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
-							shouldReplace = true;
-					}
-					else
-					{
-						if (statistics.LastIndexedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastIndexedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
-							shouldReplace = true;
-					}
+                    var statistics = accessor.Indexing.GetIndexStats(indexId);
+                    if (replaceIndex.IsMapReduce)
+                    {
+                        if (statistics.LastReducedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastReducedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
+                            shouldReplace = true;
+                    }
+                    else
+                    {
+                        if (statistics.LastIndexedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastIndexedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
+                            shouldReplace = true;
+                    }
 
-					if (shouldReplace == false && indexReplaceInformation.ReplaceTimeUtc.HasValue && (indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow).TotalSeconds < 0)
-						shouldReplace = true;
-				}
-			});
-			return shouldReplace;
-		}
+                    if (shouldReplace == false && indexReplaceInformation.ReplaceTimeUtc.HasValue && (indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow).TotalSeconds < 0)
+                        shouldReplace = true;
+                }
+            });
+            return shouldReplace;
+        }
 
-		public void ForceReplacement(IndexDefinition indexDefiniton)
-		{
-			var indexId = indexDefiniton.IndexId;
-			IndexReplaceInformation indexReplaceInformation;
-			if (indexesToReplace.TryGetValue(indexId, out indexReplaceInformation) == false)
-				return;
+        public void ForceReplacement(IndexDefinition indexDefiniton)
+        {
+            var indexId = indexDefiniton.IndexId;
+            IndexReplaceInformation indexReplaceInformation;
+            if (indexesToReplace.TryGetValue(indexId, out indexReplaceInformation) == false)
+                return;
 
-			indexReplaceInformation.Forced = true;
+            indexReplaceInformation.Forced = true;
 
-			ReplaceIndexes(new List<int> { indexId });
-		}
+            ReplaceIndexes(new List<int> { indexId });
+        }
 
-	    public event Action<string> IndexReplaced;
+        public event Action<string> IndexReplaced;
 
-		private void InternalReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
-		{
-			if (indexes.Count == 0)
-				return;
+        private void InternalReplaceIndexes(Dictionary<int, IndexReplaceInformation> indexes)
+        {
+            if (indexes.Count == 0)
+                return;
 
             var onIndexReplaced = IndexReplaced;
-			try
-			{
-				using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
-				{
-					foreach (var pair in indexes)
-					{
-						var indexReplaceInformation = pair.Value;
-							ReplaceSingleIndex(indexReplaceInformation);
-						    if (onIndexReplaced != null)
-						        onIndexReplaced(indexReplaceInformation.IndexToReplace);
-						}
-						}
-					}
-			catch (InvalidOperationException)
-			{
-				// could not get lock, ignore?
-			}
-		}
+            try
+            {
+                using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
+                {
+                    foreach (var pair in indexes)
+                    {
+                        var indexReplaceInformation = pair.Value;
+                            ReplaceSingleIndex(indexReplaceInformation);
+                            if (onIndexReplaced != null)
+                                onIndexReplaced(indexReplaceInformation.IndexToReplace);
+                        }
+                        }
+                    }
+            catch (InvalidOperationException)
+            {
+                // could not get lock, ignore?
+            }
+        }
 
-		private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
-		{
-			var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
-			var originalReplaceDocument = Database.Documents.Get(key);
-			var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
-			var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
-			if (wasReplaced)
-			{
-				try
-				{
-					Database.Documents.Delete(key, etag, null);
-				}
-				catch (ConcurrencyException)
-				{
-					if (log.IsDebugEnabled) // side by side document changed, probably means that we created a new side by side index and updated the index
-						log.Debug("Failed to delete the side by side document after index replace.");
-				}
-			}
-			else
-				HandleIndexReplaceError(indexReplaceInformation);
-		}
+        private void ReplaceSingleIndex(IndexReplaceInformation indexReplaceInformation)
+        {
+            var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
+            var originalReplaceDocument = Database.Documents.Get(key);
+            var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
+            var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
+            if (wasReplaced)
+            {
+                try
+                {
+                    Database.Documents.Delete(key, etag, null);
+                }
+                catch (ConcurrencyException)
+                {
+                    if (log.IsDebugEnabled) // side by side document changed, probably means that we created a new side by side index and updated the index
+                        log.Debug("Failed to delete the side by side document after index replace.");
+                }
+            }
+            else
+                HandleIndexReplaceError(indexReplaceInformation);
+        }
 
-		private void HandleIndexReplaceError(IndexReplaceInformation indexReplaceInformation)
-		{
-			indexReplaceInformation.ErrorCount++;
+        private void HandleIndexReplaceError(IndexReplaceInformation indexReplaceInformation)
+        {
+            indexReplaceInformation.ErrorCount++;
 
-			if (indexReplaceInformation.ReplaceTimer != null)
-			{
-				if (indexReplaceInformation.ErrorCount <= 10)
-					indexReplaceInformation.ReplaceTimer.Change(TimeSpan.FromMinutes(1), TimeSpan.FromDays(7)); // try again in one minute
-				else
-				{
-					Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
-					indexReplaceInformation.ReplaceTimer = null;
-				}
-			}
+            if (indexReplaceInformation.ReplaceTimer != null)
+            {
+                if (indexReplaceInformation.ErrorCount <= 10)
+                    indexReplaceInformation.ReplaceTimer.Change(TimeSpan.FromMinutes(1), TimeSpan.FromDays(7)); // try again in one minute
+                else
+                {
+                    Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
+                    indexReplaceInformation.ReplaceTimer = null;
+                }
+            }
 
-			var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
+            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
 
-			Database.AddAlert(new Alert
-			{
-				AlertLevel = AlertLevel.Error,
-				CreatedAt = SystemTime.UtcNow,
-				Message = message,
-				Title = "Index replace failed",
-				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", indexReplaceInformation.ReplaceIndex, Database.TransactionalStorage.Id),
-			});
+            Database.AddAlert(new Alert
+            {
+                AlertLevel = AlertLevel.Error,
+                CreatedAt = SystemTime.UtcNow,
+                Message = message,
+                Title = "Index replace failed",
+                UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", indexReplaceInformation.ReplaceIndex, Database.TransactionalStorage.Id),
+            });
 
-			log.Error(message);
-		}
+            log.Error(message);
+        }
 
-		private class IndexReplaceInformation : IndexReplaceDocument
-		{
-			public Timer ReplaceTimer { get; set; }
+        private class IndexReplaceInformation : IndexReplaceDocument
+        {
+            public Timer ReplaceTimer { get; set; }
 
-			public string ReplaceIndex { get; set; }
+            public string ReplaceIndex { get; set; }
 
-			public int ErrorCount { get; set; }
+            public int ErrorCount { get; set; }
 
-			public bool Forced { get; set; }
-		}
-	}
+            public bool Forced { get; set; }
+        }
+    }
 }

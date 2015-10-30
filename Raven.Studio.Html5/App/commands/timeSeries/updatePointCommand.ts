@@ -1,4 +1,4 @@
-﻿/*import commandBase = require("commands/commandBase");
+/*import commandBase = require("commands/commandBase");
 import pointChange = require("models/timeSeries/timeSeriesChange");
 import timeSeries = require("models/timeSeries/timeSeries");
 

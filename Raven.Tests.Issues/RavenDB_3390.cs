@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3390.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,145 +15,145 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3390 : RavenTest
-	{
-		[Fact]
-		public void CanGetSettings()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var settings = (RavenJObject)new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								return { 
-									RaiseBatchLimit : database.Configuration.AvailableMemoryForRaisingBatchSizeLimit,
-									ReduceBatchLimit: database.Configuration.MaxNumberOfItemsToReduceInSingleBatch
-								};
-							 "
-				});
-
-				Assert.NotNull(settings);
-				Assert.NotNull(settings["RaiseBatchLimit"]);
-				Assert.NotNull(settings["ReduceBatchLimit"]);
-			}
-		}
-
-		[Fact]
-		public void CanModifyConfigurationOnTheFly()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var configuration = store.DocumentDatabase.Configuration;
-
-				Assert.False(configuration.Prefetcher.Disabled);
-
-				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								database.Configuration.Prefetcher.Disabled = true;
-								database.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 13;
-								database.Configuration.BulkInsert.ImportBatchTimeout = new Raven.Database.Config.Settings.TimeSetting(13, Raven.Database.Config.Settings.TimeUnit.Minutes);
-							 "
+    public class RavenDB_3390 : RavenTest
+    {
+        [Fact]
+        public void CanGetSettings()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var settings = (RavenJObject)new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return { 
+                                    RaiseBatchLimit : database.Configuration.AvailableMemoryForRaisingBatchSizeLimit,
+                                    ReduceBatchLimit: database.Configuration.MaxNumberOfItemsToReduceInSingleBatch
+                                };
+                             "
                 });
 
-				Assert.True(configuration.Prefetcher.Disabled);
-				Assert.Equal(13, configuration.Prefetcher.MaxNumberOfItemsToPreFetch);
-				Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkInsert.ImportBatchTimeout.AsTimeSpan);
-			}
-		}
+                Assert.NotNull(settings);
+                Assert.NotNull(settings["RaiseBatchLimit"]);
+                Assert.NotNull(settings["ReduceBatchLimit"]);
+            }
+        }
 
-		[Fact]
-		public void CanPurgeTombstones()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var tombstoneRetentionTime = store.DocumentDatabase.Configuration.TombstoneRetentionTime;
+        [Fact]
+        public void CanModifyConfigurationOnTheFly()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var configuration = store.DocumentDatabase.Configuration;
 
-				SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(tombstoneRetentionTime.Add(tombstoneRetentionTime));
+                Assert.False(configuration.Prefetcher.Disabled);
 
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
-				{
-					accessor.Lists.Set(Constants.RavenPeriodicExportsDocsTombstones, "1", new RavenJObject(), UuidType.Documents);
-					accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, "2", new RavenJObject(), UuidType.Documents);
-				});
+                new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                database.Configuration.Prefetcher.Disabled = true;
+                                database.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 13;
+                                database.Configuration.BulkInsert.ImportBatchTimeout = new Raven.Database.Config.Settings.TimeSetting(13, Raven.Database.Config.Settings.TimeUnit.Minutes);
+                             "
+                });
 
-				SystemTime.UtcDateTime = null;
+                Assert.True(configuration.Prefetcher.Disabled);
+                Assert.Equal(13, configuration.Prefetcher.MaxNumberOfItemsToPreFetch);
+                Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkInsert.ImportBatchTimeout.AsTimeSpan);
+            }
+        }
 
-				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								database.Maintenance.PurgeOutdatedTombstones();
-							 "
-				});
+        [Fact]
+        public void CanPurgeTombstones()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var tombstoneRetentionTime = store.DocumentDatabase.Configuration.TombstoneRetentionTime;
 
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
-				{
-					var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "1");
-					Assert.Null(tombstone);
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(tombstoneRetentionTime.Add(tombstoneRetentionTime));
 
-					tombstone = accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, "2");
-					Assert.Null(tombstone);
-				});
-			}
-		}
+                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                {
+                    accessor.Lists.Set(Constants.RavenPeriodicExportsDocsTombstones, "1", new RavenJObject(), UuidType.Documents);
+                    accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, "2", new RavenJObject(), UuidType.Documents);
+                });
 
-		[Fact]
-		public void CanRunIdleOperations()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var lastIdleTime = store.DocumentDatabase.WorkContext.LastIdleTime;
+                SystemTime.UtcDateTime = null;
 
-				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								database.RunIdleOperations();
-							 "
-				});
+                new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                database.Maintenance.PurgeOutdatedTombstones();
+                             "
+                });
 
-				Assert.NotEqual(lastIdleTime, store.DocumentDatabase.WorkContext.LastIdleTime);
-			}
-		}
+                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+                {
+                    var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, "1");
+                    Assert.Null(tombstone);
 
-		[Fact]
-		public void CanGetStats()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
+                    tombstone = accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, "2");
+                    Assert.Null(tombstone);
+                });
+            }
+        }
 
-				var stats = (RavenJObject)new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								return database.Statistics;
-							 "
-				});
+        [Fact]
+        public void CanRunIdleOperations()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var lastIdleTime = store.DocumentDatabase.WorkContext.LastIdleTime;
 
-				Assert.NotNull(stats);
-				Assert.Equal(1, stats["CountOfDocuments"]);
-			}
-		}
+                new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                database.RunIdleOperations();
+                             "
+                });
 
-		[Fact]
-		public void CanPutDocument()
-		{
-			using (var store = NewDocumentStore())
-			{				 						
-				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
-				{
-					Script = @"
-								var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
-								var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
-								database.Documents.Put('doc/1', null, doc, metadata, null);
-							 "
-				});
+                Assert.NotEqual(lastIdleTime, store.DocumentDatabase.WorkContext.LastIdleTime);
+            }
+        }
 
-				var jsonDocument = store.DatabaseCommands.Get("doc/1");
+        [Fact]
+        public void CanGetStats()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
 
-				Assert.NotNull(jsonDocument);
-				Assert.Equal("Raven", jsonDocument.DataAsJson["Name"]);
-				Assert.Equal("Docs", jsonDocument.Metadata[Constants.RavenEntityName]);
-			}
-		}
-	}
+                var stats = (RavenJObject)new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                return database.Statistics;
+                             "
+                });
+
+                Assert.NotNull(stats);
+                Assert.Equal(1, stats["CountOfDocuments"]);
+            }
+        }
+
+        [Fact]
+        public void CanPutDocument()
+        {
+            using (var store = NewDocumentStore())
+            {				 						
+                new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
+                {
+                    Script = @"
+                                var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
+                                var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
+                                database.Documents.Put('doc/1', null, doc, metadata, null);
+                             "
+                });
+
+                var jsonDocument = store.DatabaseCommands.Get("doc/1");
+
+                Assert.NotNull(jsonDocument);
+                Assert.Equal("Raven", jsonDocument.DataAsJson["Name"]);
+                Assert.Equal("Docs", jsonDocument.Metadata[Constants.RavenEntityName]);
+            }
+        }
+    }
 }

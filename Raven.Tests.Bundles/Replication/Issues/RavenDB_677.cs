@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -34,7 +34,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               "admin/replication/purge-tombstones?docEtag=" + last,
-																			  HttpMethods.Post,
+                                                                              HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
             store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
@@ -66,7 +66,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               "admin/replication/purge-tombstones?docEtag=" + last,
-																			  HttpMethods.Post,
+                                                                              HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
             store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();

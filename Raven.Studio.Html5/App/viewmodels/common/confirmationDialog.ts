@@ -1,4 +1,4 @@
-﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 
 /*
@@ -10,7 +10,7 @@ class confirmationDialog extends dialogViewModelBase {
         super();
     }
 
-	onOptionClicked(option: string) {
+    onOptionClicked(option: string) {
         dialog.close(this, option);
     }
 

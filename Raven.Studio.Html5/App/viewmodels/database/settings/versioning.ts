@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");

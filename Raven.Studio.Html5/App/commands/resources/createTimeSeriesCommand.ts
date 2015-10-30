@@ -1,4 +1,4 @@
-﻿ import commandBase = require("commands/commandBase");
+ import commandBase = require("commands/commandBase");
 
 class createTimeSeriesCommand extends commandBase {
 

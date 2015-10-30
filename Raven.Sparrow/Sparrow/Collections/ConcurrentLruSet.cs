@@ -5,31 +5,31 @@ using System.Linq;
 
 namespace Sparrow.Collections
 {
-	public class ConcurrentLruSet<T>
-	{
-		private readonly int maxCapacity;
-		private readonly Action<T> onDrop;        
+    public class ConcurrentLruSet<T>
+    {
+        private readonly int maxCapacity;
+        private readonly Action<T> onDrop;        
         private readonly object syncRoot = new object();
 
-		private LinkedList<T> items = new LinkedList<T>();
+        private LinkedList<T> items = new LinkedList<T>();
         private Dictionary<T, LinkedListNode<T>> itemsLookupTable = new Dictionary<T, LinkedListNode<T>>();
 
-		public ConcurrentLruSet(int maxCapacity, Action<T> onDrop = null)
-		{
-			this.maxCapacity = maxCapacity;
-			this.onDrop = onDrop;
-		}
+        public ConcurrentLruSet(int maxCapacity, Action<T> onDrop = null)
+        {
+            this.maxCapacity = maxCapacity;
+            this.onDrop = onDrop;
+        }
 
-		public T FirstOrDefault(Func<T, bool> predicate)
-		{
+        public T FirstOrDefault(Func<T, bool> predicate)
+        {
             lock (syncRoot)
             {
                 return items.FirstOrDefault(predicate);
             }
-		}
+        }
 
-		public void Push(T item)
-		{
+        public void Push(T item)
+        {
             LinkedListNode<T> droppedNode = null;
 
             lock (syncRoot)
@@ -59,19 +59,19 @@ namespace Sparrow.Collections
 
             if (onDrop != null && droppedNode != null)
                 onDrop(droppedNode.Value);
-		}
+        }
 
-		public void Clear()
-		{
+        public void Clear()
+        {
             lock (syncRoot)
             {
                 items = new LinkedList<T>();
                 itemsLookupTable.Clear();
             }
-		}
+        }
 
-		public void ClearHalf()
-		{
+        public void ClearHalf()
+        {
             LinkedList<T> current;
             lock (syncRoot)
             {
@@ -92,10 +92,10 @@ namespace Sparrow.Collections
                 foreach (var item in current.Take(current.Count / 2))
                     onDrop(item);
             }
-		}
+        }
 
         public void Remove(T item)
-		{
+        {
             lock (syncRoot)
             {
                 var node = itemsLookupTable[item];
@@ -103,6 +103,6 @@ namespace Sparrow.Collections
                 items.Remove(node);
                 itemsLookupTable.Remove(item);
             }
-		}
-	}
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,104 +19,104 @@ using Xunit;
 
 namespace Raven.SlowTests.Issues
 {    
-	public class RavenDB_1594 : RavenTest
-	{
-		protected readonly string path;
-		protected readonly DocumentStore documentStore;
-		private readonly RavenDbServer ravenDbServer;
+    public class RavenDB_1594 : RavenTest
+    {
+        protected readonly string path;
+        protected readonly DocumentStore documentStore;
+        private readonly RavenDbServer ravenDbServer;
 
-		public RavenDB_1594()
-		{
-		    path = NewDataPath();
-		    pathsToDelete.Add("~/Databases");
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var config = new Raven.Database.Config.RavenConfiguration
-			             	{
-			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			             		Core =
+        public RavenDB_1594()
+        {
+            path = NewDataPath();
+            pathsToDelete.Add("~/Databases");
+            Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+            var config = new Raven.Database.Config.RavenConfiguration
+                            {
+                                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                                Core =
                                 {
                                     DataDirectory = path,
                                     Port = 8079,
                                  },
-								Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
-			             	};
-			config.PostInit();
-		    ravenDbServer = new RavenDbServer(config)
-		    {
-		        UseEmbeddedHttpServer = true
-		    };
-		    ravenDbServer.Initialize();
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
-		}
+                                Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
+                            };
+            config.PostInit();
+            ravenDbServer = new RavenDbServer(config)
+            {
+                UseEmbeddedHttpServer = true
+            };
+            ravenDbServer.Initialize();
+            documentStore = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            };
+            documentStore.Initialize();
+        }
 
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
+        public override void Dispose()
+        {
+            documentStore.Dispose();
+            ravenDbServer.Dispose();
 
-			base.Dispose();
-		}
+            base.Dispose();
+        }
 
-		public class DummyDataEntry
-		{
-			public string Id { get; set; }
+        public class DummyDataEntry
+        {
+            public string Id { get; set; }
 
-			public string Data { get; set; }
-		}
+            public string Data { get; set; }
+        }
 
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-		{
-			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
-		}
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
+        }
 
         [Fact, Trait("Category", "Smuggler")]
-		public async Task PeriodicBackup_should_export_all_relevant_documents()
-		{
-			var existingData = new List<DummyDataEntry>();
-			var backupFolder = new DirectoryInfo(Path.GetTempPath() + "\\periodic_backup_" + Guid.NewGuid());
-			if (!backupFolder.Exists)
-				backupFolder.Create();
+        public async Task PeriodicBackup_should_export_all_relevant_documents()
+        {
+            var existingData = new List<DummyDataEntry>();
+            var backupFolder = new DirectoryInfo(Path.GetTempPath() + "\\periodic_backup_" + Guid.NewGuid());
+            if (!backupFolder.Exists)
+                backupFolder.Create();
 
-			documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-			{
-				Id = "SourceDB",
-				Settings =
-				{
-					{"Raven/ActiveBundles", "PeriodicBackup"},
-					{"Raven/DataDir", "~\\Databases\\SourceDB"}
-				}
-			});
+            documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            {
+                Id = "SourceDB",
+                Settings =
+                {
+                    {"Raven/ActiveBundles", "PeriodicBackup"},
+                    {"Raven/DataDir", "~\\Databases\\SourceDB"}
+                }
+            });
 
-			documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-			{
-				Id = "DestDB",
-				Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
-			});
-			//setup periodic export
-			using (var session = documentStore.OpenSession("SourceDB"))
-			{
-				session.Store(new PeriodicExportSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
-					PeriodicExportSetup.RavenDocumentKey);
-				session.SaveChanges();
-			}
+            documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            {
+                Id = "DestDB",
+                Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
+            });
+            //setup periodic export
+            using (var session = documentStore.OpenSession("SourceDB"))
+            {
+                session.Store(new PeriodicExportSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
+                    PeriodicExportSetup.RavenDocumentKey);
+                session.SaveChanges();
+            }
 
-			//now enter dummy data
-			using (var session = documentStore.OpenSession())
-			{
-				for (int i = 0; i < 10000; i++)
-				{
-					var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
-					existingData.Add(dummyDataEntry);
-					session.Store(dummyDataEntry);
-				}
-				session.SaveChanges();
-			}
+            //now enter dummy data
+            using (var session = documentStore.OpenSession())
+            {
+                for (int i = 0; i < 10000; i++)
+                {
+                    var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
+                    existingData.Add(dummyDataEntry);
+                    session.Store(dummyDataEntry);
+                }
+                session.SaveChanges();
+            }
 
-			var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
+            var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
 
             var smuggler = new DatabaseSmuggler(
                 new DatabaseSmugglerOptions(),
@@ -129,19 +129,19 @@ namespace Raven.SlowTests.Issues
 
             await smuggler.ExecuteAsync();
 
-			using (var session = documentStore.OpenSession())
-			{
-				var fetchedData = new List<DummyDataEntry>();
-				using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
-				{
-					while (streamingQuery.MoveNext())
-						fetchedData.Add(streamingQuery.Current.Document);
-				}
+            using (var session = documentStore.OpenSession())
+            {
+                var fetchedData = new List<DummyDataEntry>();
+                using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
+                {
+                    while (streamingQuery.MoveNext())
+                        fetchedData.Add(streamingQuery.Current.Document);
+                }
 
-				Assert.Equal(existingData.Count, fetchedData.Count);
-				Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
-			}
+                Assert.Equal(existingData.Count, fetchedData.Count);
+                Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
+            }
 
-		}
-	}
+        }
+    }
 }

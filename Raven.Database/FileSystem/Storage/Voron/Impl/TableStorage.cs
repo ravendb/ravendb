@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TableStorage.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -42,15 +42,15 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
         internal Dictionary<string, object> GenerateReportOnStorage()
         {
             var reportData = new Dictionary<string, object>
-	        {
-	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
+            {
+                {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
                 {"UsedPages", env.State.NextPageNumber-1},
-	            {"MaxNodeSize", _options.DataPager.NodeMaxSize},
-	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	            {"PageMaxSpace", _options.DataPager.PageMaxSpace},
-	            {"PageSize", _options.PageSize},
+                {"MaxNodeSize", _options.DataPager.NodeMaxSize},
+                {"PageMinSpace", _options.DataPager.PageMinSpace},
+                {"PageMaxSpace", _options.DataPager.PageMaxSpace},
+                {"PageSize", _options.PageSize},
                 {"Files", GetEntriesCount(Files)},
-	        };
+            };
 
             return reportData;
         }

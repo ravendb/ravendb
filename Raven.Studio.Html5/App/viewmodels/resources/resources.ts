@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
@@ -41,8 +41,8 @@ class resources extends viewModelBase {
     searchText = ko.observable("");
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
-	isAnyResourceSelected: KnockoutComputed<boolean>;
-	hasAllResourcesSelected: KnockoutComputed<boolean>;
+    isAnyResourceSelected: KnockoutComputed<boolean>;
+    hasAllResourcesSelected: KnockoutComputed<boolean>;
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
     isCheckboxVisible: KnockoutComputed<boolean>;
     systemDb: database;
@@ -50,8 +50,8 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
-	clusterMode = ko.computed(() => shell.clusterMode());
-	showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
+    clusterMode = ko.computed(() => shell.clusterMode());
+    showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
 
     databaseType = database.type;
     fileSystemType = fileSystem.type;
@@ -184,10 +184,10 @@ class resources extends viewModelBase {
         this.resourcesLoaded();
     }
 
-	private resourcesLoaded() {
-		/*
+    private resourcesLoaded() {
+        /*
 
-		Show it only when cluster bundle is not present
+        Show it only when cluster bundle is not present
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.resources().length === 1 && this.isGlobalAdmin()) {
             this.newResource();
@@ -385,10 +385,10 @@ class resources extends viewModelBase {
         shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor());
     }
 
-	navigateToCreateCluster() {
-		this.navigate(this.appUrls.adminSettingsCluster());
-		shell.disconnectFromResourceChangesApi();
-	}
+    navigateToCreateCluster() {
+        this.navigate(this.appUrls.adminSettingsCluster());
+        shell.disconnectFromResourceChangesApi();
+    }
 
     dismissAlert(uniqueKey: string) {
         new dismissAlertCommand(appUrl.getSystemDatabase(), uniqueKey).execute();
@@ -397,7 +397,7 @@ class resources extends viewModelBase {
     urlForAlert(alert: alert) {
         var index = this.alerts().indexOf(alert);
         return appUrl.forAlerts(appUrl.getSystemDatabase()) + "&item=" + index;
-	}
+    }
 
     newResource() {
         var createResourceViewModel = new createResource();

@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using System;
@@ -32,11 +32,11 @@ namespace Raven.Tests.Bugs.MapRedue
                 public int Count { get; set; }
                 public AliasReduceResult[] Aliases { get; set; }
 
-	            public class AliasReduceResult
-	            {
-		            public string Name;
-		            public string Alias;
-	            }
+                public class AliasReduceResult
+                {
+                    public string Name;
+                    public string Alias;
+                }
             }
 
 

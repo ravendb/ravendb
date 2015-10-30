@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
@@ -14,17 +14,17 @@ namespace Raven.Abstractions.Counters
 
         public long GroupsCount { get; set; }
 
-		public long TombstonesCount { get; set; }
+        public long TombstonesCount { get; set; }
 
-		public long LastCounterEtag { get; set; }
+        public long LastCounterEtag { get; set; }
 
         public int ReplicationTasksCount { get; set; }
 
         public string CounterStorageSize { get; set; }
 
-		public long ReplicatedServersCount { get; set; }
+        public long ReplicatedServersCount { get; set; }
 
-		public double RequestsPerSecond { get; set; }
+        public double RequestsPerSecond { get; set; }
     }
 
     public class CountersStorageMetrics

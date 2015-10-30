@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import counterStorage = require("models/counter/counterStorage");
 
 class getCounterStorageReplicationCommand extends commandBase {

@@ -4635,7 +4635,7 @@
             Gets a value indicating whether this instance has expectations that weren't satisfied yet.
             </summary>
             <value>
-            	<c>true</c> if this instance has expectations; otherwise, <c>false</c>.
+                <c>true</c> if this instance has expectations; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="T:Rhino.Mocks.LastCall">
@@ -4796,8 +4796,8 @@
             <summary>
             List of the expected actions on for this recorder
             The legal values are:
-            	* Expectations
-            	* Method Recorders
+                * Expectations
+                * Method Recorders
             </summary>
         </member>
         <member name="F:Rhino.Mocks.MethodRecorders.MethodRecorderBase.recorderToCall">
@@ -4984,7 +4984,7 @@
             Gets a value indicating whether this instance has expectations that weren't satisfied yet.
             </summary>
             <value>
-            	<c>true</c> if this instance has expectations; otherwise, <c>false</c>.
+                <c>true</c> if this instance has expectations; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="P:Rhino.Mocks.MethodRecorders.MethodRecorderBase.DoHasExpectations">
@@ -5097,7 +5097,7 @@
             Gets a value indicating whether this instance has expectations that weren't satisfied yet.
             </summary>
             <value>
-            	<c>true</c> if this instance has expectations; otherwise, <c>false</c>.
+                <c>true</c> if this instance has expectations; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="M:Rhino.Mocks.MethodRecorders.OrderedMethodRecorder.#ctor(Rhino.Mocks.Interfaces.IMethodRecorder,Rhino.Mocks.Generated.ProxyMethodExpectationsDictionary)">

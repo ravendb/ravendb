@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -53,23 +53,23 @@ namespace Raven.Tests.Issues
                 usersByNameIndex.Execute(store);
 
                 var waits = 0;
-	            var mres = new ManualResetEventSlim();
+                var mres = new ManualResetEventSlim();
                 SystemTime.WaitCalled = ms =>
                 {
-	                waits++;
-					mres.Set();
-					Thread.Sleep(10);
+                    waits++;
+                    mres.Set();
+                    Thread.Sleep(10);
                 };
 
-	            var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
-		            new IndexQuery {Query = "Name:Users*"}
-		            , new BulkOperationOptions
-		            {
-			            AllowStale = false,
-			            MaxOpsPerSec = null,
-			            StaleTimeout = TimeSpan.FromSeconds(15)
-		            });
-	            mres.Wait();
+                var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
+                    new IndexQuery {Query = "Name:Users*"}
+                    , new BulkOperationOptions
+                    {
+                        AllowStale = false,
+                        MaxOpsPerSec = null,
+                        StaleTimeout = TimeSpan.FromSeconds(15)
+                    });
+                mres.Wait();
 
                 store.DatabaseCommands.Admin.StartIndexing();
 
@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
                 {
                     Assert.True(waits > 0);
 
-	                Assert.Empty(session.Query<User>());
+                    Assert.Empty(session.Query<User>());
                 }
                             
             }
@@ -119,7 +119,7 @@ namespace Raven.Tests.Issues
                 }
                 catch (InvalidOperationException e)
                 {
-					Assert.True(e.Message.StartsWith("Operation failed: Bulk operation"));
+                    Assert.True(e.Message.StartsWith("Operation failed: Bulk operation"));
                     exceptionThrown = true;
                 }
                 Assert.True(exceptionThrown);

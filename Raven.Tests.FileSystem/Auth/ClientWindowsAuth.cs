@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ClientWindowsAuth.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -29,11 +29,11 @@ namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
-		private string username = "local_user_test";
+        private string username = "local_user_test";
 
-		private string password = "local_user_test";
+        private string password = "local_user_test";
 
-		private string domain = "local_machine_name_test";
+        private string domain = "local_machine_name_test";
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
@@ -49,7 +49,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                   Databases = new List<ResourceAccess>
                                                   {
                                                       new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
-													  new ResourceAccess {TenantId = fileSystemName}
+                                                      new ResourceAccess {TenantId = fileSystemName}
                                                   }
                                               }
                                           }
@@ -64,11 +64,11 @@ namespace Raven.Tests.FileSystem.Auth
             var ms = new MemoryStream(new byte[1024 * 1024 * 10]);
 
             await client.UploadAsync("/dir/ms.bin", ms);
-	        ms.Position = 0;
-			await client.UploadAsync("/dir/ms.bin", ms);
+            ms.Position = 0;
+            await client.UploadAsync("/dir/ms.bin", ms);
 
-			var result = new MemoryStream();
-			(await client.DownloadAsync("/dir/ms.bin")).CopyTo(result);
+            var result = new MemoryStream();
+            (await client.DownloadAsync("/dir/ms.bin")).CopyTo(result);
 
             ms.Position = 0;
             result.Position = 0;
@@ -111,14 +111,14 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
             var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
-	        var adminClient = client.Admin;
+            var adminClient = client.Admin;
 
-			await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
+            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
-	        {
-		        await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
-	        }
+            {
+                await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
+            }
 
             var names = await adminClient.GetNamesAsync();
 
@@ -126,13 +126,13 @@ namespace Raven.Tests.FileSystem.Auth
 
             var stats = await adminClient.GetStatisticsAsync();
 
-			Assert.NotNull(stats.FirstOrDefault(x => x.Name == "testName"));
+            Assert.NotNull(stats.FirstOrDefault(x => x.Name == "testName"));
 
-	        await adminClient.DeleteFileSystemAsync("testName");
+            await adminClient.DeleteFileSystemAsync("testName");
 
-			names = await adminClient.GetNamesAsync();
+            names = await adminClient.GetNamesAsync();
 
-			Assert.DoesNotContain("testName", names);
+            Assert.DoesNotContain("testName", names);
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
@@ -169,7 +169,7 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task ShouldThrowWhenWindowsDocumentDoesNotContainFileSystem()
         {
             // in this test be careful if the specified credentials belong to admin user or not
-			// to make this test to you need to specify the credentials of a user who isn't an admin on this machine
+            // to make this test to you need to specify the credentials of a user who isn't an admin on this machine
 
             var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
             var server = GetServer();
@@ -186,7 +186,7 @@ namespace Raven.Tests.FileSystem.Auth
                 try
                 {
                     await anotherClient.UploadAsync("def.bin", new MemoryStream(1)); // should throw because a file system ShouldThrow_WindowsDocumentDoesNotContainsThisFS isn't added to ApiKeyDefinition
-				}
+                }
                 catch (InvalidOperationException ex)
                 {
                     errorResponse = ex.InnerException as ErrorResponseException;

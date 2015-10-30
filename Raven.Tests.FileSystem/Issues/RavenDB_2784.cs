@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2784.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,28 +12,28 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Issues
 {
-	public class RavenDB_2784 : RavenFilesTestWithLogs
-	{
-		[Theory]
+    public class RavenDB_2784 : RavenFilesTestWithLogs
+    {
+        [Theory]
         [PropertyData("Storages")]
-		public async Task DownloadingWithZeroSize(string storage)
-		{
-			var client = NewAsyncClient(requestedStorage: storage);
+        public async Task DownloadingWithZeroSize(string storage)
+        {
+            var client = NewAsyncClient(requestedStorage: storage);
 
-			await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
-			await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
+            await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
+            await client.UploadAsync("file", new RandomStream(512 * 1024, 1));
 
-			await client.Storage.CleanUpAsync();
+            await client.Storage.CleanUpAsync();
 
-			var fileHeader = await client.GetMetadataForAsync("file");
+            var fileHeader = await client.GetMetadataForAsync("file");
 
-			using (var stream = await client.DownloadAsync("file"))
-			{
-				var downloadData = new MemoryStream();
-				stream.CopyTo(downloadData);
+            using (var stream = await client.DownloadAsync("file"))
+            {
+                var downloadData = new MemoryStream();
+                stream.CopyTo(downloadData);
 
-				Assert.Equal(fileHeader.Value<long>(Constants.FileSystem.RavenFsSize), downloadData.Length);
-			}
-		}
-	}
+                Assert.Equal(fileHeader.Value<long>(Constants.FileSystem.RavenFsSize), downloadData.Length);
+            }
+        }
+    }
 }

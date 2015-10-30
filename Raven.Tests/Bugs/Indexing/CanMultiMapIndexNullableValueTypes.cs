@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,54 +12,54 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class CanMultiMapIndexNullableValueTypes : RavenTest
-	{
-		class Company
-		{
-			public decimal? Turnover { get; set; }
-		}
+    public class CanMultiMapIndexNullableValueTypes : RavenTest
+    {
+        class Company
+        {
+            public decimal? Turnover { get; set; }
+        }
 
-		class Companies_ByTurnover : AbstractMultiMapIndexCreationTask
-		{
-			public Companies_ByTurnover()
-			{
-				AddMap<Company>(companies => from c in companies
-											 select new
-											 {
-												 c.Turnover
-											 });
-			}
-		}
+        class Companies_ByTurnover : AbstractMultiMapIndexCreationTask
+        {
+            public Companies_ByTurnover()
+            {
+                AddMap<Company>(companies => from c in companies
+                                             select new
+                                             {
+                                                 c.Turnover
+                                             });
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
-		public void WillNotProduceAnyErrors(string storage)
-		{
-			using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var indexCreationTask = new Companies_ByTurnover();
-				indexCreationTask.Execute(store);
+        public void WillNotProduceAnyErrors(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
+            {
+                var indexCreationTask = new Companies_ByTurnover();
+                indexCreationTask.Execute(store);
 
-				using (var s = store.OpenSession())
-				{
-					s.Store(new Company { Turnover = null });
-					s.Store(new Company { Turnover = 1 });
-					s.Store(new Company { Turnover = 2 });
-					s.Store(new Company { Turnover = 3 });
-					s.SaveChanges();
-				}
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Company { Turnover = null });
+                    s.Store(new Company { Turnover = 1 });
+                    s.Store(new Company { Turnover = 2 });
+                    s.Store(new Company { Turnover = 3 });
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession())
-				{
-					var results = s.Query<Company, Companies_ByTurnover>()
-						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-						.ToArray();
+                using (var s = store.OpenSession())
+                {
+                    var results = s.Query<Company, Companies_ByTurnover>()
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
+                        .ToArray();
 
-					Assert.Equal(results.Length, 4);
-				}
+                    Assert.Equal(results.Length, 4);
+                }
 
-				Assert.Empty(store.SystemDatabase.Statistics.Errors);
-			}
-		}
-	}
+                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +16,7 @@ namespace Voron.Debugging
     {
         public abstract class BaseActivityEntry
         {
-	        public int LineNumber;
+            public int LineNumber;
 
             public DebugActionType ActionType { get; protected set; }
 
@@ -201,33 +201,33 @@ namespace Voron.Debugging
 
                     entryValue = array;
                 }
-				else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
-				{
-					entryValue = Encoding.UTF8.GetBytes(Value.ToString());
-				}
-				else if (Value is IStructure)
-				{
-					var structure = (IStructure) Value;
+                else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
+                {
+                    entryValue = Encoding.UTF8.GetBytes(Value.ToString());
+                }
+                else if (Value is IStructure)
+                {
+                    var structure = (IStructure) Value;
 
-					var structBytes = new byte[structure.GetSize()];
+                    var structBytes = new byte[structure.GetSize()];
 
-					fixed (byte* p = structBytes)
-						structure.Write(p);
+                    fixed (byte* p = structBytes)
+                        structure.Write(p);
 
-					entryValue = structBytes;
-				}
-				else if (Value == Stream.Null || Value == null)
-				{
-					// do nothing
-				}
-				else
-				{
-					throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
-				}
+                    entryValue = structBytes;
+                }
+                else if (Value == Stream.Null || Value == null)
+                {
+                    // do nothing
+                }
+                else
+                {
+                    throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
+                }
 
                 var line = string.Format("{0},{1},{2},\"{3}\",{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
-				
-				return line;
+                
+                return line;
             }
 
             private string ToCsvWithValueLengthOnly()
@@ -235,9 +235,9 @@ namespace Voron.Debugging
                 long? length;
                 if (Value is Stream && Value != Stream.Null)
                     length = ((Stream)Value).Length;
-				else if (Value is IStructure)
-					length = ((IStructure) Value).GetSize();
-				else return ToCsv();
+                else if (Value is IStructure)
+                    length = ((IStructure) Value).GetSize();
+                else return ToCsv();
 
                 return string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, length);
             }
@@ -269,7 +269,7 @@ namespace Voron.Debugging
                             type,
                             long.Parse(columnArray[1]),
                             (Slice)columnArray[3].Trim('"'),
-							columnArray[2].Trim('"'),
+                            columnArray[2].Trim('"'),
                             null);
 
                         return activityEntry;
@@ -305,8 +305,8 @@ namespace Voron.Debugging
                     var entry = new WriteActivityEntry(
                         type,
                         long.Parse(columnArray[1]),
-						(Slice)columnArray[3].Trim('"'),
-						columnArray[2].Trim('"'),
+                        (Slice)columnArray[3].Trim('"'),
+                        columnArray[2].Trim('"'),
                         value);
 
                     return entry;
@@ -322,8 +322,8 @@ namespace Voron.Debugging
         private FileStream _journalFileStream;
         private TextWriter _journalWriter;
         private const string FileExtension = ".djrs";
-		private readonly object _journalWriteSyncObject = new object();
-		private bool _isDisposed;
+        private readonly object _journalWriteSyncObject = new object();
+        private bool _isDisposed;
         public bool IsRecording { get; set; }
 
         public bool RecordOnlyValueLength { get; set; }
@@ -333,18 +333,18 @@ namespace Voron.Debugging
         public DebugJournal(string journalName, StorageEnvironment env, bool isRecordingByDefault = false)
         {
             _env = env;
-			
+            
             IsRecording = isRecordingByDefault;
             InitializeDebugJournal(journalName);
-	        _isDisposed = false;
+            _isDisposed = false;
         }
 
         private void InitializeDebugJournal(string journalName)
         {
             Dispose();
-	        var journalFileInfo = new FileInfo(journalName + FileExtension);
-	        if (journalFileInfo.Exists && journalFileInfo.Length >= 1024 * 1024 * 1024) //precaution - don't let the files grow too much
-				journalFileInfo.Delete();
+            var journalFileInfo = new FileInfo(journalName + FileExtension);
+            if (journalFileInfo.Exists && journalFileInfo.Length >= 1024 * 1024 * 1024) //precaution - don't let the files grow too much
+                journalFileInfo.Delete();
 
             _journalFileStream = new FileStream(journalName + FileExtension, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _journalWriter = new StreamWriter(_journalFileStream, Encoding.UTF8);
@@ -353,20 +353,20 @@ namespace Voron.Debugging
 
         public void Load(string journalName)
         {
-	        var lineNumber = 1;
+            var lineNumber = 1;
             using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
             {
                 while (journalReader.Peek() >= 0)
                 {
-	                var csvLine = journalReader.ReadLine();
-	                if (!string.IsNullOrWhiteSpace(csvLine))
-	                {
-		                var activityEntry = BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength);
-		                activityEntry.LineNumber = lineNumber;
+                    var csvLine = journalReader.ReadLine();
+                    if (!string.IsNullOrWhiteSpace(csvLine))
+                    {
+                        var activityEntry = BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength);
+                        activityEntry.LineNumber = lineNumber;
 
-		                WriteQueue.Enqueue(activityEntry);
-	                }
-	                lineNumber++;
+                        WriteQueue.Enqueue(activityEntry);
+                    }
+                    lineNumber++;
                 }
             }
         }
@@ -408,7 +408,7 @@ namespace Voron.Debugging
             {
                 var newAction = new WriteActivityEntry(actionType, tx.Id, key, treeName, value);
                 WriteQueue.Enqueue(newAction);
-				WriteAndFlush(newAction);
+                WriteAndFlush(newAction);
             }
         }
 
@@ -426,9 +426,9 @@ namespace Voron.Debugging
         {
             try
             {
-				lock(_journalWriteSyncObject)
-					if(!_isDisposed)
-						_journalWriter.Flush();
+                lock(_journalWriteSyncObject)
+                    if(!_isDisposed)
+                        _journalWriter.Flush();
             }
             catch (ObjectDisposedException)
             {
@@ -451,8 +451,8 @@ namespace Voron.Debugging
                 {
                     ReplayTransactionEntry(transactionEntry, ref currentWriteTransaction, readTransactions);
 
-	                if (validate != null)
-						validate(transactionEntry);
+                    if (validate != null)
+                        validate(transactionEntry);
                     continue;
                 }
 
@@ -462,8 +462,8 @@ namespace Voron.Debugging
                     if (currentWriteTransaction != null)
                     {
                         ReplayWriteAction(actionEntry, ref currentWriteTransaction);
-						if (validate != null)
-							validate(actionEntry);
+                        if (validate != null)
+                            validate(actionEntry);
                     }
                     continue;
                 }
@@ -472,8 +472,8 @@ namespace Voron.Debugging
                 if (flushEntry != null)
                 {
                     ReplayFlushAction(flushEntry, currentWriteTransaction);
-					if (validate != null)
-						validate(flushEntry);
+                    if (validate != null)
+                        validate(flushEntry);
                     continue;
                 }
                 throw new InvalidOperationException("unsupported tree action type: " + activityEntry);
@@ -605,14 +605,14 @@ namespace Voron.Debugging
                     var delta = EndianBitConverter.Little.ToInt64(buffer, 0);
                     tx.ReadTree(activityEntry.TreeName).Increment(activityEntry.Key, delta);
                     break;
-				case DebugActionType.AddStruct:
-					tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
-					break;
-				case DebugActionType.RenameTree:
-					_env.RenameTree(tx, activityEntry.TreeName, activityEntry.Key.ToString());
-					break;
+                case DebugActionType.AddStruct:
+                    tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
+                    break;
+                case DebugActionType.RenameTree:
+                    _env.RenameTree(tx, activityEntry.TreeName, activityEntry.Key.ToString());
+                    break;
                 default: //precaution against newly added action types
-					throw new InvalidOperationException("unsupported tree action type: " + activityEntry.ActionType);
+                    throw new InvalidOperationException("unsupported tree action type: " + activityEntry.ActionType);
             }
         }
 
@@ -620,16 +620,16 @@ namespace Voron.Debugging
         {
             try
             {
-	            lock (_journalWriteSyncObject)
-	            {
-		            if (_journalWriter != null)
-			            _journalWriter.Dispose();
+                lock (_journalWriteSyncObject)
+                {
+                    if (_journalWriter != null)
+                        _journalWriter.Dispose();
 
-		            if (_journalFileStream != null)
-			            _journalFileStream.Dispose();
+                    if (_journalFileStream != null)
+                        _journalFileStream.Dispose();
 
-		            _isDisposed = true;
-	            }
+                    _isDisposed = true;
+                }
             }
             catch (ObjectDisposedException)
             {

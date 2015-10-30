@@ -32,11 +32,11 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     notifications: Array<changeSubscription> = [];
-	appUrls: computedAppUrls;
+    appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-	static isConfirmedUsingSystemDatabase: boolean = false;
-	static showSplash = ko.observable<boolean>(false);
-	private isAttached = false;
+    static isConfirmedUsingSystemDatabase: boolean = false;
+    static showSplash = ko.observable<boolean>(false);
+    private isAttached = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
@@ -45,9 +45,9 @@ class viewModelBase {
     static clientVersion = ko.observable<string>();
     static hasContinueTestOption = ko.observable<boolean>(false);
 
-	constructor() {
-		this.appUrls = appUrl.forCurrentDatabase();
-	}
+    constructor() {
+        this.appUrls = appUrl.forCurrentDatabase();
+    }
 
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
@@ -58,9 +58,9 @@ class viewModelBase {
      */
     canActivate(args: any): any {
         var self = this;
-	    setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
+        setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
 
-		var resource = appUrl.getResource();
+        var resource = appUrl.getResource();
         if (resource instanceof filesystem) {
             var fs = this.activeFilesystem();
 
@@ -111,18 +111,18 @@ class viewModelBase {
         }
 
         oauthContext.enterApiKeyTask.done(() => {
-			// we have to wait for changes api to connect as well
-			// as obtaining changes api connection might take a while, we have to spin until connection is read
-			var createNotifySpinFunction = () => {
-				if (isShell || this.appUrls.isAreaActive("admin")())
-					return;
-				if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-					this.notifications = this.createNotifications();
-				} else {
-					setTimeout(createNotifySpinFunction, 50);
-				}
-			}
-			createNotifySpinFunction();
+            // we have to wait for changes api to connect as well
+            // as obtaining changes api connection might take a while, we have to spin until connection is read
+            var createNotifySpinFunction = () => {
+                if (isShell || this.appUrls.isAreaActive("admin")())
+                    return;
+                if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+                    this.notifications = this.createNotifications();
+                } else {
+                    setTimeout(createNotifySpinFunction, 50);
+                }
+            }
+            createNotifySpinFunction();
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
@@ -134,10 +134,10 @@ class viewModelBase {
         this.updateHelpLink(null); // clean link
     }
 
-	attached() {
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
-	}
+    attached() {
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
+    }
 
     /*
      * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
@@ -182,8 +182,8 @@ class viewModelBase {
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
 
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
     }
 
     /*
@@ -193,8 +193,8 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
 
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
     }
 
     createNotifications(): Array<changeSubscription> {

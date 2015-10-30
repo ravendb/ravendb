@@ -1,4 +1,4 @@
-﻿
+
 #if (NETFX_CORE || PORTABLE40 || PORTABLE)
 using Raven.Imports.Newtonsoft.Json.Serialization;
 

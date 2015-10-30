@@ -1,4 +1,4 @@
-﻿namespace Raven.Backup
+namespace Raven.Backup
 {
     public enum ExitCodes
     {

@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
@@ -14,11 +14,11 @@ import deleteItems = require("viewmodels/common/deleteItems");
 
 class editCounter extends viewModelBase {
 
-	groupName = ko.observable<string>();
-	counterName = ko.observable<string>();
-	groupLink = ko.observable<string>();
-	counter = ko.observable<counter>();
-	isLoading = ko.observable<boolean>();
+    groupName = ko.observable<string>();
+    counterName = ko.observable<string>();
+    groupLink = ko.observable<string>();
+    counter = ko.observable<counter>();
+    isLoading = ko.observable<boolean>();
     topRecentCounters = ko.computed(() => this.getTopRecentCounters());
     isBusy = ko.observable(false);
 
@@ -26,35 +26,35 @@ class editCounter extends viewModelBase {
     static recentCountersInCounterStorage = ko.observableArray<{ counterStorageName: string; recentCounters: KnockoutObservableArray<IGroupAndCounterName> }>();
 
     constructor() {
-	    super();
+        super();
     }
 
-	canActivate(args) {
-		super.canActivate(args);
+    canActivate(args) {
+        super.canActivate(args);
 
-		var deffered = $.Deferred();
-		if (!args.groupName || !args.counterName) {
-			messagePublisher.reportError("Can't find group name or counter name in query string!");
-			deffered.resolve({ redirect: appUrl.forCounterStorageCounters(null, this.activeCounterStorage()) });
+        var deffered = $.Deferred();
+        if (!args.groupName || !args.counterName) {
+            messagePublisher.reportError("Can't find group name or counter name in query string!");
+            deffered.resolve({ redirect: appUrl.forCounterStorageCounters(null, this.activeCounterStorage()) });
         }
 
-	    var cs = this.activeCounterStorage();
+        var cs = this.activeCounterStorage();
         this.load(args.groupName, args.counterName)
             .done(() => {
                 this.groupName(args.groupName);
                 this.counterName(args.counterName);
                 this.groupLink(appUrl.forCounterStorageCounters(args.groupName, cs));
                 this.appendRecentCounter(args.groupName, args.counterName);
-		        deffered.resolve({ can: true });
-		    })
-			.fail(() => {
+                deffered.resolve({ can: true });
+            })
+            .fail(() => {
                 messagePublisher.reportError("Can't find counter!");
                 this.removeFromTopRecentCounters(args.groupName, args.counterName);
                 deffered.resolve({ redirect: appUrl.forCounterStorageCounters(null, cs) });
-			});
+            });
 
-		return deffered;
-	}
+        return deffered;
+    }
 
     attached() {
         super.attached();
@@ -63,23 +63,23 @@ class editCounter extends viewModelBase {
 
     setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteCounter(), editCounter.container);
-	}
+    }
 
     load(groupName: string, counterName: string) {
-	    this.isLoading(true);
+        this.isLoading(true);
         return new getCounterCommand(this.activeCounterStorage(), groupName, counterName)
             .execute()
             .done((result: counter) => {
-		        this.counter(result);
-				this.isLoading(false);
-	        });
+                this.counter(result);
+                this.isLoading(false);
+            });
     }
 
-	refresh() {
-		this.load(this.groupName(), this.counterName());
-	}
+    refresh() {
+        this.load(this.groupName(), this.counterName());
+    }
 
-	change() {
+    change() {
         var dto = {
             CurrentValue: this.counter().total(),
             Group: this.groupName(),
@@ -90,27 +90,27 @@ class editCounter extends viewModelBase {
         var counterChangeVm = new editCounterDialog(change);
         counterChangeVm.updateTask.done((change: counterChange, isNew: boolean) => {
             var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), isNew);
-	        var execute = counterCommand.execute();
-			execute.done(() => this.refresh());
+            var execute = counterCommand.execute();
+            execute.done(() => this.refresh());
         });
         app.showDialog(counterChangeVm);
     }
 
-	reset() {
+    reset() {
         var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
         confirmation.done(() => {
             var resetCommand = new resetCounterCommand(this.activeCounterStorage(), this.groupName(), this.counterName());
             var execute = resetCommand.execute();
-			execute.done(() => this.refresh());
+            execute.done(() => this.refresh());
         });
     }
 
-	deleteCounter() {
-		var summary: counterSummary = new counterSummary({
-			GroupName: this.groupName(),
-			CounterName: this.counterName(),
-			Total: this.counter().total()
-		});
+    deleteCounter() {
+        var summary: counterSummary = new counterSummary({
+            GroupName: this.groupName(),
+            CounterName: this.counterName(),
+            Total: this.counter().total()
+        });
         var viewModel = new deleteItems([summary]);
         viewModel.deletionTask.done(() => {
             var countersUrl = appUrl.forCounterStorageCounters(null, this.activeCounterStorage());
@@ -120,7 +120,7 @@ class editCounter extends viewModelBase {
     }
 
     removeFromTopRecentCounters(groupName: string, counterName: string) {
-		var currentFilesystemName = this.activeFilesystem().name;
+        var currentFilesystemName = this.activeFilesystem().name;
         var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().first(x => x.counterStorageName === currentFilesystemName);
         if (recentFilesForCurFilesystem) {
             var counter = {
@@ -128,8 +128,8 @@ class editCounter extends viewModelBase {
                 counterName: counterName
             }
             recentFilesForCurFilesystem.recentCounters.remove(counter);
-		}
-	}
+        }
+    }
 
     getTopRecentCounters() {
         var cs = this.activeCounterStorage();

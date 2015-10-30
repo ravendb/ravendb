@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 
 class toggleRejectDatabaseClients extends commandBase {
     /**
@@ -13,7 +13,7 @@ class toggleRejectDatabaseClients extends commandBase {
     execute(): JQueryPromise<any> {
         var action = this.rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
         var args = {
-			id: this.dbName,
+            id: this.dbName,
             isRejectClientsEnabled: this.rejectClientsEnabled
         }
         var url = "/admin/databases-toggle-reject-clients" + this.urlEncodeArgs(args);

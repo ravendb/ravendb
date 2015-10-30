@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import timeSeries = require("models/timeSeries/timeSeries");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 

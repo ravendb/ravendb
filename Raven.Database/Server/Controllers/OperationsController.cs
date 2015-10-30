@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -15,27 +15,27 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
-	public class OperationsController : BaseDatabaseApiController
-	{
-		[HttpGet]
-		[RavenRoute("operation/status")]
-		[RavenRoute("databases/{databaseName}/operation/status")]
-		public HttpResponseMessage OperationStatusGet()
-		{
-			var idStr = GetQueryStringValue("id");
-			long id;
-			if (long.TryParse(idStr, out id) == false)
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "Query string variable id must be a valid int64"
-				}, HttpStatusCode.BadRequest);
-			}
+    [RoutePrefix("")]
+    public class OperationsController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("operation/status")]
+        [RavenRoute("databases/{databaseName}/operation/status")]
+        public HttpResponseMessage OperationStatusGet()
+        {
+            var idStr = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStr, out id) == false)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Query string variable id must be a valid int64"
+                }, HttpStatusCode.BadRequest);
+            }
 
-			var status = Database.Tasks.GetTaskState(id);
-			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
-		}
+            var status = Database.Tasks.GetTaskState(id);
+            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+        }
 
         [HttpGet]
         [RavenRoute("operation/kill")]
@@ -113,5 +113,5 @@ namespace Raven.Database.Server.Controllers
             Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
             return GetEmptyMessage();
         }
-	}
+    }
 };

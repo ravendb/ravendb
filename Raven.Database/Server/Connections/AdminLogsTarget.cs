@@ -12,8 +12,8 @@ using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Connections
 {
-	public class AdminLogsTarget : Target 
-	{
+    public class AdminLogsTarget : Target 
+    {
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
         // used for removing never used configurations
@@ -72,24 +72,24 @@ namespace Raven.Database.Server.Connections
                 });
         }
 
-	    public override void Write(LogEventInfo logEvent)
-		{
-			if (!logEvent.LoggerName.StartsWith("Raven.")) 
-				return;
+        public override void Write(LogEventInfo logEvent)
+        {
+            if (!logEvent.LoggerName.StartsWith("Raven.")) 
+                return;
 
-	        if (connections.Count > 0)
-	        {
+            if (connections.Count > 0)
+            {
                 foreach (var connection in connections)
                 {
                     connection.Value.Send(logEvent);
                 }
-	        }
-		}
+            }
+        }
 
-	    public override bool ShouldLog(ILog log, LogLevel level)
-	    {
+        public override bool ShouldLog(ILog log, LogLevel level)
+        {
             return LogManager.EnableDebugLogForTargets;
-	    }
+        }
 
         public AdminLogsConnectionState For(string id, RavenBaseApiController controller = null)
         {
@@ -125,5 +125,5 @@ namespace Raven.Database.Server.Connections
             }    
             AlterEnabled();
         }
-	}
+    }
 }

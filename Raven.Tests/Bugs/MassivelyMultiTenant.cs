@@ -7,12 +7,12 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
-	public class MassivelyMultiTenant : RavenTest
-	{
+    public class MassivelyMultiTenant : RavenTest
+        {
         [Theory]
         [PropertyData("Storages")]
-		public void CanHaveLotsOf_ACTIVE_Tenants(string storage)
-		{
+        public void CanHaveLotsOf_ACTIVE_Tenants(string storage)
+        {
             using (GetNewServer(requestedStorage: storage))
             {
                 for (int i = 0; i < 20; i++)
@@ -24,6 +24,6 @@ namespace Raven.Tests.Bugs
                     }
                 }
             }
-		}
-	}
+        }
+    }
 }

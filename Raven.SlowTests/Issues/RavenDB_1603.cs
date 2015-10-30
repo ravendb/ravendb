@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1603.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -667,8 +667,8 @@ namespace Raven.SlowTests.Issues
 
             var alreadyReset = false;
 
-	        var port = 8070;
-	        var forwarder = new ProxyServer(ref port, 8079)
+            var port = 8070;
+            var forwarder = new ProxyServer(ref port, 8079)
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {

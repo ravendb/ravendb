@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -137,7 +137,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         }
 
 #if !(NET35 || NET20 || MONO)
-		/// <summary>
+        /// <summary>
         /// When overridden in a derived class, controls the binding of a serialized object to a type.
         /// </summary>
         /// <param name="serializedType">The type of the object the formatter creates a new instance of.</param>

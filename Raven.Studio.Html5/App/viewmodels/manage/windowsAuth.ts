@@ -1,4 +1,4 @@
-﻿import windowsAuthSetup = require("models/auth/windowsAuthSetup");
+import windowsAuthSetup = require("models/auth/windowsAuthSetup");
 import windowsAuthData = require("models/auth/windowsAuthData");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/auth/getWindowsAuthCommand");

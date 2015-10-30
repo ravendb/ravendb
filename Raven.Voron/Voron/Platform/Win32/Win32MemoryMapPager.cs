@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -40,11 +40,11 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-		public Win32MemoryMapPager(int pageSize,string file,
+        public Win32MemoryMapPager(int pageSize,string file,
             long? initialFileSize = null,
                                    Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
-			:base(pageSize)
+            :base(pageSize)
         {
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);

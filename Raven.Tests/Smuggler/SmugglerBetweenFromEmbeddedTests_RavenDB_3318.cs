@@ -1,11 +1,10 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerBetweenEmbeddedTests_RavenDB_3318.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.Database;
@@ -15,32 +14,31 @@ using Raven.Database.Smuggler.Embedded;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Smuggler
 {
-	public class SmugglerBetweenFromEmbeddedTests_RavenDB_3318 : RavenTest
-	{
-		[Fact]
-		public async Task BasicBetweenTestFromEmbeddedStore()
-		{
-			using (var store = NewDocumentStore())
-			{
-				await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
-				await new SmugglerBetweenTests.UsersTransformer().ExecuteAsync(store);
-				using (var session = store.OpenAsyncSession())
-				{
-					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "Robert" });
-					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" });
-					await session.SaveChangesAsync();
-				}
+    public class SmugglerBetweenFromEmbeddedTests_RavenDB_3318 : RavenTest
+    {
+        [Fact]
+        public async Task BasicBetweenTestFromEmbeddedStore()
+        {
+            using (var store = NewDocumentStore())
+            {
+                await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
+                await new SmugglerBetweenTests.UsersTransformer().ExecuteAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SmugglerBetweenTests.User { Name = "Robert" });
+                    await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" });
+                    await session.SaveChangesAsync();
+                }
 
-				using (var server = GetNewServer(port: 8078))
-				{
-					using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
-					{
-					    var smuggler = new DatabaseSmuggler(
+                using (var server = GetNewServer(port: 8078))
+                {
+                    using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
+                    {
+                        var smuggler = new DatabaseSmuggler(
                             new DatabaseSmugglerOptions(), 
                             new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase), 
                             new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
@@ -49,44 +47,44 @@ namespace Raven.Tests.Smuggler
                                 Database = "TargetDB"
                             }));
 
-					    await smuggler.ExecuteAsync();
+                        await smuggler.ExecuteAsync();
 
-						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
-						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
+                        await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
+                        await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
 
-						using (var session = targetStore.OpenAsyncSession())
-						{
-							Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/1"));
-							Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/2"));
+                        using (var session = targetStore.OpenAsyncSession())
+                        {
+                            Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/1"));
+                            Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/2"));
 
-							var users = await session.Query<SmugglerBetweenTests.User, SmugglerBetweenTests.UsersIndex>().Customize(x => x.WaitForNonStaleResults()).ToListAsync();
+                            var users = await session.Query<SmugglerBetweenTests.User, SmugglerBetweenTests.UsersIndex>().Customize(x => x.WaitForNonStaleResults()).ToListAsync();
 
-							Assert.Equal(2, users.Count);
-						}
-					}
-				}
-			}
-		}
+                            Assert.Equal(2, users.Count);
+                        }
+                    }
+                }
+            }
+        }
 
-		[Fact]
-		public async Task ShouldSupportIncremental()
-		{
-			using (var store = NewDocumentStore())
-			{
-				await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
-				await new SmugglerBetweenTests.UsersTransformer().ExecuteAsync(store);
-				using (var session = store.OpenAsyncSession())
-				{
-					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "Robert" }, "users/1");
-					await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" }, "users/2");
-					await session.SaveChangesAsync();
-				}
+        [Fact]
+        public async Task ShouldSupportIncremental()
+        {
+            using (var store = NewDocumentStore())
+            {
+                await new SmugglerBetweenTests.UsersIndex().ExecuteAsync(store.AsyncDatabaseCommands, new DocumentConvention());
+                await new SmugglerBetweenTests.UsersTransformer().ExecuteAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SmugglerBetweenTests.User { Name = "Robert" }, "users/1");
+                    await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" }, "users/2");
+                    await session.SaveChangesAsync();
+                }
 
-				using (var server = GetNewServer(port: 8078))
-				{
-					using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
-					{
-					    var smuggler = new DatabaseSmuggler(
+                using (var server = GetNewServer(port: 8078))
+                {
+                    using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
+                    {
+                        var smuggler = new DatabaseSmuggler(
                             new DatabaseSmugglerOptions(),
                             new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
                             new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
@@ -99,38 +97,38 @@ namespace Raven.Tests.Smuggler
                                 ContinuationToken = "Token"
                             }));
 
-					    await smuggler.ExecuteAsync();
+                        await smuggler.ExecuteAsync();
 
-						await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
-						await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
+                        await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
+                        await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
 
-						using (var session = store.OpenAsyncSession())
-						{
-							var oren = await session.LoadAsync<SmugglerBetweenTests.User>("users/1");
-							oren.Name += " Smith";
-							await session.StoreAsync(new SmugglerBetweenTests.User { Name = "David" }, "users/3");
-							await session.SaveChangesAsync();
-						}
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            var oren = await session.LoadAsync<SmugglerBetweenTests.User>("users/1");
+                            oren.Name += " Smith";
+                            await session.StoreAsync(new SmugglerBetweenTests.User { Name = "David" }, "users/3");
+                            await session.SaveChangesAsync();
+                        }
 
                         await smuggler.ExecuteAsync();
 
                         using (var session = targetStore.OpenAsyncSession())
-						{
-							var changedUser = await session.LoadAsync<SmugglerBetweenTests.User>("users/1");
-							Assert.NotNull(changedUser);
+                        {
+                            var changedUser = await session.LoadAsync<SmugglerBetweenTests.User>("users/1");
+                            Assert.NotNull(changedUser);
 
-							Assert.Equal("Robert Smith", changedUser.Name);
+                            Assert.Equal("Robert Smith", changedUser.Name);
 
-							Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/2"));
-							Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/3"));
+                            Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/2"));
+                            Assert.NotNull(await session.LoadAsync<SmugglerBetweenTests.User>("users/3"));
 
-							var users = await session.Query<SmugglerBetweenTests.User, SmugglerBetweenTests.UsersIndex>().Customize(x => x.WaitForNonStaleResults()).ToListAsync();
+                            var users = await session.Query<SmugglerBetweenTests.User, SmugglerBetweenTests.UsersIndex>().Customize(x => x.WaitForNonStaleResults()).ToListAsync();
 
-							Assert.Equal(3, users.Count);
-						}
-					}
-				}
-			}
-		}
-	}
+                            Assert.Equal(3, users.Count);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

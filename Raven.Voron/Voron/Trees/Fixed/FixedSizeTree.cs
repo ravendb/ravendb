@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FixedSizeTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -526,14 +526,14 @@ namespace Voron.Trees.Fixed
             {
                 case null:
                     // nothing to do
-		            return new DeletionResult();
-				case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    return new DeletionResult();
+                case FixedSizeTreeHeader.OptionFlags.Embedded:
                     return RemoveEmbeddedEntry(key);
-	            case FixedSizeTreeHeader.OptionFlags.Large:
+                case FixedSizeTreeHeader.OptionFlags.Large:
                     return RemoveLargeEntry(key);
             }
 
-	        throw new InvalidOperationException("Flags has invalid value: " + _flags);
+            throw new InvalidOperationException("Flags has invalid value: " + _flags);
         }
 
         public struct DeletionResult
@@ -575,16 +575,16 @@ namespace Voron.Trees.Fixed
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
-	        if (_lastMatch > 0)
-		        startPos++;
-			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-			if (_lastMatch < 0)
-				endPos--;
+            if (_lastMatch > 0)
+                startPos++;
+            var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
+            if (_lastMatch < 0)
+                endPos--;
 
-			if (startPos > endPos)
-				return 0;
+            if (startPos > endPos)
+                return 0;
 
-	        byte entriesDeleted = (byte)(endPos - startPos + 1);
+            byte entriesDeleted = (byte)(endPos - startPos + 1);
 
             if (entriesDeleted == header->NumberOfEntries)
             {
@@ -783,7 +783,7 @@ namespace Voron.Trees.Fixed
                 page = RebalancePage(page, largeHeader);
             }
 
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
         private void RemoveEntryFromPage(TreePage page, int pos)
@@ -831,10 +831,10 @@ namespace Voron.Trees.Fixed
                     Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, _tx.DataPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
-	                if (largeTreeHeader != null)
-		                largeTreeHeader->Depth--;
+                    if (largeTreeHeader != null)
+                        largeTreeHeader->Depth--;
 
-	                _tx.FreePage(childPage);
+                    _tx.FreePage(childPage);
                 }
 
                 return null;
@@ -1027,10 +1027,10 @@ namespace Voron.Trees.Fixed
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
-		public Slice Read(long key)
+        public Slice Read(long key)
         {
             switch (_flags)
             {

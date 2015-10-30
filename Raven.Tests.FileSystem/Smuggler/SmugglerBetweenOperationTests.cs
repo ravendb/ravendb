@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler;
-
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Smuggler
@@ -164,12 +163,12 @@ namespace Raven.Tests.FileSystem.Smuggler
                 var server = GetServer();
 
                 var alreadyReset = false;
-	            var port = 8070;
-	            var forwarder = new ProxyServer(ref port, server.Configuration.Core.Port)
+                var port = 8070;
+                var forwarder = new ProxyServer(ref port, server.Configuration.Core.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
-	                    var s = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+                        var s = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
                         if (alreadyReset == false && totalRead > 28000 && !s.Contains("200 OK"))
                         {
                             alreadyReset = true;
@@ -179,58 +178,58 @@ namespace Raven.Tests.FileSystem.Smuggler
                     }
                 };
 
-	            try
-	            {
-					var smugglerApi = new SmugglerFilesApi();
+                try
+                {
+                    var smugglerApi = new SmugglerFilesApi();
 
-					var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
-					{
-						From = new FilesConnectionStringOptions
-						{
-							Url = "http://localhost:" + port,
-							DefaultFileSystem = SourceFilesystem
-						},
-						To = new FilesConnectionStringOptions
-						{
-							Url = store.Url,
-							DefaultFileSystem = DestinationFilesystem
-						}
-					};
+                    var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                    {
+                        From = new FilesConnectionStringOptions
+                        {
+                            Url = "http://localhost:" + port,
+                            DefaultFileSystem = SourceFilesystem
+                        },
+                        To = new FilesConnectionStringOptions
+                        {
+                            Url = store.Url,
+                            DefaultFileSystem = DestinationFilesystem
+                        }
+                    };
 
-					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
-					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
-					ReseedRandom(100); // Force a random distribution.
+                    ReseedRandom(100); // Force a random distribution.
 
-					await InitializeWithRandomFiles(store, 20, 30);
+                    await InitializeWithRandomFiles(store, 20, 30);
 
 
-					Etag lastEtag = Etag.InvalidEtag;
-					try
-					{
-						await smugglerApi.Between(options);
-						Assert.False(true, "Expected error to happen during this Between operation, but it didn't happen :-(");
-					}
-					catch (SmugglerException inner)
-					{
-						lastEtag = inner.LastEtag;
-					}
+                    Etag lastEtag = Etag.InvalidEtag;
+                    try
+                    {
+                        await smugglerApi.Between(options);
+                        Assert.False(true, "Expected error to happen during this Between operation, but it didn't happen :-(");
+                    }
+                    catch (SmugglerException inner)
+                    {
+                        lastEtag = inner.LastEtag;
+                    }
 
-					Assert.NotEqual(Etag.InvalidEtag, lastEtag);
+                    Assert.NotEqual(Etag.InvalidEtag, lastEtag);
 
-					await smugglerApi.Between(options);
+                    await smugglerApi.Between(options);
 
-					using (var session = store.OpenAsyncSession(DestinationFilesystem))
-					{
-						var files = await session.Commands.BrowseAsync();
-						Assert.Equal(20, files.Count());
-					}
-	            }
-	            finally
-	            {
-		            forwarder.Dispose();
-					server.Dispose();
-	            }
+                    using (var session = store.OpenAsyncSession(DestinationFilesystem))
+                    {
+                        var files = await session.Commands.BrowseAsync();
+                        Assert.Equal(20, files.Count());
+                    }
+                }
+                finally
+                {
+                    forwarder.Dispose();
+                    server.Dispose();
+                }
             }
         }
 

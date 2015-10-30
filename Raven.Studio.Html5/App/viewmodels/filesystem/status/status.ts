@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
 import changesContext = require("common/changesContext");

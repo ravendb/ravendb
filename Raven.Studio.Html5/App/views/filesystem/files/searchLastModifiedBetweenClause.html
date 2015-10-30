@@ -1,4 +1,4 @@
-﻿<div class="messageBox" tabindex="-1">
+<div class="messageBox" tabindex="-1">
 
     <form class="form-horizontal" data-bind="submit: applyFilter" style="width: 450px">
         <div class="modal-header">
@@ -10,25 +10,25 @@
         <div class="modal-body">
             <div class="form-group">
                 <label class="col-sm-4 control-label">Between: </label>
-	            <div class="col-sm-8">
-					<div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate' }">
-						<input type="text" class="form-control" data-bind="value: inputs[0]" />
-						<span class="input-group-addon">
-							<span class="fa fa-calendar"></span>
-						</span>
-					</div>
-	            </div>
+                <div class="col-sm-8">
+                    <div class="input-group date" id="fromDate" data-bind="datePicker: fromDate, datepickerOptions: { endDateElement: 'toDate' }">
+                        <input type="text" class="form-control" data-bind="value: inputs[0]" />
+                        <span class="input-group-addon">
+                            <span class="fa fa-calendar"></span>
+                        </span>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label class="col-sm-4 control-label"> and: </label>
-	            <div class="col-sm-8">
-					<div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate' }">
-						<input type="text" class="form-control" data-bind="value: inputs[1]" />
-						<span class="input-group-addon">
-							<span class="fa fa-calendar"></span>
-						</span>
-					</div>
-	            </div>
+                <div class="col-sm-8">
+                    <div class="input-group date" id="toDate" data-bind="datePicker: toDate, datepickerOptions: { startDateElement: 'fromDate' }">
+                        <input type="text" class="form-control" data-bind="value: inputs[1]" />
+                        <span class="input-group-addon">
+                            <span class="fa fa-calendar"></span>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="modal-footer">

@@ -1,28 +1,28 @@
-﻿<div id="editCounterContainer" tabindex="-1">
+<div id="editCounterContainer" tabindex="-1">
     <!-- We use a container with a tab index so that we can capture keyboard events, such as CTRL+S. -->
     <ul class="breadcrumb">
-	    <li>
-		    <h3>
-			    <a href="#resources">
-				    Counters
-			    </a>
-		    </h3>
-	    </li>
-		<li>
-			<a href="#" data-bind="text: groupName, attr: { href: groupLink }"></a>
-		</li>
-		<li class="active">
-			<span data-bind="text: counterName"></span>
-		</li>
+        <li>
+            <h3>
+                <a href="#resources">
+                    Counters
+                </a>
+            </h3>
+        </li>
+        <li>
+            <a href="#" data-bind="text: groupName, attr: { href: groupLink }"></a>
+        </li>
+        <li class="active">
+            <span data-bind="text: counterName"></span>
+        </li>
     </ul>
 
     <div class="btn-toolbar">
-	    <div class="btn-group">
-			<button type="button" class="btn btn-default" data-bind="click: refresh" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
-			<button type="button" class="btn btn-default" data-bind="click: change" title="Change Counter Value"><i class="fa fa-wrench"></i></button>
-			<button type="button" class="btn btn-default" data-bind="click: reset" title="Reset Counter"><i class="fa fa-recycle"></i></button>
-			<button type="button" class="btn btn-danger" data-bind="click: deleteCounter" title="Delete Counter (Alt+Shift+Del)"><i class="fa fa-trash-o"></i></button>
-	    </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default" data-bind="click: refresh" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: change" title="Change Counter Value"><i class="fa fa-wrench"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: reset" title="Reset Counter"><i class="fa fa-recycle"></i></button>
+            <button type="button" class="btn btn-danger" data-bind="click: deleteCounter" title="Delete Counter (Alt+Shift+Del)"><i class="fa fa-trash-o"></i></button>
+        </div>
     </div>
     <br/>
     <div class="row">

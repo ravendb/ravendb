@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationAlerts.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 {
     public class ReplicationAlerts : ReplicationBase
     {
-		protected string DumpFile = "dump.ravendump";
+        protected string DumpFile = "dump.ravendump";
 
         public ReplicationAlerts()
         {

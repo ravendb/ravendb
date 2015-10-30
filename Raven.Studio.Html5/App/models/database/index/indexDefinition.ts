@@ -173,7 +173,7 @@ class indexDefinition {
 
         return keys
             .map(fieldName => {
-				var suggestionsEnabled = this.suggestionsOptions && this.suggestionsOptions.indexOf(fieldName) >= 0;
+                var suggestionsEnabled = this.suggestionsOptions && this.suggestionsOptions.indexOf(fieldName) >= 0;
                 return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestionsEnabled, this.termVectors[fieldName], this.fields());
             });        
     }

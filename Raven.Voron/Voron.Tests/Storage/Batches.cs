@@ -1,4 +1,4 @@
-﻿using Voron.Util;
+using Voron.Util;
 
 namespace Voron.Tests.Storage
 {
@@ -376,7 +376,7 @@ namespace Voron.Tests.Storage
             }
             catch (AggregateException e)
             {
-				Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
+                Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
 
                 using (var tx = Env.NewTransaction(TransactionFlags.Read))
                 {
@@ -411,11 +411,11 @@ namespace Voron.Tests.Storage
             var disposable = Env.Writer.StopWrites(); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
 
             var tasks = new[]
-			{
-				Task.Run(() => Env.Writer.Write(batch1)),
-				Task.Run(() => Env.Writer.Write(batch2)),
-				Task.Run(() => Env.Writer.Write(batch3))
-			};
+            {
+                Task.Run(() => Env.Writer.Write(batch1)),
+                Task.Run(() => Env.Writer.Write(batch2)),
+                Task.Run(() => Env.Writer.Write(batch3))
+            };
 
             disposable.Dispose();
 
@@ -426,7 +426,7 @@ namespace Voron.Tests.Storage
             }
             catch (AggregateException e)
             {
-				Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
+                Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))

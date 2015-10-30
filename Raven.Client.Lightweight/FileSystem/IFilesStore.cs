@@ -1,4 +1,4 @@
-﻿using Raven.Client.Connection;
+using Raven.Client.Connection;
 using System.Collections.Specialized;
 
 namespace Raven.Client.FileSystem

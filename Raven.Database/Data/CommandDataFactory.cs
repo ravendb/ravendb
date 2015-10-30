@@ -23,59 +23,59 @@ namespace Raven.Database.Data
         };
 
     public static ICommandData CreateCommand(RavenJObject jsonCommand)
-		{
-			var key = jsonCommand["Key"].Value<string>();
-			switch (jsonCommand.Value<string>("Method"))
-			{
-				case "PUT":
-					var putCommand = new PutCommandData
-					{
-						Key = key,
-						Etag = GetEtagFromCommand(jsonCommand),
-						Document = jsonCommand["Document"] as RavenJObject,
-						Metadata = jsonCommand["Metadata"] as RavenJObject,
-					};
-			        ValidateMetadataKeys(putCommand.Metadata);
-			        return putCommand;
-				case "DELETE":
-					return new DeleteCommandData
-					{
-						Key = key,
-						Etag = GetEtagFromCommand(jsonCommand),
-					};
-				case "PATCH":
-					return new PatchCommandData
-					{
-						Key = key,
-						Etag = GetEtagFromCommand(jsonCommand),
-						Metadata = jsonCommand["Metadata"] as RavenJObject,
-						Patches = jsonCommand
-							.Value<RavenJArray>("Patches")
-							.Cast<RavenJObject>()
-							.Select(PatchRequest.FromJson)
-							.ToArray(),
-						PatchesIfMissing = jsonCommand["PatchesIfMissing"] == null ? null : jsonCommand
-							.Value<RavenJArray>("PatchesIfMissing")
-							.Cast<RavenJObject>()
-							.Select(PatchRequest.FromJson)
-							.ToArray(),
-						SkipPatchIfEtagMismatch = jsonCommand.ContainsKey("SkipPatchIfEtagMismatch") && jsonCommand.Value<bool>("SkipPatchIfEtagMismatch")
-					};
-				case "EVAL":
-					var debug = jsonCommand["DebugMode"].Value<bool>();
-					return new ScriptedPatchCommandData
-					{
-						Key = key,
-						Metadata = jsonCommand["Metadata"] as RavenJObject,
-						Etag = GetEtagFromCommand(jsonCommand),
-						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
-						PatchIfMissing = jsonCommand["PatchIfMissing"] == null ? null : ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("PatchIfMissing")),
-						DebugMode = debug
-					};
-				default:
-					throw new ArgumentException("Batching only supports PUT, PATCH, EVAL and DELETE.");
-			}
-		}
+        {
+            var key = jsonCommand["Key"].Value<string>();
+            switch (jsonCommand.Value<string>("Method"))
+            {
+                case "PUT":
+                    var putCommand = new PutCommandData
+                    {
+                        Key = key,
+                        Etag = GetEtagFromCommand(jsonCommand),
+                        Document = jsonCommand["Document"] as RavenJObject,
+                        Metadata = jsonCommand["Metadata"] as RavenJObject,
+                    };
+                    ValidateMetadataKeys(putCommand.Metadata);
+                    return putCommand;
+                case "DELETE":
+                    return new DeleteCommandData
+                    {
+                        Key = key,
+                        Etag = GetEtagFromCommand(jsonCommand),
+                    };
+                case "PATCH":
+                    return new PatchCommandData
+                    {
+                        Key = key,
+                        Etag = GetEtagFromCommand(jsonCommand),
+                        Metadata = jsonCommand["Metadata"] as RavenJObject,
+                        Patches = jsonCommand
+                            .Value<RavenJArray>("Patches")
+                            .Cast<RavenJObject>()
+                            .Select(PatchRequest.FromJson)
+                            .ToArray(),
+                        PatchesIfMissing = jsonCommand["PatchesIfMissing"] == null ? null : jsonCommand
+                            .Value<RavenJArray>("PatchesIfMissing")
+                            .Cast<RavenJObject>()
+                            .Select(PatchRequest.FromJson)
+                            .ToArray(),
+                        SkipPatchIfEtagMismatch = jsonCommand.ContainsKey("SkipPatchIfEtagMismatch") && jsonCommand.Value<bool>("SkipPatchIfEtagMismatch")
+                    };
+                case "EVAL":
+                    var debug = jsonCommand["DebugMode"].Value<bool>();
+                    return new ScriptedPatchCommandData
+                    {
+                        Key = key,
+                        Metadata = jsonCommand["Metadata"] as RavenJObject,
+                        Etag = GetEtagFromCommand(jsonCommand),
+                        Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
+                        PatchIfMissing = jsonCommand["PatchIfMissing"] == null ? null : ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("PatchIfMissing")),
+                        DebugMode = debug
+                    };
+                default:
+                    throw new ArgumentException("Batching only supports PUT, PATCH, EVAL and DELETE.");
+            }
+        }
 
         private static void ValidateMetadataKeys(RavenJObject metaDataProps)
         {
@@ -99,8 +99,8 @@ namespace Raven.Database.Data
         }
 
         private static Etag GetEtagFromCommand(RavenJObject jsonCommand)
-		{
-			return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? Etag.Parse(jsonCommand["Etag"].Value<string>()) : null;
-		}
-	}
+        {
+            return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? Etag.Parse(jsonCommand["Etag"].Value<string>()) : null;
+        }
+    }
 }

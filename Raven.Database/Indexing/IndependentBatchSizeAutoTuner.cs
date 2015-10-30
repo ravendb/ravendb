@@ -3,14 +3,14 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
-	public class IndependentBatchSizeAutoTuner : BaseBatchSizeAutoTuner
-	{
+    public class IndependentBatchSizeAutoTuner : BaseBatchSizeAutoTuner
+    {
         public IndependentBatchSizeAutoTuner(WorkContext context, PrefetchingUser user)
             : base(context)
-		{
-		    this.User = user;
+        {
+            this.User = user;
             InstallGauges();
-		}
+        }
 
         public PrefetchingUser User { get; set; }
 
@@ -22,34 +22,34 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(IndependentBatchSizeAutoTuner), User + ".CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-		protected override int InitialNumberOfItems
-		{
-			get { return context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch; }
-		}
+        protected override int InitialNumberOfItems
+        {
+            get { return context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch; }
+        }
 
-		protected override int MaxNumberOfItems
-		{
-			get { return context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch; }
-		}
+        protected override int MaxNumberOfItems
+        {
+            get { return context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch; }
+        }
 
-		protected override int CurrentNumberOfItems { get; set; }
-		protected override int LastAmountOfItemsToRemember { get; set; }
+        protected override int CurrentNumberOfItems { get; set; }
+        protected override int LastAmountOfItemsToRemember { get; set; }
 
-		private int lastAmount;
+        private int lastAmount;
 
-		protected override void RecordAmountOfItems(int numberOfItems)
-		{
-			lastAmount = numberOfItems;
-		}
+        protected override void RecordAmountOfItems(int numberOfItems)
+        {
+            lastAmount = numberOfItems;
+        }
 
-		protected override IEnumerable<int> GetLastAmountOfItems()
-		{
-			yield return lastAmount;
-		}
+        protected override IEnumerable<int> GetLastAmountOfItems()
+        {
+            yield return lastAmount;
+        }
 
-		protected override string GetName
-		{
-			get { return "IndependentBatchSizeAutoTuner"; }
-		}
-	}
+        protected override string GetName
+        {
+            get { return "IndependentBatchSizeAutoTuner"; }
+        }
+    }
 }

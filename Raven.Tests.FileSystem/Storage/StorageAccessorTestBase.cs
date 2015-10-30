@@ -1,21 +1,22 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
+
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Infrastructure;
-using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Storage;
 using System;
+using Raven.Database.Extensions;
 using System.Collections.Generic;
+using Raven.Database.FileSystem.Infrastructure;
 using System.Collections.Specialized;
+using Raven.Database.FileSystem.Plugins;
 using System.IO;
+using Raven.Database.FileSystem.Storage;
 using System.Threading;
 
 namespace Raven.Tests.FileSystem.Storage
 {
     public abstract class StorageAccessorTestBase : IDisposable
     {
-		private static int pathCount;
+        private static int pathCount;
 
         private readonly IList<string> pathsToDelete;
 
@@ -26,9 +27,9 @@ namespace Raven.Tests.FileSystem.Storage
             get
             {
                 return new[]
-				{
-					new object[] {"voron"},
-				};
+                {
+                    new object[] {"voron"},
+                };
             }
         }
 
@@ -38,47 +39,47 @@ namespace Raven.Tests.FileSystem.Storage
             storages = new List<ITransactionalStorage>();
         }
 
-		protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
-		{
-			if (prefix != null)
-				prefix = prefix.Replace("<", "").Replace(">", "");
+        protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
+        {
+            if (prefix != null)
+                prefix = prefix.Replace("<", "").Replace(">", "");
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref pathCount)));
-			if (forceCreateDir && Directory.Exists(newDataDir) == false)
-				Directory.CreateDirectory(newDataDir);
-			pathsToDelete.Add(newDataDir);
-			return newDataDir;
-		}
+            var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref pathCount)));
+            if (forceCreateDir && Directory.Exists(newDataDir) == false)
+                Directory.CreateDirectory(newDataDir);
+            pathsToDelete.Add(newDataDir);
+            return newDataDir;
+        }
 
         protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true, string path = null)
         {
             path = path ?? NewDataPath();
 
-			var configuration = new InMemoryRavenConfiguration
-			{
-				FileSystem =
-				{
-					DataDirectory = path
-				},
-				Settings = new NameValueCollection
-				           {
-					           { Constants.RunInMemory, runInMemory.ToString() }
-				           }
-			};
+            var configuration = new InMemoryRavenConfiguration
+            {
+                FileSystem =
+                {
+                    DataDirectory = path
+                },
+                Settings = new NameValueCollection
+                           {
+                               { Constants.RunInMemory, runInMemory.ToString() }
+                           }
+            };
 
             ITransactionalStorage storage;
 
             switch (requestedStorage)
             {
                 case "voron":
-					storage = new Raven.Database.FileSystem.Storage.Voron.TransactionalStorage(configuration);
+                    storage = new Raven.Database.FileSystem.Storage.Voron.TransactionalStorage(configuration);
                     break;
                 default:
                     throw new NotSupportedException(string.Format("Given storage type ({0}) is not supported.", requestedStorage));
             }
 
             storages.Add(storage);
-			storage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
+            storage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
 
             return storage;
         }

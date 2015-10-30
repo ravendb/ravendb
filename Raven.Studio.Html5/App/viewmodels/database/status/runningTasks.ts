@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import moment = require("moment");
@@ -15,8 +15,8 @@ class runningTasks extends viewModelBase {
     static TypeRestoreFilesystem = "RestoreFilesystem";
     static TypeCompactDatabase = "CompactDatabase";
     static TypeCompactFilesystem = "CompactFilesystem";
-	static TypeIoTest = "IoTest";
-	static TypeNewIndexPrecomputedBatch = "NewIndexPrecomputedBatch";
+    static TypeIoTest = "IoTest";
+    static TypeNewIndexPrecomputedBatch = "NewIndexPrecomputedBatch";
     
     allTasks = ko.observableArray<runningTaskDto>();
     filterType = ko.observable<string>(null);
@@ -32,8 +32,8 @@ class runningTasks extends viewModelBase {
     restoreFilesystemCount: KnockoutComputed<number>;
     compactDatabaseCount: KnockoutComputed<number>;
     compactFilesystemCount: KnockoutComputed<number>;
-	ioTestCount: KnockoutComputed<number>;
-	newIndexPrecomputedBatchCount: KnockoutComputed<number>;
+    ioTestCount: KnockoutComputed<number>;
+    newIndexPrecomputedBatchCount: KnockoutComputed<number>;
 
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
@@ -56,8 +56,8 @@ class runningTasks extends viewModelBase {
         this.restoreFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreFilesystem));
         this.compactDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactDatabase));
         this.compactFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactFilesystem));
-		this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
-		this.newIndexPrecomputedBatchCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeNewIndexPrecomputedBatch));
+        this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
+        this.newIndexPrecomputedBatchCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeNewIndexPrecomputedBatch));
 
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchTasks());
@@ -100,14 +100,14 @@ class runningTasks extends viewModelBase {
     fetchTasks(): JQueryPromise<runningTaskDto[]> {
         var db = this.activeDatabase();
         if (db) {
-			var deferred = $.Deferred();
+            var deferred = $.Deferred();
             new getRunningTasksCommand(db)
                 .execute()
                 .done((results: runningTaskDto[]) => {
-		            this.processRunningTasksResults(results);
-					deferred.resolve(results);
-	            });
-			return deferred;
+                    this.processRunningTasksResults(results);
+                    deferred.resolve(results);
+                });
+            return deferred;
         }
 
         return null;
@@ -257,11 +257,11 @@ class runningTasks extends viewModelBase {
 
     setFilterTypeIoTest() {
         this.filterType(runningTasks.TypeIoTest);
-	}
+    }
 
-	setFilterTypeNewIndexPrecomputedBatch() {
-		this.filterType(runningTasks.TypeNewIndexPrecomputedBatch);
-	}
+    setFilterTypeNewIndexPrecomputedBatch() {
+        this.filterType(runningTasks.TypeNewIndexPrecomputedBatch);
+    }
 
     updateCurrentNowTime() {
         this.now(moment());

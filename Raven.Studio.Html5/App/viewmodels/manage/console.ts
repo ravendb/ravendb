@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
@@ -13,22 +13,22 @@ class consoleJs extends viewModelBase {
     resourcesNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
-	responseText = ko.observable<string>();
-	script = ko.observable<string>();
-	results = ko.observable<string>();
+    responseText = ko.observable<string>();
+    script = ko.observable<string>();
+    results = ko.observable<string>();
 
-	predefinedSamples = ko.observableArray<consoleJsSampleDto>([]);
+    predefinedSamples = ko.observableArray<consoleJsSampleDto>([]);
 
-	constructor() {
-		super();
+    constructor() {
+        super();
 
-	    this.predefinedSamples.push({ Name: "Get database stats", Code: "return database.Statistics;" });
+        this.predefinedSamples.push({ Name: "Get database stats", Code: "return database.Statistics;" });
         this.predefinedSamples.push({
             Name: "Get configuration values", Code: "return {" +
                 "\n	RaiseBatchLimit : database.Configuration.AvailableMemoryForRaisingBatchSizeLimit," +
                 "\n	ReduceBatchLimit: database.Configuration.MaxNumberOfItemsToReduceInSingleBatch" +
                 "\n};" });
-		this.predefinedSamples.push({
+        this.predefinedSamples.push({
             Name: "Change configuration on the fly", Code: "database.Configuration.DisableDocumentPreFetching = true;" +
                 "\ndatabase.Configuration.MaxNumberOfItemsToPreFetch = 1024;" +
             "\ndatabase.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromMinutes(13);"
@@ -41,7 +41,7 @@ class consoleJs extends viewModelBase {
             "\n\ndatabase.Documents.Put('doc/1', null, doc, metadata, null);" });
 
 
-		aceEditorBindingHandler.install();
+        aceEditorBindingHandler.install();
         this.resourcesNames = ko.computed(() => shell.databases().map((rs: resource) => rs.name));
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
@@ -67,19 +67,19 @@ class consoleJs extends viewModelBase {
         $('form :input[name="filesystemName"]').on("keypress",(e) => e.which != 13);
     }
 
-	executeJs() {
-		this.isBusy(true);
-		new adminJsScriptCommand(this.script(), this.resourceName())
-			.execute()
-			.done((result) => {
-				this.results(JSON.stringify(result, null, 4));
-			})
-			.always(() => { this.isBusy(false); });
-	}
+    executeJs() {
+        this.isBusy(true);
+        new adminJsScriptCommand(this.script(), this.resourceName())
+            .execute()
+            .done((result) => {
+                this.results(JSON.stringify(result, null, 4));
+            })
+            .always(() => { this.isBusy(false); });
+    }
 
-	fillWithSample(sample: consoleJsSampleDto) {
-		this.script(sample.Code);
-	}
+    fillWithSample(sample: consoleJsSampleDto) {
+        this.script(sample.Code);
+    }
 }
 
 export = consoleJs;

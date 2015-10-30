@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -8,10 +8,10 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
 {
-	internal abstract class BaseRestoreOperation
+    internal abstract class BaseRestoreOperation
     {
-	    private const string IndexesSubfolder = "Indexes";
-	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private const string IndexesSubfolder = "Indexes";
+        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         protected readonly Action<string> output;
 
@@ -26,7 +26,7 @@ namespace Raven.Database.Storage
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;
             databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
-			indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
+            indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
             journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
             Configuration = configuration;
             this.output = output;			
@@ -47,7 +47,7 @@ namespace Raven.Database.Storage
             {
                 output("Error: Database location directory is not empty. Point to non-existing or empty directory.");
                 output("Error: Restore Canceled");
-				throw new IOException("Database location directory is not empty. Point to non-existing or empty directory.");
+                throw new IOException("Database location directory is not empty. Point to non-existing or empty directory.");
             }
 
             if (Directory.Exists(databaseLocation) == false)
@@ -60,9 +60,9 @@ namespace Raven.Database.Storage
                 Directory.CreateDirectory(journalLocation);
         }
 
-	    protected abstract bool IsValidBackup(string backupFilename);
+        protected abstract bool IsValidBackup(string backupFilename);
 
-	    protected string BackupIndexesPath()
+        protected string BackupIndexesPath()
         {
             return Path.Combine(backupLocation, "Indexes");
         }
@@ -104,36 +104,36 @@ namespace Raven.Database.Storage
                     indexName, Environment.NewLine, ex));
         }
 
-	    protected void CopyIndexDefinitions()
-	    {
-			var directories = Directory.GetDirectories(backupLocation, "Inc*")
-												  .OrderByDescending(dir => dir)
-												  .ToList();
+        protected void CopyIndexDefinitions()
+        {
+            var directories = Directory.GetDirectories(backupLocation, "Inc*")
+                                                  .OrderByDescending(dir => dir)
+                                                  .ToList();
 
-			string indexDefinitionsBackupFolder;
-			string indexDefinitionsDestinationFolder = Path.Combine(databaseLocation, "IndexDefinitions");
-			if (directories.Count == 0)
-			    indexDefinitionsBackupFolder = Path.Combine(backupLocation, "IndexDefinitions");
-		    else
-		    {
-				var latestIncrementalBackupDirectory = directories.First();
-			    if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions")) == false)
-			    {
-				    output("Failed to restore index definitions. It seems the index definitions are missing from backup folder.");
-					return;
-			    }
-				indexDefinitionsBackupFolder = Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions");
-		    }
+            string indexDefinitionsBackupFolder;
+            string indexDefinitionsDestinationFolder = Path.Combine(databaseLocation, "IndexDefinitions");
+            if (directories.Count == 0)
+                indexDefinitionsBackupFolder = Path.Combine(backupLocation, "IndexDefinitions");
+            else
+            {
+                var latestIncrementalBackupDirectory = directories.First();
+                if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions")) == false)
+                {
+                    output("Failed to restore index definitions. It seems the index definitions are missing from backup folder.");
+                    return;
+                }
+                indexDefinitionsBackupFolder = Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions");
+            }
 
-			try
-			{
-				CopyAll(new DirectoryInfo(indexDefinitionsBackupFolder), new DirectoryInfo(indexDefinitionsDestinationFolder));
-			}
-			catch (Exception ex)
-			{
-				output("Failed to restore index definitions. This is not supposed to happen. Reason : " + ex);
-			}
-		}
+            try
+            {
+                CopyAll(new DirectoryInfo(indexDefinitionsBackupFolder), new DirectoryInfo(indexDefinitionsDestinationFolder));
+            }
+            catch (Exception ex)
+            {
+                output("Failed to restore index definitions. This is not supposed to happen. Reason : " + ex);
+            }
+        }
 
         protected void CopyIndexes()
         {
@@ -142,7 +142,7 @@ namespace Raven.Database.Storage
                                        .OrderByDescending(dir => dir)
                                        .ToList();
 
-	        if (directories.Count == 0)
+            if (directories.Count == 0)
             {
                 if (Directory.Exists(Path.Combine(backupLocation, IndexesSubfolder)) == false)
                 {
@@ -168,8 +168,8 @@ namespace Raven.Database.Storage
                     }
                     catch (Exception ex)
                     {
-						output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
-						ForceIndexReset(indexPath, indexName, ex);
+                        output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
+                        ForceIndexReset(indexPath, indexName, ex);
                     }
                 }
 
@@ -230,7 +230,7 @@ namespace Raven.Database.Storage
             }
         }
 
-	    protected string BackupFilenamePath(string backupFilename)
+        protected string BackupFilenamePath(string backupFilename)
         {
             var directories = Directory.GetDirectories(backupLocation, "Inc*")
                 .OrderByDescending(dir => dir)

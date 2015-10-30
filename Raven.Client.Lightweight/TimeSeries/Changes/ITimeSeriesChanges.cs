@@ -1,19 +1,19 @@
-﻿using System;
+using System;
 using Raven.Abstractions.TimeSeries.Notifications;
 using Raven.Client.Changes;
 
 namespace Raven.Client.TimeSeries.Changes
 {
-	public interface ITimeSeriesChanges : IConnectableChanges<ITimeSeriesChanges>
+    public interface ITimeSeriesChanges : IConnectableChanges<ITimeSeriesChanges>
     {
-		/// <summary>
-		/// Subscribe to changes for specified type and key only.
-		/// </summary>
-		IObservableWithTask<KeyChangeNotification> ForKey(string type, string key);
+        /// <summary>
+        /// Subscribe to changes for specified type and key only.
+        /// </summary>
+        IObservableWithTask<KeyChangeNotification> ForKey(string type, string key);
 
-		/// <summary>
-		/// Subscribe to all bulk operation changes that belong to a operation with given Id.
-		/// </summary>
-		IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null);
+        /// <summary>
+        /// Subscribe to all bulk operation changes that belong to a operation with given Id.
+        /// </summary>
+        IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null);
     }
 }

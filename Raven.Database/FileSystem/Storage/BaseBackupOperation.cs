@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="BaseBackupOperation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -62,29 +62,29 @@ namespace Raven.Database.FileSystem.Storage
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
                                   backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
-				EnsureBackupDestinationExists();
+                EnsureBackupDestinationExists();
 
                 if (incrementalBackup)
                 {
-					var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
+                    var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
 
-					if (File.Exists(incrementalBackupState))
-					{
-						var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
+                    if (File.Exists(incrementalBackupState))
+                    {
+                        var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
 
-						if (state.ResourceId != filesystem.Storage.Id)
-							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from '{0}' file system.", state.ResourceName));
-					}
-					else
-					{
-						var state = new IncrementalBackupState()
-						{
-							ResourceId = filesystem.Storage.Id,
-							ResourceName = filesystem.Name
-						};
+                        if (state.ResourceId != filesystem.Storage.Id)
+                            throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from '{0}' file system.", state.ResourceName));
+                    }
+                    else
+                    {
+                        var state = new IncrementalBackupState()
+                        {
+                            ResourceId = filesystem.Storage.Id,
+                            ResourceName = filesystem.Name
+                        };
 
-						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
-					}
+                        File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
+                    }
 
                     if (CanPerformIncrementalBackup())
                     {
@@ -143,24 +143,24 @@ namespace Raven.Database.FileSystem.Storage
         /// <returns></returns>
         protected abstract bool CanPerformIncrementalBackup();
 
-		private void EnsureBackupDestinationExists()
-		{
-			if (Directory.Exists(backupDestinationDirectory))
-			{
-				var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
-				try
-				{
-					File.Create(writeTestFile).Dispose();
-				}
-				catch (UnauthorizedAccessException)
-				{
-					throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
-				}
-				IOExtensions.DeleteFile(writeTestFile);
-			}
-			else
-				Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
-		}
+        private void EnsureBackupDestinationExists()
+        {
+            if (Directory.Exists(backupDestinationDirectory))
+            {
+                var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
+                try
+                {
+                    File.Create(writeTestFile).Dispose();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
+                }
+                IOExtensions.DeleteFile(writeTestFile);
+            }
+            else
+                Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
+        }
 
         protected string DirectoryForIncrementalBackup()
         {

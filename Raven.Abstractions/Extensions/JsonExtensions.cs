@@ -20,42 +20,42 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Extensions
 {
-	/// <summary>
-	/// Json extensions 
-	/// </summary>
-	public static class JsonExtensions
-	{
-	    public static RavenJObject ToJObject(object result)
-		{
-			var dynamicJsonObject = result as Linq.IDynamicJsonObject;
-			if (dynamicJsonObject != null)
-				return dynamicJsonObject.Inner;
-			if (result is string || result is ValueType)
-				return new RavenJObject { { "Value", new RavenJValue(result) } };
-			if (result is DynamicNullObject)
-				return null;
-			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
-		}
+    /// <summary>
+    /// Json extensions 
+    /// </summary>
+    public static class JsonExtensions
+    {
+        public static RavenJObject ToJObject(object result)
+        {
+            var dynamicJsonObject = result as Linq.IDynamicJsonObject;
+            if (dynamicJsonObject != null)
+                return dynamicJsonObject.Inner;
+            if (result is string || result is ValueType)
+                return new RavenJObject { { "Value", new RavenJValue(result) } };
+            if (result is DynamicNullObject)
+                return null;
+            return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+        }
 
         public static RavenJArray ToJArray<T>(IEnumerable<T> result)
         {
             return (RavenJArray) RavenJArray.FromObject(result, CreateDefaultJsonSerializer());
         }
 
-		/// <summary>
-		/// Convert a byte array to a RavenJObject
-		/// </summary>
+        /// <summary>
+        /// Convert a byte array to a RavenJObject
+        /// </summary>
         public static RavenJObject ToJObject(this byte[] self)
-		{
+        {
             using (var stream = new MemoryStream(self))
                 return ToJObject(stream);
-		}
+        }
 
-		/// <summary>
-		/// Convert a byte array to a RavenJObject
-		/// </summary>
-		public static RavenJObject ToJObject(this Stream self)
-		{
+        /// <summary>
+        /// Convert a byte array to a RavenJObject
+        /// </summary>
+        public static RavenJObject ToJObject(this Stream self)
+        {
             var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
             if (IsJson(streamWithCachedHeader))
             {
@@ -64,26 +64,26 @@ namespace Raven.Abstractions.Extensions
                 return RavenJObject.Load(jsonReader);
             }
 
-		    return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
+            return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
             {
-				DateTimeKindHandling = DateTimeKind.Utc,
-			});
-		}
+                DateTimeKindHandling = DateTimeKind.Utc,
+            });
+        }
 
-		/// <summary>
-		/// Convert a RavenJToken to a byte array
-		/// </summary>
-		public static void WriteTo(this RavenJToken self, Stream stream)
-		{
+        /// <summary>
+        /// Convert a RavenJToken to a byte array
+        /// </summary>
+        public static void WriteTo(this RavenJToken self, Stream stream)
+        {
             using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 1024, true))
             using (var jsonWriter = new JsonTextWriter(streamWriter))
-			{
+            {
                 jsonWriter.Formatting = Formatting.None;
                 jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
                 jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
                 self.WriteTo(jsonWriter, Default.Converters);
-		    }
+            }
         }
 
         public static IEnumerable<string> EnumerateJsonObjects(this StreamReader input, char openChar = '{', char closeChar = '}')
@@ -119,23 +119,23 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-	    /// <summary>
-		/// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
-		/// </summary>
+        /// <summary>
+        /// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
+        /// </summary>
         public static T JsonDeserialization<T>(this byte[] self)
-		{
-			return (T)CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
-		}
+        {
+            return (T)CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
+        }
 
-		/// <summary>
-		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
-		/// </summary>
-		public static T JsonDeserialization<T>(this RavenJToken self)
-		{
-			return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
-		}
-		
-		/// <summary>
+        /// <summary>
+        /// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+        /// </summary>
+        public static T JsonDeserialization<T>(this RavenJToken self)
+        {
+            return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+        }
+        
+        /// <summary>
         /// Deserialize a <param name="self"/> to a list of instances of<typeparam name="T"/>
         /// </summary>
         public static T[] JsonDeserialization<T>(this RavenJArray self)
@@ -145,85 +145,85 @@ namespace Raven.Abstractions.Extensions
         }
 
         /// <summary>
-		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
-		/// </summary>
-		public static T JsonDeserialization<T>(this StreamReader self)
-		{
-			return CreateDefaultJsonSerializer().Deserialize<T>(self);
-		}
-		
-		/// <summary>
+        /// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+        /// </summary>
+        public static T JsonDeserialization<T>(this StreamReader self)
+        {
+            return CreateDefaultJsonSerializer().Deserialize<T>(self);
+        }
+        
+        /// <summary>
         /// Deserialize a <param name="stream"/> to an instance of<typeparam name="T"/>
-		/// </summary>
-		public static T JsonDeserialization<T>(this Stream stream)
-		{
-			using (var reader = new StreamReader(stream))
-			{
-				return reader.JsonDeserialization<T>();
-			}
-		}
+        /// </summary>
+        public static T JsonDeserialization<T>(this Stream stream)
+        {
+            using (var reader = new StreamReader(stream))
+            {
+                return reader.JsonDeserialization<T>();
+            }
+        }
 
-		public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
-		{
-			return (T)self.Deserialize(reader, typeof(T));
-		}
+        public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
+        {
+            return (T)self.Deserialize(reader, typeof(T));
+        }
 
-		private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
-		{
-			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-		};
+        private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
+        {
+            DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+        };
 
-		private class DefaultServerContractResolver : DefaultContractResolver
-		{
+        private class DefaultServerContractResolver : DefaultContractResolver
+        {
             public DefaultServerContractResolver(bool shareCache)
                 : base(shareCache)
-			{
-			}
+            {
+            }
 
-			protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
-			{
-				var serializableMembers = base.GetSerializableMembers(objectType);
-				foreach (var toRemove in serializableMembers
-					.Where(MembersToFilterOut)
-					.ToArray())
-				{
-					serializableMembers.Remove(toRemove);
-				}
-				return serializableMembers;
-			}
+            protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
+            {
+                var serializableMembers = base.GetSerializableMembers(objectType);
+                foreach (var toRemove in serializableMembers
+                    .Where(MembersToFilterOut)
+                    .ToArray())
+                {
+                    serializableMembers.Remove(toRemove);
+                }
+                return serializableMembers;
+            }
 
-			private static bool MembersToFilterOut(MemberInfo info)
-			{
-				if (info is EventInfo)
-					return true;
-				var fieldInfo = info as FieldInfo;
-				if (fieldInfo != null && !fieldInfo.IsPublic)
-					return true;
-				return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
-			} 
-		}
+            private static bool MembersToFilterOut(MemberInfo info)
+            {
+                if (info is EventInfo)
+                    return true;
+                var fieldInfo = info as FieldInfo;
+                if (fieldInfo != null && !fieldInfo.IsPublic)
+                    return true;
+                return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
+            } 
+        }
 
-		public static JsonSerializer CreateDefaultJsonSerializer()
-		{
-			var jsonSerializer = new JsonSerializer
-			{
-				DateParseHandling = DateParseHandling.None,
-				ContractResolver = contractResolver,
+        public static JsonSerializer CreateDefaultJsonSerializer()
+        {
+            var jsonSerializer = new JsonSerializer
+            {
+                DateParseHandling = DateParseHandling.None,
+                ContractResolver = contractResolver,
                 Converters = Default.Converters
-			};
+            };
 
-			return jsonSerializer;
-		}
+            return jsonSerializer;
+        }
 
-	    private static bool IsJson(StreamWithCachedHeader stream)
-	    {
+        private static bool IsJson(StreamWithCachedHeader stream)
+        {
             // in BSON first four bytes are int32 which represents content length
             // as result we can't distigush between json and bson based on first 4 bytes
             // in bson 5-th byte is value type
-	        var bsonType = stream.Header[4];
-	        return stream.ActualHeaderSize < 5 || bsonType > (byte)BsonType.RavenDBCustomFloat;
-	    }
-	}
+            var bsonType = stream.Header[4];
+            return stream.ActualHeaderSize < 5 || bsonType > (byte)BsonType.RavenDBCustomFloat;
+        }
+    }
 
     internal class StreamWithCachedHeader : Stream
     {

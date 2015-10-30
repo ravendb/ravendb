@@ -1,10 +1,10 @@
-﻿namespace Raven.Client.UniqueConstraints
+namespace Raven.Client.UniqueConstraints
 {
-	using System;
+    using System;
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
-	public class UniqueConstraintAttribute : Attribute
-	{
+    public class UniqueConstraintAttribute : Attribute
+    {
         public bool CaseInsensitive { get; set; }
-	}
+    }
 }

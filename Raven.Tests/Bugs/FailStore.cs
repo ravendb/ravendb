@@ -10,16 +10,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class FailStore : IDocumentStoreListener
-	{
-		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)
-		{
-			throw new NotImplementedException();
-		}
+    public class FailStore : IDocumentStoreListener
+    {
+        public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)
+        {
+            throw new NotImplementedException();
+        }
 
-		public void AfterStore(string key, object entityInstance, RavenJObject metadata)
-		{
-			throw new NotImplementedException();
-		}
-	}
+        public void AfterStore(string key, object entityInstance, RavenJObject metadata)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

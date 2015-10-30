@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3268_ConcurrencyChecks.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,350 +14,350 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Issues
 {
-	public class RavenDB_3268_ConcurrencyChecks : RavenFilesTestBase
-	{
-		[Theory]
+    public class RavenDB_3268_ConcurrencyChecks : RavenFilesTestBase
+    {
+        [Theory]
         [PropertyData("Storages")]
-		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true;
+        public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnMetadataUpdate(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
 
-					session.RegisterUpload("test.file", new MemoryStream());
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file2 = await otherSession.LoadFileAsync("test.file");
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        var file2 = await otherSession.LoadFileAsync("test.file");
 
-						file2.Metadata.Add("New", "Record");
+                        file2.Metadata.Add("New", "Record");
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					var file = await session.LoadFileAsync("test.file");
+                    var file = await session.LoadFileAsync("test.file");
 
-					file.Metadata.Add("New2", "Record2");
+                    file.Metadata.Add("New2", "Record2");
 
-					try
-					{
-						await session.SaveChangesAsync();
+                    try
+                    {
+                        await session.SaveChangesAsync();
 
-						Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
-					}
-					catch (ConcurrencyException ex)
-					{
-						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+                        Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
+                    }
+                    catch (ConcurrencyException ex)
+                    {
+                        Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
 
-						Assert.NotNull(ex.ExpectedETag);
-						Assert.NotNull(ex.ActualETag);
-					}	
-				}
-			}
-		}
+                        Assert.NotNull(ex.ExpectedETag);
+                        Assert.NotNull(ex.ActualETag);
+                    }	
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnMetadataUpdate(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					session.RegisterUpload("test.file", new MemoryStream());
+        public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnMetadataUpdate(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
-				}
+                    await session.SaveChangesAsync();
+                }
 
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
 
-					var file = await session.LoadFileAsync("test.file");
+                    var file = await session.LoadFileAsync("test.file");
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file2 = await otherSession.LoadFileAsync("test.file");
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        var file2 = await otherSession.LoadFileAsync("test.file");
 
-						file2.Metadata.Add("New", "Record");
+                        file2.Metadata.Add("New", "Record");
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					file.Metadata.Add("New2", "Record2");
+                    file.Metadata.Add("New2", "Record2");
 
-					try
-					{
-						await session.SaveChangesAsync();
-					}
-					catch (Exception ex)
-					{
-						Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
-					}
+                    try
+                    {
+                        await session.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
+                    }
 
-					var metadata = await session.Commands.GetMetadataForAsync("test.file");
+                    var metadata = await session.Commands.GetMetadataForAsync("test.file");
 
-					Assert.Equal("Record2", metadata["New2"]);
-					Assert.DoesNotContain("New", metadata.Keys);
-				}
-			}
-		}
+                    Assert.Equal("Record2", metadata["New2"]);
+                    Assert.DoesNotContain("New", metadata.Keys);
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnContentUpdate(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true;
+        public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnContentUpdate(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
 
-					session.RegisterUpload("test.file", new MemoryStream());
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						session.RegisterUpload("test.file", new MemoryStream());
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        session.RegisterUpload("test.file", new MemoryStream());
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					var file = await session.LoadFileAsync("test.file");
+                    var file = await session.LoadFileAsync("test.file");
 
-					session.RegisterUpload(file, new MemoryStream());
+                    session.RegisterUpload(file, new MemoryStream());
 
-					try
-					{
-						await session.SaveChangesAsync();
+                    try
+                    {
+                        await session.SaveChangesAsync();
 
-						Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
-					}
-					catch (ConcurrencyException ex)
-					{
-						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+                        Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
+                    }
+                    catch (ConcurrencyException ex)
+                    {
+                        Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
 
-						Assert.NotNull(ex.ExpectedETag);
-						Assert.NotNull(ex.ActualETag);
-					}
-				}
-			}
-		}
+                        Assert.NotNull(ex.ExpectedETag);
+                        Assert.NotNull(ex.ActualETag);
+                    }
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnContentUpdate(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
+        public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnContentUpdate(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
 
-					session.RegisterUpload("test.file", CreateUniformFileStream(128, 'x'));
+                    session.RegisterUpload("test.file", CreateUniformFileStream(128, 'x'));
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						session.RegisterUpload("test.file", CreateUniformFileStream(128, 'y'));
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        session.RegisterUpload("test.file", CreateUniformFileStream(128, 'y'));
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					var file = await session.LoadFileAsync("test.file");
+                    var file = await session.LoadFileAsync("test.file");
 
-					session.RegisterUpload(file, CreateUniformFileStream(128, 'z'));
+                    session.RegisterUpload(file, CreateUniformFileStream(128, 'z'));
 
-					try
-					{
-						await session.SaveChangesAsync();
-					}
-					catch (Exception ex)
-					{
-						Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
-					}
+                    try
+                    {
+                        await session.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
+                    }
 
-					var fileContent = await session.Commands.DownloadAsync("test.file");
+                    var fileContent = await session.Commands.DownloadAsync("test.file");
 
-					Assert.Equal(CreateUniformFileStream(128, 'z').GetHashAsHex(), fileContent.GetHashAsHex());
-				}
-			}
-		}
+                    Assert.Equal(CreateUniformFileStream(128, 'z').GetHashAsHex(), fileContent.GetHashAsHex());
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnRename(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true;
+        public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnRename(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
 
-					session.RegisterUpload("test.file", new MemoryStream());
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file = await otherSession.LoadFileAsync("test.file");
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        var file = await otherSession.LoadFileAsync("test.file");
 
-						file.Metadata.Add("file", "changed");
+                        file.Metadata.Add("file", "changed");
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					session.RegisterRename("test.file", "new.file");
+                    session.RegisterRename("test.file", "new.file");
 
-					try
-					{
-						await session.SaveChangesAsync();
+                    try
+                    {
+                        await session.SaveChangesAsync();
 
-						Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
-					}
-					catch (ConcurrencyException ex)
-					{
-						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+                        Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
+                    }
+                    catch (ConcurrencyException ex)
+                    {
+                        Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
 
-						Assert.NotNull(ex.ExpectedETag);
-						Assert.NotNull(ex.ActualETag);
-					}
-				}
-			}
-		}
+                        Assert.NotNull(ex.ExpectedETag);
+                        Assert.NotNull(ex.ActualETag);
+                    }
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnRename(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
+        public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnRename(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
 
-					session.RegisterUpload("test.file", CreateUniformFileStream(1));
+                    session.RegisterUpload("test.file", CreateUniformFileStream(1));
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						session.RegisterUpload("test.file", CreateUniformFileStream(128, 'y'));
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        session.RegisterUpload("test.file", CreateUniformFileStream(128, 'y'));
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					var file = await session.LoadFileAsync("test.file");
+                    var file = await session.LoadFileAsync("test.file");
 
-					session.RegisterRename(file, "new.file");
+                    session.RegisterRename(file, "new.file");
 
-					try
-					{
-						await session.SaveChangesAsync();
-					}
-					catch (Exception ex)
-					{
-						Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
-					}
+                    try
+                    {
+                        await session.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
+                    }
 
-					var newFile = await session.Commands.GetMetadataForAsync("new.file");
+                    var newFile = await session.Commands.GetMetadataForAsync("new.file");
 
-					Assert.NotNull(newFile);
-				}
-			}
-		}
+                    Assert.NotNull(newFile);
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnDelete(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
-					session.Advanced.UseOptimisticConcurrency = true;
+        public async Task CanEnableUseOptimisticConcurrency_ShouldThrowOnDelete(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
 
-					session.RegisterUpload("test.file", new MemoryStream());
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file = await otherSession.LoadFileAsync("test.file");
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        var file = await otherSession.LoadFileAsync("test.file");
 
-						file.Metadata.Add("file", "changed");
+                        file.Metadata.Add("file", "changed");
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					session.RegisterFileDeletion("test.file");
+                    session.RegisterFileDeletion("test.file");
 
-					try
-					{
-						await session.SaveChangesAsync();
+                    try
+                    {
+                        await session.SaveChangesAsync();
 
-						Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
-					}
-					catch (ConcurrencyException ex)
-					{
-						Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
+                        Assert.False(true, "Expected to throw ConcurrencyException while it didn't throw it");
+                    }
+                    catch (ConcurrencyException ex)
+                    {
+                        Assert.Equal("Operation attempted on file '/test.file' using a non current etag", ex.Message);
 
-						Assert.NotNull(ex.ExpectedETag);
-						Assert.NotNull(ex.ActualETag);
-					}
-				}
-			}
-		}
+                        Assert.NotNull(ex.ExpectedETag);
+                        Assert.NotNull(ex.ActualETag);
+                    }
+                }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnDelete(string storage)
-		{
-			using (var store = NewStore(requestedStorage: storage))
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					Assert.False(session.Advanced.UseOptimisticConcurrency);
+        public async Task OptimisticConcurrencyDisabledByDefault_ShouldNotThrowOnDelete(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
 
-					session.RegisterUpload("test.file", new MemoryStream());
+                    session.RegisterUpload("test.file", new MemoryStream());
 
-					await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-					using (var otherSession = store.OpenAsyncSession())
-					{
-						var file = await otherSession.LoadFileAsync("test.file");
+                    using (var otherSession = store.OpenAsyncSession())
+                    {
+                        var file = await otherSession.LoadFileAsync("test.file");
 
-						file.Metadata.Add("file", "changed");
+                        file.Metadata.Add("file", "changed");
 
-						await otherSession.SaveChangesAsync();
-					}
+                        await otherSession.SaveChangesAsync();
+                    }
 
-					session.RegisterFileDeletion("test.file");
+                    session.RegisterFileDeletion("test.file");
 
-					try
-					{
-						await session.SaveChangesAsync();
-					}
-					catch (Exception ex)
-					{
-						Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
-					}
+                    try
+                    {
+                        await session.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Assert.False(true, "It shouldn't throw the following exception: " + ex.Message);
+                    }
 
-					var deletedFile = await session.Commands.GetMetadataForAsync("test.file");
+                    var deletedFile = await session.Commands.GetMetadataForAsync("test.file");
 
-					Assert.Null(deletedFile);
-				}
-			}
-		}
-	}
+                    Assert.Null(deletedFile);
+                }
+            }
+        }
+    }
 }

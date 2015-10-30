@@ -46,7 +46,7 @@ class document implements documentBase {
 
         if (includeMeta && this.__metadata) {
             var newDocumentMetadata = new documentMetadata(this.__metadata);
-	        var metadataDto: any = newDocumentMetadata.toDto();
+            var metadataDto: any = newDocumentMetadata.toDto();
             dto["@metadata"] = metadataDto;
         }
 

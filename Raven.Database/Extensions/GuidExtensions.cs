@@ -7,14 +7,14 @@ using System;
 
 namespace Raven.Database.Extensions
 {
-	public static class GuidExtensions
-	{
-		public static Guid TransformToGuidWithProperSorting(this byte[] bytes)
-		{
-			if (bytes == null)
-				return Guid.Empty;
+    public static class GuidExtensions
+    {
+        public static Guid TransformToGuidWithProperSorting(this byte[] bytes)
+        {
+            if (bytes == null)
+                return Guid.Empty;
 
-			return new Guid(bytes);
-		}
-	}
+            return new Guid(bytes);
+        }
+    }
 }

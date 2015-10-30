@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="StorageActionsAccessor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -34,16 +34,16 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private readonly TableStorage storage;
 
         private readonly Reference<WriteBatch> writeBatch;
-	    private readonly UuidGenerator uuidGenerator;
-	    private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
+        private readonly UuidGenerator uuidGenerator;
+        private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
 
-	    public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IdGenerator generator, IBufferPool bufferPool, UuidGenerator uuidGenerator, OrderedPartCollection<AbstractFileCodec> fileCodecs)
+        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IdGenerator generator, IBufferPool bufferPool, UuidGenerator uuidGenerator, OrderedPartCollection<AbstractFileCodec> fileCodecs)
             : base(snapshot, generator, bufferPool)
         {
             this.storage = storage;
             this.writeBatch = writeBatch;
-		    this.uuidGenerator = uuidGenerator;
-		    this.fileCodecs = fileCodecs;
+            this.uuidGenerator = uuidGenerator;
+            this.fileCodecs = fileCodecs;
         }
 
         public void Dispose()
@@ -102,18 +102,18 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             storage.Pages.Add(writeBatch.Value, newPageKey, newPage, 0);
 
-			var dataStream = CreateStream();
+            var dataStream = CreateStream();
 
-			using (var finalDataStream = fileCodecs.Aggregate((Stream)new UndisposableStream(dataStream),
-				(current, codec) => codec.EncodePage(current)))
-			{
-				finalDataStream.Write(buffer, 0, size);
-				finalDataStream.Flush();
-			}
+            using (var finalDataStream = fileCodecs.Aggregate((Stream)new UndisposableStream(dataStream),
+                (current, codec) => codec.EncodePage(current)))
+            {
+                finalDataStream.Write(buffer, 0, size);
+                finalDataStream.Flush();
+            }
 
-			dataStream.Position = 0;
+            dataStream.Position = 0;
 
-			pageData.Add(writeBatch.Value, newPageKey, dataStream, 0);
+            pageData.Add(writeBatch.Value, newPageKey, dataStream, 0);
 
             pageByKey.Add(writeBatch.Value, key, newPageKeyString);
 
@@ -122,46 +122,46 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
         {
-			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
             var keyString = CreateKey(filename);
             var keySlice = (Slice) keyString;
 
-			ushort version;
-			var existingFile = LoadJson(storage.Files, keySlice, writeBatch.Value, out version);
+            ushort version;
+            var existingFile = LoadJson(storage.Files, keySlice, writeBatch.Value, out version);
 
-	        var newEtag = uuidGenerator.CreateSequentialUuid();
+            var newEtag = uuidGenerator.CreateSequentialUuid();
 
-			metadata.Remove(RavenConstants.MetadataEtagField);
+            metadata.Remove(RavenConstants.MetadataEtagField);
 
-			var file = new RavenJObject
-					   {
-						   { "name", filename }, 
-						   { "total_size", totalSize }, 
-						   { "uploaded_size", 0 }, 
-						   { "etag", newEtag.ToByteArray() }, 
-						   { "metadata", metadata }
-					   };
+            var file = new RavenJObject
+                       {
+                           { "name", filename }, 
+                           { "total_size", totalSize }, 
+                           { "uploaded_size", 0 }, 
+                           { "etag", newEtag.ToByteArray() }, 
+                           { "metadata", metadata }
+                       };
 
-			storage.Files.Add(writeBatch.Value, keySlice, file, version);
+            storage.Files.Add(writeBatch.Value, keySlice, file, version);
 
-			if (existingFile != null)
-			{
-				filesByEtag.Delete(writeBatch.Value, CreateKey(Etag.Parse(existingFile.Value<byte[]>("etag"))));
-			}
+            if (existingFile != null)
+            {
+                filesByEtag.Delete(writeBatch.Value, CreateKey(Etag.Parse(existingFile.Value<byte[]>("etag"))));
+            }
 
             filesByEtag.Add(writeBatch.Value, (Slice)CreateKey(newEtag), keyString);
 
-	        if (tombstone == false)
-	        {
-		        var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            if (tombstone == false)
+            {
+                var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
                 fileCount.Add(writeBatch.Value, keySlice, keyString);
-	        }
+            }
 
-	        return new FileUpdateResult()
-	        {
-		        Etag = newEtag
-	        };
+            return new FileUpdateResult()
+            {
+                Etag = newEtag
+            };
         }
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
@@ -220,13 +220,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
             if (result == null)
                 return -1;
 
-			using (var stream = result.Reader.AsStream())
-			{
-				using (var decodedStream = fileCodecs.Aggregate(stream, (current, codec) => codec.DecodePage(current)))
-				{
-					return decodedStream.Read(buffer, 0, buffer.Length);
-				}
-			}
+            using (var stream = result.Reader.AsStream())
+            {
+                using (var decodedStream = fileCodecs.Aggregate(stream, (current, codec) => codec.DecodePage(current)))
+                {
+                    return decodedStream.Read(buffer, 0, buffer.Length);
+                }
+            }
         }
 
         public FileHeader ReadFile(string filename)
@@ -281,7 +281,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                                                       {
                                                           Id = usage.Value<int>("page_id"),
                                                           Size = usage.Value<int>("page_size"),
-														  PositionInFile = usage.Value<int>("file_pos")
+                                                          PositionInFile = usage.Value<int>("file_pos")
                                                       });
                         }
                         while (iterator.MoveNext() && fileInformation.Pages.Count < pagesToLoad);
@@ -345,40 +345,40 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-	    public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
-	    {
-			if (string.IsNullOrEmpty(namePrefix))
-				throw new ArgumentNullException("namePrefix");
-			if (start < 0)
-				throw new ArgumentException("must have zero or positive value", "start");
-			if (take < 0)
-				throw new ArgumentException("must have zero or positive value", "take");
+        public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
+        {
+            if (string.IsNullOrEmpty(namePrefix))
+                throw new ArgumentNullException("namePrefix");
+            if (start < 0)
+                throw new ArgumentException("must have zero or positive value", "start");
+            if (take < 0)
+                throw new ArgumentException("must have zero or positive value", "take");
 
-			if (take == 0)
-				yield break;
+            if (take == 0)
+                yield break;
 
-		    using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
-		    {
+            using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
+            {
                 iterator.RequiredPrefix = (Slice)namePrefix.ToLowerInvariant();
-				if (iterator.Seek(iterator.RequiredPrefix) == false || iterator.Skip(start) == false)
-					yield break;
+                if (iterator.Seek(iterator.RequiredPrefix) == false || iterator.Skip(start) == false)
+                    yield break;
 
-				var fetchedCount = 0;
-				do
-				{
-					var key = iterator.CurrentKey.ToString();
-					
-					ushort version;
-					var file = LoadFileByKey(key, out version);
-					
-					fetchedCount++;
+                var fetchedCount = 0;
+                do
+                {
+                    var key = iterator.CurrentKey.ToString();
+                    
+                    ushort version;
+                    var file = LoadFileByKey(key, out version);
+                    
+                    fetchedCount++;
 
-					yield return ConvertToFile(file);
-				} while (iterator.MoveNext() && fetchedCount < take);
-		    }
-	    }
+                    yield return ConvertToFile(file);
+                } while (iterator.MoveNext() && fetchedCount < take);
+            }
+        }
 
-	    public void Delete(string filename)
+        public void Delete(string filename)
         {
             DeleteUsage(filename);
             DeleteFile(filename);
@@ -394,19 +394,19 @@ namespace Raven.Database.FileSystem.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-	        var existingEtag = EnsureDocumentEtagMatch(filename, etag, file);
+            var existingEtag = EnsureDocumentEtagMatch(filename, etag, file);
 
-	        var newEtag = uuidGenerator.CreateSequentialUuid();
+            var newEtag = uuidGenerator.CreateSequentialUuid();
             metadata.Remove(RavenConstants.MetadataEtagField);
 
-			var existingMetadata = (RavenJObject) file["metadata"];
+            var existingMetadata = (RavenJObject) file["metadata"];
 
-			if (!metadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
-				metadata["Content-MD5"] = existingMetadata["Content-MD5"];
-			if (!metadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize) && existingMetadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize))
-				metadata[RavenConstants.FileSystem.RavenFsSize] = existingMetadata[RavenConstants.FileSystem.RavenFsSize];
+            if (!metadata.ContainsKey("Content-MD5") && existingMetadata.ContainsKey("Content-MD5"))
+                metadata["Content-MD5"] = existingMetadata["Content-MD5"];
+            if (!metadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize) && existingMetadata.ContainsKey(RavenConstants.FileSystem.RavenFsSize))
+                metadata[RavenConstants.FileSystem.RavenFsSize] = existingMetadata[RavenConstants.FileSystem.RavenFsSize];
 
-	        file["etag"] = newEtag.ToByteArray();
+            file["etag"] = newEtag.ToByteArray();
             file["metadata"] = metadata;
 
             storage.Files.Add(writeBatch.Value, keySlice, file, version);
@@ -416,11 +416,11 @@ namespace Raven.Database.FileSystem.Storage.Voron
             filesByEtag.Delete(writeBatch.Value, CreateKey(existingEtag));
             filesByEtag.Add(writeBatch.Value, (Slice)CreateKey(newEtag), key);
 
-	        return new FileUpdateResult()
-	        {
-		        PrevEtag = existingEtag,
-		        Etag = newEtag
-	        };
+            return new FileUpdateResult()
+            {
+                PrevEtag = existingEtag,
+                Etag = newEtag
+            };
         }
 
         public void CompleteFileUpload(string filename)
@@ -461,19 +461,19 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-	    public bool IsNested { get; set; }
+        public bool IsNested { get; set; }
 
-	    public int GetFileCount()
+        public int GetFileCount()
         {
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
             return Convert.ToInt32(storage.GetEntriesCount(fileCount));
         }
 
-		public void DecrementFileCount(string nameOfFileThatShouldNotBeCounted)
+        public void DecrementFileCount(string nameOfFileThatShouldNotBeCounted)
         {
-			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
 
-			fileCount.Delete(writeBatch.Value, CreateKey(nameOfFileThatShouldNotBeCounted));
+            fileCount.Delete(writeBatch.Value, CreateKey(nameOfFileThatShouldNotBeCounted));
         }
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
@@ -497,10 +497,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
             file["name"] = rename;
             storage.Files.Add(writeBatch.Value, renameKeySlice, file, renameVersion ?? 0);
 
-			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
-			fileCount.Add(writeBatch.Value, renameKey, renameKey);
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            fileCount.Add(writeBatch.Value, renameKey, renameKey);
 
-			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
             filesByEtag.Add(writeBatch.Value, (Slice)CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), renameKey);
         }
@@ -549,60 +549,60 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-		public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
-		{
-			ushort version;
-			ushort? fileVersion;
-			var targetKey = CreateKey(targetFilename);
+        public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
+        {
+            ushort version;
+            ushort? fileVersion;
+            var targetKey = CreateKey(targetFilename);
 
-			if (storage.Files.Contains(Snapshot, targetKey, writeBatch.Value, out fileVersion))
-				throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' exists.", sourceFilename, targetFilename));
+            if (storage.Files.Contains(Snapshot, targetKey, writeBatch.Value, out fileVersion))
+                throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' exists.", sourceFilename, targetFilename));
 
-			var key = CreateKey(sourceFilename);
-			var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
-			if (file == null)
-				throw new FileNotFoundException("Could not find file: " + sourceFilename);
+            var key = CreateKey(sourceFilename);
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            if (file == null)
+                throw new FileNotFoundException("Could not find file: " + sourceFilename);
 
-			var newEtag = uuidGenerator.CreateSequentialUuid();
-			file["etag"] = newEtag.ToByteArray();
-			file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
+            var newEtag = uuidGenerator.CreateSequentialUuid();
+            file["etag"] = newEtag.ToByteArray();
+            file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
 
-			CopyUsage(sourceFilename, targetFilename, commitPeriodically);
+            CopyUsage(sourceFilename, targetFilename, commitPeriodically);
 
-			file["name"] = targetFilename;
-			storage.Files.Add(writeBatch.Value, targetKey, file, fileVersion ?? 0);
+            file["name"] = targetFilename;
+            storage.Files.Add(writeBatch.Value, targetKey, file, fileVersion ?? 0);
 
-			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
-			fileCount.Add(writeBatch.Value, targetKey, targetKey);
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            fileCount.Add(writeBatch.Value, targetKey, targetKey);
 
-			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
-			filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
-		}
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
+        }
 
-		private void CopyUsage(string sourceFilename, string targetFilename, bool commitPeriodically)
-		{
-			var oldKey = CreateKey(sourceFilename);
-			var newKey = CreateKey(targetFilename);
+        private void CopyUsage(string sourceFilename, string targetFilename, bool commitPeriodically)
+        {
+            var oldKey = CreateKey(sourceFilename);
+            var newKey = CreateKey(targetFilename);
 
-			var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
-			var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
+            var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+            var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
-			using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
-			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return;
+            using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return;
 
-				var count = 0;
+                var count = 0;
 
-				do
-				{
-					var usageId = iterator.CurrentKey.ToString();
-					ushort version;
-					var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
-					var newId = IdGenerator.GetNextIdForTable(storage.Usage);
-					var position = usage.Value<int>("file_pos");
+                do
+                {
+                    var usageId = iterator.CurrentKey.ToString();
+                    ushort version;
+                    var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
+                    var newId = IdGenerator.GetNextIdForTable(storage.Usage);
+                    var position = usage.Value<int>("file_pos");
 
-					var newUsage = new RavenJObject
+                    var newUsage = new RavenJObject
                         {
                             { "id", newId },
                             { "name", targetFilename }, 
@@ -611,22 +611,22 @@ namespace Raven.Database.FileSystem.Storage.Voron
                             { "page_size", usage.Value<int>("page_size") }
                         };
 
-					var newUsageId = CreateKey(newId);
+                    var newUsageId = CreateKey(newId);
 
-					storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
+                    storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
 
-					usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
-					usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
+                    usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
+                    usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
 
-					if (commitPeriodically && count++ > 1000)
-					{
-						PulseTransaction();
-						count = 0;
-					}
-				}
-				while (iterator.MoveNext());
-			}
-		}
+                    if (commitPeriodically && count++ > 1000)
+                    {
+                        PulseTransaction();
+                        count = 0;
+                    }
+                }
+                while (iterator.MoveNext());
+            }
+        }
 
         public RavenJObject GetConfig(string name)
         {
@@ -843,17 +843,17 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                 do
                 {
-					var config = iterator
-							.CreateReaderForCurrent()
-							.AsStream()
-							.ToJObject();
+                    var config = iterator
+                            .CreateReaderForCurrent()
+                            .AsStream()
+                            .ToJObject();
 
-	                var configName = config.Value<string>("name");
+                    var configName = config.Value<string>("name");
 
-					if (configName.StartsWith(prefix) == false)
-						break;
+                    if (configName.StartsWith(prefix) == false)
+                        break;
 
-					if (count < take)
+                    if (count < take)
                     {
                         results.Add(configName);
                     }
@@ -1014,33 +1014,33 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private Etag EnsureDocumentEtagMatch(string key, Etag etag, RavenJObject file)
         {
-	        var existingEtag = Etag.Parse(file.Value<byte[]>("etag"));
+            var existingEtag = Etag.Parse(file.Value<byte[]>("etag"));
 
-			if (etag != null)
-			{
-				if (existingEtag != etag)
-				{
-					if (etag == Etag.Empty)
-					{
-						var metadata = (RavenJObject) file["metadata"];
+            if (etag != null)
+            {
+                if (existingEtag != etag)
+                {
+                    if (etag == Etag.Empty)
+                    {
+                        var metadata = (RavenJObject) file["metadata"];
 
-						if (metadata.ContainsKey(RavenConstants.RavenDeleteMarker) &&
-							metadata.Value<bool>(RavenConstants.RavenDeleteMarker))
-						{
-							return existingEtag;
-						}
-					}
+                        if (metadata.ContainsKey(RavenConstants.RavenDeleteMarker) &&
+                            metadata.Value<bool>(RavenConstants.RavenDeleteMarker))
+                        {
+                            return existingEtag;
+                        }
+                    }
 
-					throw new ConcurrencyException("Operation attempted on file '" + key +
-												   "' using a non current etag")
-					{
-						ActualETag = existingEtag,
-						ExpectedETag = etag
-					};
-				}
-			}
+                    throw new ConcurrencyException("Operation attempted on file '" + key +
+                                                   "' using a non current etag")
+                    {
+                        ActualETag = existingEtag,
+                        ExpectedETag = etag
+                    };
+                }
+            }
 
-			return existingEtag;
-		}
+            return existingEtag;
+        }
     }
 }

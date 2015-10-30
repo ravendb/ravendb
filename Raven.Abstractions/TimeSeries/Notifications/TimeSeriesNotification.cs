@@ -1,7 +1,7 @@
-﻿namespace Raven.Abstractions.TimeSeries.Notifications
+namespace Raven.Abstractions.TimeSeries.Notifications
 {
-	public class TimeSeriesNotification
-	{
+    public class TimeSeriesNotification
+    {
 
-	}
+    }
 }

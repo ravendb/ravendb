@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.FileSystem;
@@ -7,17 +7,17 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FileSystemsStatsController : BaseFileSystemApiController
-	{
-		[HttpGet]
+    public class FileSystemsStatsController : BaseFileSystemApiController
+    {
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/stats")]
         public HttpResponseMessage Get()
-		{
-			var count = 0;
-			Storage.Batch(accessor =>
-			{
-				count = accessor.GetFileCount();
-			});
+        {
+            var count = 0;
+            Storage.Batch(accessor =>
+            {
+                count = accessor.GetFileCount();
+            });
 
             var stats = new FileSystemStats
             {
@@ -29,6 +29,6 @@ namespace Raven.Database.FileSystem.Controllers
             };
 
             return GetMessageWithObject(stats).WithNoCache();
-		}
-	}
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2808.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -52,11 +52,11 @@ namespace Raven.Tests.Smuggler
                 var options = new DatabaseSmugglerOptions();
                 options.TransformScript =
                     @"function(doc) { 
-						var id = doc['@metadata']['@id']; 
-						if(id === 'foos/1')
-							return null;
-						return doc;
-					}";
+                        var id = doc['@metadata']['@id']; 
+                        if(id === 'foos/1')
+                            return null;
+                        return doc;
+                    }";
 
                 var smuggler = new DatabaseSmuggler(
                     options,
@@ -64,18 +64,18 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerFileDestination(backupPath));
 
                 await smuggler.ExecuteAsync();
-            }
+                        }
 
             using (var documentStore = NewDocumentStore())
             {
                 var options = new DatabaseSmugglerOptions();
                 options.TransformScript =
                     @"function(doc) { 
-						var id = doc['@metadata']['@id']; 
-						if(id === 'foos/1')
-							return null;
-						return doc;
-					}";
+                        var id = doc['@metadata']['@id']; 
+                        if(id === 'foos/1')
+                            return null;
+                        return doc;
+                    }";
 
                 var smuggler = new DatabaseSmuggler(
                     options,
@@ -222,7 +222,7 @@ namespace Raven.Tests.Smuggler
 
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions
-                    {
+                {
                         StripReplicationInformation = true
                     },
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
@@ -251,7 +251,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerFileSource(backupPath),
                     new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                    {
+                {
                         Url = store.Url,
                         Database = "N2"
                     }));
@@ -280,7 +280,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerFileSource(backupPath),
                     new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                    {
+                {
                         Url = store.Url,
                         Database = "N3"
                     }));
@@ -324,7 +324,7 @@ namespace Raven.Tests.Smuggler
                 {
                     var smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions
-                        {
+                    {
                             StripReplicationInformation = true
                         },
                         new DatabaseSmugglerStreamSource(stream),
@@ -344,7 +344,7 @@ namespace Raven.Tests.Smuggler
                 {
                     var smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions
-                        {
+                    {
                             StripReplicationInformation = true
                         },
                         new DatabaseSmugglerStreamSource(stream),

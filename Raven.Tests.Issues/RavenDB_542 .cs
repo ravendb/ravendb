@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using FizzWare.NBuilder;
@@ -11,73 +11,73 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_542 : RavenTest
-	{
-		[Fact]
-		public void MapWithMinValueComparison()
-		{
-			using (var store = NewRemoteDocumentStore())
-			{
-				new OrganizationIndex().Execute(store);
+    public class RavenDB_542 : RavenTest
+    {
+        [Fact]
+        public void MapWithMinValueComparison()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                new OrganizationIndex().Execute(store);
 
-				using (var session = store.OpenSession())
-				{
-					var orgs = Builder<Organization>.CreateListOfSize(10)
-						.All()
-						.Random(10)
-						.Build();
+                using (var session = store.OpenSession())
+                {
+                    var orgs = Builder<Organization>.CreateListOfSize(10)
+                        .All()
+                        .Random(10)
+                        .Build();
 
-					foreach (var org in orgs)
-						session.Store(org);
-					session.SaveChanges();
+                    foreach (var org in orgs)
+                        session.Store(org);
+                    session.SaveChanges();
 
-					store.DatabaseCommands.Patch("organizations/1",
-					                             new[]
-					                             {
-						                             new PatchRequest
-						                             {
-							                             Type = PatchCommandType.Set,
-							                             Name = "DateApproved",
-							                             Value = "2012-09-07T09:41:42.9893269"
-						                             },
+                    store.DatabaseCommands.Patch("organizations/1",
+                                                 new[]
+                                                 {
+                                                     new PatchRequest
+                                                     {
+                                                         Type = PatchCommandType.Set,
+                                                         Name = "DateApproved",
+                                                         Value = "2012-09-07T09:41:42.9893269"
+                                                     },
                                                      new PatchRequest()
                                                      {
                                                          Type = PatchCommandType.Set,
                                                          Name = "NewProp",
                                                          Value = "test"
                                                      }
-					                             });
+                                                 });
 
-				
-					WaitForIndexing(store);
+                
+                    WaitForIndexing(store);
 
-					//Assert.Empty(store.SystemDatabase.Statistics.Errors);
-				}
-			}
-		}
+                    //Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                }
+            }
+        }
 
-		class Organization
-		{
-			public int Id { get; set; }
-			public string Name { get; set; }
-			public DateTime DateApproved { get; set; }
-		}
+        class Organization
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public DateTime DateApproved { get; set; }
+        }
 
-		class OrganizationIndex : AbstractIndexCreationTask<Organization, OrganizationIndex.Result>
-		{
-			public class Result
-			{
-				public bool IsApproved { get; set; }
-			}
+        class OrganizationIndex : AbstractIndexCreationTask<Organization, OrganizationIndex.Result>
+        {
+            public class Result
+            {
+                public bool IsApproved { get; set; }
+            }
 
-			public OrganizationIndex()
-			{
-				Map = orgs => orgs.Select(org => new
-				{
-					org.Name,
-					IsApproved = org.DateApproved == DateTime.MinValue
-				});
-			}
-		}
-	}
+            public OrganizationIndex()
+            {
+                Map = orgs => orgs.Select(org => new
+                {
+                    org.Name,
+                    IsApproved = org.DateApproved == DateTime.MinValue
+                });
+            }
+        }
+    }
 }

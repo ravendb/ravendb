@@ -3,13 +3,13 @@ using System.Linq;
 
 namespace Raven.Abstractions.Extensions 
 {
-	public static class SetExtensions
-	{
-		public static bool ContentEquals<TKey>(ISet<TKey> x, ISet<TKey> y)
-		{
-			if (x.Count != y.Count)
-				return false;
-			return x.All(y.Contains);
-		} 
-	}
+    public static class SetExtensions
+    {
+        public static bool ContentEquals<TKey>(ISet<TKey> x, ISet<TKey> y)
+        {
+            if (x.Count != y.Count)
+                return false;
+            return x.All(y.Contains);
+        } 
+    }
 }

@@ -1,4 +1,4 @@
-﻿import indexDefinition = require("models/database/index/indexDefinition");
+import indexDefinition = require("models/database/index/indexDefinition");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");

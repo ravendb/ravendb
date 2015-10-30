@@ -115,7 +115,7 @@ class infoPackage extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink('KVLC4Y');
         var self = this;
         $("#stacksContainer").resize();

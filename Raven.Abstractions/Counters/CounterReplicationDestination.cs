@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CounterStorageReplicationDestination.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,19 +13,19 @@ namespace Raven.Abstractions.Counters
 {
     public class CounterReplicationDestination
     {
-	    public string ServerUrl { get; set; }
+        public string ServerUrl { get; set; }
 
-	    public string CounterStorageName { get; set; }
+        public string CounterStorageName { get; set; }
 
         public string CounterStorageUrl
         {
-	        get
-	        {
-				Debug.Assert(String.IsNullOrWhiteSpace(CounterStorageName) == false);
-				Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
+            get
+            {
+                Debug.Assert(String.IsNullOrWhiteSpace(CounterStorageName) == false);
+                Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
 
-		        return string.Format("{0}cs/{1}", ServerUrl, CounterStorageName);
-	        }
+                return string.Format("{0}cs/{1}", ServerUrl, CounterStorageName);
+            }
         }
 
         public string Username { get; set; }
@@ -38,22 +38,22 @@ namespace Raven.Abstractions.Counters
 
         public bool Disabled { get; set; }
 
-		[JsonIgnore]
-		public ICredentials Credentials
-		{
-			get
-			{
-				if (string.IsNullOrEmpty(Username) == false)
-				{
-					return string.IsNullOrEmpty(Domain)
-									  ? new NetworkCredential(Username, Password)
-									  : new NetworkCredential(Username, Password, Domain);
-				}
-				return null;
-			}
-		}
+        [JsonIgnore]
+        public ICredentials Credentials
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Username) == false)
+                {
+                    return string.IsNullOrEmpty(Domain)
+                                      ? new NetworkCredential(Username, Password)
+                                      : new NetworkCredential(Username, Password, Domain);
+                }
+                return null;
+            }
+        }
 
-		protected bool Equals(CounterReplicationDestination other)
+        protected bool Equals(CounterReplicationDestination other)
         {
             return string.Equals(ServerUrl, other.ServerUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(CounterStorageName, other.CounterStorageName);

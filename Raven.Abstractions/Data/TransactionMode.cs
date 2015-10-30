@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------
 namespace Raven.Abstractions.Data
 {
-	public enum TransactionMode
-	{
-		Lazy,
-		Safe
-	}
+    public enum TransactionMode
+    {
+        Lazy,
+        Safe
+    }
 }

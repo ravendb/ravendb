@@ -6,14 +6,14 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Quotas.Documents.Triggers
 {
-	[InheritedExport(typeof(AbstractPutTrigger))]
-	[ExportMetadata("Bundle", "Quotas")]
-	public class DatabaseCountQuotaForDocumentsPutTrigger : AbstractPutTrigger
-	{
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
-		{
-			return DocQuotaConfiguration.GetConfiguration(Database).AllowPut();
-		}
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    [ExportMetadata("Bundle", "Quotas")]
+    public class DatabaseCountQuotaForDocumentsPutTrigger : AbstractPutTrigger
+    {
+        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
+        {
+            return DocQuotaConfiguration.GetConfiguration(Database).AllowPut();
+        }
 
-	}
+    }
 }

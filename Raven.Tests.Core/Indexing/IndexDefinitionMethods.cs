@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -69,7 +69,7 @@ namespace Raven.Tests.Core.Indexing
         }
 
         [Fact]
-		public void CanUseAsDocumentToIndexAllDocumentFields()
+        public void CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = GetDocumentStore())
             {

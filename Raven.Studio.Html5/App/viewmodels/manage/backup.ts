@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
@@ -18,7 +18,7 @@ class resourceBackup {
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
 
-	has40Features = ko.computed(() => shell.has40Features());
+    has40Features = ko.computed(() => shell.has40Features());
 
     constructor(private type: TenantType, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
@@ -33,7 +33,7 @@ class resourceBackup {
             var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name && rs.type === this.type);
 
             if (!foundRs && newResourceName.length > 0) {
-	            var tenantType = foundRs.fullTypeName;
+                var tenantType = foundRs.fullTypeName;
                 errorMessage = tenantType + " name doesn't exist!";
             }
 
@@ -46,7 +46,7 @@ class backupDatabase extends viewModelBase {
 
     private dbBackupOptions = new resourceBackup(TenantType.Database, shell.databases);
     private fsBackupOptions = new resourceBackup(TenantType.FileSystem, shell.fileSystems);
-	private csBackupOptions = new resourceBackup(TenantType.CounterStorage, shell.counterStorages);
+    private csBackupOptions = new resourceBackup(TenantType.CounterStorage, shell.counterStorages);
     
     canActivate(args): any {
         return true;
@@ -64,7 +64,7 @@ class backupDatabase extends viewModelBase {
     }
 
     startDbBackup() {
-		var backupOptions = this.dbBackupOptions;
+        var backupOptions = this.dbBackupOptions;
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);
@@ -78,7 +78,7 @@ class backupDatabase extends viewModelBase {
     }
 
     startFsBackup() {
-		var backupOptions = this.fsBackupOptions;
+        var backupOptions = this.fsBackupOptions;
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);
@@ -91,8 +91,8 @@ class backupDatabase extends viewModelBase {
             .always(() => backupOptions.isBusy(false));
     }
 
-	startCsBackup() {
-		var backupOptions = this.csBackupOptions;
+    startCsBackup() {
+        var backupOptions = this.csBackupOptions;
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);

@@ -1,4 +1,4 @@
-﻿import dialog = require("plugins/dialog");
+import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import createResourceBase = require("viewmodels/resources/createResourceBase");
@@ -17,16 +17,16 @@ class createFilesystem extends createResourceBase {
     constructor(parent: dialogViewModelBase) {
         super(shell.fileSystems, parent);
 
-		this.fetchAllowVoron();
+        this.fetchAllowVoron();
     }
 
-	fetchAllowVoron() {
-		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-			).done((stats: Array<databaseStatisticsDto>, config: any) => {
-			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-		});
-	}
+    fetchAllowVoron() {
+        $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+            new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+            ).done((stats: Array<databaseStatisticsDto>, config: any) => {
+            this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+        });
+    }
 
     nextOrCreate() {
         this.creationTaskStarted = true;

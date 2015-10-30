@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ClusterKeeperTask.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -25,153 +25,153 @@ using Raven.Server;
 
 namespace Raven.Database.Raft
 {
-	public class ClusterKeeperTask : IServerStartupTask
-	{
-		private DocumentDatabase systemDatabase;
+    public class ClusterKeeperTask : IServerStartupTask
+    {
+        private DocumentDatabase systemDatabase;
 
-		private ClusterManager clusterManager;
+        private ClusterManager clusterManager;
 
-		public void Execute(RavenDBOptions serverOptions)
-		{
-			if (IsValidLicense() == false)
-				return;
+        public void Execute(RavenDBOptions serverOptions)
+        {
+            if (IsValidLicense() == false)
+                return;
 
-			systemDatabase = serverOptions.SystemDatabase;
-			clusterManager = serverOptions.ClusterManager.Value = ClusterManagerFactory.Create(systemDatabase, serverOptions.DatabaseLandlord);
+            systemDatabase = serverOptions.SystemDatabase;
+            clusterManager = serverOptions.ClusterManager.Value = ClusterManagerFactory.Create(systemDatabase, serverOptions.DatabaseLandlord);
 
-			systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
-			{
-				if (string.Equals(notification.Id, Constants.Cluster.ClusterConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
-				{
-					if (notification.Type != DocumentChangeTypes.Put)
-						return;
+            systemDatabase.Notifications.OnDocumentChange += (db, notification, metadata) =>
+            {
+                if (string.Equals(notification.Id, Constants.Cluster.ClusterConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (notification.Type != DocumentChangeTypes.Put)
+                        return;
 
-					HandleClusterConfigurationChanges();
-				}
-			};
+                    HandleClusterConfigurationChanges();
+                }
+            };
 
-			clusterManager.Engine.TopologyChanged += HandleTopologyChanges;
+            clusterManager.Engine.TopologyChanged += HandleTopologyChanges;
 
-			HandleClusterConfigurationChanges();
-		}
+            HandleClusterConfigurationChanges();
+        }
 
-		private static bool IsValidLicense()
-		{
-			DevelopmentHelper.TimeBomb();
-			return true;
+        private static bool IsValidLicense()
+        {
+            DevelopmentHelper.TimeBomb();
+            return true;
 
-			if (ValidateLicense.CurrentLicense.IsCommercial == false)
-				return false;
+            if (ValidateLicense.CurrentLicense.IsCommercial == false)
+                return false;
 
-			string value;
-			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("cluster", out value) == false)
-				return false;
+            string value;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("cluster", out value) == false)
+                return false;
 
-			bool cluster;
-			if (bool.TryParse(value, out cluster) == false)
-				return false;
+            bool cluster;
+            if (bool.TryParse(value, out cluster) == false)
+                return false;
 
-			return cluster;
-		}
+            return cluster;
+        }
 
-		public void Dispose()
-		{
-			if(clusterManager != null)
-				clusterManager.Engine.TopologyChanged -= HandleTopologyChanges;
-		}
+        public void Dispose()
+        {
+            if(clusterManager != null)
+                clusterManager.Engine.TopologyChanged -= HandleTopologyChanges;
+        }
 
-		private void HandleTopologyChanges(TopologyChangeCommand command)
-		{
-			if (RaftHelper.HasDifferentNodes(command) == false)
-				return;
+        private void HandleTopologyChanges(TopologyChangeCommand command)
+        {
+            if (RaftHelper.HasDifferentNodes(command) == false)
+                return;
 
-			if (command.Previous == null)
-			{
-				HandleClusterConfigurationChanges();
-				return;
-			}
+            if (command.Previous == null)
+            {
+                HandleClusterConfigurationChanges();
+                return;
+            }
 
-			var removedNodeUrls = command
-				.Previous
-				.AllNodes.Select(x => x.Uri.AbsoluteUri)
-				.Except(command.Requested.AllNodes.Select(x => x.Uri.AbsoluteUri))
-				.ToList();
+            var removedNodeUrls = command
+                .Previous
+                .AllNodes.Select(x => x.Uri.AbsoluteUri)
+                .Except(command.Requested.AllNodes.Select(x => x.Uri.AbsoluteUri))
+                .ToList();
 
-			HandleClusterConfigurationChanges(removedNodeUrls);
-		}
+            HandleClusterConfigurationChanges(removedNodeUrls);
+        }
 
-		private void HandleClusterConfigurationChanges(List<string> removedNodeUrls = null)
-		{
-			var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey);
-			if (configurationJson == null)
-				return;
+        private void HandleClusterConfigurationChanges(List<string> removedNodeUrls = null)
+        {
+            var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey);
+            if (configurationJson == null)
+                return;
 
-			var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+            var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 
-			HandleClusterReplicationChanges(removedNodeUrls, configuration.EnableReplication);
-		}
+            HandleClusterReplicationChanges(removedNodeUrls, configuration.EnableReplication);
+        }
 
-		private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
-		{
-			var currentTopology = clusterManager.Engine.CurrentTopology;
-			var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName);
-			var replicationDocument = replicationDocumentJson != null
-				? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
-				: new ReplicationDocument();
+        private void HandleClusterReplicationChanges(List<string> removedNodes, bool enableReplication)
+        {
+            var currentTopology = clusterManager.Engine.CurrentTopology;
+            var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName);
+            var replicationDocument = replicationDocumentJson != null
+                ? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
+                : new ReplicationDocument();
 
-			var replicationDocumentNormalizedDestinations = replicationDocument
-				.Destinations
-				.ToDictionary(x => RaftHelper.GetNormalizedNodeUrl(x.Url), x => x);
+            var replicationDocumentNormalizedDestinations = replicationDocument
+                .Destinations
+                .ToDictionary(x => RaftHelper.GetNormalizedNodeUrl(x.Url), x => x);
 
-			var currentTopologyNormalizedDestionations = currentTopology
-				.AllNodes
-				.ToDictionary(x => x.Uri.AbsoluteUri.ToLowerInvariant(), x => x);
+            var currentTopologyNormalizedDestionations = currentTopology
+                .AllNodes
+                .ToDictionary(x => x.Uri.AbsoluteUri.ToLowerInvariant(), x => x);
 
-			var urls = replicationDocumentNormalizedDestinations
-				.Keys
-				.Union(currentTopologyNormalizedDestionations.Keys)
-				.ToList();
+            var urls = replicationDocumentNormalizedDestinations
+                .Keys
+                .Union(currentTopologyNormalizedDestionations.Keys)
+                .ToList();
 
-			foreach (var url in urls)
-			{
-				ReplicationDestination destination;
-				replicationDocumentNormalizedDestinations.TryGetValue(url, out destination);
-				NodeConnectionInfo node;
-				currentTopologyNormalizedDestionations.TryGetValue(url, out node);
+            foreach (var url in urls)
+            {
+                ReplicationDestination destination;
+                replicationDocumentNormalizedDestinations.TryGetValue(url, out destination);
+                NodeConnectionInfo node;
+                currentTopologyNormalizedDestionations.TryGetValue(url, out node);
 
-				if (destination == null && node == null)
-					continue; // not possible, but...
+                if (destination == null && node == null)
+                    continue; // not possible, but...
 
-				if (destination != null && node == null)
-				{
-					if (removedNodes.Contains(url, StringComparer.OrdinalIgnoreCase) == false)
-						continue; // external destination
+                if (destination != null && node == null)
+                {
+                    if (removedNodes.Contains(url, StringComparer.OrdinalIgnoreCase) == false)
+                        continue; // external destination
 
-					replicationDocument.Destinations.Remove(destination);
-					continue;
-				}
+                    replicationDocument.Destinations.Remove(destination);
+                    continue;
+                }
 
-				if (string.Equals(node.Name, clusterManager.Engine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
-					continue; // skipping self
+                if (string.Equals(node.Name, clusterManager.Engine.Options.SelfConnection.Name, StringComparison.OrdinalIgnoreCase))
+                    continue; // skipping self
 
-				if (destination == null)
-				{
-					destination = new ReplicationDestination();
-					replicationDocument.Destinations.Add(destination);
-				}
+                if (destination == null)
+                {
+                    destination = new ReplicationDestination();
+                    replicationDocument.Destinations.Add(destination);
+                }
 
-				destination.ApiKey = node.ApiKey;
-				destination.Database = null;
-				destination.Disabled = enableReplication == false;
-				destination.Domain = node.Domain;
-				destination.Password = node.Password;
-				destination.TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate;
-				destination.SkipIndexReplication = false;
-				destination.Url = node.Uri.AbsoluteUri;
-				destination.Username = node.Username;
-			}
+                destination.ApiKey = node.ApiKey;
+                destination.Database = null;
+                destination.Disabled = enableReplication == false;
+                destination.Domain = node.Domain;
+                destination.Password = node.Password;
+                destination.TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate;
+                destination.SkipIndexReplication = false;
+                destination.Url = node.Uri.AbsoluteUri;
+                destination.Username = node.Username;
+            }
 
-			systemDatabase.Documents.Put(Constants.Global.ReplicationDestinationsDocumentName, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
-		}
-	}
+            systemDatabase.Documents.Put(Constants.Global.ReplicationDestinationsDocumentName, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 using Raven.Abstractions.Data;
@@ -14,7 +14,7 @@ namespace Raven.Database.FileSystem.Storage
     {
         Guid Id { get; }
 
-		void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs);
+        void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs);
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         void Batch(Action<IStorageActionsAccessor> action);
@@ -27,6 +27,6 @@ namespace Raven.Database.FileSystem.Storage
 
         void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
 
-		IDisposable DisableBatchNesting();
+        IDisposable DisableBatchNesting();
     }
 }

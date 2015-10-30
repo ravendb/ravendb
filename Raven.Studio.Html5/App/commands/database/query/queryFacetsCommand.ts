@@ -5,7 +5,7 @@ import facet = require("models/database/query/facet");
 import document = require("models/database/documents/document");
 
 class queryFacetsCommand extends commandBase {
-	constructor(private indexName: string, private queryText: string, private skip: number, private take: number, private facets: facetDto[], private db: database, private disableCache: boolean = false) {
+    constructor(private indexName: string, private queryText: string, private skip: number, private take: number, private facets: facetDto[], private db: database, private disableCache: boolean = false) {
         super();
         this.argsUrl = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,

@@ -1,4 +1,4 @@
-﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
@@ -11,7 +11,7 @@ class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(true);
     stripReplicationInformation = ko.observable(false);
-	shouldDisableVersioningBundle = ko.observable(false);
+    shouldDisableVersioningBundle = ko.observable(false);
     transformScript = ko.observable<string>();
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -28,7 +28,7 @@ class importDatabase extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         $("#transformScriptHelp").popover({
             html: true,
             trigger: "hover",
@@ -106,7 +106,7 @@ class importDatabase extends viewModelBase {
         var formData = new FormData();
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
-		db.importStatus("Uploading 0%");
+        db.importStatus("Uploading 0%");
         var importItemTypes: ImportItemType[] = [];
         if (this.includeDocuments()) {
             importItemTypes.push(ImportItemType.Documents);

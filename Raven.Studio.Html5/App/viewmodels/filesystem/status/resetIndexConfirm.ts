@@ -1,4 +1,4 @@
-﻿import resetIndexCommand = require("commands/filesystem/resetIndexCommand");
+import resetIndexCommand = require("commands/filesystem/resetIndexCommand");
 import dialog = require("plugins/dialog");
 import filesystem = require("models/filesystem/filesystem");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");

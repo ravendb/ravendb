@@ -1,4 +1,4 @@
-﻿// Type definitions for Bootstrap datetimepicker v3 
+// Type definitions for Bootstrap datetimepicker v3 
 // Project: http://eonasdan.github.io/bootstrap-datetimepicker
 // Definitions by: Jesica N. Fera <https://github.com/bayitajesi>
 // Definitions: https://github.com/borisyankov/DefinitelyTyped
@@ -58,7 +58,7 @@ declare module BootstrapV3DatetimePicker {
         disable(): void;
         enable(): void;
         date(): void;
-		date(date: any): void;
+        date(date: any): void;
     }
 
 }

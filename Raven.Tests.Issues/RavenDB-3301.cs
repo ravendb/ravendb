@@ -1,4 +1,4 @@
-﻿using Raven.Tests.Helpers;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Issues

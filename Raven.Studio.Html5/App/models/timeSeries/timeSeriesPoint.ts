@@ -1,4 +1,4 @@
-﻿class timeSeriesPoint implements documentBase {
+class timeSeriesPoint implements documentBase {
     type: string;
     fields: string[];
     key: string;

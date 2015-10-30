@@ -1,4 +1,4 @@
-﻿import databaseAccess = require("models/resources/databaseAccess");
+import databaseAccess = require("models/resources/databaseAccess");
 
 class windowsAuthData {
 
@@ -6,19 +6,19 @@ class windowsAuthData {
     enabled = ko.observable<boolean>();
     databases = ko.observableArray<databaseAccess>();
     nameCustomValidity = ko.observable<string>('');
-	needToShowSystemDatabaseWarning: KnockoutComputed<boolean>;
+    needToShowSystemDatabaseWarning: KnockoutComputed<boolean>;
 
     constructor(dto: windowsAuthDataDto) {
         this.name(dto.Name);
         this.enabled(dto.Enabled);
         this.databases(dto.Databases.map(dbDto => new databaseAccess(dbDto)));
 
-		this.needToShowSystemDatabaseWarning = ko.computed(() => {
-		    var resources = this.databases();
-		    var hasAllDatabasesAdminAccess = resources.filter(x => x.admin() && x.tenantId() === "*").length > 0;
-			var hasSystemDatabaseAdminAcces = resources.filter(x => x.admin() && x.tenantId() === "<system>").length > 0;
-		    return hasAllDatabasesAdminAccess && hasSystemDatabaseAdminAcces === false;
-	    });
+        this.needToShowSystemDatabaseWarning = ko.computed(() => {
+            var resources = this.databases();
+            var hasAllDatabasesAdminAccess = resources.filter(x => x.admin() && x.tenantId() === "*").length > 0;
+            var hasSystemDatabaseAdminAcces = resources.filter(x => x.admin() && x.tenantId() === "<system>").length > 0;
+            return hasAllDatabasesAdminAccess && hasSystemDatabaseAdminAcces === false;
+        });
     }
 
     toDto(): windowsAuthDataDto {

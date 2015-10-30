@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -16,76 +16,76 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.WebApi.Handlers
 {
-	public class GZipToJsonAndCompressHandler : DelegatingHandler
-	{
-		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-															   CancellationToken cancellationToken)
-		{
-			HttpResponseMessage response;
-			// Handle only if content type is 'application/gzip'
-			var contentEncoding = request.Content.Headers.ContentEncoding.FirstOrDefault();
-			if (contentEncoding == null ||
-				contentEncoding.Contains("gzip") == false)
-			{
-				response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-				return Compress(response);
-			}
+    public class GZipToJsonAndCompressHandler : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+                                                               CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response;
+            // Handle only if content type is 'application/gzip'
+            var contentEncoding = request.Content.Headers.ContentEncoding.FirstOrDefault();
+            if (contentEncoding == null ||
+                contentEncoding.Contains("gzip") == false)
+            {
+                response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                return Compress(response);
+            }
 
-			// Read in the input stream, then decompress in to the output stream.
-			// Doing this asynchronously, but not really required at this point
-			// since we end up waiting on it right after this.
-			Stream outputStream = new MemoryStream();
-			await request.Content.ReadAsStreamAsync().ContinueWith(t =>
-			{
-				Stream inputStream = t.Result;
-				var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
+            // Read in the input stream, then decompress in to the output stream.
+            // Doing this asynchronously, but not really required at this point
+            // since we end up waiting on it right after this.
+            Stream outputStream = new MemoryStream();
+            await request.Content.ReadAsStreamAsync().ContinueWith(t =>
+            {
+                Stream inputStream = t.Result;
+                var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
 
-				gzipStream.CopyTo(outputStream);
-				gzipStream.Dispose();
+                gzipStream.CopyTo(outputStream);
+                gzipStream.Dispose();
 
-				outputStream.Seek(0, SeekOrigin.Begin);
-			}, cancellationToken).ConfigureAwait(false);
+                outputStream.Seek(0, SeekOrigin.Begin);
+            }, cancellationToken).ConfigureAwait(false);
 
-			// This next section is the key...
+            // This next section is the key...
 
-			// Save the original content
-			HttpContent origContent = request.Content;
+            // Save the original content
+            HttpContent origContent = request.Content;
 
-			// Replace request content with the newly decompressed stream
-			request.Content = new StreamContent(outputStream);
+            // Replace request content with the newly decompressed stream
+            request.Content = new StreamContent(outputStream);
 
-			// Copy all headers from original content in to new one
-			foreach (var header in origContent.Headers)
-			{
-				foreach (var val in header.Value)
-				{
-					request.Content.Headers.Add(header.Key, val);
-				}
-			}
+            // Copy all headers from original content in to new one
+            foreach (var header in origContent.Headers)
+            {
+                foreach (var val in header.Value)
+                {
+                    request.Content.Headers.Add(header.Key, val);
+                }
+            }
 
-			response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-			return Compress(response);
-		}
+            response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return Compress(response);
+        }
 
-		public HttpResponseMessage Compress(HttpResponseMessage response)
-		{
-			if (response.RequestMessage != null && 
-				response.RequestMessage.Headers.AcceptEncoding != null && 
-				response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
-				response.Content != null &&
-				response.Content is IEventsTransport == false &&
-				response.Content is CompressedContent == false &&
-				response.Content is CompressedStreamContent == false &&
-				response.Content is CompressedStringContent == false)
-			{
-				string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
-				if (encodingType == "gzip" || encodingType == "deflate")
-				{
-					response.Content = new CompressedContent(response.Content, encodingType);
-				}
-			}
+        public HttpResponseMessage Compress(HttpResponseMessage response)
+        {
+            if (response.RequestMessage != null && 
+                response.RequestMessage.Headers.AcceptEncoding != null && 
+                response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
+                response.Content != null &&
+                response.Content is IEventsTransport == false &&
+                response.Content is CompressedContent == false &&
+                response.Content is CompressedStreamContent == false &&
+                response.Content is CompressedStringContent == false)
+            {
+                string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
+                if (encodingType == "gzip" || encodingType == "deflate")
+                {
+                    response.Content = new CompressedContent(response.Content, encodingType);
+                }
+            }
 
-			return response;
-		}
-	}
+            return response;
+        }
+    }
 }

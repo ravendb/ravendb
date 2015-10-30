@@ -1346,9 +1346,9 @@ namespace Raven.Database.Indexing
                         continue;
 
                     accessor.Lists.Set("Raven/Indexes/QueryTime", index.Value.PublicName, new RavenJObject
-	                {
-	                    {"LastQueryTime", lastQueryTime}
-	                }, UuidType.Indexing);
+                    {
+                        {"LastQueryTime", lastQueryTime}
+                    }, UuidType.Indexing);
 
                     if (lastQueryTime > maxDate)
                         maxDate = lastQueryTime;

@@ -19,71 +19,71 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class CreatingIndexes : RavenTest, IDisposable
-	{
-		protected RavenDbServer GetNewServer(int port)
-		{
-		    RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
-		    {
-				Core =
-				{
-				    RunInMemory = true,
+    public class CreatingIndexes : RavenTest, IDisposable
+    {
+        protected RavenDbServer GetNewServer(int port)
+        {
+            RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
+            {
+                Core =
+                {
+                    RunInMemory = true,
                     DataDirectory = "Data",
                     Port = port,
                 },
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-		    })
-		    {
-		        UseEmbeddedHttpServer = true
-		    };
-		    ravenDbServer.Initialize();
-		    return
-				ravenDbServer;
-		}
+            })
+            {
+                UseEmbeddedHttpServer = true
+            };
+            ravenDbServer.Initialize();
+            return
+                ravenDbServer;
+        }
 
 
-	    [Fact]
-		public void Multitenancy_Test()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079",
-				DefaultDatabase = "Test"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
-				store.DatabaseCommands.PutIndex("TestIndex",
-												new IndexDefinitionBuilder<Test, Test>("TestIndex")
-												{
-													Map = movies => from movie in movies
-																	select new {movie.Name}
-												});
+        [Fact]
+        public void Multitenancy_Test()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079",
+                DefaultDatabase = "Test"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
+                store.DatabaseCommands.PutIndex("TestIndex",
+                                                new IndexDefinitionBuilder<Test, Test>("TestIndex")
+                                                {
+                                                    Map = movies => from movie in movies
+                                                                    select new {movie.Name}
+                                                });
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Test {Name = "xxx"});
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Test {Name = "xxx"});
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					var result = session.Query<Test>("TestIndex")
-						.Customize(x=>x.WaitForNonStaleResults())
-						.Where(x => x.Name == "xxx")
-						.FirstOrDefault();
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Test>("TestIndex")
+                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Where(x => x.Name == "xxx")
+                        .FirstOrDefault();
 
-					Assert.NotNull(result);
-				}
-			}
-		}
+                    Assert.NotNull(result);
+                }
+            }
+        }
 
-		public override void Dispose()
-		{
-			IOExtensions.DeleteDirectory("Data");
-			IOExtensions.DeleteDirectory("Test");
-			base.Dispose();
-		}
-	}
+        public override void Dispose()
+        {
+            IOExtensions.DeleteDirectory("Data");
+            IOExtensions.DeleteDirectory("Test");
+            base.Dispose();
+        }
+    }
 }

@@ -9,28 +9,28 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class Storage : RavenTest
-	{
-		[Fact]
-		public void CanCreateNewFile()
-		{
-			using (NewTransactionalStorage())
-			{
-			}
-		}
+    public class Storage : RavenTest
+    {
+        [Fact]
+        public void CanCreateNewFile()
+        {
+            using (NewTransactionalStorage())
+            {
+            }
+        }
 
-		[Fact]
-		public void CanCreateNewFileAndThenOpenIt()
-		{
-			var dataDir = NewDataPath();
+        [Fact]
+        public void CanCreateNewFileAndThenOpenIt()
+        {
+            var dataDir = NewDataPath();
 
-			using (NewTransactionalStorage(dataDir: dataDir))
-			{
-			}
+            using (NewTransactionalStorage(dataDir: dataDir))
+            {
+            }
 
-			using (NewTransactionalStorage(dataDir: dataDir))
-			{
-			}
-		}
-	}
+            using (NewTransactionalStorage(dataDir: dataDir))
+            {
+            }
+        }
+    }
 }

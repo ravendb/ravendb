@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Linq;
@@ -109,72 +109,72 @@ namespace Raven.Abstractions.Data
         {
             return ToBytes().ToArray();
         }
-		[StructLayout(LayoutKind.Explicit)]
-		struct LongBytes
-		{
-			[FieldOffset(0)]
-			public long Long;
+        [StructLayout(LayoutKind.Explicit)]
+        struct LongBytes
+        {
+            [FieldOffset(0)]
+            public long Long;
 
-			[FieldOffset(0)]
-			public Byte Byte0;
-			[FieldOffset(1)]
-			public Byte Byte1;
-			[FieldOffset(2)]
-			public Byte Byte2;
-			[FieldOffset(3)]
-			public Byte Byte3;
-			[FieldOffset(4)]
-			public Byte Byte4;
-			[FieldOffset(5)]
-			public Byte Byte5;
-			[FieldOffset(6)]
-			public Byte Byte6;
-			[FieldOffset(7)]
-			public Byte Byte7;
-		}
+            [FieldOffset(0)]
+            public Byte Byte0;
+            [FieldOffset(1)]
+            public Byte Byte1;
+            [FieldOffset(2)]
+            public Byte Byte2;
+            [FieldOffset(3)]
+            public Byte Byte3;
+            [FieldOffset(4)]
+            public Byte Byte4;
+            [FieldOffset(5)]
+            public Byte Byte5;
+            [FieldOffset(6)]
+            public Byte Byte6;
+            [FieldOffset(7)]
+            public Byte Byte7;
+        }
 
-	    public override unsafe string ToString()
-	    {
-		    var results = new string('-', 36);
-			// Optimized with the help of Oliver Hallam (oliver.hallam@gmail.com)
-		    fixed (char* buf = results)
-		    {
-			    var bytes = new LongBytes {Long = this.restarts};
+        public override unsafe string ToString()
+        {
+            var results = new string('-', 36);
+            // Optimized with the help of Oliver Hallam (oliver.hallam@gmail.com)
+            fixed (char* buf = results)
+            {
+                var bytes = new LongBytes {Long = this.restarts};
 
-			    *(int*) (&buf[0]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
-			    *(int*) (&buf[2]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
-			    *(int*) (&buf[4]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
-			    *(int*) (&buf[6]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
+                *(int*) (&buf[0]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
+                *(int*) (&buf[2]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
+                *(int*) (&buf[4]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
+                *(int*) (&buf[6]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
 
-			    //buf[8] = '-';
-			    *(int*) (&buf[9]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
-			    *(int*) (&buf[11]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
+                //buf[8] = '-';
+                *(int*) (&buf[9]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
+                *(int*) (&buf[11]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
 
-			    //buf[13] = '-';
-			    *(int*) (&buf[14]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
-			    *(int*) (&buf[16]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
+                //buf[13] = '-';
+                *(int*) (&buf[14]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
+                *(int*) (&buf[16]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
 
-			    //buf[18] = '-';
+                //buf[18] = '-';
 
-			    bytes.Long = this.changes;
+                bytes.Long = this.changes;
 
-			    *(int*) (&buf[19]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
-			    *(int*) (&buf[21]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
+                *(int*) (&buf[19]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
+                *(int*) (&buf[21]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
 
-			    //buf[23] = '-';
-			    *(int*) (&buf[24]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
-			    *(int*) (&buf[26]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
-			    *(int*) (&buf[28]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
-			    *(int*) (&buf[30]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
-			    *(int*) (&buf[32]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
-			    *(int*) (&buf[34]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
+                //buf[23] = '-';
+                *(int*) (&buf[24]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
+                *(int*) (&buf[26]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
+                *(int*) (&buf[28]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
+                *(int*) (&buf[30]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
+                *(int*) (&buf[32]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
+                *(int*) (&buf[34]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
 
-			    return results;
-		    }
-	    }
+                return results;
+            }
+        }
 
 
-	    public unsafe static Etag Parse(byte[] bytes)
+        public unsafe static Etag Parse(byte[] bytes)
         {
             var etag = new Etag();
             fixed (byte* restarts = bytes)
@@ -405,18 +405,18 @@ namespace Raven.Abstractions.Data
             return Etag.Parse(bytes);
         }
 
-		private static readonly int[] ByteToHexStringAsInt32Lookup;
+        private static readonly int[] ByteToHexStringAsInt32Lookup;
 
-		static Etag()
-		{
-			ByteToHexStringAsInt32Lookup = new int[256];
-			var abcdef = "0123456789ABCDEF";
-			for (var i = 0; i < 256; i++)
-			{
-				var hex = (abcdef[i / 16] | (abcdef[i % 16] << 16));
-				ByteToHexStringAsInt32Lookup[i] = hex;
-			}
-		}
+        static Etag()
+        {
+            ByteToHexStringAsInt32Lookup = new int[256];
+            var abcdef = "0123456789ABCDEF";
+            for (var i = 0; i < 256; i++)
+            {
+                var hex = (abcdef[i / 16] | (abcdef[i % 16] << 16));
+                ByteToHexStringAsInt32Lookup[i] = hex;
+            }
+        }
 
         public static Etag FromHash(Metro128Hash hash)
         {

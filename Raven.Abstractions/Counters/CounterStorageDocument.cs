@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Counters
@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Counters
         public CounterStorageDocument()
         {
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

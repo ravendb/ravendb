@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
@@ -87,7 +87,7 @@ namespace Voron.Tests.Trees
                 }
 
                 tx.Commit();
-				if (Env.Options.PageSize != 4096)
+                if (Env.Options.PageSize != 4096)
 #pragma warning disable 162
                     return;
 #pragma warning restore 162

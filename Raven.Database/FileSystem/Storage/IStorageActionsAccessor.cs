@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Storage
 
         IEnumerable<FileHeader> GetFilesAfter(Etag etag, int take);
 
-		IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take);
+        IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take);
 
         void Delete(string filename);
        
@@ -48,7 +48,7 @@ namespace Raven.Database.FileSystem.Storage
 
         void RenameFile(string filename, string rename, bool commitPeriodically = false);
 
-	    void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false);
+        void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false);
 
         RavenJObject GetConfig(string name);
 
@@ -76,12 +76,12 @@ namespace Raven.Database.FileSystem.Storage
 
         Etag GetLastEtag();
 
-		bool IsNested { get; set; }
+        bool IsNested { get; set; }
     }
 
-	public class FileUpdateResult
-	{
-		public Etag Etag;
-		public Etag PrevEtag;
-	}
+    public class FileUpdateResult
+    {
+        public Etag Etag;
+        public Etag PrevEtag;
+    }
 }

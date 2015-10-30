@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
@@ -13,8 +13,8 @@ class resourceRestore {
     defrag = ko.observable<boolean>(false);
     backupLocation = ko.observable<string>("");
     resourceLocation = ko.observable<string>();
-	indexesLocation = ko.observable<string>();
-	journalsLocation = ko.observable<string>();
+    indexesLocation = ko.observable<string>();
+    journalsLocation = ko.observable<string>();
     resourceName = ko.observable<string>();
     nameCustomValidityError: KnockoutComputed<string>;
 
@@ -111,8 +111,8 @@ class restore extends viewModelBase {
             DatabaseName: this.dbRestoreOptions.resourceName(),
             DisableReplicationDestinations: this.disableReplicationDestinations(),
             GenerateNewDatabaseId: this.generateNewDatabaseId(),
-			IndexesLocation: this.dbRestoreOptions.indexesLocation(),
-			JournalsLocation: this.dbRestoreOptions.journalsLocation()
+            IndexesLocation: this.dbRestoreOptions.indexesLocation(),
+            JournalsLocation: this.dbRestoreOptions.journalsLocation()
         };
 
         new startDbRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
@@ -128,8 +128,8 @@ class restore extends viewModelBase {
             BackupLocation: this.fsRestoreOptions.backupLocation(),
             FilesystemLocation: this.fsRestoreOptions.resourceLocation(),
             FilesystemName: this.fsRestoreOptions.resourceName(),
-			IndexesLocation: this.fsRestoreOptions.indexesLocation(),
-			JournalsLocation: this.fsRestoreOptions.journalsLocation()
+            IndexesLocation: this.fsRestoreOptions.indexesLocation(),
+            JournalsLocation: this.fsRestoreOptions.journalsLocation()
         };
 
         new startFsRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))

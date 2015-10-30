@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Indexes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,23 +20,23 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Raft.Client
 {
-	public class Indexes : RaftTestBase
-	{
-		private class Test_Index : AbstractIndexCreationTask<Person>
-		{
-			public Test_Index()
-			{
-				Map = persons => from person in persons select new { Name = person.Name };
-			}
-		}
+    public class Indexes : RaftTestBase
+    {
+        private class Test_Index : AbstractIndexCreationTask<Person>
+        {
+            public Test_Index()
+            {
+                Map = persons => from person in persons select new { Name = person.Name };
+            }
+        }
 
-		[Theory]
-		[PropertyData("Nodes")]
-		public void PutAndDeleteShouldBePropagated(int numberOfNodes)
-		{
-			var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+        [Theory]
+        [PropertyData("Nodes")]
+        public void PutAndDeleteShouldBePropagated(int numberOfNodes)
+        {
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
 
-			SetupClusterConfiguration(clusterStores);
+            SetupClusterConfiguration(clusterStores);
 
 
             var store1 = clusterStores[0];
@@ -46,28 +46,28 @@ namespace Raven.Tests.Raft.Client
                 var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
                 sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
             });
-		    
+            
 
             store1.DatabaseCommands.PutIndex("Test/Index", new Test_Index().CreateIndexDefinition(), true);
 
-			var requestFactory = new HttpRavenRequestFactory();
-			var replicationRequestUrl = string.Format("{0}/replication/replicate-indexes?op=replicate-all", store1.Url.ForDatabase(store1.DefaultDatabase));
-			if (numberOfNodes > 1)
-			{
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
-				replicationRequest.ExecuteRequest();
-			}
+            var requestFactory = new HttpRavenRequestFactory();
+            var replicationRequestUrl = string.Format("{0}/replication/replicate-indexes?op=replicate-all", store1.Url.ForDatabase(store1.DefaultDatabase));
+            if (numberOfNodes > 1)
+            {
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
+                replicationRequest.ExecuteRequest();
+            }
 
-			clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") != null, TimeSpan.FromMinutes(1)));
+            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") != null, TimeSpan.FromMinutes(1)));
 
-			store1.DatabaseCommands.DeleteIndex("Test/Index");
-			if (numberOfNodes > 1)
-			{
-				var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
-				replicationRequest.ExecuteRequest();
-			}
+            store1.DatabaseCommands.DeleteIndex("Test/Index");
+            if (numberOfNodes > 1)
+            {
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethod.Post, new RavenConnectionStringOptions { Url = store1.Url });
+                replicationRequest.ExecuteRequest();
+            }
 
-			clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") == null, TimeSpan.FromMinutes(1)));
-		}
-	}
+            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") == null, TimeSpan.FromMinutes(1)));
+        }
+    }
 }

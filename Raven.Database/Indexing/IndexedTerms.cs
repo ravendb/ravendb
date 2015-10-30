@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CachedIndexedTerms.cs" company="Hibernating Rhinos LTD"> 
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -50,19 +50,19 @@ namespace Raven.Database.Indexing
                 }
             }
 
-	        public void SoftMemoryRelease()
-	        {
-	        }
+            public void SoftMemoryRelease()
+            {
+            }
 
-	        public LowMemoryHandlerStatistics GetStats()
-	        {
-		        return new LowMemoryHandlerStatistics
-		        {
-					Name = "WeakCache"
-		        };
-	        }
+            public LowMemoryHandlerStatistics GetStats()
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "WeakCache"
+                };
+            }
 
-	        public CachedIndexedTerms GetOrCreateValue(IndexReader reader)
+            public CachedIndexedTerms GetOrCreateValue(IndexReader reader)
             {
                 CachedIndexedTerms value;
                 // ReSharper disable once InconsistentlySynchronizedField
@@ -88,39 +88,39 @@ namespace Raven.Database.Indexing
         public class CachedIndexedTerms : ILowMemoryHandler
         {
             public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
-	        private string databaseName;
-	        private object indexName;
+            private string databaseName;
+            private object indexName;
 
-	        public CachedIndexedTerms(string databaseName, string indexName)
-			{
-				this.databaseName = databaseName;
-		        this.indexName = indexName;
+            public CachedIndexedTerms(string databaseName, string indexName)
+            {
+                this.databaseName = databaseName;
+                this.indexName = indexName;
                 MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-	        public void HandleLowMemory()
+            public void HandleLowMemory()
             {
                 Results.Clear();
             }
 
-	        public void SoftMemoryRelease()
-	        {
-		        
-	        }
+            public void SoftMemoryRelease()
+            {
+                
+            }
 
-	        public LowMemoryHandlerStatistics GetStats()
-	        {
-		        return new LowMemoryHandlerStatistics
-		        {
-					Name = "CachedIndexedTerms",
-					Metadata = new
-					{
-						IndexName=indexName
-					},
-					DatabaseName = databaseName,
-					EstimatedUsedMemory = Results.Sum(x=>x.Key.Length*sizeof(char) + x.Value.Results.Sum(y=>y.Key.Length*sizeof(char) + y.Value.Length * sizeof(int)))
-		        };
-	        }
+            public LowMemoryHandlerStatistics GetStats()
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "CachedIndexedTerms",
+                    Metadata = new
+                    {
+                        IndexName=indexName
+                    },
+                    DatabaseName = databaseName,
+                    EstimatedUsedMemory = Results.Sum(x=>x.Key.Length*sizeof(char) + x.Value.Results.Sum(y=>y.Key.Length*sizeof(char) + y.Value.Length * sizeof(int)))
+                };
+            }
         }
 
         public class FieldCacheInfo
@@ -129,10 +129,10 @@ namespace Raven.Database.Indexing
             public bool Done;
         }
 
-		public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
+        public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
         {
-			var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
-			
+            var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
+            
             FieldCacheInfo info;
             if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {
@@ -239,10 +239,10 @@ namespace Raven.Database.Indexing
                                     break;
                                 case JTokenType.String:
                                     result[propertyName] = new RavenJArray
-									{
-										result[propertyName],
-										text
-									};
+                                    {
+                                        result[propertyName],
+                                        text
+                                    };
                                     break;
                                 default:
                                     throw new ArgumentException("No idea how to handle " + result[propertyName].Type);

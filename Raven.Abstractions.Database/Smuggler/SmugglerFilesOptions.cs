@@ -13,13 +13,13 @@ namespace Raven.Abstractions.Database.Smuggler
         public Etag StartFilesEtag { get; set; }
         public Etag StartFilesDeletionEtag { get; set; }
 
-		public bool StripReplicationInformation { get; set; }
+        public bool StripReplicationInformation { get; set; }
 
-		public bool ShouldDisableVersioningBundle { get; set; }
+        public bool ShouldDisableVersioningBundle { get; set; }
 
-		/// <summary>
-		/// When set ovverides the default document name.
-		/// </summary>
-		public string NoneDefualtFileName { get; set; }
+        /// <summary>
+        /// When set ovverides the default document name.
+        /// </summary>
+        public string NoneDefualtFileName { get; set; }
     }
 }

@@ -32,10 +32,10 @@ class createResource extends dialogViewModelBase {
     constructor() {
         super();
 
-		if (!shell.has40Features()) {
-			this.resourceTypes().first(r => r.resourceType === this.counterStorageType).experimental = true;
-			this.resourceTypes().first(r => r.resourceType === this.timeSeriesType).experimental = true;
-		}
+        if (!shell.has40Features()) {
+            this.resourceTypes().first(r => r.resourceType === this.counterStorageType).experimental = true;
+            this.resourceTypes().first(r => r.resourceType === this.timeSeriesType).experimental = true;
+        }
 
 
         this.createDatabasePart = new createDatabase(this);

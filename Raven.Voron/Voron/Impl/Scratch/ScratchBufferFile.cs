@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ScratchBufferFile.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,57 +13,57 @@ using Voron.Trees;
 
 namespace Voron.Impl.Scratch
 {
-	public unsafe class ScratchBufferFile : IDisposable
-	{
-		private class PendingPage
-		{
-			public long Page;
-			public long NumberOfPages;
-			public long ValidAfterTransactionId;
-		}
+    public unsafe class ScratchBufferFile : IDisposable
+    {
+        private class PendingPage
+        {
+            public long Page;
+            public long NumberOfPages;
+            public long ValidAfterTransactionId;
+        }
 
         private readonly IVirtualPager _scratchPager;
-		private readonly int _scratchNumber;        
+        private readonly int _scratchNumber;        
 
         private readonly SortedList<long, long> _freePagesByTransaction = new SortedList<long, long>(NumericDescendingComparer.Instance);
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>();
-		private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>();
-		private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
+        private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>();
+        private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
         
         private long _allocatedPagesUsedSize;
-		private long _lastUsedPage;
+        private long _lastUsedPage;
 
-		public ScratchBufferFile(IVirtualPager scratchPager, int scratchNumber)
-		{
-			_scratchPager = scratchPager;
-			_scratchNumber = scratchNumber;
+        public ScratchBufferFile(IVirtualPager scratchPager, int scratchNumber)
+        {
+            _scratchPager = scratchPager;
+            _scratchNumber = scratchNumber;
             _allocatedPagesUsedSize = 0;
-		}
+        }
 
-		public PagerState PagerState { get { return _scratchPager.PagerState; } }
+        public PagerState PagerState { get { return _scratchPager.PagerState; } }
 
-		public int Number
-		{
-			get { return _scratchNumber; }
-		}
+        public int Number
+        {
+            get { return _scratchNumber; }
+        }
 
-		public int NumberOfAllocations
-		{
-			get { return _allocatedPages.Count; }
-		}
+        public int NumberOfAllocations
+        {
+            get { return _allocatedPages.Count; }
+        }
 
-		public long Size
-		{
-			get { return _scratchPager.NumberOfAllocatedPages * _scratchPager.PageSize; }
-		}
+        public long Size
+        {
+            get { return _scratchPager.NumberOfAllocatedPages * _scratchPager.PageSize; }
+        }
 
-		public long SizeAfterAllocation(long sizeToAllocate)
-		{
-			return (_lastUsedPage + sizeToAllocate) * _scratchPager.PageSize;
-		}
+        public long SizeAfterAllocation(long sizeToAllocate)
+        {
+            return (_lastUsedPage + sizeToAllocate) * _scratchPager.PageSize;
+        }
 
-		public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages, long size)
-		{
+        public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages, long size)
+        {
             _scratchPager.EnsureContinuous(tx, _lastUsedPage, (int)size);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, size, numberOfPages);
@@ -75,8 +75,8 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-		public bool HasDiscontinuousSpaceFor(Transaction tx, long size, int scratchFilesInUse)
-		{
+        public bool HasDiscontinuousSpaceFor(Transaction tx, long size, int scratchFilesInUse)
+        {
             long available = 0;
             if (scratchFilesInUse == 1)
             {
@@ -114,11 +114,11 @@ namespace Voron.Impl.Scratch
             }
 
             return available >= size;
-		}
+        }
 
-		public bool TryGettingFromAllocatedBuffer(Transaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
-		{
-			result = null;
+        public bool TryGettingFromAllocatedBuffer(Transaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
+        {
+            result = null;
 
             LinkedList<long> listOfAvailableImmediately;
             if (_freePagesBySizeAvailableImmediately.TryGetValue(size, out listOfAvailableImmediately) && listOfAvailableImmediately.Count > 0)
@@ -150,10 +150,10 @@ namespace Voron.Impl.Scratch
             _allocatedPages.Add(val.Page, result);
 
             return true;       
-		}
+        }
 
-		public void Free(long page, long asOfTxId)
-		{        
+        public void Free(long page, long asOfTxId)
+        {        
             PageFromScratchBuffer value;
             if (_allocatedPages.TryGetValue(page, out value) == false)
             {
@@ -198,20 +198,20 @@ namespace Voron.Impl.Scratch
                 else
                     _freePagesByTransaction[asOfTxId] = _freePagesByTransaction.Values[position] + value.NumberOfPages;
             }
-		}
+        }
 
-		public TreePage ReadPage(long p, PagerState pagerState = null)
-		{
-			return _scratchPager.Read(p, pagerState);
-		}
+        public TreePage ReadPage(long p, PagerState pagerState = null)
+        {
+            return _scratchPager.Read(p, pagerState);
+        }
 
-		public byte* AcquirePagePointer(long p)
-		{
-			return _scratchPager.AcquirePagePointer(p);
-		}
+        public byte* AcquirePagePointer(long p)
+        {
+            return _scratchPager.AcquirePagePointer(p);
+        }
 
-		public long ActivelyUsedBytes(long oldestActiveTransaction)
-		{
+        public long ActivelyUsedBytes(long oldestActiveTransaction)
+        {
             long result = _allocatedPagesUsedSize;
 
             var keys = _freePagesByTransaction.Keys;
@@ -224,11 +224,11 @@ namespace Voron.Impl.Scratch
                 result += values[i];
             }
 
-			return result * _scratchPager.PageSize;
-		}
+            return result * _scratchPager.PageSize;
+        }
 
-		internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
-		{
+        internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
+        {
             return _freePagesBySize.Keys.ToDictionary(size => size, size =>
             {
                 var list = _freePagesBySize[size].Last;
@@ -242,11 +242,11 @@ namespace Voron.Impl.Scratch
 
                 return value.ValidAfterTransactionId;
             });
-		}
+        }
 
-		public void Dispose()
-		{
-			_scratchPager.Dispose();
-		}
-	}
+        public void Dispose()
+        {
+            _scratchPager.Dispose();
+        }
+    }
 }

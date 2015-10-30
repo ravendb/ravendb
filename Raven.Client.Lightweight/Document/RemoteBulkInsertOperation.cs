@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net;
 
 using Raven.Abstractions.Exceptions;
@@ -52,8 +52,8 @@ namespace Raven.Client.Document
     public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
     {
         private readonly BulkInsertOptions options;
-	    private readonly Task<int> previousTask;
-	    private CancellationTokenSource cancellationTokenSource;
+        private readonly Task<int> previousTask;
+        private CancellationTokenSource cancellationTokenSource;
         private readonly AsyncServerClient operationClient;
         private readonly MemoryStream bufferedStream = new MemoryStream();
         private readonly BlockingCollection<RavenJObject> queue;
@@ -61,17 +61,17 @@ namespace Raven.Client.Document
         private static readonly RavenJObject SkipMarker = new RavenJObject();
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
-	    private bool aborted;
-	    private bool waitedForPreviousTask;
-	    private readonly Stopwatch _timing = Stopwatch.StartNew();
+        private bool aborted;
+        private bool waitedForPreviousTask;
+        private readonly Stopwatch _timing = Stopwatch.StartNew();
         private const int BigDocumentSize = 64 * 1024;
 
         public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
-			Task<int> previousTask = null, Guid? existingOperationId = null)
+            Task<int> previousTask = null, Guid? existingOperationId = null)
         {
             this.options = options;
-	        this.previousTask = previousTask;
-	        using (NoSynchronizationContext.Scope())
+            this.previousTask = previousTask;
+            using (NoSynchronizationContext.Scope())
             {
                 OperationId = existingOperationId.HasValue ? existingOperationId.Value : Guid.NewGuid();
                 operationClient = client;
@@ -86,8 +86,8 @@ namespace Raven.Client.Document
         }
 
         public int Total { get; set; }
-	    public int localCount;
-	    public long size;
+        public int localCount;
+        public long size;
 
 #if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
@@ -115,46 +115,46 @@ namespace Raven.Client.Document
                     throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
                 }
 
-	            using (operationRequest = CreateOperationRequest(operationUrl, token))
-	            {
-		            var cancellationToken = CreateCancellationToken();
+                using (operationRequest = CreateOperationRequest(operationUrl, token))
+                {
+                    var cancellationToken = CreateCancellationToken();
                     response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
-		            {
-			            try
-			            {
-				            WriteQueueToServer(stream, options, cancellationToken);
+                    {
+                        try
+                        {
+                            WriteQueueToServer(stream, options, cancellationToken);
                             source.TrySetResult(null);
-			            }
-			            catch (Exception e)
-			            {
+                        }
+                        catch (Exception e)
+                        {
                             //we get a cancellation only if we receive a notification of BulkInsertError
                             //in that case we need to get the real error from the server using response.AssertNotFailingResponse()
                             if (cancellationToken.IsCancellationRequested)
                                 source.TrySetResult(null);
                             else
-				            source.TrySetException(e);
-			            }
+                            source.TrySetException(e);
+                        }
                         finally
                         {
                             queue.CompleteAdding();
                         }
-		            }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
+                    }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-		            await response.AssertNotFailingResponse().ConfigureAwait(false);
+                    await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-		            long operationId;
+                    long operationId;
 
-		            using (response)
-		            using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-		            using (var streamReader = new StreamReader(stream))
-		            {
-			            var result = RavenJObject.Load(new JsonTextReader(streamReader));
-			            operationId = result.Value<long>("OperationId");
-		            }
+                    using (response)
+                    using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    {
+                        var result = RavenJObject.Load(new JsonTextReader(streamReader));
+                        operationId = result.Value<long>("OperationId");
+                    }
 
                     if (await IsOperationCompleted(operationId).ConfigureAwait(false))
                         responseOperationId = operationId;
-	            }
+                }
             }
         }
 
@@ -174,26 +174,26 @@ namespace Raven.Client.Document
 
         private async Task<RavenJToken> GetAuthToken()
         {
-	        using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true))
-			{
-				return await request.ReadResponseJsonAsync().ConfigureAwait(false);
-	        }
+            using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true))
+            {
+                return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
-			using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
-	        {
-		        request.AddOperationHeader("Single-Use-Auth-Token", token);
-		        var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-		        return result.Value<string>("Token");
-	        }
+            using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
+            {
+                request.AddOperationHeader("Single-Use-Auth-Token", token);
+                var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                return result.Value<string>("Token");
+            }
         }
 
         private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
         {
-			// the request may take a long time to process, so we need to set a large timeout value
-			var request = operationClient.CreateRequest(operationUrl, HttpMethods.Post, disableRequestCompression: true, disableAuthentication: true, timeout: TimeSpan.FromHours(6));
+            // the request may take a long time to process, so we need to set a large timeout value
+            var request = operationClient.CreateRequest(operationUrl, HttpMethods.Post, disableRequestCompression: true, disableAuthentication: true, timeout: TimeSpan.FromHours(6));
             request.AddOperationHeader("Single-Use-Auth-Token", token);
 
             return request;
@@ -347,8 +347,8 @@ namespace Raven.Client.Document
 
         public async Task<int> DisposeAsync()
         {
-	        if (disposed)
-		        return -1;
+            if (disposed)
+                return -1;
             disposed = true;
 
             try
@@ -376,29 +376,29 @@ namespace Raven.Client.Document
                 operationTask.AssertNotFailed();
 #pragma warning restore 4014
 
-	            if (previousTask == null)
-		            ReportInternal("Finished writing all results to server");
+                if (previousTask == null)
+                    ReportInternal("Finished writing all results to server");
 
                 while (true)
                 {
                     if (await IsOperationCompleted(responseOperationId).ConfigureAwait(false))
                         break;
 
-	                await Task.Delay(100).ConfigureAwait(false);
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
-				if (previousTask == null)
-	            {
-		            ReportInternal("Done writing to server");
-	            }
-	            else
-	            {
-					ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
-					   localCount,
-					   bufferedStream.Position / 1024d,
-					   Total,
-					   size / 1024d,
-					   _timing.Elapsed.TotalSeconds);   
-	            }
+                if (previousTask == null)
+                {
+                    ReportInternal("Done writing to server");
+                }
+                else
+                {
+                    ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+                       localCount,
+                       bufferedStream.Position / 1024d,
+                       Total,
+                       size / 1024d,
+                       _timing.Elapsed.TotalSeconds);   
+                }
             }
             catch (Exception e)
             {
@@ -406,11 +406,11 @@ namespace Raven.Client.Document
                 if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
                     throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
 
-				if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
-					throw new OperationVetoedException(e.Message, e);
+                if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
+                    throw new OperationVetoedException(e.Message, e);
                 throw;
             }
-	        return Total;
+            return Total;
         }
 
         public void Dispose()
@@ -427,39 +427,39 @@ namespace Raven.Client.Document
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {
-	        if (localBatch.Count == 0)
-		        return;
-	        if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
+            if (localBatch.Count == 0)
+                return;
+            if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-			if (previousTask != null && waitedForPreviousTask == false)
-	        {
-		        Total += previousTask.Result;
-		        waitedForPreviousTask = true;
-	        }
+            if (previousTask != null && waitedForPreviousTask == false)
+            {
+                Total += previousTask.Result;
+                waitedForPreviousTask = true;
+            }
 
             var sp = Stopwatch.StartNew();
 
-	        bufferedStream.SetLength(0);
+            bufferedStream.SetLength(0);
             long bytesWrittenToServer = WriteToBuffer(options, bufferedStream, localBatch);
 
-	        var requestBinaryWriter = new BinaryWriter(requestStream);
+            var requestBinaryWriter = new BinaryWriter(requestStream);
             requestBinaryWriter.Write((int)bufferedStream.Position);
-	        bufferedStream.WriteTo(requestStream);
-	        requestStream.Flush();
+            bufferedStream.WriteTo(requestStream);
+            requestStream.Flush();
 
-	        Total += localBatch.Count;
-	        localCount += localBatch.Count;
-	        size += bytesWrittenToServer;
-			
-			if (previousTask == null)
-	        {
-		        ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
-			        localBatch.Count,
+            Total += localBatch.Count;
+            localCount += localBatch.Count;
+            size += bytesWrittenToServer;
+            
+            if (previousTask == null)
+            {
+                ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+                    localBatch.Count,
                     bufferedStream.Position / 1024d,
-			        Total,
+                    Total,
                     bytesWrittenToServer / 1024d,
-			        sp.Elapsed.TotalSeconds);
-	        }
+                    sp.Elapsed.TotalSeconds);
+            }
         }
 
         private static long WriteToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)

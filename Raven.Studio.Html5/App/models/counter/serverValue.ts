@@ -1,4 +1,4 @@
-﻿class serverValue {
+class serverValue {
     serverId = ko.observable<string>();
     value  = ko.observable<number>(0);
     etag = ko.observable<number>(0);

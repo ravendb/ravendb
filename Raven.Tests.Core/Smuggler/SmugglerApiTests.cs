@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -20,7 +20,6 @@ using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
-
 using Xunit;
 using Xunit.Extensions;
 
@@ -37,8 +36,8 @@ namespace Raven.Tests.Core.Smuggler
 
         public SmugglerApiTests()
         {
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
             IOExtensions.DeleteDirectory(BackupDir);
         }
 
@@ -105,24 +104,24 @@ namespace Raven.Tests.Core.Smuggler
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
-							var smuggler = new DatabaseSmuggler(
-								new DatabaseSmugglerOptions(),
-								new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                            var smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                             {
-									Url = "http://localhost:" + Port1,
-									Database = "db1"
-								}),
-								new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-								{
-									Url = "http://localhost:" + Port2,
-									Database = "db2"
-								}));
+                                    Url = "http://localhost:" + Port1,
+                                    Database = "db1"
+                                }),
+                                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:" + Port2,
+                                    Database = "db2"
+                                }));
 
-							await smuggler.ExecuteAsync();
+                            await smuggler.ExecuteAsync();
 
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                             Assert.Equal(3, docs.Length);
-							var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
+                            var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
@@ -133,9 +132,9 @@ namespace Raven.Tests.Core.Smuggler
         }
 
         [Theory]
-		[InlineData(true)]
-		[InlineData(false)]
-		public async Task CanExportAndImportData(bool disableCompressionOnImport)
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanExportAndImportData(bool disableCompressionOnImport)
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration
             {
@@ -169,18 +168,18 @@ namespace Raven.Tests.Core.Smuggler
                         session.SaveChanges();
                     }
 
-					var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
-	                    {
-						Url = "http://localhost:" + Port1,
-						Database = "db1"
-					};
+                    var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                        Url = "http://localhost:" + Port1,
+                        Database = "db1"
+                    };
 
-					var smuggler = new DatabaseSmuggler(
-						new DatabaseSmugglerOptions(),
-						new DatabaseSmugglerRemoteSource(connectionOptions),
-						new DatabaseSmugglerFileDestination(BackupDir));
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerRemoteSource(connectionOptions),
+                        new DatabaseSmugglerFileDestination(BackupDir));
 
-					await smuggler.ExecuteAsync();
+                    await smuggler.ExecuteAsync();
 
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
@@ -204,27 +203,27 @@ namespace Raven.Tests.Core.Smuggler
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
-							connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
+                            connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
                             {
-								Url = "http://localhost:" + Port2,
-								Database = "db2"
-							};
+                                Url = "http://localhost:" + Port2,
+                                Database = "db2"
+                            };
                             
-							smuggler = new DatabaseSmuggler(
-								new DatabaseSmugglerOptions(),
-								new DatabaseSmugglerFileSource(BackupDir),
-								new DatabaseSmugglerRemoteDestination(
-									connectionOptions,
-									new DatabaseSmugglerRemoteDestinationOptions
-									{
-										DisableCompression = disableCompressionOnImport
-									}));
+                            smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerFileSource(BackupDir),
+                                new DatabaseSmugglerRemoteDestination(
+                                    connectionOptions,
+                                    new DatabaseSmugglerRemoteDestinationOptions
+                                    {
+                                        DisableCompression = disableCompressionOnImport
+                                    }));
 
-							await smuggler.ExecuteAsync();
+                            await smuggler.ExecuteAsync();
 
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                             Assert.Equal(3, docs.Length);
-							var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
+                            var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);

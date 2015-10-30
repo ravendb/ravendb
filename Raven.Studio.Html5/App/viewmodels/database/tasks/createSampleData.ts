@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");

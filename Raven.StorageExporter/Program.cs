@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -99,7 +99,7 @@ Copyright (C) 2008 - {0} - Hibernating Rhinos
             Console.WriteLine(@"
 Usage:
   - Export a RavenDB database to a file in raven.dump format.
-	Raven.StorageExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
+    Raven.StorageExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
 
 Parameters:
  -BatchSize <integer number> : The size of the export batch (default size is 1024). 

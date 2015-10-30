@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-
+using System.Threading.Tasks;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -14,8 +13,8 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class TroyMapReduceImport : RavenTest
-	{
+    public class TroyMapReduceImport : RavenTest
+    {
         [Theory]
         [PropertyData("Storages")]
         public async Task CanGetCorrectResult(string storage)
@@ -41,5 +40,5 @@ namespace Raven.Tests.MailingList
                 }
             }
         } 
-	}
+    }
 }

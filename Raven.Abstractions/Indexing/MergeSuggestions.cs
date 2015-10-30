@@ -10,13 +10,13 @@ namespace Raven.Abstractions.Indexing
         // start MergedIndex != null
         public List<string> CanMerge = new List<string>();  // index names
 
-	    public string Collection = String.Empty; // the collection that is being merged
+        public string Collection = String.Empty; // the collection that is being merged
         // end MergedIndex != null
 
         // start MergedIndex == null
-		public List<string> CanDelete = new List<string>();  // index names
+        public List<string> CanDelete = new List<string>();  // index names
 
-	    public string SurpassingIndex = string.Empty;
+        public string SurpassingIndex = string.Empty;
         // end MergedIndex == null
     }
 }

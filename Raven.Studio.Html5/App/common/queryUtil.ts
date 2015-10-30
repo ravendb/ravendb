@@ -1,4 +1,4 @@
-﻿import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
+import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
 

@@ -1,4 +1,4 @@
-﻿using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
@@ -7,7 +7,7 @@ using GeoAPI.Geometries;
 // From: https://code.google.com/p/nettopologysuite/source/browse/#svn%2Ftrunk%2FNetTopologySuite.IO%2FNetTopologySuite.IO.GeoJSON
 namespace Raven.Tests.Spatial.JsonConverters.GeoJson
 {
-	public class EnvelopeConverter : JsonConverter
+    public class EnvelopeConverter : JsonConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {

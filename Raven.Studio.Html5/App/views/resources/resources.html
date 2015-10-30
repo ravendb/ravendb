@@ -1,6 +1,6 @@
-﻿<section id="resources-page">
-	<div class="text-center" data-bind="visible: resources().length == 1">
-		<div class="row">
+<section id="resources-page">
+    <div class="text-center" data-bind="visible: resources().length == 1">
+        <div class="row">
             <div data-bind="css: { 'col-md-5' : showCreateCluster(), 'col-md-12': !showCreateCluster() }">
                 <h2 class="page-header text-info">
                     <i class="fa fa-database fa-5x"></i>
@@ -27,8 +27,8 @@
                     <small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small>
                 </h2>
             </div>
-		</div>
-	</div>
+        </div>
+    </div>
     <ul class="breadcrumb" data-bind="visible: resources().length > 1">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
@@ -49,35 +49,35 @@
         <!-- /ko -->
     <!-- /ko -->
 
-	<div class="btn-toolbar" data-bind="visible: resources().length > 1">
-		<div class="btn-group">
-			<button type="button" class="btn btn-link" data-bind="click: toggleSelectAll" title="Select all or none">
+    <div class="btn-toolbar" data-bind="visible: resources().length > 1">
+        <div class="btn-group">
+            <button type="button" class="btn btn-link" data-bind="click: toggleSelectAll" title="Select all or none">
                 <img data-bind="attr: { src: hasAllResourcesSelected() ? 'content/images/checked.png' : isAnyResourceSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }, visible: isCheckboxVisible">
-			</button>
-		</div>
-		<div class="btn-group">
+            </button>
+        </div>
+        <div class="btn-group">
             <button type="button" class="btn btn-primary" data-bind="click: newResource, visible: isGlobalAdmin" accesskey="n" title="Create a new resource. (Alt+N)">
                 <i class="fa fa-plus"></i> New Resource
             </button>
-		</div>
-		<div class="btn-group">
-			<input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: resources().length > 0" title="Search for a database or file system (Alt+/)">
-		</div>
-		<div class="btn-group">
-			<button type="button" class="btn btn-danger" data-bind="click: deleteCheckedResources, visible: isAnyResourceSelected" title="Delete selected databases or file systems"><i class="fa fa-trash-o"></i></button>
-		</div>
-	    <div class="btn-group">
-	        <button type="button" class="btn btn-default" data-bind="click: toggleCheckedResources, visible: allCheckedResourcesDisabled() != null, attr: { title: allCheckedResourcesDisabled() ? 'Enable selected resources' : 'Disable selected resources' }">
-	            <i class="fa" data-bind="css: { 'fa-lock': !allCheckedResourcesDisabled(), 'fa-unlock': allCheckedResourcesDisabled }"></i>
-	        </button>
-	    </div>
-	    <div class="btn-group">
+        </div>
+        <div class="btn-group">
+            <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: resources().length > 0" title="Search for a database or file system (Alt+/)">
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-danger" data-bind="click: deleteCheckedResources, visible: isAnyResourceSelected" title="Delete selected databases or file systems"><i class="fa fa-trash-o"></i></button>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default" data-bind="click: toggleCheckedResources, visible: allCheckedResourcesDisabled() != null, attr: { title: allCheckedResourcesDisabled() ? 'Enable selected resources' : 'Disable selected resources' }">
+                <i class="fa" data-bind="css: { 'fa-lock': !allCheckedResourcesDisabled(), 'fa-unlock': allCheckedResourcesDisabled }"></i>
+            </button>
+        </div>
+        <div class="btn-group">
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
-	    </div>
-	    <div class="btn-group pull-right">
+        </div>
+        <div class="btn-group pull-right">
             <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
-		</div>
-	</div>
+        </div>
+    </div>
 
     <div class="resources-container" data-bind="foreach: resources">
         <!--ko if: $data.isDatabase() -->

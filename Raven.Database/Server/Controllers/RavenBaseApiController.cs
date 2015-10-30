@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -38,20 +38,20 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
     public abstract class RavenBaseApiController : ApiController
-	{
-		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
+    {
+        protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
         
-		private HttpRequestMessage request;
+        private HttpRequestMessage request;
 
-		internal bool SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized{ get; set; }
+        internal bool SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized{ get; set; }
 
-		public HttpRequestMessage InnerRequest
-		{
-			get
-			{
-				return Request ?? request;
-			}
-		}
+        public HttpRequestMessage InnerRequest
+        {
+            get
+            {
+                return Request ?? request;
+            }
+        }
 
         public bool IsInternalRequest
         {
@@ -62,14 +62,14 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		public HttpHeaders InnerHeaders
-		{
-			get
-			{
-			    var message = InnerRequest;
-			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
-			}
-		}
+        public HttpHeaders InnerHeaders
+        {
+            get
+            {
+                var message = InnerRequest;
+                return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
+            }
+        }
 
         public static HttpHeaders CloneRequestHttpHeaders( HttpRequestHeaders httpRequestHeaders, HttpContentHeaders httpContentHeaders)
         {
@@ -108,100 +108,100 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		public new IPrincipal User { get; set; }
+        public new IPrincipal User { get; set; }
 
         public bool WasAlreadyAuthorizedUsingSingleAuthToken { get; set; }
 
-		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			request = controllerContext.Request;
-			User = controllerContext.RequestContext.Principal;
+        protected virtual void InnerInitialization(HttpControllerContext controllerContext)
+        {
+            request = controllerContext.Request;
+            User = controllerContext.RequestContext.Principal;
 
             landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
-			timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
+            timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
-			clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
-		}
+            clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
+        }
 
-		public async Task<T> ReadJsonObjectAsync<T>()
-		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
+        public async Task<T> ReadJsonObjectAsync<T>()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var gzipStream = new GZipStream(buffered, CompressionMode.Decompress))
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
-			{
-				using (var jsonReader = new JsonTextReader(streamReader))
-				{
-					var result = JsonExtensions.CreateDefaultJsonSerializer();
+            using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            {
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    var result = JsonExtensions.CreateDefaultJsonSerializer();
 
-					return (T)result.Deserialize(jsonReader, typeof(T));
-				}
-			}
-		}
+                    return (T)result.Deserialize(jsonReader, typeof(T));
+                }
+            }
+        }
 
-	    protected Guid ExtractOperationId()
-		{
-			Guid result;
-			Guid.TryParse(GetQueryStringValue("operationId"), out result);
-			return result;
-		}
+        protected Guid ExtractOperationId()
+        {
+            Guid result;
+            Guid.TryParse(GetQueryStringValue("operationId"), out result);
+            return result;
+        }
 
-	    protected async Task<RavenJObject> ReadJsonAsync()
-		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
+        protected async Task<RavenJObject> ReadJsonAsync()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
-			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
-			using (var jsonReader = new RavenJsonTextReader(streamReader))
-				return RavenJObject.Load(jsonReader);
-		}
+            using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
+            using (var jsonReader = new RavenJsonTextReader(streamReader))
+                return RavenJObject.Load(jsonReader);
+        }
 
-	    protected async Task<RavenJArray> ReadJsonArrayAsync()
-		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
+        protected async Task<RavenJArray> ReadJsonArrayAsync()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
-			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
-			using (var jsonReader = new RavenJsonTextReader(streamReader))
-			{
-				return RavenJArray.Load(jsonReader);
-		}
-		}
+            using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
+            using (var jsonReader = new RavenJsonTextReader(streamReader))
+            {
+                return RavenJArray.Load(jsonReader);
+        }
+        }
 
-	    protected async Task<string> ReadStringAsync()
-		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
+        protected async Task<string> ReadStringAsync()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
-			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
-				return streamReader.ReadToEnd();
-		}
+            using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
+                return streamReader.ReadToEnd();
+        }
 
-	    protected async Task<RavenJArray> ReadBsonArrayAsync()
-		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
+        protected async Task<RavenJArray> ReadBsonArrayAsync()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
-			using (var jsonReader = new BsonReader(buffered))
-			{
-				var jObject = RavenJObject.Load(jsonReader);
-				return new RavenJArray(jObject.Values<RavenJToken>());
-			}
-		}
+            using (var jsonReader = new BsonReader(buffered))
+            {
+                var jObject = RavenJObject.Load(jsonReader);
+                return new RavenJArray(jObject.Values<RavenJToken>());
+            }
+        }
 
-		private Encoding GetRequestEncoding()
-		{
-			if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
-				return Encoding.GetEncoding(Constants.DefaultRequestEncoding);
-			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
-		}
+        private Encoding GetRequestEncoding()
+        {
+            if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
+                return Encoding.GetEncoding(Constants.DefaultRequestEncoding);
+            return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
+        }
 
-	    protected int GetStart()
-		{
-			int start;
-			int.TryParse(GetQueryStringValue("start"), out start);
-			return Math.Max(0, start);
-		}
+        protected int GetStart()
+        {
+            int start;
+            int.TryParse(GetQueryStringValue("start"), out start);
+            return Math.Max(0, start);
+        }
 
-	    protected int GetNextPageStart()
+        protected int GetNextPageStart()
         {
             bool isNextPage;
             if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
@@ -210,48 +210,48 @@ namespace Raven.Database.Server.Controllers
             return 0;
         }
 
-	    protected int GetPageSize(int maxPageSize)
-		{
-			int pageSize;
-			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
-				pageSize = 25;
-		    if (pageSize < 0)
-		        return 0;
-			if (pageSize > maxPageSize)
-				pageSize = maxPageSize;
-			return pageSize;
-		}
+        protected int GetPageSize(int maxPageSize)
+        {
+            int pageSize;
+            if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
+                pageSize = 25;
+            if (pageSize < 0)
+                return 0;
+            if (pageSize > maxPageSize)
+                pageSize = maxPageSize;
+            return pageSize;
+        }
 
 
-	    protected bool MatchEtag(Etag etag)
-		{
-			return EtagHeaderToEtag() == etag;
-		}
+        protected bool MatchEtag(Etag etag)
+        {
+            return EtagHeaderToEtag() == etag;
+        }
 
-	    private Etag EtagHeaderToEtag()
-		{
-		    try
-		    {
-		        var responseHeader = GetHeader("If-None-Match");
-		        if (string.IsNullOrEmpty(responseHeader))
-		            return Etag.InvalidEtag;
+        private Etag EtagHeaderToEtag()
+        {
+            try
+            {
+                var responseHeader = GetHeader("If-None-Match");
+                if (string.IsNullOrEmpty(responseHeader))
+                    return Etag.InvalidEtag;
 
-		        if (responseHeader[0] == '\"')
-		            return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+                if (responseHeader[0] == '\"')
+                    return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-		        return Etag.Parse(responseHeader);
-		    }
-		    catch (Exception e)
-		    {
-		        Console.WriteLine(e.Message);
+                return Etag.Parse(responseHeader);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
                 return Etag.InvalidEtag;
-		    }
-		}
+            }
+        }
 
-		public string GetQueryStringValue(string key)
-		{
-			return GetQueryStringValue(InnerRequest, key);
-		}
+        public string GetQueryStringValue(string key)
+        {
+            return GetQueryStringValue(InnerRequest, key);
+        }
 
 //		public static string GetQueryStringValue(HttpRequestMessage req, string key)
 //		{
@@ -261,7 +261,7 @@ namespace Raven.Database.Server.Controllers
 //			return value;
 //		}
 
-	    protected static string GetQueryStringValue(HttpRequestMessage req, string key)
+        protected static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
             NameValueCollection nvc;
             object value;
@@ -271,80 +271,80 @@ namespace Raven.Database.Server.Controllers
                 return nvc[key];
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-		    if (!ClientIsV3OrHigher(req))
-		    {
-			    foreach (var queryKey in nvc.AllKeys)
-				    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
-		    }
-	        req.Properties["Raven.QueryString"] = nvc;
+            if (!ClientIsV3OrHigher(req))
+            {
+                foreach (var queryKey in nvc.AllKeys)
+                    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+            }
+            req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
-		protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
-		{
-			IEnumerable<string> values;
-			if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
-				return false; // probably 1.0 client?
-			foreach (var value in values)
-			{
-				if (string.IsNullOrEmpty(value) ) return false;
-				if (value[0] == '1' || value[0] == '2') return false;
-			}
-			return true;
-		}
+        protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
+        {
+            IEnumerable<string> values;
+            if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                return false; // probably 1.0 client?
+            foreach (var value in values)
+            {
+                if (string.IsNullOrEmpty(value) ) return false;
+                if (value[0] == '1' || value[0] == '2') return false;
+            }
+            return true;
+        }
 
-	    protected string[] GetQueryStringValues(string key)
-		{
-			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
-		}
+        protected string[] GetQueryStringValues(string key)
+        {
+            var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
+            return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
+        }
 
-	    protected Etag GetEtagFromQueryString()
-		{
-			var etagAsString = GetQueryStringValue("etag");
-			return etagAsString != null ? Etag.Parse(etagAsString) : null;
-		}
+        protected Etag GetEtagFromQueryString()
+        {
+            var etagAsString = GetQueryStringValue("etag");
+            return etagAsString != null ? Etag.Parse(etagAsString) : null;
+        }
 
-	    protected void WriteETag(Etag etag, HttpResponseMessage msg)
-		{
-			if (etag == null)
-				return;
-			WriteETag(etag.ToString(), msg);
-		}
+        protected void WriteETag(Etag etag, HttpResponseMessage msg)
+        {
+            if (etag == null)
+                return;
+            WriteETag(etag.ToString(), msg);
+        }
 
-	    protected static void WriteETag(string etag, HttpResponseMessage msg)
-		{
-			if (string.IsNullOrWhiteSpace(etag))
-				return;
+        protected static void WriteETag(string etag, HttpResponseMessage msg)
+        {
+            if (string.IsNullOrWhiteSpace(etag))
+                return;
 
-			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
-		}
+            msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
+        }
 
-	    protected void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
-		{
-			foreach (var header in headers)
-			{
-				if (header.Key.StartsWith("@"))
-					continue;
+        protected void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
+        {
+            foreach (var header in headers)
+            {
+                if (header.Key.StartsWith("@"))
+                    continue;
 
-				switch (header.Key)
-				{
-					case "Content-Type":
-						var headerValue = header.Value.Value<string>();
-						string charset = null;
-						if (headerValue.Contains("charset="))
-						{
-							var splits = headerValue.Split(';');
-							headerValue = splits[0];
+                switch (header.Key)
+                {
+                    case "Content-Type":
+                        var headerValue = header.Value.Value<string>();
+                        string charset = null;
+                        if (headerValue.Contains("charset="))
+                        {
+                            var splits = headerValue.Split(';');
+                            headerValue = splits[0];
 
-							charset = splits[1].Split('=')[1];
-						}
+                            charset = splits[1].Split('=')[1];
+                        }
 
-						msg.Content.Headers.ContentType = new MediaTypeHeaderValue(headerValue) { CharSet = charset };
+                        msg.Content.Headers.ContentType = new MediaTypeHeaderValue(headerValue) { CharSet = charset };
 
-						break;
-					default:
-						if (header.Value.Type == JTokenType.Date)
-						{
+                        break;
+                    default:
+                        if (header.Value.Type == JTokenType.Date)
+                        {
                             if (header.Key.StartsWith("Raven-"))
                             {
                                 var iso8601 = GetDateString(header.Value, "o");
@@ -360,33 +360,33 @@ namespace Raven.Database.Server.Controllers
                                     msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
                                 }                                    
                             }
-						}
+                        }
                         else if (header.Value.Type == JTokenType.Boolean)
                         {
                             msg.Content.Headers.Add(header.Key, header.Value.ToString());
                         }
-						else
-						{
-							//headers do not need url decoding because they might contain special symbols (like + symbol in clr type)
-							var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None), shouldDecodeUrl: false);
-							msg.Content.Headers.Add(header.Key, value);
-						}
-						break;
-				}
-			}
-			if (headers["@Http-Status-Code"] != null)
-			{
-				msg.StatusCode = (HttpStatusCode)headers.Value<int>("@Http-Status-Code");
-				msg.Content.Headers.Add("Temp-Status-Description", headers.Value<string>("@Http-Status-Description"));
-			}
+                        else
+                        {
+                            //headers do not need url decoding because they might contain special symbols (like + symbol in clr type)
+                            var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None), shouldDecodeUrl: false);
+                            msg.Content.Headers.Add(header.Key, value);
+                        }
+                        break;
+                }
+            }
+            if (headers["@Http-Status-Code"] != null)
+            {
+                msg.StatusCode = (HttpStatusCode)headers.Value<int>("@Http-Status-Code");
+                msg.Content.Headers.Add("Temp-Status-Description", headers.Value<string>("@Http-Status-Description"));
+            }
 
-			WriteETag(etag, msg);
-		}
+            WriteETag(etag, msg);
+        }
 
-		public void AddHeader(string key, string value, HttpResponseMessage msg)
-		{
-			if (msg.Content == null)
-				msg.Content = JsonContent();
+        public void AddHeader(string key, string value, HttpResponseMessage msg)
+        {
+            if (msg.Content == null)
+                msg.Content = JsonContent();
 
             // Ensure we haven't already appended these values.
             IEnumerable<string> existingValues;
@@ -395,362 +395,362 @@ namespace Raven.Database.Server.Controllers
             {
                 msg.Content.Headers.Add(key, value);
             }
-		}
+        }
 
-		private string GetDateString(RavenJToken token, string format)
-		{
-			var value = token as RavenJValue;
-			if (value == null)
-				return token.ToString();
+        private string GetDateString(RavenJToken token, string format)
+        {
+            var value = token as RavenJValue;
+            if (value == null)
+                return token.ToString();
 
-			var obj = value.Value;
+            var obj = value.Value;
 
-			if (obj is DateTime)
-				return ((DateTime)obj).ToString(format);
+            if (obj is DateTime)
+                return ((DateTime)obj).ToString(format);
 
-			if (obj is DateTimeOffset)
-				return ((DateTimeOffset)obj).ToString(format);
+            if (obj is DateTimeOffset)
+                return ((DateTimeOffset)obj).ToString(format);
 
-			return obj.ToString();
-		}
+            return obj.ToString();
+        }
 
-		private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
-		{
-			if (str.StartsWith("\"") && str.EndsWith("\""))
-				str = Regex.Unescape(str.Substring(1, str.Length - 2));
-			if (str.Any(ch => ch > 127))
-			{
-				// contains non ASCII chars, needs encoding
-				return Uri.EscapeDataString(str);
-			}
+        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
+        {
+            if (str.StartsWith("\"") && str.EndsWith("\""))
+                str = Regex.Unescape(str.Substring(1, str.Length - 2));
+            if (str.Any(ch => ch > 127))
+            {
+                // contains non ASCII chars, needs encoding
+                return Uri.EscapeDataString(str);
+            }
 
-			return shouldDecodeUrl ? HttpUtility.UrlDecode(str) : str;
-		}
+            return shouldDecodeUrl ? HttpUtility.UrlDecode(str) : str;
+        }
 
-		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var token = item as RavenJToken;
-			if (token == null && item != null)
-			{
-				token = RavenJToken.FromObject(item);
-			}
+        public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var token = item as RavenJToken;
+            if (token == null && item != null)
+            {
+                token = RavenJToken.FromObject(item);
+            }
 
             bool metadataOnly;
             if (bool.TryParse(GetQueryStringValue("metadata-only"), out metadataOnly) && metadataOnly)
-				token = Extensions.HttpExtensions.MinimizeToken(token);
+                token = Extensions.HttpExtensions.MinimizeToken(token);
             
-			var msg = new HttpResponseMessage(code)
-			{
-				Content = JsonContent(token),
-			};
+            var msg = new HttpResponseMessage(code)
+            {
+                Content = JsonContent(token),
+            };
 
-			WriteETag(etag, msg);
+            WriteETag(etag, msg);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		public virtual HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var resMsg = new HttpResponseMessage(code)
-			{
+        public virtual HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var resMsg = new HttpResponseMessage(code)
+            {
                 Content = new MultiGetSafeStringContent(msg),
-			};
+            };
 
-			WriteETag(etag, resMsg);
+            WriteETag(etag, resMsg);
 
-			return resMsg;
-		}
+            return resMsg;
+        }
 
-		public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var resMsg = new HttpResponseMessage(code)
-			{
-				Content = JsonContent()
-			};
-			WriteETag(etag, resMsg);
-			return resMsg;
-		}
+        public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var resMsg = new HttpResponseMessage(code)
+            {
+                Content = JsonContent()
+            };
+            WriteETag(etag, resMsg);
+            return resMsg;
+        }
 
-		public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-	    {
-			return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
-	    }
+        public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
+        }
 
-		public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
-		}
+        public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
+        }
 
-		public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
-		}
+        public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
+        }
 
-		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
-		{
-			if (msg == null)
-				msg = GetEmptyMessage(status);
+        public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
+        {
+            if (msg == null)
+                msg = GetEmptyMessage(status);
 
-			var jsonContent = ((JsonContent)msg.Content);
+            var jsonContent = ((JsonContent)msg.Content);
 
-			WriteHeaders(headers, etag, msg);
+            WriteHeaders(headers, etag, msg);
 
-			var jsonp = GetQueryStringValue("jsonp");
-			if (string.IsNullOrEmpty(jsonp) == false)
-				jsonContent.Jsonp = jsonp;
+            var jsonp = GetQueryStringValue("jsonp");
+            if (string.IsNullOrEmpty(jsonp) == false)
+                jsonContent.Jsonp = jsonp;
 
-			jsonContent.Data = data;
+            jsonContent.Data = data;
 
-			return msg;
-		}
+            return msg;
+        }
 
-		public Etag GetEtag()
-		{
-			var etagAsString = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-			if (etagAsString != null)
-			{
-				// etags are usually quoted
-				if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
-					etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
+        public Etag GetEtag()
+        {
+            var etagAsString = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            if (etagAsString != null)
+            {
+                // etags are usually quoted
+                if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
+                    etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
 
-				Etag result;
-				if (Etag.TryParse(etagAsString, out result))
-					return result;
+                Etag result;
+                if (Etag.TryParse(etagAsString, out result))
+                    return result;
 
-				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
-			}
+                throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public string GetHeader(string key)
-		{
-		    IEnumerable<string> values;
-		    if (InnerRequest.Headers.TryGetValues(key, out values) ||
+        public string GetHeader(string key)
+        {
+            IEnumerable<string> values;
+            if (InnerRequest.Headers.TryGetValues(key, out values) ||
                 (InnerRequest.Content != null && InnerRequest.Content.Headers.TryGetValues(key, out values)))
-		        return values.FirstOrDefault();
-		    return null;
-		}
+                return values.FirstOrDefault();
+            return null;
+        }
 
-		public List<string> GetHeaders(string key)
-		{
+        public List<string> GetHeaders(string key)
+        {
             IEnumerable<string> values;
             if (InnerRequest.Headers.TryGetValues(key, out values) ||
                 InnerRequest.Content.Headers.TryGetValues(key, out values))
                 return values.ToList();
             return null;
-		}
+        }
 
-		public bool HasCookie(string key)
-		{
-			return InnerRequest.Headers.GetCookies(key).Count != 0;
-		}
+        public bool HasCookie(string key)
+        {
+            return InnerRequest.Headers.GetCookies(key).Count != 0;
+        }
 
-		public string GetCookie(string key)
-		{
-			var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
-			if (cookieHeaderValue != null)
-			{
-				var cookie = cookieHeaderValue.Cookies.FirstOrDefault();
-				if (cookie != null)
-					return cookie.Value;
-			}
+        public string GetCookie(string key)
+        {
+            var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
+            if (cookieHeaderValue != null)
+            {
+                var cookie = cookieHeaderValue.Cookies.FirstOrDefault();
+                if (cookie != null)
+                    return cookie.Value;
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string zipPath,  string docPath)
-		{
-			var filePath = Path.Combine(ravenPath, docPath);
-			if (File.Exists(filePath))
-				return WriteFile(filePath);
-			
+        public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string zipPath,  string docPath)
+        {
+            var filePath = Path.Combine(ravenPath, docPath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
+            
             filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio.Html5/", docPath);
-			if (File.Exists(filePath))
-				return WriteFile(filePath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
 
-		    filePath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, docPath);
-		    if (File.Exists(filePath))
-		        return WriteFile(filePath);
+            filePath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, docPath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
 
             filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
             if (File.Exists(filePath))
                 return WriteFile(filePath);
 
-			if (string.IsNullOrEmpty(zipPath) == false)
-			{
-			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
+            if (string.IsNullOrEmpty(zipPath) == false)
+            {
+                var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
 
-				if (File.Exists(fullZipPath) == false)
-					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
+                if (File.Exists(fullZipPath) == false)
+                    fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
 
-			    if (File.Exists(fullZipPath) == false)
-			        fullZipPath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, zipPath + ".zip");
+                if (File.Exists(fullZipPath) == false)
+                    fullZipPath = Path.Combine(this.SystemConfiguration.Core.EmbeddedFilesDirectory, zipPath + ".zip");
 
-				if (File.Exists(fullZipPath))
-				{
+                if (File.Exists(fullZipPath))
+                {
                     return WriteFileFromZip(fullZipPath, docPath);
-				}
-			}
+                }
+            }
 
-		    return WriteEmbeddedFileOfType(embeddedPath, docPath);
-		}
+            return WriteEmbeddedFileOfType(embeddedPath, docPath);
+        }
 
-		private HttpResponseMessage WriteFileFromZip(string zipPath, string docPath)
-		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == "\"" + currentFileEtag + "\"")
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+        private HttpResponseMessage WriteFileFromZip(string zipPath, string docPath)
+        {
+            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            var currentFileEtag = EmbeddedLastChangedDate + docPath;
+            if (etagValue == "\"" + currentFileEtag + "\"")
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-			var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false);
-			
-			var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(docPath, StringComparison.OrdinalIgnoreCase));
-			if (zipEntry == null)
-				return EmbeddedFileNotFound(docPath);
+            var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false);
+            
+            var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(docPath, StringComparison.OrdinalIgnoreCase));
+            if (zipEntry == null)
+                return EmbeddedFileNotFound(docPath);
 
-			var entry = zipEntry.Open();
-			var msg = new HttpResponseMessage
-			{
-				Content = new CompressedStreamContent(entry, false)
-				{
-					Disposables = { zipArchive }
-				},
-			};
+            var entry = zipEntry.Open();
+            var msg = new HttpResponseMessage
+            {
+                Content = new CompressedStreamContent(entry, false)
+                {
+                    Disposables = { zipArchive }
+                },
+            };
 
-			WriteETag(currentFileEtag, msg);
+            WriteETag(currentFileEtag, msg);
 
-			var type = GetContentType(docPath);
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+            var type = GetContentType(docPath);
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		public abstract void MarkRequestDuration(long duration);
+        public abstract void MarkRequestDuration(long duration);
 
-	    public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
+        public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
 
-		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
-		public HttpResponseMessage WriteFile(string filePath)
-		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+        public HttpResponseMessage WriteFile(string filePath)
+        {
+            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
             if (etagValue != null)
             {
                 // Bug fix: the etag header starts and ends with quotes, resulting in cache-busting; the Studio always receives new files, even if should be cached.
                 etagValue = etagValue.Trim(new[] { '\"' });
             }
 
-			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
-			if (etagValue == fileEtag)
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+            var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+            if (etagValue == fileEtag)
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var msg = new HttpResponseMessage
-			{
-				Content = new CompressedStreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), false)
-			};
+            var msg = new HttpResponseMessage
+            {
+                Content = new CompressedStreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), false)
+            };
 
-			WriteETag(fileEtag, msg);
+            WriteETag(fileEtag, msg);
 
-			var type = GetContentType(filePath);
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+            var type = GetContentType(filePath);
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath)
-		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == "\"" + currentFileEtag + "\"")
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+        private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath)
+        {
+            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            var currentFileEtag = EmbeddedLastChangedDate + docPath;
+            if (etagValue == "\"" + currentFileEtag + "\"")
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			byte[] bytes;
-			var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
+            byte[] bytes;
+            var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
 
-			var resourceAssembly = typeof(RavenBaseApiController).Assembly;
-			var resourceNames = resourceAssembly.GetManifestResourceNames();
-			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
-		    if (lowercasedResourceName == null)
-		    {
-				return EmbeddedFileNotFound(docPath);
-		    }
-			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
-			{
-				if (resource == null)
-					return EmbeddedFileNotFound(docPath);
+            var resourceAssembly = typeof(RavenBaseApiController).Assembly;
+            var resourceNames = resourceAssembly.GetManifestResourceNames();
+            var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
+            if (lowercasedResourceName == null)
+            {
+                return EmbeddedFileNotFound(docPath);
+            }
+            using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
+            {
+                if (resource == null)
+                    return EmbeddedFileNotFound(docPath);
 
-				bytes = resource.ReadData();
-			}
-			var msg = new HttpResponseMessage
-			{
-				Content = new ByteArrayContent(bytes),
-			};
+                bytes = resource.ReadData();
+            }
+            var msg = new HttpResponseMessage
+            {
+                Content = new ByteArrayContent(bytes),
+            };
 
-			WriteETag(currentFileEtag, msg);
+            WriteETag(currentFileEtag, msg);
 
-			var type = GetContentType(docPath);
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+            var type = GetContentType(docPath);
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		private HttpResponseMessage EmbeddedFileNotFound(string docPath)
-		{
-			var message = "The following embedded file was not available: " + docPath +
-			              ". Please make sure that the Raven.Studio.Html5.zip file exist in the main directory (near to the Raven.Database.dll).";
-			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
-		}
+        private HttpResponseMessage EmbeddedFileNotFound(string docPath)
+        {
+            var message = "The following embedded file was not available: " + docPath +
+                          ". Please make sure that the Raven.Studio.Html5.zip file exist in the main directory (near to the Raven.Database.dll).";
+            return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
+        }
 
-		private static readonly string EmbeddedLastChangedDate =
+        private static readonly string EmbeddedLastChangedDate =
             File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
-		private static string GetContentType(string docPath)
-		{
-			switch (Path.GetExtension(docPath))
-			{
-				case ".html":
-				case ".htm":
-					return "text/html";
-				case ".css":
-					return "text/css";
-				case ".js":
-					return "text/javascript";
-				case ".ico":
-					return "image/vnd.microsoft.icon";
-				case ".jpg":
-					return "image/jpeg";
-				case ".gif":
-					return "image/gif";
-				case ".png":
-					return "image/png";
-				case ".xap":
-					return "application/x-silverlight-2";
-				case ".json":
-					return "application/json";
-				case ".eot":
-					return "application/vnd.ms-fontobject";
-				case ".svg":
-					return "image/svg+xml";
-				case ".ttf":
-					return "application/octet-stream";
-				case ".woff":
-					return "application/font-woff";
-				case ".woff2":
-					return "application/font-woff2";
-				default:
-					return "text/plain";
-			}
-		}
+        private static string GetContentType(string docPath)
+        {
+            switch (Path.GetExtension(docPath))
+            {
+                case ".html":
+                case ".htm":
+                    return "text/html";
+                case ".css":
+                    return "text/css";
+                case ".js":
+                    return "text/javascript";
+                case ".ico":
+                    return "image/vnd.microsoft.icon";
+                case ".jpg":
+                    return "image/jpeg";
+                case ".gif":
+                    return "image/gif";
+                case ".png":
+                    return "image/png";
+                case ".xap":
+                    return "application/x-silverlight-2";
+                case ".json":
+                    return "application/json";
+                case ".eot":
+                    return "application/vnd.ms-fontobject";
+                case ".svg":
+                    return "image/svg+xml";
+                case ".ttf":
+                    return "application/octet-stream";
+                case ".woff":
+                    return "application/font-woff";
+                case ".woff2":
+                    return "application/font-woff2";
+                default:
+                    return "text/plain";
+            }
+        }
 
         protected class Headers : HttpHeaders {}
 
-		public JsonContent JsonContent(RavenJToken data = null)
-		{
-			return new JsonContent(data)
-				.WithRequest(InnerRequest);
-		}
+        public JsonContent JsonContent(RavenJToken data = null)
+        {
+            return new JsonContent(data)
+                .WithRequest(InnerRequest);
+        }
 
         public string GetRequestUrl()
         {
@@ -758,45 +758,45 @@ namespace Raven.Database.Server.Controllers
             return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, SystemConfiguration);
         }
 
-	    public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
+        public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
 
 
-	    protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
+        protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
         {
             AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion, msg);
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-		public abstract string ResourcePrefix { get; }
+        public abstract string ResourcePrefix { get; }
 
-		public abstract string ResourceName { get; protected set; }
+        public abstract string ResourceName { get; protected set; }
 
         private int innerRequestsCount;
 
         public int InnerRequestsCount { get { return innerRequestsCount;  } }
 
-		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
 
-	    protected void AddRequestTraceInfo(Action<StringBuilder> info)
-		{
-			if (info == null)
-				return;
+        protected void AddRequestTraceInfo(Action<StringBuilder> info)
+        {
+            if (info == null)
+                return;
 
-			if (CustomRequestTraceInfo == null)
-				CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+            if (CustomRequestTraceInfo == null)
+                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
 
-			CustomRequestTraceInfo.Add(info);
-		}
+            CustomRequestTraceInfo.Add(info);
+        }
 
-	    protected void IncrementInnerRequestsCount()
+        protected void IncrementInnerRequestsCount()
         {
             Interlocked.Increment(ref innerRequestsCount);
         }
 
-		protected static bool Match(string x, string y)
-		{
-			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
-		}
+        protected static bool Match(string x, string y)
+        {
+            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
 
         #region Landlords
 
@@ -828,7 +828,7 @@ namespace Raven.Database.Server.Controllers
             get
             {
                 if (Configuration == null)
-					return timeSeriesLandlord;
+                    return timeSeriesLandlord;
                 return (TimeSeriesLandlord)Configuration.Properties[typeof(TimeSeriesLandlord)];
             }
         }
@@ -855,17 +855,17 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		private ClusterManager clusterManager;
-		public ClusterManager ClusterManager
-		{
-			get
-			{
-				if (Configuration == null)
-					return clusterManager;
+        private ClusterManager clusterManager;
+        public ClusterManager ClusterManager
+        {
+            get
+            {
+                if (Configuration == null)
+                    return clusterManager;
 
-				return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
-			}
-		}
+                return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
+            }
+        }
         #endregion
     }
 }

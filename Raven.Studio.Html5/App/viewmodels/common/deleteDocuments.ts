@@ -36,7 +36,7 @@ class deleteDocuments extends dialogViewModelBase {
     }
 
     deactivate(args) {
-	    super.deactivate(args);
+        super.deactivate(args);
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never carried it out.
         if (!this.deletionStarted) {

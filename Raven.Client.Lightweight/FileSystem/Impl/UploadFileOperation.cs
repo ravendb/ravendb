@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Util;
 using Raven.Json.Linq;
@@ -10,41 +10,41 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal class UploadFileOperation : IFilesOperation
     {
-	    private readonly InMemoryFilesSessionOperations sessionOperations;
+        private readonly InMemoryFilesSessionOperations sessionOperations;
 
         public string FileName { get; private set; }
-	    private RavenJObject Metadata { get; set; }
-	    public Etag Etag { get; internal set; }
+        private RavenJObject Metadata { get; set; }
+        public Etag Etag { get; internal set; }
 
 
-	    private long Size { get; set; }
-	    private Action<Stream> StreamWriter { get; set; }
+        private long Size { get; set; }
+        private Action<Stream> StreamWriter { get; set; }
 
-		private Stream Stream { get; set; }
+        private Stream Stream { get; set; }
 
-		private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, Etag etag = null)
+        private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, Etag etag = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace!");
 
             this.sessionOperations = sessionOperations;
 
-			FileName = path;
-			Metadata = metadata;
-			Etag = etag;
-		}
+            FileName = path;
+            Metadata = metadata;
+            Etag = etag;
+        }
 
-		public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
-			: this(sessionOperations, path, metadata, etag)
-		{
-			Stream = stream;
-		}
+        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+            : this(sessionOperations, path, metadata, etag)
+        {
+            Stream = stream;
+        }
 
-	    public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long size, Action<Stream> stream, RavenJObject metadata = null, Etag etag = null)
-			: this(sessionOperations, path, metadata, etag)
-		{
+        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long size, Action<Stream> stream, RavenJObject metadata = null, Etag etag = null)
+            : this(sessionOperations, path, metadata, etag)
+        {
             StreamWriter = stream;
-			Size = size;
+            Size = size;
         }
 
         public async Task<FileHeader> Execute(IAsyncFilesSession session)
@@ -60,20 +60,20 @@ namespace Raven.Client.FileSystem.Impl
                 }
             }
 
-	        if (Stream != null)
-	        {
-		        await commands.UploadAsync(FileName, Stream, Metadata, Etag)
+            if (Stream != null)
+            {
+                await commands.UploadAsync(FileName, Stream, Metadata, Etag)
                           .ConfigureAwait(false);
-			}
-	        else if (StreamWriter != null)
-	        {
-		        await commands.UploadAsync(FileName, StreamWriter, null, Size, Metadata, Etag)
-			        .ConfigureAwait(false);
-	        }
-	        else
-	        {
-		        throw new InvalidOperationException("Neither stream not stream writer was specified");
-	        }
+            }
+            else if (StreamWriter != null)
+            {
+                await commands.UploadAsync(FileName, StreamWriter, null, Size, Metadata, Etag)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                throw new InvalidOperationException("Neither stream not stream writer was specified");
+            }
 
             var metadata = await commands.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (metadata == null)

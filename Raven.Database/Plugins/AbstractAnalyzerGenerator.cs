@@ -4,11 +4,11 @@ using Lucene.Net.Documents;
 
 namespace Raven.Database.Plugins
 {
-	[InheritedExport]
-	public abstract class AbstractAnalyzerGenerator
-	{
-		public abstract Analyzer GenerateAnalyzerForIndexing(string indexName, Document document, Analyzer previousAnalyzer);
+    [InheritedExport]
+    public abstract class AbstractAnalyzerGenerator
+    {
+        public abstract Analyzer GenerateAnalyzerForIndexing(string indexName, Document document, Analyzer previousAnalyzer);
 
-		public abstract Analyzer GenerateAnalyzerForQuerying(string indexName, string query, Analyzer previousAnalyzer);
-	}
+        public abstract Analyzer GenerateAnalyzerForQuerying(string indexName, string query, Analyzer previousAnalyzer);
+    }
 }

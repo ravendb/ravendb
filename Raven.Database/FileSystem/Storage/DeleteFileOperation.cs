@@ -1,9 +1,9 @@
-﻿namespace Raven.Database.FileSystem.Storage
+namespace Raven.Database.FileSystem.Storage
 {
-	public class DeleteFileOperation
-	{
-		public string OriginalFileName { get; set; }
+    public class DeleteFileOperation
+    {
+        public string OriginalFileName { get; set; }
 
-		public string CurrentFileName { get; set; }
-	}
+        public string CurrentFileName { get; set; }
+    }
 }

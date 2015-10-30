@@ -1,4 +1,4 @@
-﻿import documentMetadata = require("models/database/documents/documentMetadata");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
 class versioningEntry implements copyFromParentDto<versioningEntry> {
     collection = ko.observable<string>();

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2586.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,13 +16,13 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2586 : RavenTest
-	{
-		[Fact]
-		public void SmugglerBetweenOperationShouldNotCreateDatabases()
-		{
-			using (var store = NewRemoteDocumentStore())
-			{
+    public class RavenDB_2586 : RavenTest
+    {
+        [Fact]
+        public void SmugglerBetweenOperationShouldNotCreateDatabases()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
@@ -35,14 +35,14 @@ namespace Raven.Tests.Issues
                         Database = "DB2"
                     }));
 
-				var exception = Assert.Throws<SmugglerException>(() => smuggler.Execute());
-				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB1' on server"));
+                var exception = Assert.Throws<SmugglerException>(() => smuggler.Execute());
+                Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB1' on server"));
 
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DB1");
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DB1");
 
                 exception = Assert.Throws<SmugglerException>(() => smuggler.Execute());
-				Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB2' on server"));
-			}
-		}
-	}
+                Assert.True(exception.Message.StartsWith("Smuggler does not support database creation (database 'DB2' on server"));
+            }
+        }
+    }
 }

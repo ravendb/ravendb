@@ -1,4 +1,4 @@
-﻿namespace Voron.Trees
+namespace Voron.Trees
 {
     using Sparrow;
     using System;

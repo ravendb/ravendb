@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -11,52 +11,52 @@ using System.Linq;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
-	public class SigGeneratorTest : IDisposable
-	{
-		private readonly Stream _stream = new MemoryStream();
+    public class SigGeneratorTest : IDisposable
+    {
+        private readonly Stream _stream = new MemoryStream();
 
-		private InMemoryRavenConfiguration configuration;
+        private InMemoryRavenConfiguration configuration;
 
-		public SigGeneratorTest()
-		{
-			configuration = new InMemoryRavenConfiguration();
-			configuration.Initialize();
+        public SigGeneratorTest()
+        {
+            configuration = new InMemoryRavenConfiguration();
+            configuration.Initialize();
 
-			TestDataGenerators.WriteNumbers(_stream, 10000);
-			_stream.Position = 0;
-		}
+            TestDataGenerators.WriteNumbers(_stream, 10000);
+            _stream.Position = 0;
+        }
 
-		public void Dispose()
-		{
-		}
+        public void Dispose()
+        {
+        }
 
-		[MtaFact]
-		public void Ctor_and_dispose()
-		{
-			using (var tested = new SigGenerator())
-			{
-				Assert.NotNull(tested);
-			}
-		}
+        [MtaFact]
+        public void Ctor_and_dispose()
+        {
+            using (var tested = new SigGenerator())
+            {
+                Assert.NotNull(tested);
+            }
+        }
 
-		[MtaFact]
-		public void Generate_check()
-		{
-			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
-			using (var rested = new SigGenerator())
-			{
-				var result = rested.GenerateSignatures(_stream, "test", signatureRepository);
-				Assert.Equal(2, result.Count);
-				using (var content = signatureRepository.GetContentForReading(result[0].Name))
-				{
-					Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetHashAsHex());
-				}
-				using (var content = signatureRepository.GetContentForReading(result[1].Name))
-				{
-					Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetHashAsHex());
-				}
-			}
-		}
+        [MtaFact]
+        public void Generate_check()
+        {
+            using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
+            using (var rested = new SigGenerator())
+            {
+                var result = rested.GenerateSignatures(_stream, "test", signatureRepository);
+                Assert.Equal(2, result.Count);
+                using (var content = signatureRepository.GetContentForReading(result[0].Name))
+                {
+                    Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetHashAsHex());
+                }
+                using (var content = signatureRepository.GetContentForReading(result[1].Name))
+                {
+                    Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetHashAsHex());
+                }
+            }
+        }
 
         [MtaFact]
         public void Should_be_the_same_signatures()
@@ -69,7 +69,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var firstSigContentHashes = new List<string>();
 
-			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
+            using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var result = rested.GenerateSignatures(stream, "test", signatureRepository);
@@ -87,7 +87,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var secondSigContentHashes = new List<string>();
 
-			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
+            using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var result = rested.GenerateSignatures(stream, "test", signatureRepository);
@@ -119,7 +119,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             randomStream.Read(buffer, 0, size);
             var stream = new MemoryStream(buffer);
 
-			using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
+            using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
             using (var rested = new SigGenerator())
             {
                 var signatures = signatureRepository.GetByFileName();
@@ -138,5 +138,5 @@ namespace Raven.Tests.FileSystem.Synchronization
                 Assert.Equal(2, signatures.Count());
             }
         }
-	}
+    }
 }

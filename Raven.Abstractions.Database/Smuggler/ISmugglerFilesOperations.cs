@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -27,8 +27,8 @@ namespace Raven.Abstractions.Database.Smuggler
         Task PutFile(FileHeader file, Stream data, long dataSize);
 
 
-	    Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take);
-		Task PutConfig(string name, RavenJObject value);
+        Task<IEnumerable<KeyValuePair<string, RavenJObject>>> GetConfigurations(int start, int take);
+        Task PutConfig(string name, RavenJObject value);
         
         void Initialize(SmugglerFilesOptions options);
 
@@ -40,8 +40,8 @@ namespace Raven.Abstractions.Database.Smuggler
         Task<ExportFilesDestinations> GetIncrementalExportKey();
         Task PutIncrementalExportKey(ExportFilesDestinations destinations);
 
-	    RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
+        RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
 
-		RavenJObject DisableVersioning(RavenJObject metadata);
+        RavenJObject DisableVersioning(RavenJObject metadata);
     }
 }

@@ -3,11 +3,11 @@
 Setlocal ENABLEDELAYEDEXPANSION
 
 IF NOT EXIST version.txt (
-	GOTO FIRST-RUN-START
+    GOTO FIRST-RUN-START
 ) ELSE (
-	set /p Build=<version.txt
+    set /p Build=<version.txt
 
-	IF !Build! NEQ 3.0.{build} (GOTO FIRST-RUN-START) ELSE (GOTO START-RAVENDB)
+    IF !Build! NEQ 3.0.{build} (GOTO FIRST-RUN-START) ELSE (GOTO START-RAVENDB)
 )
 
 :START-RAVENDB

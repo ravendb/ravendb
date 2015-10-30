@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -56,7 +56,7 @@ namespace Raven.Backup
                 BackupLocation = parameters.BackupPath.Replace("\\", "\\\\"),
             };
 
-	       
+           
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
             var url = "/admin/backup";
@@ -64,15 +64,15 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-				using (var req = CreateRequest(url, HttpMethods.Post))
-	            {
-					req.WriteAsync(json).Wait();
+                using (var req = CreateRequest(url, HttpMethods.Post))
+                {
+                    req.WriteAsync(json).Wait();
 
-					Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
+                    Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
 
-					var response = req.ReadResponseJson();
-					Console.WriteLine(response);
-	            }
+                    var response = req.ReadResponseJson();
+                    Console.WriteLine(response);
+                }
             }
             catch (Exception exc)
             {
@@ -98,28 +98,28 @@ namespace Raven.Backup
 
         public override BackupStatus GetStatusDoc()
         {
-			using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethods.Get))
-	        {
-		        try
-		        {
-			        var json = (RavenJObject)req.ReadResponseJson();
-			        return json.Deserialize<BackupStatus>(store.Conventions);
-		        }
-		        catch (WebException ex)
-		        {
-			        var res = ex.Response as HttpWebResponse;
-			        if (res == null)
-			        {
-				        throw new IOException("Network error", ex);
-			        }
-			        if (res.StatusCode == HttpStatusCode.NotFound)
-			        {
-				        return null;
-			        }
-		        }
+            using (var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, HttpMethods.Get))
+            {
+                try
+                {
+                    var json = (RavenJObject)req.ReadResponseJson();
+                    return json.Deserialize<BackupStatus>(store.Conventions);
+                }
+                catch (WebException ex)
+                {
+                    var res = ex.Response as HttpWebResponse;
+                    if (res == null)
+                    {
+                        throw new IOException("Network error", ex);
+                    }
+                    if (res.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        return null;
+                    }
+                }
 
-		        return null;
-	        }
+                return null;
+            }
         }
 
         public override void Dispose()

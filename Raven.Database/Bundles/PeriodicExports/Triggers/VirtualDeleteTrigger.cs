@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="VirtualDeleteTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-	[ExportMetadata("Bundle", "PeriodicExport")]
+    [ExportMetadata("Bundle", "PeriodicExport")]
     [ExportMetadata("Order", 10001)]
     [InheritedExport(typeof(AbstractDeleteTrigger))]
     public class VirtualDeleteTrigger : AbstractDeleteTrigger
@@ -19,9 +19,9 @@ namespace Raven.Database.Bundles.PeriodicExports.Triggers
         public override void AfterDelete(string key)
         {
             var metadata = new RavenJObject
-			{
-				{Constants.RavenDeleteMarker, true},
-			};
+            {
+                {Constants.RavenDeleteMarker, true},
+            };
 
             Database.TransactionalStorage.Batch(accessor => 
                 accessor.Lists.Set(Constants.RavenPeriodicExportsDocsTombstones, key, metadata, UuidType.Documents));

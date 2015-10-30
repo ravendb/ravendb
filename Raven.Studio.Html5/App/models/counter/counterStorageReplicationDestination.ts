@@ -1,4 +1,4 @@
-﻿class counterStorageReplicationDestination {
+class counterStorageReplicationDestination {
 
     disabled = ko.observable<boolean>().extend({ required: true });
     serverUrl = ko.observable<string>().extend({ required: true });

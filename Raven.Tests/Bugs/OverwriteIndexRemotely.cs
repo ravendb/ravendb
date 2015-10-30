@@ -16,54 +16,54 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OverwriteIndexRemotely : RavenTest, IDisposable
-	{
-		private readonly RavenDbServer ravenDbServer;
-		private readonly IDocumentStore documentStore;
+    public class OverwriteIndexRemotely : RavenTest, IDisposable
+    {
+        private readonly RavenDbServer ravenDbServer;
+        private readonly IDocumentStore documentStore;
 
-		public OverwriteIndexRemotely()
-		{
-			const int port = 8079;
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
+        public OverwriteIndexRemotely()
+        {
+            const int port = 8079;
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 
-			ravenDbServer = GetNewServer(port);
-			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
+            ravenDbServer = GetNewServer(port);
+            documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
+        }
 
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            documentStore.Dispose();
+            ravenDbServer.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanOverwriteIndex()
-		{
-			documentStore.DatabaseCommands.PutIndex("test",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Name }"
-			                                        	}, overwrite: true);
+        [Fact]
+        public void CanOverwriteIndex()
+        {
+            documentStore.DatabaseCommands.PutIndex("test",
+                                                    new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name }"
+                                                        }, overwrite: true);
 
 
-			documentStore.DatabaseCommands.PutIndex("test",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Name }"
-			                                        	}, overwrite: true);
+            documentStore.DatabaseCommands.PutIndex("test",
+                                                    new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name }"
+                                                        }, overwrite: true);
 
-			documentStore.DatabaseCommands.PutIndex("test",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Email }"
-			                                        	}, overwrite: true);
+            documentStore.DatabaseCommands.PutIndex("test",
+                                                    new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Email }"
+                                                        }, overwrite: true);
 
-			documentStore.DatabaseCommands.PutIndex("test",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs select new { doc.Email }"
-			                                        	}, overwrite: true);
-		}
-	}
+            documentStore.DatabaseCommands.PutIndex("test",
+                                                    new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Email }"
+                                                        }, overwrite: true);
+        }
+    }
 }

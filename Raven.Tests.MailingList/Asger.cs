@@ -1,4 +1,4 @@
-﻿using System.Transactions;
+using System.Transactions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -9,55 +9,55 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class Asger : RavenTest
-	{
+    public class Asger : RavenTest
+    {
         [Theory]
         [PropertyData("Storages")]
-		public void putting_and_patching_in_same_transaction(string storage)
-		{
+        public void putting_and_patching_in_same_transaction(string storage)
+        {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				Assert.DoesNotThrow(() =>
-				{
-					using (var tx = new TransactionScope())
-					{
-						store.DatabaseCommands.Batch(new ICommandData[]
-						{
-							new PutCommandData
-							{
-								Key = "RebusSubscriptions/TheMessage",
-								Metadata = new RavenJObject
-								{
-									{
-						                             	"Raven-Entity-Name",
-						                             	"RebusSubscriptions"
-						                             	},
-								},
-								Document = new RavenJObject
-								{
-									{"Endpoints", new RavenJArray()}
-								}
-							},
-							new PatchCommandData
-							{
-								Key = "RebusSubscriptions/TheMessage",
-								Patches = new[]
-								{
-									new PatchRequest
-									{
-										Type = PatchCommandType.Add,
-										Name = "Endpoints",
-										Value = new
-						                             	RavenJValue("application_queue"),
-									}
-								}
-							}
-						});
+            {
+                Assert.DoesNotThrow(() =>
+                {
+                    using (var tx = new TransactionScope())
+                    {
+                        store.DatabaseCommands.Batch(new ICommandData[]
+                        {
+                            new PutCommandData
+                            {
+                                Key = "RebusSubscriptions/TheMessage",
+                                Metadata = new RavenJObject
+                                {
+                                    {
+                                                        "Raven-Entity-Name",
+                                                        "RebusSubscriptions"
+                                                        },
+                                },
+                                Document = new RavenJObject
+                                {
+                                    {"Endpoints", new RavenJArray()}
+                                }
+                            },
+                            new PatchCommandData
+                            {
+                                Key = "RebusSubscriptions/TheMessage",
+                                Patches = new[]
+                                {
+                                    new PatchRequest
+                                    {
+                                        Type = PatchCommandType.Add,
+                                        Name = "Endpoints",
+                                        Value = new
+                                                        RavenJValue("application_queue"),
+                                    }
+                                }
+                            }
+                        });
 
-						tx.Complete();
-					}
-				});
-			}
-		}
-	}
+                        tx.Complete();
+                    }
+                });
+            }
+        }
+    }
 }

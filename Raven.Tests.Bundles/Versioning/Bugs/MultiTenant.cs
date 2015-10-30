@@ -1,4 +1,4 @@
-﻿using Raven.Bundles.Versioning.Data;
+using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Bundles.Versioning;
 using Raven.Tests.Common;

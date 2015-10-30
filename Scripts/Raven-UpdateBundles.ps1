@@ -1,4 +1,4 @@
-﻿$appConfigFileName = "Raven.Server.exe.config"
+$appConfigFileName = "Raven.Server.exe.config"
 $webConfigFileName = "web.config"
 $base_dir  = resolve-path .
 

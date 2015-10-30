@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3658.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,25 +19,25 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3658 : ReplicationBase
-	{
-		[Fact]
-		public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed()
-		{
-			using (var store1 = CreateStore())
-			using (var store2 = CreateStore())
-			{
-				using (var session = store1.OpenSession())
-				{
-					session.Store(new Person { Name = "John" });
-					session.Store(new Person { Name = "Edward" });
-					session.Store(new Address { Street = "Main Street" });
+    public class RavenDB_3658 : ReplicationBase
+    {
+        [Fact]
+        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed()
+        {
+            using (var store1 = CreateStore())
+            using (var store2 = CreateStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new Person { Name = "John" });
+                    session.Store(new Person { Name = "Edward" });
+                    session.Store(new Address { Street = "Main Street" });
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				using (var stream = new MemoryStream())
-				{
+                using (var stream = new MemoryStream())
+                {
                     var options = new DatabaseSmugglerOptions();
                     options.Filters.Add(new FilterSetting
                     {
@@ -46,7 +46,7 @@ namespace Raven.Tests.Issues
                         Values = { "People" }
                     });
 
-				    var smuggler = new DatabaseSmuggler(
+                    var smuggler = new DatabaseSmuggler(
                         options, 
                         new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                         {
@@ -56,11 +56,11 @@ namespace Raven.Tests.Issues
                         new DatabaseSmugglerStreamDestination(stream));
 
 
-				    await smuggler.ExecuteAsync();
+                    await smuggler.ExecuteAsync();
 
-					stream.Position = 0;
+                    stream.Position = 0;
 
-				    smuggler = new DatabaseSmuggler(
+                    smuggler = new DatabaseSmuggler(
                         options,
                         new DatabaseSmugglerStreamSource(stream),
                         new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
@@ -69,48 +69,48 @@ namespace Raven.Tests.Issues
                             Url = store2.Url
                         }));
 
-				    await smuggler.ExecuteAsync();
-				}
+                    await smuggler.ExecuteAsync();
+                }
 
-				WaitForIndexing(store2);
+                WaitForIndexing(store2);
 
-				using (var session = store2.OpenSession())
-				{
-					var people = session
-						.Query<Person>()
-						.ToList();
+                using (var session = store2.OpenSession())
+                {
+                    var people = session
+                        .Query<Person>()
+                        .ToList();
 
-					Assert.Equal(2, people.Count);
+                    Assert.Equal(2, people.Count);
 
-					var addresses = session
-						.Query<Address>()
-						.ToList();
+                    var addresses = session
+                        .Query<Address>()
+                        .ToList();
 
-					Assert.Equal(0, addresses.Count);
+                    Assert.Equal(0, addresses.Count);
 
-					var hilo = session.Advanced.DocumentStore.DatabaseCommands.Get("Raven/Hilo/People");
-					Assert.NotNull(hilo);
-				}
-			}
-		}
+                    var hilo = session.Advanced.DocumentStore.DatabaseCommands.Get("Raven/Hilo/People");
+                    Assert.NotNull(hilo);
+                }
+            }
+        }
 
-		[Fact]
-		public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed_Between()
-		{
-			using (var store1 = CreateStore())
-			using (var store2 = CreateStore())
-			{
-				using (var session = store1.OpenSession())
-				{
-					session.Store(new Person { Name = "John" });
-					session.Store(new Person { Name = "Edward" });
-					session.Store(new Address { Street = "Main Street" });
+        [Fact]
+        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed_Between()
+        {
+            using (var store1 = CreateStore())
+            using (var store2 = CreateStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new Person { Name = "John" });
+                    session.Store(new Person { Name = "Edward" });
+                    session.Store(new Address { Street = "Main Street" });
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				using (var stream = new MemoryStream())
-				{
+                using (var stream = new MemoryStream())
+                {
                     var options = new DatabaseSmugglerOptions();
                     options.Filters.Add(new FilterSetting
                     {
@@ -133,29 +133,29 @@ namespace Raven.Tests.Issues
                         }));
 
 
-				    await smuggler.ExecuteAsync();
-				}
+                    await smuggler.ExecuteAsync();
+                }
 
-				WaitForIndexing(store2);
+                WaitForIndexing(store2);
 
-				using (var session = store2.OpenSession())
-				{
-					var people = session
-						.Query<Person>()
-						.ToList();
+                using (var session = store2.OpenSession())
+                {
+                    var people = session
+                        .Query<Person>()
+                        .ToList();
 
-					Assert.Equal(2, people.Count);
+                    Assert.Equal(2, people.Count);
 
-					var addresses = session
-						.Query<Address>()
-						.ToList();
+                    var addresses = session
+                        .Query<Address>()
+                        .ToList();
 
-					Assert.Equal(0, addresses.Count);
+                    Assert.Equal(0, addresses.Count);
 
-					var hilo = session.Advanced.DocumentStore.DatabaseCommands.Get("Raven/Hilo/People");
-					Assert.NotNull(hilo);
-				}
-			}
-		}
-	}
+                    var hilo = session.Advanced.DocumentStore.DatabaseCommands.Get("Raven/Hilo/People");
+                    Assert.NotNull(hilo);
+                }
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="BinaryTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,9 +12,9 @@ namespace Voron.Trees
         public class FoundPage
         {
             public readonly long Number;
-			public TreePage Page;
-			public readonly Slice FirstKey;
-			public readonly Slice LastKey;
+            public TreePage Page;
+            public readonly Slice FirstKey;
+            public readonly Slice LastKey;
             public readonly long[] CursorPath;
 
             public FoundPage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath)
@@ -45,8 +45,8 @@ namespace Voron.Trees
             int position = current + _cacheSize;
             while (itemsLeft > 0)
             {
-	            var itemIndex = position % _cacheSize;
-	            var item = _cache[itemIndex];
+                var itemIndex = position % _cacheSize;
+                var item = _cache[itemIndex];
                 if (item == null || item.Number == page.Number)
                 {
                     _cache[itemIndex] = page;
@@ -112,17 +112,17 @@ namespace Voron.Trees
             Array.Clear(_cache, 0, _cacheSize);
         }
 
-	    public void Reset(long num)
-	    {
-		    for (int i = 0; i < _cache.Length; i++)
-		    {
-			    var page = _cache[i];
-			    if (page != null && page.Number == num)
-			    {
-				    page.Page = null;
-				    return;
-			    }
-		    }
-	    }
+        public void Reset(long num)
+        {
+            for (int i = 0; i < _cache.Length; i++)
+            {
+                var page = _cache[i];
+                if (page != null && page.Number == num)
+                {
+                    page.Page = null;
+                    return;
+                }
+            }
+        }
     }
 }

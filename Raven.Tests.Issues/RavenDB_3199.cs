@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="UnknownIssue.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,13 +14,13 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3199
-	{
+    public class RavenDB_3199
+    {
 
-		[Fact]
-		public void ShouldReadLegacySuggestionOptions()
-		{
-			string legacySuggestions = @"{
+        [Fact]
+        public void ShouldReadLegacySuggestionOptions()
+        {
+            string legacySuggestions = @"{
   ""IndexId"": 5,
   ""Name"": ""Orders/ByCompany"",
   ""LockMode"": ""Unlock"",
@@ -56,12 +56,12 @@ namespace Raven.Tests.Issues
   ""IsSideBySideIndex"": false
 }";
 
-			var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(legacySuggestions, Default.Converters);
-			Assert.Equal(1, indexDefinition.Suggestions.Count);
-			Assert.Equal(1, indexDefinition.SuggestionsOptions.Count);
-			Assert.Equal(SuggestionQuery.DefaultDistance, indexDefinition.Suggestions["Company"].Distance);
-			Assert.Equal(SuggestionQuery.DefaultAccuracy, indexDefinition.Suggestions["Company"].Accuracy);
-			Assert.Equal("Company", indexDefinition.SuggestionsOptions.ToList()[0]);
-		}
-	}
+            var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(legacySuggestions, Default.Converters);
+            Assert.Equal(1, indexDefinition.Suggestions.Count);
+            Assert.Equal(1, indexDefinition.SuggestionsOptions.Count);
+            Assert.Equal(SuggestionQuery.DefaultDistance, indexDefinition.Suggestions["Company"].Distance);
+            Assert.Equal(SuggestionQuery.DefaultAccuracy, indexDefinition.Suggestions["Company"].Accuracy);
+            Assert.Equal("Company", indexDefinition.SuggestionsOptions.ToList()[0]);
+        }
+    }
 }

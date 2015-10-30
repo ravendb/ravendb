@@ -1,4 +1,4 @@
-﻿using Raven.Json.Linq;
+using Raven.Json.Linq;
 using System.Collections.Generic;
 
 namespace Raven.Client.FileSystem.Shard

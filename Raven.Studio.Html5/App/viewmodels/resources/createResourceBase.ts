@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
@@ -22,7 +22,7 @@ class createResourceBase extends viewModelBase {
 
     storageEngine = ko.observable("");
     allowVoron = ko.observable<boolean>(true);
-	voronWarningVisible = ko.computed(() => !this.allowVoron() && this.storageEngine() === "voron");
+    voronWarningVisible = ko.computed(() => !this.allowVoron() && this.storageEngine() === "voron");
     tempPathVisible = ko.computed(() => this.storageEngine() === "voron");
     licenseStatus: KnockoutObservable<licenseStatusDto>;
 

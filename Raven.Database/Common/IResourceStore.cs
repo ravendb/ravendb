@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -10,12 +10,12 @@ namespace Raven.Database.Common
     {
         string Name { get; }
 
-		string ResourceName { get; }
+        string ResourceName { get; }
 
         TransportState TransportState { get; }
 
-		AtomicDictionary<object> ExtensionsState { get; }
+        AtomicDictionary<object> ExtensionsState { get; }
 
-		InMemoryRavenConfiguration Configuration { get; }
+        InMemoryRavenConfiguration Configuration { get; }
     }
 }

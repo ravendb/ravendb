@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,148 +22,148 @@ using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Counters
 {
-	public class RavenBaseCountersTest : RavenTestBase
-	{
-		protected readonly Lazy<IDocumentStore> ravenStore;
-		private readonly ConcurrentDictionary<string, int> storeCount;
-		private readonly List<IDisposable> disposables = new List<IDisposable>();
-		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
+    public class RavenBaseCountersTest : RavenTestBase
+    {
+        protected readonly Lazy<IDocumentStore> ravenStore;
+        private readonly ConcurrentDictionary<string, int> storeCount;
+        private readonly List<IDisposable> disposables = new List<IDisposable>();
+        protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
-		protected RavenBaseCountersTest()
-		{
-			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
-				IOExtensions.DeleteDirectory(folder);
+        protected RavenBaseCountersTest()
+        {
+            foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
+                IOExtensions.DeleteDirectory(folder);
 
-			ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
-			DefaultCounterStorageName += Guid.NewGuid();
-			storeCount = new ConcurrentDictionary<string, int>();
-		}
+            ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
+            DefaultCounterStorageName += Guid.NewGuid();
+            storeCount = new ConcurrentDictionary<string, int>();
+        }
 
-		protected CounterStorage NewCounterStorage()
-		{
-			var newCounterStorage = new CounterStorage(string.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
-			{
-				Core =
-				{
-				    RunInMemory = true
-				}
-			});
+        protected CounterStorage NewCounterStorage()
+        {
+            var newCounterStorage = new CounterStorage(string.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
+            {
+                Core =
+                {
+                    RunInMemory = true
+                }
+            });
 
-			disposables.Add(newCounterStorage);
-			return newCounterStorage;
-		}
-
-
-		protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			Authentication.EnableOnce();
-		}
-
-		protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null, bool isAdmin = false)
-		{
-			var allowedResources = new List<ResourceAccess>
-			{					
-				new ResourceAccess {TenantId = resourceName, Admin = isAdmin}
-			};
-
-			if (isAdmin)
-			{
-				allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true});
-			}
-
-			var apiKeyDefinition = RavenJObject.FromObject(new ApiKeyDefinition
-			{
-				Name = Name,
-				Secret = Secret,
-				Enabled = true,
-				Databases = allowedResources
-			});
-			database.Documents.Put("Raven/ApiKeys/" + Name, null, apiKeyDefinition, new RavenJObject(), null);
-		}
+            disposables.Add(newCounterStorage);
+            return newCounterStorage;
+        }
 
 
-		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
-		{
-			ravenStore = ravenStore ?? this.ravenStore.Value;
-			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
-	
-			var counterStore = new CounterStore
-			{
-				Url = ravenStore.Url,
-				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				Name = counterStorageName + storeCount[ravenStore.Identifier]
-			};
-			counterStore.Initialize(createDefaultCounter);
-			return counterStore;
-		}
+        protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
+        {
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
+        }
 
-		public override void Dispose()
-		{
-			if (ravenStore.IsValueCreated && ravenStore.Value != null) ravenStore.Value.Dispose();
+        protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null, bool isAdmin = false)
+        {
+            var allowedResources = new List<ResourceAccess>
+            {					
+                new ResourceAccess {TenantId = resourceName, Admin = isAdmin}
+            };
 
-			try
-			{
-				foreach(var server in servers)
-					IOExtensions.DeleteDirectory(server.Configuration.Core.DataDirectory); //for failover tests that have runInMemory = false
-				IOExtensions.DeleteDirectory("Counters");
+            if (isAdmin)
+            {
+                allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true});
+            }
 
-				disposables.ForEach(d => d.Dispose());
-				base.Dispose();
-			}
-			catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed
-			{
-			}
-		}
+            var apiKeyDefinition = RavenJObject.FromObject(new ApiKeyDefinition
+            {
+                Name = Name,
+                Secret = Secret,
+                Enabled = true,
+                Databases = allowedResources
+            });
+            database.Documents.Put("Raven/ApiKeys/" + Name, null, apiKeyDefinition, new RavenJObject(), null);
+        }
 
-		protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 3)
-		{
-			var waitStartingTime = DateTime.Now;
-			var hasReplicated = false;
 
-			if (Debugger.IsAttached)
-				timeoutInSec = 60 * 60; //1 hour timeout if debugging
+        protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+        {
+            ravenStore = ravenStore ?? this.ravenStore.Value;
+            storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
+    
+            var counterStore = new CounterStore
+            {
+                Url = ravenStore.Url,
+                Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
+                Name = counterStorageName + storeCount[ravenStore.Identifier]
+            };
+            counterStore.Initialize(createDefaultCounter);
+            return counterStore;
+        }
 
-			while (true)
-			{
-				if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
-					break;
-				try
-				{
-					var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
-					var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
-					if (sourceValue == targetValue)
-					{
-						hasReplicated = true;
-						break;
-					}
-				}
-				catch (InvalidOperationException e)
-				{
-					var exception = e.InnerException as ErrorResponseException;
-					if (exception != null && exception.StatusCode != HttpStatusCode.NotFound)
-						throw;
-				}
-				Thread.Sleep(50);
-			}
+        public override void Dispose()
+        {
+            if (ravenStore.IsValueCreated && ravenStore.Value != null) ravenStore.Value.Dispose();
 
-			return hasReplicated;
-		}
+            try
+            {
+                foreach(var server in servers)
+                    IOExtensions.DeleteDirectory(server.Configuration.Core.DataDirectory); //for failover tests that have runInMemory = false
+                IOExtensions.DeleteDirectory("Counters");
 
-		protected static async Task<object> SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
-		{
-			var replicationDocument = new CountersReplicationDocument();
-			foreach (var destStore in destinations)
-			{
-				replicationDocument.Destinations.Add(new CounterReplicationDestination
-				{
-					CounterStorageName = destStore.Name,
-					ServerUrl = destStore.Url
-				});
-			}
+                disposables.ForEach(d => d.Dispose());
+                base.Dispose();
+            }
+            catch (AggregateException) //TODO: do not forget to investigate where counter storage is not being disposed
+            {
+            }
+        }
 
-			await source.SaveReplicationsAsync(replicationDocument);
-			return null;
-		}
-	}
+        protected async Task<bool> WaitForReplicationBetween(ICounterStore source, ICounterStore destination, string groupName, string counterName, int timeoutInSec = 3)
+        {
+            var waitStartingTime = DateTime.Now;
+            var hasReplicated = false;
+
+            if (Debugger.IsAttached)
+                timeoutInSec = 60 * 60; //1 hour timeout if debugging
+
+            while (true)
+            {
+                if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
+                    break;
+                try
+                {
+                    var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
+                    var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
+                    if (sourceValue == targetValue)
+                    {
+                        hasReplicated = true;
+                        break;
+                    }
+                }
+                catch (InvalidOperationException e)
+                {
+                    var exception = e.InnerException as ErrorResponseException;
+                    if (exception != null && exception.StatusCode != HttpStatusCode.NotFound)
+                        throw;
+                }
+                Thread.Sleep(50);
+            }
+
+            return hasReplicated;
+        }
+
+        protected static async Task<object> SetupReplicationAsync(ICounterStore source, params ICounterStore[] destinations)
+        {
+            var replicationDocument = new CountersReplicationDocument();
+            foreach (var destStore in destinations)
+            {
+                replicationDocument.Destinations.Add(new CounterReplicationDestination
+                {
+                    CounterStorageName = destStore.Name,
+                    ServerUrl = destStore.Url
+                });
+            }
+
+            await source.SaveReplicationsAsync(replicationDocument);
+            return null;
+        }
+    }
 }

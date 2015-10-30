@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1041.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,27 +18,27 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1041 : ReplicationBase
-	{
-		public RavenDB_1041()
-		{
-			IOExtensions.DeleteDirectory("Database #0");
-			IOExtensions.DeleteDirectory("Database #1");
-			IOExtensions.DeleteDirectory("Database #2");
-		}
-		class ReplicatedItem
-		{
-			public string Id { get; set; }
-		}
+    public class RavenDB_1041 : ReplicationBase
+    {
+        public RavenDB_1041()
+        {
+            IOExtensions.DeleteDirectory("Database #0");
+            IOExtensions.DeleteDirectory("Database #1");
+            IOExtensions.DeleteDirectory("Database #2");
+        }
+        class ReplicatedItem
+        {
+            public string Id { get; set; }
+        }
 
-		private const string DatabaseName = "RavenDB_1041";
+        private const string DatabaseName = "RavenDB_1041";
 
         [Theory]
         [PropertyData("Storages")]
-		public async Task CanWaitForReplication(string storage)
-		{
-			using (var store1 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
-			using (var store2 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
+        public async Task CanWaitForReplication(string storage)
+        {
+            using (var store1 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
+            using (var store2 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
             using (var store3 = CreateStore(requestedStorage: storage, databaseName: DatabaseName))
             {
                 SetupReplication(store1.DatabaseCommands, store2, store3);
@@ -57,12 +57,12 @@ namespace Raven.Tests.Issues
                 Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
                 Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
             }
-		}
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public async Task CanWaitForReplicationOfParticularEtag(string storage)
-		{
+        {
             using (var store1 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store1"))
             using (var store2 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store2"))
             using (var store3 = CreateStore(requestedStorage: storage, databaseName: "CanWaitForReplicationOfParticularEtag_Store3"))
@@ -84,12 +84,12 @@ namespace Raven.Tests.Issues
                 Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
                 Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
             }
-		}
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public async Task CanWaitForReplicationInAsyncManner(string storage)
-		{
+        {
             using (var store1 = CreateStore(requestedStorage: storage))
             using (var store2 = CreateStore(requestedStorage: storage))
             using (var store3 = CreateStore(requestedStorage: storage))
@@ -108,12 +108,12 @@ namespace Raven.Tests.Issues
                 Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
                 Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
             }
-		}
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void CanSpecifyTimeoutWhenWaitingForReplication(string storage)
-		{
+        {
             using (var store1 = CreateStore(requestedStorage: storage))
             using (var store2 = CreateStore(requestedStorage: storage))
             {
@@ -130,32 +130,32 @@ namespace Raven.Tests.Issues
                 store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
                 Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
             }
-		}
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldThrowTimeoutException(string storage)
-		{
+        {
             var store1 = CreateStore(requestedStorage: storage);
-			var store2 = CreateStore(requestedStorage: storage);
+            var store2 = CreateStore(requestedStorage: storage);
 
-			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
+            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-				session.SaveChanges();
-			}
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                session.SaveChanges();
+            }
 
-		    Assert.Throws<TimeoutException>(() => 
-			    // ReSharper disable once RedundantArgumentDefaultValue
-				AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
-		}
+            Assert.Throws<TimeoutException>(() => 
+                // ReSharper disable once RedundantArgumentDefaultValue
+                AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers(string storage)
-		{
+        {
             using (var store1 = CreateStore(requestedStorage: storage))
             using (var store2 = CreateStore(requestedStorage: storage))
             {
@@ -171,13 +171,13 @@ namespace Raven.Tests.Issues
                 var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
                 Assert.Contains("Could only confirm that the specified Etag", exception.Message);
             }
-	    }
+        }
 
 
         [Theory]
         [PropertyData("Storages")]
         public async Task CanWaitForReplicationForOneServerEvenIfTheSecondOneIsDown(string storage)
-		{
+        {
             using (var store1 = CreateStore(requestedStorage: storage))
             using (var store2 = CreateStore(requestedStorage: storage))
             {
@@ -194,6 +194,6 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
             }
-		}
-	}
+        }
+    }
 }

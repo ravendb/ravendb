@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerBetweenTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,7 +6,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.Database;
@@ -30,7 +29,7 @@ namespace Raven.Tests.Smuggler
             using (var server1 = GetNewServer(port: 8079))
             using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
-				await new UsersIndex().ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
+                await new UsersIndex().ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
                 await new UsersTransformer().ExecuteAsync(store1);
                 using (var session = store1.OpenAsyncSession("Database1"))
                 {
@@ -41,9 +40,9 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
-					{
-					    var smuggler = new DatabaseSmuggler(
+                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+                    {
+                        var smuggler = new DatabaseSmuggler(
                             new DatabaseSmugglerOptions(), 
                             new DatabaseSmugglerRemoteSource(
                                 new DatabaseSmugglerRemoteConnectionOptions
@@ -58,7 +57,7 @@ namespace Raven.Tests.Smuggler
                                     Database = "Database2"
                                 }));
 
-					    await smuggler.ExecuteAsync();
+                        await smuggler.ExecuteAsync();
                     
                         await AssertDatabaseHasIndex<UsersIndex>(store2);
                         await AssertDatabaseHasTransformer<UsersTransformer>(store2);
@@ -87,8 +86,8 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
-					{
+                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+                    {
                         var smuggler = new DatabaseSmuggler(
                             new DatabaseSmugglerOptions(),
                             new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
@@ -106,15 +105,15 @@ namespace Raven.Tests.Smuggler
                                 ContinuationToken = "Token"
                             }));
 
-					    await smuggler.ExecuteAsync();
+                        await smuggler.ExecuteAsync();
 
                         using (var session = store1.OpenAsyncSession("Database1"))
-						{
-							var oren = await session.LoadAsync<User>("users/1");
-							oren.Name += " Changed";
-							await session.StoreAsync(new User {Name = "Daniel Dar"});
-							await session.SaveChangesAsync();
-						}
+                        {
+                            var oren = await session.LoadAsync<User>("users/1");
+                            oren.Name += " Changed";
+                            await session.StoreAsync(new User {Name = "Daniel Dar"});
+                            await session.SaveChangesAsync();
+                        }
                     
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
@@ -137,32 +136,32 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-	    [Fact]
-	    public async Task ShouldSupportIncrementalFromTwoServers()
-	    {
+        [Fact]
+        public async Task ShouldSupportIncrementalFromTwoServers()
+        {
             using (var server1 = GetNewServer(port: 8079))
-		    using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
-		    {
-			    using (var session = store1.OpenAsyncSession("Database1"))
-			    {
-				    await session.StoreAsync(new User {Name = "Oren Eini"});
-				    await session.StoreAsync(new User {Name = "Fitzchak Yitzchaki"});
-				    await session.SaveChangesAsync();
-			    }
+            using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
+            {
+                using (var session = store1.OpenAsyncSession("Database1"))
+                {
+                    await session.StoreAsync(new User {Name = "Oren Eini"});
+                    await session.StoreAsync(new User {Name = "Fitzchak Yitzchaki"});
+                    await session.SaveChangesAsync();
+                }
 
-			    using (var server2 = GetNewServer(port: 8078))
-			    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
-			    {
-				    using (var session = store2.OpenAsyncSession("Database2"))
-				    {
-					    await session.StoreAsync(new User {Name = "Oren Eini Server 2"});
-					    await session.SaveChangesAsync();
-				    }
+                using (var server2 = GetNewServer(port: 8078))
+                using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+                {
+                    using (var session = store2.OpenAsyncSession("Database2"))
+                    {
+                        await session.StoreAsync(new User {Name = "Oren Eini Server 2"});
+                        await session.SaveChangesAsync();
+                    }
 
-				    using (var server3 = GetNewServer(port: 8077))
-				    {
-						using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
-						{
+                    using (var server3 = GetNewServer(port: 8077))
+                    {
+                        using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
+                        {
                             var smuggler = new DatabaseSmuggler(
                                 new DatabaseSmugglerOptions(),
                                 new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
@@ -180,7 +179,7 @@ namespace Raven.Tests.Smuggler
                                     ContinuationToken = "Token1"
                                 }));
 
-						    await smuggler.ExecuteAsync();
+                            await smuggler.ExecuteAsync();
 
                             smuggler = new DatabaseSmuggler(
                                 new DatabaseSmugglerOptions(),
@@ -199,19 +198,19 @@ namespace Raven.Tests.Smuggler
                                     ContinuationToken = "Token2"
                                 }));
 
-						    await smuggler.ExecuteAsync();
+                            await smuggler.ExecuteAsync();
 
                             using (var session3 = store3.OpenAsyncSession("Database3"))
-						    {
-							    Assert.Equal(2, await session3.Query<User>().CountAsync());
-							    Assert.Equal("Oren Eini Server 2", (await session3.LoadAsync<User>("users/1")).Name);
-							    Assert.Equal("Fitzchak Yitzchaki", (await session3.LoadAsync<User>("users/2")).Name); // Test that the value from Database1 is there
-						    }
-					    }
-				    }
-			    }
-		    }
-	    }
+                            {
+                                Assert.Equal(2, await session3.Query<User>().CountAsync());
+                                Assert.Equal("Oren Eini Server 2", (await session3.LoadAsync<User>("users/1")).Name);
+                                Assert.Equal("Fitzchak Yitzchaki", (await session3.LoadAsync<User>("users/2")).Name); // Test that the value from Database1 is there
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         protected override void ModifyStore(DocumentStore documentStore)
         {

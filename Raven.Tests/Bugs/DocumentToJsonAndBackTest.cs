@@ -17,103 +17,103 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentToJsonAndBackTest : NoDisposalNeeded
-	{
-		private readonly Page page;
+    public class DocumentToJsonAndBackTest : NoDisposalNeeded
+    {
+        private readonly Page page;
 
-		public DocumentToJsonAndBackTest()
-		{
-			page = new Page();
-			page.CoAuthors.Add(new User {UserId = 1});
-			page.CoAuthors.Add(new User {UserId = 2});
-		}
+        public DocumentToJsonAndBackTest()
+        {
+            page = new Page();
+            page.CoAuthors.Add(new User {UserId = 1});
+            page.CoAuthors.Add(new User {UserId = 2});
+        }
 
-		[Fact]
-		public void ListOnDynamicJsonObjectFromJsonWillFailToBeAJsonList()
-		{
-			var conventions = new DocumentConvention();
+        [Fact]
+        public void ListOnDynamicJsonObjectFromJsonWillFailToBeAJsonList()
+        {
+            var conventions = new DocumentConvention();
 
-			var jObject = RavenJObject.FromObject(page, conventions.CreateSerializer());
+            var jObject = RavenJObject.FromObject(page, conventions.CreateSerializer());
 
-			dynamic dynamicObject = new DynamicJsonObject(jObject);
-			Assert.NotNull(dynamicObject.CoAuthors as IEnumerable);
-			Assert.NotNull(dynamicObject.CoAuthors.Length);
-			Assert.Equal(2, dynamicObject.CoAuthors.Length);
-		}
+            dynamic dynamicObject = new DynamicJsonObject(jObject);
+            Assert.NotNull(dynamicObject.CoAuthors as IEnumerable);
+            Assert.NotNull(dynamicObject.CoAuthors.Length);
+            Assert.Equal(2, dynamicObject.CoAuthors.Length);
+        }
 
-		[Fact]
-		public void ListOnDynamicJsonObjectFromJsonIsAnArray()
-		{
-			var conventions = new DocumentConvention();
-			var jObject = RavenJObject.FromObject(page, conventions.CreateSerializer());
+        [Fact]
+        public void ListOnDynamicJsonObjectFromJsonIsAnArray()
+        {
+            var conventions = new DocumentConvention();
+            var jObject = RavenJObject.FromObject(page, conventions.CreateSerializer());
 
-			dynamic dynamicObject = new DynamicJsonObject(jObject);
-			Assert.NotNull(dynamicObject.CoAuthors as IEnumerable);
+            dynamic dynamicObject = new DynamicJsonObject(jObject);
+            Assert.NotNull(dynamicObject.CoAuthors as IEnumerable);
 
-			Assert.NotNull(dynamicObject.CoAuthors.Length);
-			Assert.Equal(2, dynamicObject.CoAuthors.Length);
-		}
+            Assert.NotNull(dynamicObject.CoAuthors.Length);
+            Assert.Equal(2, dynamicObject.CoAuthors.Length);
+        }
 
-		[Fact]
-		public void LinqQueryWithStaticCallOnEnumerableIsTranslatedToExtensionMethod()
-		{
-			var indexDefinition = new IndexDefinitionBuilder<Page>
-			{
-				Map = pages => from p in pages
-							   from coAuthor in p.CoAuthors.DefaultIfEmpty()
-							   select new
-							   {
-								   p.Id,
-								   CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1
-							   }
-			}.ToIndexDefinition(new DocumentConvention());
-			Assert.Contains("p.CoAuthors.DefaultIfEmpty()", indexDefinition.Map);
-		}
+        [Fact]
+        public void LinqQueryWithStaticCallOnEnumerableIsTranslatedToExtensionMethod()
+        {
+            var indexDefinition = new IndexDefinitionBuilder<Page>
+            {
+                Map = pages => from p in pages
+                               from coAuthor in p.CoAuthors.DefaultIfEmpty()
+                               select new
+                               {
+                                   p.Id,
+                                   CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1
+                               }
+            }.ToIndexDefinition(new DocumentConvention());
+            Assert.Contains("p.CoAuthors.DefaultIfEmpty()", indexDefinition.Map);
+        }
 
 
-		[Fact]
-		public void LinqQueryWithStaticCallOnEnumerableIsCanBeCompiledAndRun()
-		{
-			var indexDefinition = new IndexDefinitionBuilder<Page>
-			{
-				Map = pages => from p in pages
-							   from coAuthor in p.CoAuthors.DefaultIfEmpty()
-							   select new
-							   {
-								   p.Id,
-								   CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1
-							   }
-			}.ToIndexDefinition(new DocumentConvention());
+        [Fact]
+        public void LinqQueryWithStaticCallOnEnumerableIsCanBeCompiledAndRun()
+        {
+            var indexDefinition = new IndexDefinitionBuilder<Page>
+            {
+                Map = pages => from p in pages
+                               from coAuthor in p.CoAuthors.DefaultIfEmpty()
+                               select new
+                               {
+                                   p.Id,
+                                   CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1
+                               }
+            }.ToIndexDefinition(new DocumentConvention());
 
-			var mapInstance = new DynamicViewCompiler("testView",
-													  indexDefinition, ".").
-				GenerateInstance();
+            var mapInstance = new DynamicViewCompiler("testView",
+                                                      indexDefinition, ".").
+                GenerateInstance();
 
-			var conventions = new DocumentConvention();
-			var o = RavenJObject.FromObject(page,conventions.CreateSerializer());
-			o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}, {"@id", "0"}};
-			dynamic dynamicObject = new DynamicJsonObject(o);
+            var conventions = new DocumentConvention();
+            var o = RavenJObject.FromObject(page,conventions.CreateSerializer());
+            o["@metadata"] = new RavenJObject {{"Raven-Entity-Name", "Pages"}, {"@id", "0"}};
+            dynamic dynamicObject = new DynamicJsonObject(o);
 
-			var result = mapInstance.MapDefinitions[0](new[] { dynamicObject }).ToList<object>();
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id = 0 }", result[0].ToString());
-			Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id = 0 }", result[1].ToString());
-		}
+            var result = mapInstance.MapDefinitions[0](new[] { dynamicObject }).ToList<object>();
+            Assert.Equal("{ Id = 0, CoAuthorUserID = 1, __document_id = 0 }", result[0].ToString());
+            Assert.Equal("{ Id = 0, CoAuthorUserID = 2, __document_id = 0 }", result[1].ToString());
+        }
 
-		private class Page
-		{
-			public readonly IList<User> CoAuthors;
+        private class Page
+        {
+            public readonly IList<User> CoAuthors;
 #pragma warning disable 0649
-			public int Id;
+            public int Id;
 #pragma warning restore 0649
-			public Page()
-			{
-				CoAuthors = new List<User>();
-			}
-		}
+            public Page()
+            {
+                CoAuthors = new List<User>();
+            }
+        }
 
-		private class User
-		{
-			public int UserId;
-		}
-	}
+        private class User
+        {
+            public int UserId;
+        }
+    }
 }

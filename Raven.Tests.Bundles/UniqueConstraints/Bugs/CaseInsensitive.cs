@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.UniqueConstraints;
 
