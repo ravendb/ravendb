@@ -162,10 +162,11 @@ namespace Raven.Tests.FileSystem.ClientApi
                         x.WriteByte(i);
                     
                     // We are throwing to break the upload. RavenFS client should detect this case and cancel the upload. 
-                    throw new Exception();
+                    throw new DataMisalignedException("intended fail");
                 });
 
-                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                var ex = await AssertAsync.Throws<DataMisalignedException>(() => session.SaveChangesAsync());
+				Assert.Equal("intended fail", ex.Message);
             }
         }
 

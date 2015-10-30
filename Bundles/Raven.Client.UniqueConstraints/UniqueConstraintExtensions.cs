@@ -97,13 +97,16 @@ namespace Raven.Client.UniqueConstraints
 											  Key = Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
 										  }).ToList();
 
+                var constraintDocsIds = constraintsIds.Select(x => x.Id).ToList();
+                var inMemory = ((InMemoryDocumentSessionOperations)session);
+                constraintDocsIds.ForEach(inMemory.UnregisterMissing);
 
-				var constraintDocs = session
-					.Include<ConstraintDocument>(x => x.RelatedId)
-					.Include<ConstraintDocument>(x => x.Constraints.Values.Select(c => c.RelatedId))
-					.Load(constraintsIds.Select(x => x.Id).ToArray());
+                var constraintDocs = session
+                    .Include<ConstraintDocument>(x => x.RelatedId)
+                    .Include<ConstraintDocument>(x => x.Constraints.Values.Select(c => c.RelatedId))
+                    .Load(constraintDocsIds);
 
-				var existingDocsIds = new List<string>();
+                var existingDocsIds = new List<string>();
 				for (var i = 0; i < constraintDocs.Length; i++)
 				{
 					// simple way to maintain parallel results array - DummyId should never exist in the DB

@@ -122,7 +122,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[RavenRoute("studio-tasks/import")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, DatabaseItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 			{
@@ -160,6 +160,7 @@ for(var customFunction in customFunctions) {{
 						smugglerOptions.BatchSize = batchSize;
 						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
 					    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
+						smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
 						smugglerOptions.OperateOnTypes = operateOnTypes;
 						smugglerOptions.TransformScript = transformScript;
 
@@ -200,6 +201,10 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
+					else if (e is OperationVetoedException)
+					{
+						status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
+					}
                     else
                     {
                         status.ExceptionDetails = e.ToString();
@@ -239,16 +244,16 @@ for(var customFunction in customFunctions) {{
         public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
 		{
 			throw new NotImplementedException();
-
+      
    //         var requestString = smugglerOptionsJson.SmugglerOptions;
    //         SmugglerDatabaseOptions smugglerOptions;
-      
+
    //         using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
 			//{
 			//	var serializer = JsonExtensions.CreateDefaultJsonSerializer();
    //             smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
 			//}
-
+            
    //         var result = GetEmptyMessage();
             
    //         // create PushStreamContent object that will be called when the output stream will be ready.
@@ -559,7 +564,7 @@ for(var customFunction in customFunctions) {{
 			                if (string.IsNullOrEmpty(column))
 				                continue;
 
-			                if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
+			                if (string.Equals("@id", column, StringComparison.OrdinalIgnoreCase))
 			                {
 								id = record[index];
 			                }

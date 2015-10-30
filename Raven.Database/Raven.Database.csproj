@@ -425,6 +425,7 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTaskContext.cs" />
+    <Compile Include="FileSystem\Util\RandomProvider.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\AlphaNumeric\AlphaNumericFieldComparator.cs" />
@@ -602,7 +603,6 @@
     <Compile Include="Counters\Controllers\BaseCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
-    <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
     <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
@@ -1284,6 +1284,7 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
+    <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
@@ -1300,7 +1301,6 @@
     <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
-    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
     <Compile Include="Extensions\FeatureNotSupportedOnPosixException.cs" />
     <Compile Include="Config\MemoryStatisticsPosix.cs" />

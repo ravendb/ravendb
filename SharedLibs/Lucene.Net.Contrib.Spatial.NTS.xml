@@ -36,6 +36,215 @@
             Abstraction of the calculation used to determine how similar two Bounding Boxes are.
             </summary>
         </member>
+        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeContains(Spatial4n.Core.Shapes.Rectangle)">
+            <summary>
+            Constructs a query to retrieve documents that fully contain the input envelope.
+            </summary>
+            <param name="bbox"></param>
+            <returns>The spatial query</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeDisjoint(Spatial4n.Core.Shapes.Rectangle)">
+            <summary>
+            Constructs a query to retrieve documents that are disjoint to the input envelope.
+            </summary>
+            <param name="bbox"></param>
+            <returns>the spatial query</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeIntersects(Spatial4n.Core.Shapes.Rectangle)">
+            <summary>
+            Constructs a query to retrieve documents that intersect the input envelope.
+            </summary>
+            <param name="bbox"></param>
+            <returns>the spatial query</returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.BBox.DistanceSimilarity">
+            <summary>
+            Returns the distance between the center of the indexed rectangle and the
+            query shape.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.PointPrefixTreeFieldCacheProvider">
+            <summary>
+            Implementation of {@link ShapeFieldCacheProvider} designed for {@link PrefixTreeStrategy}s.
+            
+            Note, due to the fragmented representation of Shapes in these Strategies, this implementation
+            can only retrieve the central {@link Point} of the original Shapes.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy">
+            <summary>
+            Abstract SpatialStrategy which provides common functionality for those 
+            Strategys which use {@link SpatialPrefixTree}s
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.DistErrPct">
+            <summary>
+            The default measure of shape precision affecting indexed and query shapes.
+            Specific shapes at index and query time can use something different.
+            @see org.apache.lucene.spatial.query.SpatialArgs#getDistErrPct()
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.CellTokenStream">
+            <summary>
+            Outputs the tokenString of a cell, and if its a leaf, outputs it again with the leaf byte.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.RecursivePrefixTreeFilter">
+            <summary>
+            Performs a spatial intersection filter against a field indexed with {@link SpatialPrefixTree}, a Trie.
+            SPT yields terms (grids) at length 1 and at greater lengths corresponding to greater precisions.
+            This filter recursively traverses each grid length and uses methods on {@link Shape} to efficiently know
+            that all points at a prefix fit in the shape or not to either short-circuit unnecessary traversals or to efficiently
+            load all enclosed points.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.RecursivePrefixTreeStrategy">
+            <summary>
+            Based on {@link RecursivePrefixTreeFilter}.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.TermQueryPrefixTreeStrategy">
+            <summary>
+            A basic implementation using a large {@link TermsFilter} of all the nodes from
+            {@link SpatialPrefixTree#getNodes(com.spatial4j.core.shape.Shape, int, boolean)}.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree">
+            <summary>
+            A SpatialPrefixGrid based on Geohashes.  Uses {@link GeohashUtils} to do all the geohash work.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree.Factory">
+            <summary>
+            Factory for creating {@link GeohashPrefixTree} instances with useful defaults
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree.GetMaxLevelsPossible">
+            <summary>
+            Any more than this and there's no point (double lat and lon are the same).
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.QuadPrefixTree">
+            <summary>
+            Implementation of {@link SpatialPrefixTree} which uses a quad tree
+            (http://en.wikipedia.org/wiki/Quadtree)
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.QuadPrefixTree.Factory">
+            <summary>
+            Factory for creating {@link QuadPrefixTree} instances with useful defaults
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree">
+            <summary>
+            A spatial Prefix Tree, or Trie, which decomposes shapes into prefixed strings at variable lengths corresponding to
+            variable precision.  Each string corresponds to a spatial region.
+            
+            Implementations of this class should be thread-safe and immutable once initialized. 
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetLevelForDistance(System.Double)">
+            <summary>
+            Returns the level of the largest grid in which its longest side is less
+            than or equal to the provided distance (in degrees). Consequently {@link
+            dist} acts as an error epsilon declaring the amount of detail needed in the
+            grid, such that you can get a grid with just the right amount of
+            precision.
+            </summary>
+            <param name="dist">>= 0</param>
+            <returns>level [1 to maxLevels]</returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory">
+            <summary>
+            Abstract Factory for creating {@link SpatialPrefixTree} instances with useful
+            defaults and passed on configurations defined in a Map.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory.MakeSPT(System.Collections.Generic.Dictionary{System.String,System.String},Spatial4n.Core.Context.SpatialContext)">
+            <summary>
+            The factory  is looked up via "prefixTree" in args, expecting "geohash" or "quad".
+            If its neither of these, then "geohash" is chosen for a geo context, otherwise "quad" is chosen.
+            </summary>
+            <param name="args"></param>
+            <param name="ctx"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.CalcDistanceFromErrPct(Spatial4n.Core.Shapes.Shape,System.Double,Spatial4n.Core.Context.SpatialContext)">
+            <summary>
+            Computes the distance given a shape and the {@code distErrPct}.  The
+            algorithm is the fraction of the distance from the center of the query
+            shape to its furthest bounding box corner.
+            </summary>
+            <param name="shape">Mandatory.</param>
+            <param name="distErrPct">0 to 0.5</param>
+            <param name="ctx">Mandatory</param>
+            <returns>A distance (in degrees).</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.ResolveDistErr(Spatial4n.Core.Context.SpatialContext,System.Double)">
+            <summary>
+            Gets the error distance that specifies how precise the query shape is. This
+            looks at {@link #getDistErr()}, {@link #getDistErrPct()}, and {@code
+            defaultDistErrPct}.
+            </summary>
+            <param name="ctx"></param>
+            <param name="defaultDistErrPct">0 to 0.5</param>
+            <returns>>= 0</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.Validate">
+            <summary>
+            Check if the arguments make sense -- throw an exception if not
+            </summary>
+        </member>
+        <member name="P:Lucene.Net.Spatial.Queries.SpatialArgs.DistErrPct">
+            <summary>
+            A measure of acceptable error of the shape as a fraction. This effectively
+            inflates the size of the shape but should not shrink it.
+            <p/>
+            The default is {@link #DEFAULT_DIST_PRECISION}
+            </summary>
+            <returns>0 to 0.5</returns>
+        </member>
+        <member name="P:Lucene.Net.Spatial.Queries.SpatialArgs.DistErr">
+            <summary>
+            The acceptable error of the shape.  This effectively inflates the
+            size of the shape but should not shrink it.
+            </summary>
+            <returns>>= 0</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.WriteSpatialArgs(Lucene.Net.Spatial.Queries.SpatialArgs)">
+            <summary>
+            Writes a close approximation to the parsed input format.
+            </summary>
+            <param name="args"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.Parse(System.String,Spatial4n.Core.Context.SpatialContext)">
+            <summary>
+            Parses a string such as "Intersects(-10,20,-8,22) distErrPct=0.025".
+            </summary>
+            <param name="v"></param>
+            <param name="ctx"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.ParseMap(System.String)">
+            <summary>
+            Parses "a=b c=d f" (whitespace separated) into name-value pairs. If there
+            is no '=' as in 'f' above then it's short for f=f.
+            </summary>
+            <param name="body"></param>
+            <returns></returns>
+        </member>
+        <member name="F:Lucene.Net.Spatial.Queries.SpatialOperation.BBoxIntersects">
+            <summary>
+            Bounding box of the *indexed* shape.
+            </summary>
+        </member>
+        <member name="F:Lucene.Net.Spatial.Queries.SpatialOperation.BBoxWithin">
+            <summary>
+            Bounding box of the *indexed* shape.
+            </summary>
+        </member>
         <member name="T:Lucene.Net.Spatial.SpatialStrategy">
             <summary>
             The SpatialStrategy encapsulates an approach to indexing and searching based on shapes.
@@ -116,225 +325,6 @@
             </summary>
             <param name="queryShape"></param>
             <returns></returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeContains(Spatial4n.Core.Shapes.Rectangle)">
-            <summary>
-            Constructs a query to retrieve documents that fully contain the input envelope.
-            </summary>
-            <param name="bbox"></param>
-            <returns>The spatial query</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeDisjoint(Spatial4n.Core.Shapes.Rectangle)">
-            <summary>
-            Constructs a query to retrieve documents that are disjoint to the input envelope.
-            </summary>
-            <param name="bbox"></param>
-            <returns>the spatial query</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.BBox.BBoxStrategy.MakeIntersects(Spatial4n.Core.Shapes.Rectangle)">
-            <summary>
-            Constructs a query to retrieve documents that intersect the input envelope.
-            </summary>
-            <param name="bbox"></param>
-            <returns>the spatial query</returns>
-        </member>
-        <member name="T:Lucene.Net.Spatial.BBox.DistanceSimilarity">
-            <summary>
-            Returns the distance between the center of the indexed rectangle and the
-            query shape.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.PointPrefixTreeFieldCacheProvider">
-            <summary>
-            Implementation of {@link ShapeFieldCacheProvider} designed for {@link PrefixTreeStrategy}s.
-            
-            Note, due to the fragmented representation of Shapes in these Strategies, this implementation
-            can only retrieve the central {@link Point} of the original Shapes.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Util.ShapeFieldCacheProvider`1">
-            <summary>
-            Provides access to a {@link ShapeFieldCache} for a given {@link AtomicReader}.
-            
-            If a Cache does not exist for the Reader, then it is built by iterating over
-            the all terms for a given field, reconstructing the Shape from them, and adding
-            them to the Cache.
-            </summary>
-            <typeparam name="T"></typeparam>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy">
-            <summary>
-            Abstract SpatialStrategy which provides common functionality for those 
-            Strategys which use {@link SpatialPrefixTree}s
-            </summary>
-        </member>
-        <member name="P:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.DistErrPct">
-            <summary>
-            The default measure of shape precision affecting indexed and query shapes.
-            Specific shapes at index and query time can use something different.
-            @see org.apache.lucene.spatial.query.SpatialArgs#getDistErrPct()
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.CellTokenStream">
-            <summary>
-            Outputs the tokenString of a cell, and if its a leaf, outputs it again with the leaf byte.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.RecursivePrefixTreeFilter">
-            <summary>
-            Performs a spatial intersection filter against a field indexed with {@link SpatialPrefixTree}, a Trie.
-            SPT yields terms (grids) at length 1 and at greater lengths corresponding to greater precisions.
-            This filter recursively traverses each grid length and uses methods on {@link Shape} to efficiently know
-            that all points at a prefix fit in the shape or not to either short-circuit unnecessary traversals or to efficiently
-            load all enclosed points.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.RecursivePrefixTreeStrategy">
-            <summary>
-            Based on {@link RecursivePrefixTreeFilter}.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.TermQueryPrefixTreeStrategy">
-            <summary>
-            A basic implementation using a large {@link TermsFilter} of all the nodes from
-            {@link SpatialPrefixTree#getNodes(com.spatial4j.core.shape.Shape, int, boolean)}.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree">
-            <summary>
-            A SpatialPrefixGrid based on Geohashes.  Uses {@link GeohashUtils} to do all the geohash work.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree">
-            <summary>
-            A spatial Prefix Tree, or Trie, which decomposes shapes into prefixed strings at variable lengths corresponding to
-            variable precision.  Each string corresponds to a spatial region.
-            
-            Implementations of this class should be thread-safe and immutable once initialized. 
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetLevelForDistance(System.Double)">
-            <summary>
-            Returns the level of the largest grid in which its longest side is less
-            than or equal to the provided distance (in degrees). Consequently {@link
-            dist} acts as an error epsilon declaring the amount of detail needed in the
-            grid, such that you can get a grid with just the right amount of
-            precision.
-            </summary>
-            <param name="dist">>= 0</param>
-            <returns>level [1 to maxLevels]</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree.GetMaxLevelsPossible">
-            <summary>
-            Any more than this and there's no point (double lat and lon are the same).
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree.Factory">
-            <summary>
-            Factory for creating {@link GeohashPrefixTree} instances with useful defaults
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory">
-            <summary>
-            Abstract Factory for creating {@link SpatialPrefixTree} instances with useful
-            defaults and passed on configurations defined in a Map.
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory.MakeSPT(System.Collections.Generic.Dictionary{System.String,System.String},Spatial4n.Core.Context.SpatialContext)">
-            <summary>
-            The factory  is looked up via "prefixTree" in args, expecting "geohash" or "quad".
-            If its neither of these, then "geohash" is chosen for a geo context, otherwise "quad" is chosen.
-            </summary>
-            <param name="args"></param>
-            <param name="ctx"></param>
-            <returns></returns>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.QuadPrefixTree">
-            <summary>
-            Implementation of {@link SpatialPrefixTree} which uses a quad tree
-            (http://en.wikipedia.org/wiki/Quadtree)
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Prefix.Tree.QuadPrefixTree.Factory">
-            <summary>
-            Factory for creating {@link QuadPrefixTree} instances with useful defaults
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.CalcDistanceFromErrPct(Spatial4n.Core.Shapes.Shape,System.Double,Spatial4n.Core.Context.SpatialContext)">
-            <summary>
-            Computes the distance given a shape and the {@code distErrPct}.  The
-            algorithm is the fraction of the distance from the center of the query
-            shape to its furthest bounding box corner.
-            </summary>
-            <param name="shape">Mandatory.</param>
-            <param name="distErrPct">0 to 0.5</param>
-            <param name="ctx">Mandatory</param>
-            <returns>A distance (in degrees).</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.ResolveDistErr(Spatial4n.Core.Context.SpatialContext,System.Double)">
-            <summary>
-            Gets the error distance that specifies how precise the query shape is. This
-            looks at {@link #getDistErr()}, {@link #getDistErrPct()}, and {@code
-            defaultDistErrPct}.
-            </summary>
-            <param name="ctx"></param>
-            <param name="defaultDistErrPct">0 to 0.5</param>
-            <returns>>= 0</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgs.Validate">
-            <summary>
-            Check if the arguments make sense -- throw an exception if not
-            </summary>
-        </member>
-        <member name="P:Lucene.Net.Spatial.Queries.SpatialArgs.DistErrPct">
-            <summary>
-            A measure of acceptable error of the shape as a fraction. This effectively
-            inflates the size of the shape but should not shrink it.
-            <p/>
-            The default is {@link #DEFAULT_DIST_PRECISION}
-            </summary>
-            <returns>0 to 0.5</returns>
-        </member>
-        <member name="P:Lucene.Net.Spatial.Queries.SpatialArgs.DistErr">
-            <summary>
-            The acceptable error of the shape.  This effectively inflates the
-            size of the shape but should not shrink it.
-            </summary>
-            <returns>>= 0</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.WriteSpatialArgs(Lucene.Net.Spatial.Queries.SpatialArgs)">
-            <summary>
-            Writes a close approximation to the parsed input format.
-            </summary>
-            <param name="args"></param>
-            <returns></returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.Parse(System.String,Spatial4n.Core.Context.SpatialContext)">
-            <summary>
-            Parses a string such as "Intersects(-10,20,-8,22) distErrPct=0.025".
-            </summary>
-            <param name="v"></param>
-            <param name="ctx"></param>
-            <returns></returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Queries.SpatialArgsParser.ParseMap(System.String)">
-            <summary>
-            Parses "a=b c=d f" (whitespace separated) into name-value pairs. If there
-            is no '=' as in 'f' above then it's short for f=f.
-            </summary>
-            <param name="body"></param>
-            <returns></returns>
-        </member>
-        <member name="F:Lucene.Net.Spatial.Queries.SpatialOperation.BBoxIntersects">
-            <summary>
-            Bounding box of the *indexed* shape.
-            </summary>
-        </member>
-        <member name="F:Lucene.Net.Spatial.Queries.SpatialOperation.BBoxWithin">
-            <summary>
-            Bounding box of the *indexed* shape.
-            </summary>
         </member>
         <member name="T:Lucene.Net.Spatial.Util.IBits">
             <summary>
@@ -453,6 +443,16 @@
             <summary>
             Bounded Cache of Shapes associated with docIds.  Note, multiple Shapes can be
             associated with a given docId
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.ShapeFieldCacheProvider`1">
+            <summary>
+            Provides access to a {@link ShapeFieldCache} for a given {@link AtomicReader}.
+            
+            If a Cache does not exist for the Reader, then it is built by iterating over
+            the all terms for a given field, reconstructing the Shape from them, and adding
+            them to the Cache.
             </summary>
             <typeparam name="T"></typeparam>
         </member>

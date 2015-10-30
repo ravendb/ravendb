@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
+using Raven.Client.Connection;
 using Raven.Client.Counters.Changes;
 using Raven.Client.Counters.Replication;
 
@@ -17,6 +18,8 @@ namespace Raven.Client.Counters
 		string Name { get; }
 
 		string Url { get; }
+
+		HttpJsonRequestFactory JsonRequestFactory { get; set; }
 
 		CountersConvention CountersConvention { get; set; }
 
@@ -42,7 +45,7 @@ namespace Raven.Client.Counters
 
 		Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken));
 
-		Task<List<CounterStorageReplicationStats>> GetCounterReplicationStatsAsync(CancellationToken token = default (CancellationToken));
+		Task<IReadOnlyList<CounterStorageReplicationStats>> GetCounterReplicationStatsAsync(CancellationToken token = default (CancellationToken), int skip = 0, int take = 1024);
 
 
 		Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken));

@@ -526,11 +526,15 @@ namespace Raven.Tests.FileSystem
 	    [Fact]
 	    public async Task Can_get_stats_for_all_active_file_systems()
 	    {
-	        var client = NewAsyncClient();
-	        var server = GetServer();
+            var store = NewStore();
+            var failoverConvention = store.Conventions.FailoverBehavior;
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 
-	        using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
+	        try
 	        {
+                using (var client = store.AsyncFilesCommands)
+                using (var anotherClient = client.ForFileSystem("test"))
+                {
 	            await anotherClient.EnsureFileSystemExistsAsync();
 
                 await client.UploadAsync("test1", new RandomStream(10)); // will make it active
@@ -545,7 +549,7 @@ namespace Raven.Tests.FileSystem
 	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
 	            Assert.NotNull(stats2);
 
-                Assert.Equal(3, stats1.Metrics.Requests.Count);
+                    Assert.Equal(2, stats1.Metrics.Requests.Count);
                 Assert.Equal(1, stats2.Metrics.Requests.Count);
 
                 Assert.Equal(0, stats1.ActiveSyncs.Count);
@@ -555,6 +559,17 @@ namespace Raven.Tests.FileSystem
                 Assert.Equal(0, stats2.PendingSyncs.Count);
 	        }
 	    }
+	        finally
+	        {
+                store.Conventions.FailoverBehavior= failoverConvention;
+            }
+
+	        
+        }
+        protected override void ModifyStore(FilesStore store)
+        {
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+        }
 
 	    [Fact]
 	    public async Task Will_not_return_stats_of_inactive_file_systems()

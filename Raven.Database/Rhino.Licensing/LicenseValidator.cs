@@ -11,7 +11,7 @@ namespace Rhino.Licensing
 	public class LicenseValidator : AbstractLicenseValidator
 	{
 		private readonly string licensePath;
-	    private DateTime lastModified;
+        private DateTime lastModified;
 		private string inMemoryLicense;
 
 		/// <summary>
@@ -23,7 +23,7 @@ namespace Rhino.Licensing
 			: base(publicKey)
 		{
 			this.licensePath = licensePath;
-		    lastModified = File.GetLastWriteTimeUtc(licensePath);
+            lastModified = File.GetLastWriteTimeUtc(licensePath);
 		}
 
 		/// <summary>
@@ -88,10 +88,10 @@ namespace Rhino.Licensing
 			File.Delete(licensePath);
 		}
 
-	    public bool SameFile(string fullPath)
-	    {
-	        return fullPath == licensePath &&
-	               lastModified == File.GetLastWriteTimeUtc(licensePath);
-	    }
+        public bool SameFile(string fullPath)
+        {
+            return fullPath == licensePath &&
+                   lastModified == File.GetLastWriteTimeUtc(licensePath);
 	}
+}
 }

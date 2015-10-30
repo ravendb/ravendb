@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 namespace Voron.Impl.Scratch
 {
 	public sealed class PageFromScratchBuffer

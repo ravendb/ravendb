@@ -536,10 +536,7 @@ namespace Raven.Database.Counters.Controllers
 	        return activeTasks.Count;
 	    }
 
-        public ConcurrentDictionary<string, CounterDestinationStats> DestinationStats
-        {
-            get { return destinationsStats; }
-        }
+        public ConcurrentDictionary<string, CounterDestinationStats> DestinationStats => destinationsStats;
 
 		public void Dispose()
         {

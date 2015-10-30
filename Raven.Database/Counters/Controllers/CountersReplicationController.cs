@@ -111,6 +111,7 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
+		//TODO: refactor the endpoints
 		[RavenRoute("cs/{counterStorageName}/replications/get")]
 		[HttpGet]
 		public HttpResponseMessage ReplicationsGet()

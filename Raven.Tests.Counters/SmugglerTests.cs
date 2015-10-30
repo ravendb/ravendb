@@ -263,8 +263,8 @@ namespace Raven.Tests.Counters
 					To = ConnectionStringTo(counterStore)
 				});
 
-				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-                Assert.Equal(3, summary.Length);//sanity check
+				var summary = await counterStore.Admin.GetCountersByStorage(counterStore.Name);
+                Assert.Equal(3, summary.Count);//sanity check
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c" && x.GroupName == "g"));
@@ -304,8 +304,8 @@ namespace Raven.Tests.Counters
 					To = ConnectionStringTo(counterStore)
 				});
 
-				var summary = await counterStore.Admin.GetCounterStorageSummary(counterStore.Name);
-                Assert.Equal(3, summary.Length); //sanity check
+				var summary = await counterStore.Admin.GetCountersByStorage(counterStore.Name);
+                Assert.Equal(3, summary.Count); //sanity check
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
 			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
 			    Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));
@@ -334,8 +334,8 @@ namespace Raven.Tests.Counters
 					To = ConnectionStringTo(target)
 				});
 
-				var summary = await target.Admin.GetCounterStorageSummary(target.Name);
-                Assert.Equal(3, summary.Length); //sanity check
+				var summary = await target.Admin.GetCountersByStorage(target.Name);
+                Assert.Equal(3, summary.Count); //sanity check
 				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g1"));
                 Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c2" && x.GroupName == "g1"));
 				Assert.NotNull(summary.SingleOrDefault(x => x.CounterName == "c1" && x.GroupName == "g2"));

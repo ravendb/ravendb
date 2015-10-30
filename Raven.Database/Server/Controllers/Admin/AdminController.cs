@@ -955,6 +955,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				string ravenDebugDir = null;
 
+				var output = string.Empty;
 				try
 				{
 					if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
@@ -968,14 +969,14 @@ namespace Raven.Database.Server.Controllers.Admin
 					if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
 					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
 
-					var process = new Process
+                    var process = new Process
 					{
 						StartInfo = new ProcessStartInfo
 						{
 							Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
 							FileName = ravenDebugExe,
 							WindowStyle = ProcessWindowStyle.Normal,
-							LoadUserProfile = true,
+							LoadUserProfile = false,
 							RedirectStandardError = true,
 							RedirectStandardOutput = true,
 							UseShellExecute = false
@@ -983,7 +984,7 @@ namespace Raven.Database.Server.Controllers.Admin
 						EnableRaisingEvents = true
 					};
 
-					var output = string.Empty;
+					
 
 					process.OutputDataReceived += (sender, args) => output += args.Data;
 					process.ErrorDataReceived += (sender, args) => output += args.Data;
@@ -996,7 +997,10 @@ namespace Raven.Database.Server.Controllers.Admin
 					process.WaitForExit();
 
 					if (process.ExitCode != 0)
-						throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode + Environment.NewLine + "Message: " + output);
+					{
+						Log.Error("Could not read stacktraces. Message: " + output);
+						throw new InvalidOperationException("Could not read stacktraces.");
+					}
 
 					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
 					{
@@ -1006,7 +1010,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				catch (Exception ex)
 				{
 					var streamWriter = new StreamWriter(stacktraceStream);
-					jsonSerializer.Serialize(streamWriter, new { Error = "Exception occurred during getting stacktraces of the RavenDB process. Exception: " + ex });
+					jsonSerializer.Serialize(streamWriter, new { Error = ex.Message, Details = output });
 					streamWriter.Flush();
 				}
 				finally

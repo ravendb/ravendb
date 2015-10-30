@@ -25,7 +25,6 @@ using RavenConstants = Raven.Abstractions.Data.Constants;
 
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
-using Sparrow;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {

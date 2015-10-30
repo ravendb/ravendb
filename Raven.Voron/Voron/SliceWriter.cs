@@ -50,9 +50,9 @@ namespace Voron
 			return new Slice(_buffer);
 		}
 
-		public void Write(byte[] bytes)
+		public void Write(byte[] bytes, int? length = null)
 		{
-			Write(bytes, 0, bytes.Length);
+			Write(bytes, 0, length ?? bytes.Length);
 		}
 
 		private void Write(byte[] bytes, int offset, int count)
@@ -78,9 +78,9 @@ namespace Voron
 			_pos = 0;
 		}
 
-		public Slice CreateSlice(int pos)
+		public Slice CreateSlice(int size)
 		{
-			return new Slice(_buffer, (ushort)pos);
+			return new Slice(_buffer, (ushort)size);
 		}
 	}
 }

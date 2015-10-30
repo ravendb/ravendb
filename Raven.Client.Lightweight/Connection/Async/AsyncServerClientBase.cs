@@ -29,8 +29,6 @@ namespace Raven.Client.Connection.Async
             
 			ReplicationInformerGetter = replicationInformerGetter ?? DefaultReplicationInformerGetter();
 			replicationInformer = new Lazy<TReplicationInformer>(() => ReplicationInformerGetter(resourceName), true);
-            readStrippingBase = new Lazy<int>(() => ReplicationInformer.GetReadStripingBase(true), true);
-
             MaxQuerySizeForGetRequest = 8 * 1024;
         }
 
@@ -59,6 +57,16 @@ namespace Raven.Client.Connection.Async
 
         public abstract string UrlFor(string fileSystem);
 
+        /// <summary>
+        ///     Force the File ServerClient to read directly from the master, unless there has been a failover.
+        /// </summary>
+        public IDisposable ForceReadFromMaster()
+        {
+            var old = ReadStrippingBase;
+            readStrippingBase= -1;// this means that will have to use the master url first
+            return new DisposableAction(() => readStrippingBase = old);
+        }
+
         #region Execute with replication
 
         //protected abstract TReplicationInformer GetReplicationInformer();
@@ -72,7 +80,24 @@ namespace Raven.Client.Connection.Async
         public TReplicationInformer ReplicationInformer { get { return replicationInformer.Value; } }
 		protected readonly Func<string, TReplicationInformer> ReplicationInformerGetter;
 
-        private readonly Lazy<int> readStrippingBase;
+        private int? readStrippingBase=null;
+
+        public int ReadStrippingBase
+        {
+            get
+            {
+                if (readStrippingBase.HasValue)
+                {
+                    return readStrippingBase.Value;
+                }else if (ReplicationInformer == null)
+                {
+                    readStrippingBase = -1;
+                }
+                else readStrippingBase = ReplicationInformer.GetReadStripingBase(true);
+                return readStrippingBase.Value;
+            }
+            internal set { readStrippingBase = value; }
+        }
         private int requestCount;
         private volatile bool currentlyExecuting;
 		private static readonly NameValueCollection DefaultNameValueCollection = new NameValueCollection();
@@ -86,7 +111,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await ReplicationInformer.ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null, currentRequest, readStrippingBase.Value, operation)
+                return await ReplicationInformer.ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null, currentRequest, ReadStrippingBase, operation)
                                                 .ConfigureAwait(false);
             }
             catch (AggregateException e)

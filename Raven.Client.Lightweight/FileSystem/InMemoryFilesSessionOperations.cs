@@ -132,44 +132,42 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-			RegisterUploadInternal(path, stream.Length, stream.CopyTo, metadata, etag);
+			RegisterUploadInternal(new UploadFileOperation(this, path, stream, metadata, etag));
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-			RegisterUploadInternal(file.FullPath, stream.Length, stream.CopyTo, file.Metadata, etag);
+			RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, stream, file.Metadata, etag));
         }
 
         public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-			RegisterUploadInternal(path, size, write, metadata, etag);
+			RegisterUploadInternal(new UploadFileOperation(this, path, size, write, metadata, etag));
         }
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            RegisterUploadInternal(file.FullPath, size, write, file.Metadata, etag);
+            RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, size, write, file.Metadata, etag));
         }
 
-	    internal void RegisterUploadInternal(string path, long size, Action<Stream> content, RavenJObject metadata, Etag etag)
-	    {
-			if (deletedEntities.Contains(path))
-				throw new InvalidOperationException("The file '" + path + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+		internal void RegisterUploadInternal(UploadFileOperation operation)
+		{
+			if (deletedEntities.Contains(operation.FileName))
+				throw new InvalidOperationException("The file '" + operation.FileName + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
 
 			FileHeader existingEntity;
-		    if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
-		    {
-			    if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
-				    etag = existingEntity.Etag;
-		    }
-
-			var operation = new UploadFileOperation(this, path, size, content, metadata, etag);
-
+			if (operation.Etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(operation.FileName, out existingEntity))
+			{
+				if (IsDeleted(operation.FileName) == false) // do not set etag if we already know that file was deleted
+					operation.Etag = existingEntity.Etag;
+			}
+			
 			IncrementRequestCount();
 
-			registeredOperations.Enqueue(operation); 
-	    }
+			registeredOperations.Enqueue(operation);
+		}
 
-        public void RegisterFileDeletion(string path, Etag etag = null)
+		public void RegisterFileDeletion(string path, Etag etag = null)
         {
 			FileHeader existingEntity;
 			if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))

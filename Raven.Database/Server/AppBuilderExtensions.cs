@@ -260,7 +260,7 @@ namespace Owin
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
 				var content = response.Content;
-				var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
+				var compressedContent = content as CompressedContent;
 				if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
 					return ShouldBuffer(compressedContent.OriginalContent);
 				return ShouldBuffer(content);

@@ -16,6 +16,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
+using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
@@ -71,7 +73,13 @@ namespace Raven.Tests.FileSystem.Synchronization
 			Assert.True(resultMd5 == sourceMd5);
 		}
 
-		[Theory]
+        protected override void ModifyStore(FilesStore store)
+        {
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+            base.ModifyStore(store);
+        }
+
+        [Theory]
 		[InlineData(1)]
 		[InlineData(5000)]
 		public async Task Synchronize_file_with_appended_data(int size)
@@ -85,8 +93,8 @@ namespace Raven.Tests.FileSystem.Synchronization
 			var sourceContent = new CombinedStream(SyncTestUtils.PrepareSourceStream(size), differenceChunk) {Position = 0};
 			var destinationContent = SyncTestUtils.PrepareSourceStream(size);
 			destinationContent.Position = 0;
-			var sourceClient = NewAsyncClient(0);
-			var destinationClient = NewAsyncClient(1);
+			var sourceClient = NewAsyncClient(0,fiddler:true);
+			var destinationClient = NewAsyncClient(1, fiddler: true);
 
 			await destinationClient.UploadAsync("test.txt", destinationContent);
 			sourceContent.Position = 0;

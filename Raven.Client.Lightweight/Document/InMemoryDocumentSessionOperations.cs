@@ -1244,8 +1244,12 @@ more responsive application.
 		{
 			knownMissingIds.Add(id);
 		}
+        public void UnregisterMissing(string id)
+        {
+            knownMissingIds.Remove(id);
+        }
 
-		public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
+        public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
 		{
 			if (includes == null || includes.Any() == false)
 				return;

@@ -281,9 +281,9 @@ namespace Raven.Tests.Core.Configuration
 			//configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CompiledIndexCacheDirectory.Value.ToFullPath(null)), actual => actual.CompiledIndexCacheDirectory);
 			configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
 			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
+			configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
 			configurationComparer.Assert(expected => expected.Counter.TombstoneRetentionTime.Value, actual => actual.Counter.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.Counter.DeletedTombstonesInBatch.Value, actual => actual.Counter.DeletedTombstonesInBatch);
-			configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
 			configurationComparer.Assert(expected => expected.TimeSeries.TombstoneRetentionTime.Value, actual => actual.TimeSeries.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.TimeSeries.DeletedTombstonesInBatch.Value, actual => actual.TimeSeries.DeletedTombstonesInBatch);
             configurationComparer.Assert(expected => expected.TimeSeries.ReplicationLatencyInMs.Value, actual => actual.TimeSeries.ReplicationLatencyInMs);

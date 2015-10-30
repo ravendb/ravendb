@@ -417,22 +417,10 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-						    var multiLoadResult = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false));
-						    var items = multiLoadResult
-								.Results
-                                .Where(x=>x != null)
-								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-								.Select(JsonExtensions.ToJObject)
-								.Select(
-										x =>
-										{
-											HandleInternalMetadata(x);
-											return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-										})
-								.Cast<T>()
-								.ToArray();
+                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false);
+                            var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
-							if (items.Length > currentShardIds.Length)
+                            if (items.Length > currentShardIds.Length)
 							{
 								throw new InvalidOperationException(
 									String.Format(

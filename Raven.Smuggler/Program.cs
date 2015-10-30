@@ -378,6 +378,10 @@ namespace Raven.Smuggler
 				{
 					Console.WriteLine(e.InnerException != null ? e.InnerException.SimplifyError() : e.SimplifyError());
 				}
+				else if (e is OperationVetoedException)
+				{
+					Console.WriteLine("You are trying to import into database with versioning bundle enabled, use the flag: disable - versioning - during - import in the command line parameters\r\n");
+				}
                 else
 				{
 					var errorResponseException = e as ErrorResponseException;

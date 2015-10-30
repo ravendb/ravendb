@@ -13,7 +13,6 @@ using System.Net;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Web.Http;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -355,8 +354,7 @@ namespace Raven.Database.FileSystem.Actions
 
 				var renameSucceeded = false;
 
-				int deleteVersion = 0;
-
+				int deleteAttempts = 0;
 				do
 				{
 					try
@@ -374,14 +372,17 @@ namespace Raven.Database.FileSystem.Actions
 							return;
 						}
 
-						// we need to use different name to do a file rename
-						deleteVersion++;
-						deletingFileName = RavenFileNameHelper.DeletingFileName(fileName, deleteVersion);
-					}
-				} while (!renameSucceeded && deleteVersion < 128);
+						if (deleteAttempts++ > 128)
+						{
+							Log.Warn("Could not rename a file '{0}' when a delete operation was performed", fileName);
+							throw;
+						}
 
-				if (renameSucceeded)
-				{
+						// we need to use different name to do a file rename
+						deletingFileName = RavenFileNameHelper.DeletingFileName(fileName, RandomProvider.GetThreadRandom().Next());
+					}
+				} while (renameSucceeded == false);
+
 					accessor.UpdateFileMetadata(deletingFileName, metadata, null);
 					accessor.DecrementFileCount(deletingFileName);
 
@@ -399,11 +400,6 @@ namespace Raven.Database.FileSystem.Actions
 					
 					if (Log.IsDebugEnabled)
 					Log.Debug("File '{0}' was deleted", fileName);
-				}
-				else
-				{
-					Log.Warn("Could not rename a file '{0}' when a delete operation was performed", fileName);
-				}
 			});
 
 			if (fileExists)
