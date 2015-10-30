@@ -18,7 +18,7 @@ namespace Raven.Database.Impl.DTC
         public DtcNotSupportedTransactionalState(string storageName,
             Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut,
             Func<string, Etag, TransactionInformation, bool> databaseDelete)
-            : base(databasePut, databaseDelete)
+            : base(databasePut, databaseDelete, false)
         {
             this.storageName = storageName;
         }

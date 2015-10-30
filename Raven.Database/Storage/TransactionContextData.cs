@@ -12,5 +12,6 @@ namespace Raven.Database.Storage
         public int NumberOfActionsAfterCommit { get; set; }
         public bool IsAlreadyInContext { get; set; }
         public List<string> DocumentIdsToTouch { get; set; }
+        public List<string> DocumentTombstonesToTouch { get; set; }
     }
 }

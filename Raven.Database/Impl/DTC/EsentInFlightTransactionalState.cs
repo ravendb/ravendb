@@ -17,6 +17,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
@@ -36,7 +37,7 @@ namespace Raven.Database.Impl.DTC
         private readonly Timer timer;
 
         public EsentInFlightTransactionalState(DocumentDatabase database, TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
-            : base(databasePut, databaseDelete)
+            : base(databasePut, databaseDelete, database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault() != null)
         {
             _database = database;
             this.storage = storage;
@@ -104,27 +105,9 @@ namespace Raven.Database.Impl.DTC
                 //using(context.Session) - disposing the session is actually done in the rollback, which is always called
                 using (context.EnterSessionContext())
                 {
-                    if (context.DocumentIdsToTouch != null)
-                    {
-                        using (storage.SetTransactionContext(context))
-                        {
-                            storage.Batch(accessor =>
-                            {
-                                foreach (var docId in context.DocumentIdsToTouch)
-                                {
-                                    _database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
-
-                                    Etag preTouchEtag;
-                                    Etag afterTouchEtag;
-                                    accessor.Documents.TouchDocument(docId, out preTouchEtag, out afterTouchEtag);
-                                }
-                            });
-                        }
-                    }
-
                     context.Transaction.Commit(txMode);
 
-                    if (context.DocumentIdsToTouch != null)
+                    if (context.ItemsToTouch != null)
                     {
                         using (_database.DocumentLock.Lock())
                         {
@@ -132,7 +115,7 @@ namespace Raven.Database.Impl.DTC
                             {
                                 storage.Batch(accessor =>
                                 {
-                                    foreach (var docId in context.DocumentIdsToTouch)
+                                    foreach (var docId in context.ItemsToTouch.Documents)
                                     {
                                         _database.Indexes.CheckReferenceBecauseOfDocumentUpdate(docId, accessor);
                                         try
@@ -144,6 +127,21 @@ namespace Raven.Database.Impl.DTC
                                         catch (ConcurrencyException)
                                         {
                                             log.Info("Concurrency exception when touching {0}", docId);
+
+                                        }
+                                    }
+
+                                    foreach (var tombstoneKey in context.ItemsToTouch.DocumentTombstones)
+                                    {
+                                        try
+                                        {
+                                            Etag preTouchEtag;
+                                            Etag afterTouchEtag;
+                                            accessor.Lists.Touch(Constants.RavenReplicationDocsTombstones, tombstoneKey, UuidType.Documents, out preTouchEtag, out afterTouchEtag);
+                                        }
+                                        catch (ConcurrencyException)
+                                        {
+                                            log.Info("Concurrency exception when touching tombstone list item {0}", tombstoneKey);
 
                                         }
                                     }
@@ -183,8 +181,8 @@ namespace Raven.Database.Impl.DTC
                 {
                     storage.Batch(accessor =>
                     {
-                        var documentsToTouch = RunOperationsInTransaction(id, out changes);
-                        context.DocumentIdsToTouch = documentsToTouch;
+                        var itemsToTouch = RunOperationsInTransaction(id, out changes);
+                        context.ItemsToTouch = itemsToTouch;
                     });
                 }
 
@@ -245,14 +243,15 @@ namespace Raven.Database.Impl.DTC
                 if (!transactionContexts.TryGetValue(transactionName, out curContext))
                     continue;
 
-                var documentIdsToTouch = curContext.DocumentIdsToTouch;
+                var itemsToTouch = curContext.ItemsToTouch;
                 var actionsAfterCommit = curContext.ActionsAfterCommit;
                 results.Add(new TransactionContextData()
                 {
 
                     Id = transactionName,
                     CreatedAt = curContext.CreatedAt,
-                    DocumentIdsToTouch = documentIdsToTouch != null ? documentIdsToTouch.ToList() : null,
+                    DocumentIdsToTouch = itemsToTouch != null ? itemsToTouch.Documents.ToList() : null,
+                    DocumentTombstonesToTouch = itemsToTouch != null ? itemsToTouch.DocumentTombstones.ToList() : null,
                     IsAlreadyInContext = curContext.AlreadyInContext,
                     NumberOfActionsAfterCommit = actionsAfterCommit != null ? actionsAfterCommit.Count : 0
                 });
