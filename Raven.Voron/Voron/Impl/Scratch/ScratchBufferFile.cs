@@ -90,16 +90,19 @@ namespace Voron.Impl.Scratch
 				available += (_scratchPager.NumberOfAllocatedPages - _lastUsedPage);
 			}
 
-			available += _freePagesBySizeAvailableImmediately.Sum(x => x.Key * x.Value.Count);
+            foreach (var freePage in _freePagesBySizeAvailableImmediately)
+                available += freePage.Key * freePage.Value.Count;
 
-			if (available >= size)
+
+            if (available >= size)
 				return true;
 
-			var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x).ToList();
 
 			var oldestTransaction = tx.Environment.OldestTransaction;
 
-			foreach (var sizeKey in sizesFromLargest)
+			var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x);
+
+            foreach (var sizeKey in sizesFromLargest)
 			{
 				var item = _freePagesBySize[sizeKey].Last;
 
