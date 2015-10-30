@@ -7,6 +7,8 @@ namespace Raven.Database.Config
 	{
 		public readonly static ConfigOptionDocs OptionsDocs = new ConfigOptionDocs
 		{
+			//TODO arek RavenDB-3518
+
 			// Common
 			{"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
 			{"Raven/RunInMemory", "bool", "true,false", "Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing. Default: false."},

@@ -30,7 +30,7 @@ namespace Raven.Database.Server
 
             var name = type.Assembly.GetName().Name;
 
-            return Path.Combine(configuration.AssembliesDirectory, name + AssemblySuffix);
+            return Path.Combine(configuration.Core.AssembliesDirectory, name + AssemblySuffix);
         }
 
         public static void ExtractEmbeddedAssemblies(InMemoryRavenConfiguration configuration)
@@ -41,7 +41,7 @@ namespace Raven.Database.Server
 					typeof(Field).Assembly.GetName().Name 
 				};
 
-				var assemblyLocation = configuration.AssembliesDirectory;
+				var assemblyLocation = configuration.Core.AssembliesDirectory;
 
 				var assembly = Assembly.GetExecutingAssembly();
 				var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);

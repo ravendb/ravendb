@@ -43,7 +43,7 @@ namespace Raven.Database.Linq
 			this.configuration = configuration;
 			this.name = name;
 			this.extensions = extensions;
-			if (configuration.RunInMemory == false)
+			if (configuration.Core.RunInMemory == false)
 			{
 				this.basePath = Path.Combine(basePath, "temp");
 				if (Directory.Exists(this.basePath) == false)

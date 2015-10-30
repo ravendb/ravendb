@@ -32,8 +32,11 @@ namespace Raven.Tests.Storage
 	        db = new DocumentDatabase(new RavenConfiguration
 	        {
                 DefaultStorageTypeName = storageName,
-	            DataDirectory = DataDir,
-                RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DataDir
+				},
 	            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 	            Settings =
 	            {
@@ -72,8 +75,11 @@ namespace Raven.Tests.Storage
 			MaintenanceActions.Restore(new RavenConfiguration
 			{
                 DefaultStorageTypeName = storageName,
-                DataDirectory = DataDir,
-                RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DataDir,
+				},
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
@@ -88,7 +94,12 @@ namespace Raven.Tests.Storage
                 Defrag = true
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+			db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 
 		    var fetchedData = db.Documents.Get("ayende");
             Assert.NotNull(fetchedData);
@@ -135,8 +146,11 @@ namespace Raven.Tests.Storage
             MaintenanceActions.Restore(new RavenConfiguration
             {
                 DefaultStorageTypeName = storageName,
-                DataDirectory = DataDir,
-                RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DataDir
+				},
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
@@ -151,7 +165,12 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+            db = new DocumentDatabase(new RavenConfiguration {
+                Core =
+                {
+                    DataDirectory = DataDir
+                }
+            }, null);
 
             var fetchedData = db.Documents.Get("ayende");
             Assert.NotNull(fetchedData);
@@ -182,9 +201,12 @@ namespace Raven.Tests.Storage
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-                RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+				    DataDirectory = DataDir
+				},
 				DefaultStorageTypeName = storageName,
-				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}, null);
 

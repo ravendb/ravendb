@@ -42,7 +42,7 @@ namespace Raven.SlowTests
 					session.SaveChanges();
                 }
 
-			    var indexDefinitionsFolder = Path.Combine(store.SystemDatabase.Configuration.DataDirectory,"IndexDefinitions");
+			    var indexDefinitionsFolder = Path.Combine(store.SystemDatabase.Configuration.Core.DataDirectory,"IndexDefinitions");
 			    if (!Directory.Exists(indexDefinitionsFolder))
 			        Directory.CreateDirectory(indexDefinitionsFolder);
 

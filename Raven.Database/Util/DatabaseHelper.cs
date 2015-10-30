@@ -48,13 +48,13 @@ namespace Raven.Database.Util
 
 		public static void DeleteDatabaseFiles(InMemoryRavenConfiguration configuration)
 		{
-			if (configuration.RunInMemory)
+			if (configuration.Core.RunInMemory)
 				return;
 
-			IOExtensions.DeleteDirectory(configuration.DataDirectory);
+			IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-			if (configuration.IndexStoragePath != null)
-				IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+			if (configuration.Core.IndexStoragePath != null)
+				IOExtensions.DeleteDirectory(configuration.Core.IndexStoragePath);
 
 			if (configuration.Storage.Voron.JournalsStoragePath != null)
 				IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);

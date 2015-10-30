@@ -81,8 +81,8 @@ namespace Raven.Database.Client
         /// </summary>
         public bool RunInMemory
         {
-            get { return server.Configuration.RunInMemory; }
-            set { server.Configuration.RunInMemory = value; }
+            get { return server.Configuration.Core.RunInMemory; }
+            set { server.Configuration.Core.RunInMemory = value; }
         }
 
         /// <summary>
@@ -91,8 +91,8 @@ namespace Raven.Database.Client
         /// <value>The data directory.</value>
         public string DataDirectory
         {
-            get { return Configuration.DataDirectory; }
-            set { Configuration.DataDirectory = value; }
+            get { return Configuration.Core.DataDirectory; }
+            set { Configuration.Core.DataDirectory = value; }
         }
 
         /// <summary>

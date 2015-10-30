@@ -187,10 +187,13 @@ namespace Raven.Tests.Helpers
                 Configuration =
                 {
                     DefaultStorageTypeName = storageType,
-                    DataDirectory = Path.Combine(dataDirectory, "System"),
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                    RunInMemory = runInMemory,
-                    Port = port ?? 8079,
+					Core =
+					{
+					    RunInMemory = runInMemory,
+                        DataDirectory = Path.Combine(dataDirectory, "System"),
+                        Port = port ?? 8079,
+                    },
                     AnonymousUserAccessMode = anonymousUserAccessMode
                 },
 				Conventions = conventions ?? new DocumentConvention()
@@ -329,7 +332,7 @@ namespace Raven.Tests.Helpers
                 Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
                 DefaultDatabase = databaseName
             };
-            pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
+            pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.Core.DataDirectory, @"..\Databases"));
             stores.Add(documentStore);
             documentStore.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
@@ -369,7 +372,7 @@ namespace Raven.Tests.Helpers
 
         protected RavenDbServer GetServer(int port = 8079)
         {
-            return servers.First(x => x.SystemDatabase.Configuration.Port == port);
+            return servers.First(x => x.SystemDatabase.Configuration.Core.Port == port);
         }
 
 	    protected static string GetServerUrl(bool fiddler, string serverUrl)
@@ -419,9 +422,12 @@ namespace Raven.Tests.Helpers
 			var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
 			var ravenConfiguration = new RavenConfiguration
 			{
-				Port = port,
-				DataDirectory = Path.Combine(directory, "System"),
-				RunInMemory = runInMemory,
+				Core =
+				{
+				    RunInMemory = runInMemory,
+                    DataDirectory = Path.Combine(directory, "System"),
+                    Port = port,
+                },
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
@@ -445,7 +451,7 @@ namespace Raven.Tests.Helpers
 
 			ravenConfiguration.PostInit();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Core.Port);
 			var ravenDbServer = new RavenDbServer(ravenConfiguration)
 			{
 				UseEmbeddedHttpServer = true,
@@ -492,8 +498,11 @@ namespace Raven.Tests.Helpers
 			var dataDirectory = dataDir ?? NewDataPath();
 			var ravenConfiguration = new RavenConfiguration
 			{
-				DataDirectory = dataDirectory,
-				RunInMemory = runInMemory ?? true,
+				Core =
+				{
+				    RunInMemory = runInMemory ?? true,
+                    DataDirectory = dataDirectory,
+                },
 			};
 
 			ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
@@ -751,7 +760,7 @@ namespace Raven.Tests.Helpers
 			if (embeddableDocumentStore != null)
 			{
 			    databaseName = embeddableDocumentStore.DefaultDatabase;
-				embeddableDocumentStore.Configuration.Port = port;
+				embeddableDocumentStore.Configuration.Core.Port = port;
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);

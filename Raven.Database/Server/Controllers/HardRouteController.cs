@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet][RavenRoute("favicon.ico")]
 		public HttpResponseMessage FaviconGet()
 		{
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, "favicon.ico");
+			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.Core.WebDir, "Raven.Database.Server.WebUI", null, "favicon.ico");
 		}
 
 		[HttpGet][RavenRoute("clientaccesspolicy.xml")]

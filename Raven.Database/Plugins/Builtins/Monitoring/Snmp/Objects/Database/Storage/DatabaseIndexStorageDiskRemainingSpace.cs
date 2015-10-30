@@ -22,10 +22,10 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stora
 
 		protected override Gauge32 GetData(DocumentDatabase database)
 		{
-			if (database.Configuration.RunInMemory) 
+			if (database.Configuration.Core.RunInMemory) 
 				return Empty;
 			
-			var result = CheckFreeDiskSpace.DiskSpaceChecker.GetFreeDiskSpace(database.Configuration.IndexStoragePath, DriveInfo.GetDrives());
+			var result = CheckFreeDiskSpace.DiskSpaceChecker.GetFreeDiskSpace(database.Configuration.Core.IndexStoragePath, DriveInfo.GetDrives());
 			if (result == null) 
 				return Empty;
 

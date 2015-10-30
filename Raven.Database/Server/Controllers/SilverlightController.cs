@@ -45,7 +45,7 @@ namespace Raven.Database.Server.Controllers
 		    string matchingPath = null;
 
 			var fileName = id;
-			var paths = GetPaths(fileName, Database.Configuration.WebDir);
+			var paths = GetPaths(fileName, Database.Configuration.Core.WebDir);
 			
 			matchingPath = paths.FirstOrDefault(path =>
 			{
@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 
-			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, "Raven.Studio.xap");
+			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.Core.WebDir, "Raven.Database.Server.WebUI", null, "Raven.Studio.xap");
 		}
 
 		public static IEnumerable<string> GetPaths(string fileName, string webDir)

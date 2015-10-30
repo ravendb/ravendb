@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.MaxSimpleIndexOutputsPerDocument = 100;
+            configuration.Indexing.MaxSimpleIndexOutputsPerDocument = 100;
         }
 		public class DataSet
 		{

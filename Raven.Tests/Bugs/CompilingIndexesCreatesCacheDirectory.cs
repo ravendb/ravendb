@@ -20,9 +20,9 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-                store.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
+                store.Configuration.Core.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
 
-                DeleteDirectory(store.Configuration.CompiledIndexCacheDirectory);
+                DeleteDirectory(store.Configuration.Core.CompiledIndexCacheDirectory);
 
                 var index = new Index();
 

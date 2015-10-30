@@ -96,7 +96,7 @@ namespace Raven.Database.Indexing
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
 		{
             //if we are using too much memory for indexing, do not even consider to increase batch size
-			if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > context.Configuration.DynamicMemoryLimitForProcessing)
+			if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > context.Configuration.Memory.DynamicLimitForProcessing.Bytes)
 			{
 				return false;
 			}
@@ -122,17 +122,17 @@ namespace Raven.Database.Indexing
 			// Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take
 			// that into account, you may have 10 indexes but only 2 CPUs, so we only consider the cost of executing 2 indexes,
 			// not all 10
-			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelProcessingTasks)));
+			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.Core.MaxNumberOfParallelProcessingTasks)));
 
 			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemoryInMb - sizedPlusIndexingCost;
 
-			if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+			if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
 				return false;
 
 			// here we assume that the next batch would be 175% as long as the current one
 			// and there is no point in trying if we are just going to blow out past our max latency
 			var timeSpan = processingDuration.Add(TimeSpan.FromMilliseconds(processingDuration.TotalMilliseconds * 0.75));
-			if (timeSpan > context.Configuration.MaxProcessingRunLatency)
+			if (timeSpan > context.Configuration.Core.MaxProcessingRunLatency.AsTimeSpan)
 				return false;
 
             // We want to aggressively increase the size while it is small, but once we hit a certain
@@ -166,7 +166,7 @@ namespace Raven.Database.Indexing
 			get
 			{
 				// we take just a bit more to account for indexing costs as well
-                var sizeToKeepFree = context.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 1.33;
+                var sizeToKeepFree = context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes * 1.33;
                 // if we just loaded > 256 MB to index, that is big enough for right now
 				// remember, this value refer to just the data on disk, not including
 				// the memory to do the actual indexing
@@ -179,13 +179,13 @@ namespace Raven.Database.Indexing
 		{
 			get
 			{
-				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > context.Configuration.DynamicMemoryLimitForProcessing;
+				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > context.Configuration.Memory.DynamicLimitForProcessing.Bytes;
 			}
 		}
 
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
 		{
-			if (MemoryStatistics.AvailableMemoryInMb >= context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false &&
+			if (MemoryStatistics.AvailableMemoryInMb >= context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes && forceReducing == false &&
 				IsProcessingUsingTooMuchMemory == false)
 			{
 				// there is enough memory available for the next indexing run
@@ -204,7 +204,7 @@ namespace Raven.Database.Indexing
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (MemoryStatistics.AvailableMemoryInMb > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false)
+			if (MemoryStatistics.AvailableMemoryInMb > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes && forceReducing == false)
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;
@@ -227,7 +227,7 @@ namespace Raven.Database.Indexing
 				    // we might need to increase, but certainly not decrease the batch size
 				    amountOfItemsToProcess >= NumberOfItemsToProcessInSingleBatch ||
 				    // we haven't gone over the max latency limit, no reason to decrease yet
-				    processingDuration < context.Configuration.MaxProcessingRunLatency)
+				    processingDuration < context.Configuration.Core.MaxProcessingRunLatency.AsTimeSpan)
 			    {
 				    return false;
 			    }

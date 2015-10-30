@@ -19,9 +19,9 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.InitialNumberOfItemsToReduceInSingleBatch = 2;
-			configuration.MaxNumberOfItemsToReduceInSingleBatch = 2;
-			configuration.NumberOfItemsToExecuteReduceInSingleStep = 2;
+			configuration.Core.InitialNumberOfItemsToReduceInSingleBatch = 2;
+			configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 2;
+			configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = 2;
 		}
 
         [Theory]

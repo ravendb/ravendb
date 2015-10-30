@@ -281,8 +281,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			ravenConfiguration.Initialize();
 
 			string documentDataDir;
-			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
-			restoreRequest.DatabaseLocation = ravenConfiguration.DataDirectory;
+			ravenConfiguration.Core.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
+			restoreRequest.DatabaseLocation = ravenConfiguration.Core.DataDirectory;
 
 			string anotherRestoreResourceName;
 			if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
@@ -477,7 +477,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return databaseLocation;
 			}
 
-			var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
+			var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.Core.DataDirectory);
 			if (baseDataPath == null)
 				throw new InvalidOperationException("Could not find root data path");
 
@@ -676,7 +676,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
 			if (string.IsNullOrEmpty(concurrency) == false)
-				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
+				Database.Configuration.Core.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
 			Database.SpinBackgroundWorkers(true);
 		}

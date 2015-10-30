@@ -17,8 +17,8 @@ namespace Raven.Tests.Indexes
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.MaxNumberOfItemsToProcessInSingleBatch = 128;
-			configuration.InitialNumberOfItemsToProcessInSingleBatch = 128;
+			configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 128;
+			configuration.Core.InitialNumberOfItemsToProcessInSingleBatch = 128;
 		}
 
 		[Fact]

@@ -81,7 +81,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 					Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-					commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+					commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 														 indexInstance.IndexId + "\\CommitPoints");
 				}
 
@@ -134,7 +134,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 						Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-						var commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+						var commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 															  indexInstance.IndexId + "\\CommitPoints");
 
 						var commitPoints = Directory.GetDirectories(commitPointsDirectory);
@@ -185,10 +185,10 @@ namespace Raven.Tests.Indexes.Recovery
 
 				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 													 indexInstance.IndexId + "\\CommitPoints");
 
-				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
@@ -262,10 +262,10 @@ namespace Raven.Tests.Indexes.Recovery
 
 				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 													 indexInstance.IndexId + "\\CommitPoints");
 
-				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
@@ -346,13 +346,13 @@ namespace Raven.Tests.Indexes.Recovery
 				}
 				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 													 indexInstance.IndexId + "\\CommitPoints");
 
-				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
 										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 
-				indexStoragePath = server.SystemDatabase.Configuration.IndexStoragePath;
+				indexStoragePath = server.SystemDatabase.Configuration.Core.IndexStoragePath;
 
 				indexId = indexInstance.IndexId;
 

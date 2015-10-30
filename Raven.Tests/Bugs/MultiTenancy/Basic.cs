@@ -26,13 +26,16 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		protected RavenDbServer GetNewServer(int port)
 		{
 			var dataDirectory = Path.Combine(NewDataPath(), "System");
-			var configuration = new RavenConfiguration
-								{
-									Port = port,
-									DataDirectory = dataDirectory,
-									AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-								};
-			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+		    var configuration = new RavenConfiguration
+		    {
+		        Core =
+		        {
+		            DataDirectory = dataDirectory,
+                    Port = port,
+                },
+		        AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+		    };
+			configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
 
 			var ravenDbServer = new RavenDbServer(configuration)
 			{

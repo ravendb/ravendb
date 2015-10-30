@@ -264,6 +264,12 @@
     <Compile Include="Common\IResourceLandlord.cs" />
     <Compile Include="Common\ResourceApiController.cs" />
     <Compile Include="Common\ResourceType.cs" />
+    <Compile Include="Config\Attributes\ConfigurationEntryAttribute.cs" />
+    <Compile Include="Config\Attributes\MinValueAttribute.cs" />
+    <Compile Include="Config\Attributes\SizeUnitAttribute.cs" />
+    <Compile Include="Config\Attributes\TimeUnitAttribute.cs" />
+    <Compile Include="Config\Settings\SizeSetting.cs" />
+    <Compile Include="Config\Settings\TimeSetting.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="Counters\Controllers\BaseAdminCountersApiController.cs" />

@@ -81,14 +81,14 @@ namespace Raven.Database.Storage
             this.extensions = extensions; // this is used later in the ctor, so it must appears first
             this.path = Path.Combine(path, IndexDefDir);
 
-            if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
+            if (Directory.Exists(this.path) == false && configuration.Core.RunInMemory == false)
                 Directory.CreateDirectory(this.path);
         }
 
         internal Dictionary<int, DocumentDatabase.IndexFailDetails> Initialize()
         {
             Dictionary<int, DocumentDatabase.IndexFailDetails> reason = null;
-            if (configuration.RunInMemory == false)
+            if (configuration.Core.RunInMemory == false)
                 reason = ReadFromDisk();
             newDefinitionsThisSession.Clear();
 
@@ -265,7 +265,7 @@ namespace Raven.Database.Storage
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
             var transformer = AddAndCompileIndex(indexDefinition);
-            if (configuration.RunInMemory == false)
+            if (configuration.Core.RunInMemory == false)
             {
                 WriteIndexDefinition(indexDefinition);
             }
@@ -274,7 +274,7 @@ namespace Raven.Database.Storage
 
         private void WriteIndexDefinition(IndexDefinition indexDefinition)
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
             var indexName = System.IO.Path.Combine(path, indexDefinition.IndexId + ".index");
             var serializedObject = JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters);
@@ -283,7 +283,7 @@ namespace Raven.Database.Storage
 
         private void WriteTransformerDefinition(TransformerDefinition transformerDefinition)
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
 
             string transformerFileName = System.IO.Path.Combine(path, transformerDefinition.TransfomerId + ".transform");
@@ -302,7 +302,7 @@ namespace Raven.Database.Storage
         [CLSCompliant(false)]
         public void PersistTransform(TransformerDefinition transformerDefinition)
         {
-            if (configuration.RunInMemory == false)
+            if (configuration.Core.RunInMemory == false)
             {
                 WriteTransformerDefinition(transformerDefinition);
             }
@@ -379,7 +379,7 @@ namespace Raven.Database.Storage
             IndexDefinition ignoredIndexDefinition;
             IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
             newDefinitionsThisSession.TryRemove(id, out ignoredIndexDefinition);
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(id) + ".index");
             UpdateIndexMappingFile();
@@ -594,7 +594,7 @@ public bool Contains(string indexName)
                 transformNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             TransformerDefinition ignoredIndexDefinition;
             transformDefinitions.TryRemove(id, out ignoredIndexDefinition);
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(id) + ".transform");
             UpdateTransformerMappingFile();
@@ -638,7 +638,7 @@ public bool Contains(string indexName)
 
         private void UpdateIndexMappingFile()
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
 
             var sb = new StringBuilder();
@@ -653,7 +653,7 @@ public bool Contains(string indexName)
 
         private void UpdateTransformerMappingFile()
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
                 return;
 
             var sb = new StringBuilder();

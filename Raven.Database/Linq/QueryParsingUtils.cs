@@ -423,11 +423,11 @@ namespace Raven.Database.Linq
 
 		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
 		{
-			var indexCacheDir = configuration.CompiledIndexCacheDirectory;
+			var indexCacheDir = configuration.Core.CompiledIndexCacheDirectory;
 			if (string.IsNullOrWhiteSpace(indexCacheDir))
 				indexCacheDir = Path.Combine(configuration.TempPath, "Raven", "CompiledIndexCache");
 
-			if (configuration.RunInMemory == false)
+			if (configuration.Core.RunInMemory == false)
 			{
 				// if we aren't running in memory, we might be running in a mode where we can't write to our base directory
 				// which is where we _want_ to write. In that case, our cache is going to be the db directory, instead, since 
@@ -445,7 +445,7 @@ namespace Raven.Database.Linq
 				{
 				}
 
-                indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                indexCacheDir = Path.Combine(configuration.Core.IndexStoragePath, "Raven", "CompiledIndexCache");
                 if (Directory.Exists(indexCacheDir) == false)
                     Directory.CreateDirectory(indexCacheDir);
 			}

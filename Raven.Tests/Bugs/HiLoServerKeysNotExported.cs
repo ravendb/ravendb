@@ -49,8 +49,11 @@ namespace Raven.Tests.Bugs
 
 			server = new RavenDbServer(new RavenConfiguration
 										{
-											Port = 8079,
-											DataDirectory = "HiLoData",
+											Core =
+											{
+											    DataDirectory = "HiLoData",
+                                                Port = 8079,
+                                            },
 											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 											AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 										})

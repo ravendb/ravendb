@@ -129,7 +129,7 @@ namespace Raven.Database.Server.Controllers
 			if (Database.IndexDefinitionStorage.Contains(index) == false)
 				return GetMessageWithStringAsTask(string.Format("Index '{0}' does not exist.", index), HttpStatusCode.BadRequest);
 
-            var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+            var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);

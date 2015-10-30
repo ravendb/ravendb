@@ -35,7 +35,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
-			serverConfiguration.RunInMemory = false;
+			serverConfiguration.Core.RunInMemory = false;
 			serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
 			serverConfiguration.DefaultStorageTypeName = "voron";
 		}

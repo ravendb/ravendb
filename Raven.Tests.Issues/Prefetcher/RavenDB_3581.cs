@@ -11,6 +11,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Storage;
 
 using Xunit;
@@ -199,7 +200,7 @@ namespace Raven.Tests.Issues.Prefetcher
 			var mre = new ManualResetEventSlim();
 
 			var prefetcher = CreatePrefetcher();
-			prefetcher.Configuration.DisableDocumentPreFetching = true;
+			prefetcher.Configuration.Prefetcher.Disabled = true;
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
 			AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -235,7 +236,7 @@ namespace Raven.Tests.Issues.Prefetcher
 		{
 			var mre = new ManualResetEventSlim();
 
-			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfParallelProcessingTasks = 1);
+			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Core.MaxNumberOfParallelProcessingTasks = 1);
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
 			AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -253,7 +254,7 @@ namespace Raven.Tests.Issues.Prefetcher
 		{
 			var mre = new ManualResetEventSlim();
 
-			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = MemoryStatistics.TotalPhysicalMemory);
+			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(MemoryStatistics.TotalPhysicalMemory, SizeUnit.Megabytes));
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
 			AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -273,7 +274,7 @@ namespace Raven.Tests.Issues.Prefetcher
 			var mre2 = new ManualResetEventSlim();
 			var count = 0;
 
-			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 128);
+			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 128);
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
 			{
 				count += i;
@@ -302,7 +303,7 @@ namespace Raven.Tests.Issues.Prefetcher
 			var mre2 = new ManualResetEventSlim();
 			var count = 0;
 
-			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1);
+			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(1, SizeUnit.Megabytes));
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
 			{
 				count += i;
@@ -333,7 +334,7 @@ namespace Raven.Tests.Issues.Prefetcher
 			var mre2 = new ManualResetEventSlim();
 			var count = 0;
 
-			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1);
+			var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(1, SizeUnit.Megabytes));
 			prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
 			{
 				count += i;

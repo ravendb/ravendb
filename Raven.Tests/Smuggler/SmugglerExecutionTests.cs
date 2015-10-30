@@ -778,7 +778,7 @@ namespace Raven.Tests.Smuggler
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
-            using (var server = GetNewServer(configureConfig: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1234))
+            using (var server = GetNewServer(configureConfig: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 1234))
             {
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions
@@ -829,7 +829,7 @@ namespace Raven.Tests.Smuggler
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
-            using (var server = GetNewServer(configureConfig: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1234))
+            using (var server = GetNewServer(configureConfig: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 1234))
             {
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions
@@ -904,7 +904,7 @@ namespace Raven.Tests.Smuggler
                 // Prepare everything.
                 int serverPort = new Uri(store.Url).Port;
                 var server = GetServer(serverPort);
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
                 string newDatabase = store.DefaultDatabase + "-Verify";
                 await store.AsyncDatabaseCommands.EnsureDatabaseExists(newDatabase);

@@ -25,10 +25,13 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		{
 		    RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
 		    {
-		        Port = port,
-		        RunInMemory = true,
-		        DataDirectory = "Data",
-		        AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+				Core =
+				{
+				    RunInMemory = true,
+                    DataDirectory = "Data",
+                    Port = port,
+                },
+                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 		    })
 		    {
 		        UseEmbeddedHttpServer = true

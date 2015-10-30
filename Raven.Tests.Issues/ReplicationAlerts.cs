@@ -32,7 +32,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.RunInMemory = false;
+            configuration.Core.RunInMemory = false;
         }
 
         [Trait("Category", "Smuggler")]

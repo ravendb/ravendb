@@ -39,9 +39,9 @@ namespace Raven.Database.Server.Controllers
 			bool namesOnly;
 			RavenJArray indexes;
 			if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-				indexes = Database.Indexes.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Database.Indexes.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 			else
-				indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
 			return GetMessageWithObject(indexes);
 		}
@@ -516,7 +516,7 @@ namespace Raven.Database.Server.Controllers
             List<string> keys = null;
             Database.TransactionalStorage.Batch(accessor =>
             {
-                keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
+                keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.Core.MaxPageSize))
                     .ToList(); 
             });
 	        return GetMessageWithObject(new {keys.Count, Results = keys});
@@ -537,7 +537,7 @@ namespace Raven.Database.Server.Controllers
 				List<string> keys = null;
 				Database.TransactionalStorage.Batch(accessor =>
 				{
-                    keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+                    keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize))
 						.ToList();
 				});
 
@@ -551,7 +551,7 @@ namespace Raven.Database.Server.Controllers
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(definition.IndexId, key, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(definition.IndexId, key, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize))
 					.ToList();
 			});
 			return GetMessageWithObject(new
@@ -574,7 +574,7 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 			string entityName = null;
 			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 				entityName = index.Substring("dynamic/".Length);
@@ -613,7 +613,7 @@ namespace Raven.Database.Server.Controllers
 
 		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
-			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 			RewriteDateQueriesFromOldClients(indexQuery);
 
 			var sp = Stopwatch.StartNew();
@@ -693,7 +693,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			if (dynamicIndexName == null && // would have to create a dynamic index
-				Database.Configuration.CreateAutoIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+				Database.Configuration.Indexing.CreateAutoIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
 			{
 				indexEtag = Etag.InvalidEtag;
 				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
@@ -800,7 +800,7 @@ namespace Raven.Database.Server.Controllers
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(definition.IndexId, key, level, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(definition.IndexId, key, level, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize))
 					.ToList();
 			});
 
@@ -817,7 +817,7 @@ namespace Raven.Database.Server.Controllers
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				var instance = Database.IndexStorage.GetIndexInstance(index);
-				mappedResult = accessor.MapReduce.GetScheduledReductionForDebug(instance.indexId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
+				mappedResult = accessor.MapReduce.GetScheduledReductionForDebug(instance.indexId, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize))
 					.ToList();
 			});
 
@@ -841,7 +841,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				keys = accessor.MapReduce.GetKeysStats(definition.IndexId,
 						 GetStart(),
-						 GetPageSize(Database.Configuration.MaxPageSize))
+						 GetPageSize(Database.Configuration.Core.MaxPageSize))
 					.ToList();
 			});
 
@@ -854,7 +854,7 @@ namespace Raven.Database.Server.Controllers
 
 		private HttpResponseMessage GetIndexEntries(string index)
 		{
-			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 		    var reduceKeys = GetQueryStringValues("reduceKeys").Select(x => x.Trim()).ToList();
 
 			if (string.IsNullOrEmpty(indexQuery.Query) == false && reduceKeys.Count > 0)

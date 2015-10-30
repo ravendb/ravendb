@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.MaxNumberOfParallelProcessingTasks = 1;
+			configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
 		}
 
 		[Fact]

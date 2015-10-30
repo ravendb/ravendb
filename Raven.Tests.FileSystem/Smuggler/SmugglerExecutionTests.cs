@@ -27,7 +27,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
 				try
 				{
@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem.Smuggler
             using (var store = NewStore(fileSystemName: "DoesExists", requestedStorage: storage))
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");                
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");                
 
 				try
 				{
@@ -88,7 +88,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
 				try
 				{
@@ -123,7 +123,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
                 var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
                 try
                 {
 
@@ -151,7 +151,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 				try
 				{
 
@@ -191,11 +191,11 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
 				var alreadyReset = false;
 				var proxyPort = 8070;
-				var forwarder = new ProxyServer(ref proxyPort, server.Configuration.Port)
+				var forwarder = new ProxyServer(ref proxyPort, server.Configuration.Core.Port)
 				{
 					VetoTransfer = (totalRead, buffer) =>
 					{
@@ -280,7 +280,7 @@ namespace Raven.Tests.FileSystem.Smuggler
             using (var store = NewStore())
             {
                 var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 
                 var smugglerApi = new SmugglerFilesApi();
 
@@ -358,7 +358,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 int fileSize = 10000;
 
                 var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
                 try
                 {
                     var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
@@ -417,7 +417,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 ReseedRandom(100); // Force a random distribution.
 
                 var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
                 try
                 {
                     var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
@@ -479,7 +479,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 ReseedRandom(100); // Force a random distribution.
 
                 var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
                 try
                 {
                     var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
@@ -539,7 +539,7 @@ namespace Raven.Tests.FileSystem.Smuggler
             using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				var outputDirectory = Path.Combine(server.Configuration.Core.DataDirectory, "Export");
 				try
 				{
 					var dumper = new SmugglerFilesApi { Options = { Incremental = true } };

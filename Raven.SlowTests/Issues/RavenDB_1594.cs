@@ -32,9 +32,12 @@ namespace Raven.SlowTests.Issues
 			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			var config = new Raven.Database.Config.RavenConfiguration
 			             	{
-			             		Port = 8079,
 			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			             		DataDirectory = path,
+			             		Core =
+                                {
+                                    DataDirectory = path,
+                                    Port = 8079,
+                                 },
 								Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
 			             	};
 			config.PostInit();

@@ -520,7 +520,7 @@ namespace Raven.Database.Server.Controllers
 			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
 			var resourcesDocuments = Resource.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
-				GetPageSize(Resource.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+				GetPageSize(Resource.Configuration.Core.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
 			return resourcesDocuments;
 		}
@@ -626,7 +626,7 @@ namespace Raven.Database.Server.Controllers
 
 		protected bool CanExposeConfigOverTheWire()
 		{
-			if (string.Equals(SystemConfiguration.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+			if (string.Equals(SystemConfiguration.Core.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
 			{
 				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 				var user = authorizer.GetUser(this);

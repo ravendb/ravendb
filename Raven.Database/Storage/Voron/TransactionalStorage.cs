@@ -78,7 +78,7 @@ namespace Raven.Storage.Voron
 			this.onCommit = onCommit;
 			this.onStorageInaccessible = onStorageInaccessible;
 
-			RecoverFromFailedCompact(configuration.DataDirectory);
+			RecoverFromFailedCompact(configuration.Core.DataDirectory);
 
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
@@ -326,9 +326,9 @@ namespace Raven.Storage.Voron
 		    uuidGenerator = generator;
 		    _documentCodecs = documentCodecs;
 
-			Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
+			Log.Info("Starting to initialize Voron storage. Path: " + configuration.Core.DataDirectory);
 
-		    StorageEnvironmentOptions options = configuration.RunInMemory ?
+		    StorageEnvironmentOptions options = configuration.Core.RunInMemory ?
 				CreateMemoryStorageOptionsFromConfiguration(configuration) :
 		        CreateStorageOptionsFromConfiguration(configuration);
 
@@ -371,7 +371,7 @@ namespace Raven.Storage.Voron
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
-            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+            var directoryPath = configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo (directoryPath);
 
 			if (filePathFolder.Exists == false) {
@@ -399,7 +399,7 @@ namespace Raven.Storage.Voron
 			if (tableStorage == null) 
 				throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
 			
-			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
+			var backupOperation = new BackupOperation(database, database.Configuration.Core.DataDirectory,
 		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase);
 
 		    Task.Factory.StartNew(() =>
@@ -479,13 +479,13 @@ namespace Raven.Storage.Voron
 
 		public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
 	    {
-			if (ravenConfiguration.RunInMemory)
+			if (ravenConfiguration.Core.RunInMemory)
 				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
 
 			tableStorage.Dispose();
 
-			var sourcePath = ravenConfiguration.DataDirectory;
-			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Voron.Compaction");
+			var sourcePath = ravenConfiguration.Core.DataDirectory;
+			var compactPath = Path.Combine(ravenConfiguration.Core.DataDirectory, "Voron.Compaction");
 
 			if (Directory.Exists(compactPath))
 				Directory.Delete(compactPath, true);

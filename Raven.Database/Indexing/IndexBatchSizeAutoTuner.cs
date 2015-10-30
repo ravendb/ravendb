@@ -24,12 +24,12 @@ namespace Raven.Database.Indexing
 
 		protected override int InitialNumberOfItems
 		{
-			get { return context.Configuration.InitialNumberOfItemsToProcessInSingleBatch; }
+			get { return context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch; }
 		}
 
 		protected override int MaxNumberOfItems
 		{
-			get { return context.Configuration.MaxNumberOfItemsToProcessInSingleBatch; }
+			get { return context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch; }
 		}
 
 		protected override int CurrentNumberOfItems
@@ -69,7 +69,7 @@ namespace Raven.Database.Indexing
 
 		public IDisposable ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
 		{
-			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))
+			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument : context.Configuration.Indexing.MaxSimpleIndexOutputsPerDocument))
 				return null;
 
 			var oldValue = NumberOfItemsToProcessInSingleBatch;

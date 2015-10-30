@@ -116,7 +116,7 @@ namespace Raven.Tests.MailingList
 			List<Car> cars;
 			using (
 				var documentStore = new EmbeddableDocumentStore
-				{Configuration = {RunInMemory = true, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true}})
+				{Configuration = { Core = { RunInMemory = true }, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true}})
 			{
 				documentStore.Initialize();
 

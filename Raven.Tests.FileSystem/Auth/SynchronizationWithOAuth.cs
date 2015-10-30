@@ -25,7 +25,7 @@ namespace Raven.Tests.FileSystem.Auth
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            if (server.SystemDatabase.Configuration.Port == Ports[1]) // setup only for destination
+            if (server.SystemDatabase.Configuration.Core.Port == Ports[1]) // setup only for destination
             {
                 server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
                 {

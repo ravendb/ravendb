@@ -20,7 +20,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, GetQueryStringValue("field"),
-				GetQueryStringValue("fromValue"), GetPageSize(Database.Configuration.MaxPageSize));
+				GetQueryStringValue("fromValue"), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
 			var msg = GetMessageWithObject(executeGetTermsQuery);
 

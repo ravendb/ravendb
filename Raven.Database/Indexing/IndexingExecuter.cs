@@ -284,7 +284,7 @@ namespace Raven.Database.Indexing
 								context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
 							}
 						}
-					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
+					}, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.Memory.LimitForProcessing.Megabytes, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
 				Interlocked.Increment(ref executedPartially);
 			}
 			catch (InvalidDataException e)

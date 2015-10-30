@@ -81,7 +81,7 @@ namespace Raven.Database.Server.Controllers
             
             var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var currentDatabase = Database;
-            var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkImportBatchTimeout);
+            var timeout = tre.TimeoutAfter(currentDatabase.Configuration.BulkInsert.ImportBatchTimeout.AsTimeSpan);
             var user = CurrentOperationContext.User.Value;
             var headers = CurrentOperationContext.Headers.Value;
             Exception error = null;

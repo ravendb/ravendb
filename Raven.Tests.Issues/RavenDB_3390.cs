@@ -7,6 +7,7 @@ using System;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Config.Settings;
 using Raven.Database.JsConsole;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -44,20 +45,20 @@ namespace Raven.Tests.Issues
 			{
 				var configuration = store.DocumentDatabase.Configuration;
 
-				Assert.False(configuration.DisableDocumentPreFetching);
+				Assert.False(configuration.Prefetcher.Disabled);
 
 				new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
 				{
 					Script = @"
-								database.Configuration.DisableDocumentPreFetching = true;
-								database.Configuration.MaxNumberOfItemsToPreFetch = 13;
-								database.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromMinutes(13);
+								database.Configuration.Prefetcher.Disabled = true;
+								database.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 13;
+								database.Configuration.BulkInsert.ImportBatchTimeout = new Raven.Database.Config.Settings.TimeSetting(13, Raven.Database.Config.Settings.TimeUnit.Minutes);
 							 "
-				});
+                });
 
-				Assert.True(configuration.DisableDocumentPreFetching);
-				Assert.Equal(13, configuration.MaxNumberOfItemsToPreFetch);
-				Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkImportBatchTimeout);
+				Assert.True(configuration.Prefetcher.Disabled);
+				Assert.Equal(13, configuration.Prefetcher.MaxNumberOfItemsToPreFetch);
+				Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkInsert.ImportBatchTimeout.AsTimeSpan);
 			}
 		}
 

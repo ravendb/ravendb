@@ -89,7 +89,7 @@ namespace Raven.Database.FileSystem.Search
                 indexDirectory = configuration.FileSystem.IndexStoragePath;         
        
                 // Skip crash markers setup when running in memory.
-                if ( configuration.RunInMemory == false )
+                if ( configuration.Core.RunInMemory == false )
                 {
                     var filesystemDirectory = configuration.FileSystem.DataDirectory;
                     if (!Directory.Exists(filesystemDirectory))
@@ -137,7 +137,7 @@ namespace Raven.Database.FileSystem.Search
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
 
                     // Skip sanity test if we are running in memory. Index will not exist anyways.
-                    if (!configuration.RunInMemory && !IsIndexStateValid(luceneDirectory))
+                    if (!configuration.Core.RunInMemory && !IsIndexStateValid(luceneDirectory))
                         throw new InvalidOperationException("Sanity check on the index failed.");
 
                     directory = luceneDirectory;
@@ -256,7 +256,7 @@ namespace Raven.Database.FileSystem.Search
 
         private LuceneDirectory OpenOrCreateLuceneDirectory(string path)
         {
-            if (configuration.RunInMemory)
+            if (configuration.Core.RunInMemory)
 			{
 				return new RAMDirectory();
 			}

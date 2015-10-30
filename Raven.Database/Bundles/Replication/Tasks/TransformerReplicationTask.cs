@@ -35,7 +35,7 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			this.replication = replication;
 
-			replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
+			replicationFrequency = database.Configuration.Replication.IndexAndTransformerReplicationLatency.AsTimeSpan; //by default 10 min
 			TimeToWaitBeforeSendingDeletesOfTransformersToSiblings = TimeSpan.FromMinutes(1);
 		}
 

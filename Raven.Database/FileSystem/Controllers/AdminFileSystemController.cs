@@ -178,7 +178,7 @@ namespace Raven.Database.FileSystem.Controllers
             var docKey = Constants.FileSystem.Prefix + id;
 			SystemDatabase.Documents.Delete(docKey, null, null);
 
-			if (isHardDeleteNeeded && configuration.RunInMemory == false)
+			if (isHardDeleteNeeded && configuration.Core.RunInMemory == false)
 			{
 				IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
 

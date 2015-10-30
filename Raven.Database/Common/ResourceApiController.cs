@@ -31,29 +31,29 @@ namespace Raven.Database.Common
 	{
 		public abstract ResourceType ResourceType { get; }
 
-		private int? _maxSecondsForTaskToWaitForResourceToLoad;
-		public int MaxSecondsForTaskToWaitForResourceToLoad
+		private TimeSpan? _maxTimeForTaskToWaitForResourceToLoad;
+		public TimeSpan MaxTimeForTaskToWaitForResourceToLoad
 		{
 			get
 			{
-				if (_maxSecondsForTaskToWaitForResourceToLoad.HasValue)
-					return _maxSecondsForTaskToWaitForResourceToLoad.Value;
+				if (_maxTimeForTaskToWaitForResourceToLoad.HasValue)
+					return _maxTimeForTaskToWaitForResourceToLoad.Value;
 
 				switch (ResourceType)
 				{
 					case ResourceType.Database:
-						_maxSecondsForTaskToWaitForResourceToLoad = Resource.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+						_maxTimeForTaskToWaitForResourceToLoad = Resource.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 						break;
 					case ResourceType.FileSystem:
 					case ResourceType.TimeSeries:
 					case ResourceType.Counter:
-						_maxSecondsForTaskToWaitForResourceToLoad = 30;
+						_maxTimeForTaskToWaitForResourceToLoad = TimeSpan.FromSeconds(30);
 						break;
 					default:
 						throw new NotSupportedException(ResourceType.ToString());
 				}
 
-				return _maxSecondsForTaskToWaitForResourceToLoad.Value;
+				return _maxTimeForTaskToWaitForResourceToLoad.Value;
 			}
 		}
 
@@ -191,7 +191,7 @@ namespace Raven.Database.Common
 		{
 			base.InnerInitialization(controllerContext);
 
-			_maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
+			_maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)];
 			_resourceLandlord = (TResourceLandlord)controllerContext.Configuration.Properties[typeof(TResourceLandlord)];
 
 			ResourceName = GetResourceName(controllerContext, ResourceType);
@@ -248,7 +248,7 @@ namespace Raven.Database.Common
 			{
 				try
 				{
-					int timeToWaitForResourceToLoad = MaxSecondsForTaskToWaitForResourceToLoad;
+					TimeSpan timeToWaitForResourceToLoad = MaxTimeForTaskToWaitForResourceToLoad;
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (MaxNumberOfThreadsForResourceToLoadSemaphore.Wait(0) == false)
@@ -260,9 +260,9 @@ namespace Raven.Database.Common
 
 						try
 						{
-							if (await Task.WhenAny(resourceStoreTask, Task.Delay(TimeSpan.FromSeconds(timeToWaitForResourceToLoad))).ConfigureAwait(false) != resourceStoreTask)
+							if (await Task.WhenAny(resourceStoreTask, Task.Delay(timeToWaitForResourceToLoad)).ConfigureAwait(false) != resourceStoreTask)
 							{
-								msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad);
+								msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad.TotalSeconds);
 								Log.Warn(msg);
 								throw new TimeoutException(msg);
 							}

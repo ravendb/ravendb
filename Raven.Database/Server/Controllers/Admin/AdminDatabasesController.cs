@@ -56,7 +56,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			MessageWithStatusCode nameFormatErrorMessage;
-			if (IsValidName(id, Database.Configuration.DataDirectory, out nameFormatErrorMessage) == false)
+			if (IsValidName(id, Database.Configuration.Core.DataDirectory, out nameFormatErrorMessage) == false)
 			{
 				return GetMessageWithString(nameFormatErrorMessage.Message, nameFormatErrorMessage.ErrorCode);
 			}
@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (dbDoc.Settings.TryGetValue("Raven/DataDir", out dataDir) == false || string.IsNullOrEmpty(dataDir))
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, because 'Raven/DataDir' setting is missing.", id), HttpStatusCode.BadRequest);
 
-				dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
+				dataDir = dataDir.ToFullPath(SystemConfiguration.Core.DataDirectory);
 
 				if (Directory.Exists(dataDir))
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);

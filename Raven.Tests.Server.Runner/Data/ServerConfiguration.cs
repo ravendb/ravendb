@@ -33,8 +33,11 @@ namespace Raven.Tests.Server.Runner.Data
 		{
 			var configuration = new RavenConfiguration
 			                    {
-				                    Port = Port,
-				                    RunInMemory = RunInMemory,
+									Core =
+									{
+										RunInMemory = RunInMemory,
+                                         Port = Port,
+                                    },
                                     DefaultStorageTypeName = DefaultStorageTypeName
 			                    };
 

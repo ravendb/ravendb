@@ -171,7 +171,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage Get()
 		{
 			var start = GetStart();
-			var take = GetPageSize(Database.Configuration.MaxPageSize);
+			var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
 			return GetMessageWithObject(Database.Subscriptions.GetSubscriptions(start, take));
 		}

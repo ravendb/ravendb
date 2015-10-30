@@ -173,8 +173,8 @@ namespace Raven.Database.Config
 							else
 							{
 								RavenConfiguration configuration = new RavenConfiguration();
-								ulong availableMem = info.AvailableRam / (1024L * 1024);
-								if (availableMem < (ulong)configuration.LowMemoryForLinuxDetectionInMB)
+								ulong availableMem = info.AvailableRam;
+								if (availableMem < (ulong)configuration.Memory.LowMemoryForLinuxDetection.Bytes)
 								{
 									clearInactiveHandlersCounter = 0;
 									Log.Warn("Low memory detected, will try to reduce memory usage...");

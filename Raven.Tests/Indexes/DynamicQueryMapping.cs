@@ -21,8 +21,8 @@ namespace Raven.Tests.Indexes
 		private DocumentDatabase CreateDocumentDatabase()
 		{
 			var configuration = new RavenConfiguration();
-			configuration.DataDirectory = Path.Combine(NewDataPath(), "System");
-			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+			configuration.Core.DataDirectory = Path.Combine(NewDataPath(), "System");
+			configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
 			return new DocumentDatabase(configuration, null);
 		}
 

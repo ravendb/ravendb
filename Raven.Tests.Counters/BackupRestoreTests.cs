@@ -37,9 +37,12 @@ namespace Raven.Tests.Counters
 
 			config = new RavenConfiguration
 			{
-				Port = 8090,
-				DataDirectory = DocumentDatabaseDirectory,
-				RunInMemory = false,
+				Core =
+				{
+				    RunInMemory = false,
+                    DataDirectory = DocumentDatabaseDirectory,
+                    Port = 8090,
+                },
 				DefaultStorageTypeName = "Voron",
 				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
 				Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
@@ -90,7 +93,7 @@ namespace Raven.Tests.Counters
 
 			var restoreConfig = new RavenConfiguration
 			{
-				RunInMemory = false
+				Core = { RunInMemory = false }
 			};
 			restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 
@@ -129,7 +132,7 @@ namespace Raven.Tests.Counters
 
 			var restoreConfig = new RavenConfiguration
 			{
-				RunInMemory = false
+				Core = { RunInMemory = false }
 			};
 			restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 

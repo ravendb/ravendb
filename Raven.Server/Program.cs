@@ -180,7 +180,7 @@ namespace Raven.Server
 			optionSet.Add("ram", OptionCategory.General, "Run RavenDB in RAM only", key =>
 			{
 				ravenConfiguration.Settings[Constants.RunInMemory] = "true";
-				ravenConfiguration.RunInMemory = true;
+				ravenConfiguration.Core.RunInMemory = true;
 				ravenConfiguration.Initialize();
 				actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);
 			});
@@ -630,9 +630,9 @@ namespace Raven.Server
 
 			var certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port, true);
-			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
-			NonAdminHttp.BindCertificate(configuration.Port, certificate);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Core.Port, true);
+			NonAdminHttp.UnbindCertificate(configuration.Core.Port, certificate);
+			NonAdminHttp.BindCertificate(configuration.Core.Port, certificate);
 		}
 
 		private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
@@ -644,7 +644,7 @@ namespace Raven.Server
 				certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
 			}
 
-			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+			NonAdminHttp.UnbindCertificate(configuration.Core.Port, certificate);
 		}
 
 		private static void UpdateVersion(string dbToUpdate)
@@ -810,7 +810,7 @@ Configuration databaseOptions:
 			if (noLog == false)
 				ConfigureDebugLogging();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.Encryption.UseSsl);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Core.Port, ravenConfiguration.Encryption.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			while (RunServerInDebugMode(ravenConfiguration, launchBrowser, server => InteractiveRun(server)))
@@ -870,44 +870,44 @@ Configuration databaseOptions:
 			    ConsoleWriteWithColor(new ConsoleText {Message = "  Working directory    : "},
 			        new ConsoleText
 			        {
-			            Message = ravenConfiguration.RunInMemory ? " RAM " : ravenConfiguration.WorkingDirectory.TrimEnd('\\'),
-                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+			            Message = ravenConfiguration.Core.RunInMemory ? " RAM " : ravenConfiguration.Core.WorkingDirectory.TrimEnd('\\'),
+                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
 			        });
 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Data directory       : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.DataDirectory),
-                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.DataDirectory),
+                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Index cache directory: " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.CompiledIndexCacheDirectory),
-                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.CompiledIndexCacheDirectory),
+                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
                 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Plugins directory    : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.WorkingDirectory, ravenConfiguration.PluginsDirectory),
-                        ForegroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.PluginsDirectory),
+                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
                 
-                var hostName = ravenConfiguration.HostName ?? "<any>";
+                var hostName = ravenConfiguration.Core.HostName ?? "<any>";
                 ConsoleWriteWithColor(new ConsoleText { Message = "  HostName             : " },
                     new ConsoleText { Message = hostName, ForegroundColor = ConsoleColor.White });
                 ConsoleWriteWithColor(new ConsoleText { Message = " Port: " },
-                    new ConsoleText { Message = ravenConfiguration.Port.ToString(), ForegroundColor = ConsoleColor.White, IsNewLinePostPended = true });
+                    new ConsoleText { Message = ravenConfiguration.Core.Port.ToString(), ForegroundColor = ConsoleColor.White, IsNewLinePostPended = true });
                 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Storage              : " },
                     new ConsoleText { Message = server.SystemDatabase.TransactionalStorage.FriendlyName, ForegroundColor = ConsoleColor.Red, IsNewLinePostPended = true });

@@ -41,7 +41,7 @@ namespace Raven.Database.Server
 
 			var schema = config.Encryption.UseSsl ? "https" : "http";
 
-			server = WebApp.Start(schema + "://+:" + config.Port, app => //TODO DH: configuration.ServerUrl doesn't bind properly
+			server = WebApp.Start(schema + "://+:" + config.Core.Port, app => //TODO DH: configuration.ServerUrl doesn't bind properly
 			{
 				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
 				if (listener != null)

@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
@@ -219,8 +220,8 @@ namespace Raven.Database.Prefetching
 				result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && 
 				(take.HasValue == false || result.Count < take.Value) && 
 				docsLoaded &&
-				prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
-                ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.DynamicMemoryLimitForProcessing)));
+				prefetchingDurationTimer.Elapsed <= context.Configuration.Prefetcher.DurationLimit.AsTimeSpan &&
+                ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.Memory.DynamicLimitForProcessing.Bytes)));
 
 			return result;
 		}
@@ -315,7 +316,7 @@ namespace Raven.Database.Prefetching
 
 		private TaskStatus? CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
 		{
-			if (context.Configuration.DisableDocumentPreFetching)
+			if (context.Configuration.Prefetcher.Disabled)
 				return null;
 
 			FutureIndexBatch batch;
@@ -384,7 +385,7 @@ namespace Raven.Database.Prefetching
 			{
 				//limit how much data we load from disk --> better adhere to memory limits
 				var totalSizeAllowedToLoadInBytes =
-					(context.Configuration.DynamicMemoryLimitForProcessing) -
+					(context.Configuration.Memory.DynamicLimitForProcessing.Bytes) -
                     (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
 
 				// at any rate, we will load a min of 512Kb docs
@@ -419,16 +420,16 @@ namespace Raven.Database.Prefetching
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
 		{
-			if (context.Configuration.DisableDocumentPreFetching || context.RunIndexing == false)
+			if (context.Configuration.Prefetcher.Disabled || context.RunIndexing == false)
 				return;
-			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
+			if (context.Configuration.Core.MaxNumberOfParallelProcessingTasks == 1)
 				return;
 			if (past.Count == 0)
 				return;
 			if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes)
 				return; // already have too much in memory
 			// don't keep _too_ much in memory
-			if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 2)
+			if (prefetchingQueue.Count > context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch * 2)
 				return;
 
 			var size = 1024;
@@ -447,7 +448,7 @@ namespace Raven.Database.Prefetching
 			});
 
 			var alreadyLoadedSizeInMb = alreadyLoadedSizeInBytes / 1024 / 1024;
-			if (alreadyLoadedSizeInMb > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+			if (alreadyLoadedSizeInMb > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
 				return;
 
 			if (MemoryStatistics.IsLowMemory)
@@ -467,7 +468,7 @@ namespace Raven.Database.Prefetching
 
 			// ensure we don't do TOO much future caching
 			if (MemoryStatistics.AvailableMemoryInMb <
-				context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+				context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
 				return;
 
 			// we loaded the maximum amount, there are probably more items to read now.
@@ -598,12 +599,12 @@ namespace Raven.Database.Prefetching
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
-			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || DisableCollectingDocumentsAfterCommit)
+			if (context.Configuration.Prefetcher.Disabled || docs.Length == 0 || DisableCollectingDocumentsAfterCommit)
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToPreFetch ||
-				prefetchingQueue.LoadedSize > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+				context.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch ||
+				prefetchingQueue.LoadedSize > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Bytes)
 				return;
 
 			Etag lowestEtag = null;

@@ -56,7 +56,7 @@ namespace Raven.Database.Server.Controllers
 		        int nextPageStart = GetNextPageStart();
 			    if (string.IsNullOrEmpty(startsWith))
 			    {
-				    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
+				    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), 
 						GetEtagFromQueryString(), cts.Token);
 				    msg = GetMessageWithObject(results);
 			    }
@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Controllers
 							    GetQueryStringValue("matches"),
 							    GetQueryStringValue("exclude"),
 							    GetStart(),
-							    GetPageSize(Database.Configuration.MaxPageSize),
+							    GetPageSize(Database.Configuration.Core.MaxPageSize),
 							    cts.Token,
 							    ref nextPageStart, transformer, transformerParameters,
 								skipAfter: GetQueryStringValue("skipAfter")));
