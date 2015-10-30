@@ -352,7 +352,7 @@ namespace Raven.Tests.Issues.Prefetcher
 			Assert.Equal(1, documents.Count);
 			Assert.True(mre1.Wait(TimeSpan.FromSeconds(3)));
 			Assert.False(mre2.Wait(TimeSpan.FromSeconds(3)));
-            Assert.Equal(3584, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire once
+            Assert.True(4096 > prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire once
 			Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 		}
 
@@ -438,7 +438,7 @@ namespace Raven.Tests.Issues.Prefetcher
 
 			Assert.Equal(1, documents.Count);
 			Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
-			Assert.Equal(1536, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize);
+			Assert.True(prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize > 1536);
 			Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
 			prefetcher.PrefetchingBehavior.ClearQueueAndFutureBatches();

@@ -1,19 +1,21 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
+
+using NDesk.Options;
+
 using Newtonsoft.Json;
 
 namespace Raven.Debug
 {
-	using Microsoft.Diagnostics.Runtime;
-	using Microsoft.Diagnostics.Runtime.Interop;
-	using NDesk.Options;
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Text;
-
-	class Program
+	public class Program
 	{
-		static void Main(string[] args)
+		public static int Main(string[] args)
 		{
 			int processId = -1;
 			uint attachTimeout = 15000;
@@ -22,10 +24,10 @@ namespace Raven.Debug
 
 			var optionSet = new OptionSet
 			{
-				{"pid=", "Process id.", pid => processId = int.Parse(pid)},
-				{"attachTimeout=", "Attaching to process timeout in miliseconds. Default 15000.", timeout => attachTimeout = uint.Parse(timeout)},
-				{"output=", "Output file path.", path => outputFilePath = path},
-				{"stacktrace", "Print stacktraces of the attached process.", x => actionToTake = () => ShowStackTrace(processId, attachTimeout, outputFilePath)}
+				{"pid=", OptionCategory.General, "Process id.", pid => processId = int.Parse(pid)},
+				{"attachTimeout=", OptionCategory.General, "Attaching to process timeout in miliseconds. Default 15000.", timeout => attachTimeout = uint.Parse(timeout)},
+				{"output=", OptionCategory.General, "Output file path.", path => outputFilePath = path},
+				{"stacktrace", OptionCategory.General, "Print stacktraces of the attached process.", x => actionToTake = () => ShowStackTrace(processId, attachTimeout, outputFilePath)}
 			};
 
 			try
@@ -33,20 +35,30 @@ namespace Raven.Debug
 				if (args.Length == 0)
 				{
 					PrintUsage(optionSet);
-					return;
-				}
+                    return -2;
+                }
 
 				optionSet.Parse(args);
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine(e.Message);
+				Console.Error.WriteLine(e.Message);
 				PrintUsage(optionSet);
-				return;
+			    return -2;
 			}
 
-			if (actionToTake != null)
-				actionToTake();
+		    try
+		    {
+                if (actionToTake != null)
+                    actionToTake();
+            }
+		    catch (Exception e)
+		    {
+                Console.Error.WriteLine(e.ToString());
+		        return -1;
+		    }
+
+		    return 0;
 		}
 
 		private static void ShowStackTrace(int processId, uint attachTimeout, string outputPath)
@@ -58,8 +70,8 @@ namespace Raven.Debug
 
 			using (DataTarget dataTarget = DataTarget.AttachToProcess(processId, attachTimeout))
 			{
-				var dacLocation = dataTarget.ClrVersions[0].TryGetDacLocation();
-				var runtime = dataTarget.CreateRuntime(dacLocation);
+				var clrInfo = dataTarget.ClrVersions[0];
+				var runtime = clrInfo.CreateRuntime();
 				var control = (IDebugControl)dataTarget.DebuggerInterface;
 				var sysObjs = (IDebugSystemObjects)dataTarget.DebuggerInterface;
 				var nativeFrames = new DEBUG_STACK_FRAME[100];

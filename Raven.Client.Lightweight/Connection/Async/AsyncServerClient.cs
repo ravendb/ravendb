@@ -824,7 +824,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
-														   Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default (CancellationToken))
+                                                           Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
 		{
 			var path = operationMetadata.Url + "/queries/?";
 			if (metadataOnly)
@@ -847,37 +847,26 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 
 			var uniqueIds = new HashSet<string>(keys);
-			HttpJsonRequest request = null;
-
-			try
-			{
 				// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 				// we are fine with that, requests to load > 128 items are going to be rare
-				if (uniqueIds.Sum(x => x.Length) < 1024)
+            var isGet = uniqueIds.Sum(x => x.Length) < 1024;
+            var method = isGet ? HttpMethod.Get : HttpMethod.Post;
+            if (isGet)
 				{
 					path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-					request =
-						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Get, metadata, operationMetadata.Credentials,
-																								 convention, GetRequestTimeMetric(operationMetadata.Url))
-																	 .AddOperationHeaders(OperationsHeaders));
-
-					request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-
-					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result, token).ConfigureAwait(false);
 				}
-				request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Post, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))
-																 .AddOperationHeaders(OperationsHeaders));
 
-				await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);
-				var responseResult = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, responseResult, token).ConfigureAwait(false);
-			}
-			finally
-			{
-				if (request != null)
-					request.Dispose();
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders))
+                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            {
+                if (isGet == false)
+                {
+                    await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);
+                }
+
+                var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result, token).ConfigureAwait(false);
 			}
 		}
 

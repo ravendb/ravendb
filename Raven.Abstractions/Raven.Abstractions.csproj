@@ -141,6 +141,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\CompressedContent.cs" />
     <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\CountingStream.cs" />
     <Compile Include="Connection\ErrorResponseException.cs" />
@@ -472,6 +473,7 @@
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\DocumentHelpers.cs" />
@@ -505,6 +507,7 @@
     <Compile Include="Util\MalformedLineException.cs" />
     <Compile Include="Util\EnvironmentUtils.cs" />
     <Compile Include="Threading\ThreadLocal.cs" />
+    <Compile Include="Util\UndisposableStream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">

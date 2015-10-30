@@ -25,6 +25,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using System.IO.Compression;
+using System.Net.Http;
 using Raven.Client.Extensions;
 using System.Text;
 
@@ -72,7 +73,7 @@ namespace Raven.Client.Document
 	        this.previousTask = previousTask;
 	        using (NoSynchronizationContext.Scope())
             {
-				OperationId = existingOperationId.HasValue?existingOperationId.Value:Guid.NewGuid();
+                OperationId = existingOperationId.HasValue ? existingOperationId.Value : Guid.NewGuid();
                 operationClient = client;
                 queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
@@ -84,7 +85,7 @@ namespace Raven.Client.Document
             }
         }
 
-	    public int Total { get;set; }
+        public int Total { get; set; }
 	    public int localCount;
 	    public long size;
 
@@ -96,6 +97,8 @@ namespace Raven.Client.Document
                 .Subscribe(this);
         }
 #endif
+
+        private HttpResponseMessage response;
 
         private async Task StartBulkInsertAsync(BulkInsertOptions options)
         {
@@ -115,17 +118,26 @@ namespace Raven.Client.Document
 	            using (operationRequest = CreateOperationRequest(operationUrl, token))
 	            {
 		            var cancellationToken = CreateCancellationToken();
-		            var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
+                    response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 		            {
 			            try
 			            {
 				            WriteQueueToServer(stream, options, cancellationToken);
-				            var x = source.TrySetResult(null);
+                            source.TrySetResult(null);
 			            }
 			            catch (Exception e)
 			            {
+                            //we get a cancellation only if we receive a notification of BulkInsertError
+                            //in that case we need to get the real error from the server using response.AssertNotFailingResponse()
+                            if (cancellationToken.IsCancellationRequested)
+                                source.TrySetResult(null);
+                            else
 				            source.TrySetException(e);
 			            }
+                        finally
+                        {
+                            queue.CompleteAdding();
+                        }
 		            }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 		            await response.AssertNotFailingResponse().ConfigureAwait(false);
@@ -140,7 +152,8 @@ namespace Raven.Client.Document
 			            operationId = result.Value<long>("OperationId");
 		            }
 
-		            if (await IsOperationCompleted(operationId).ConfigureAwait(false)) responseOperationId = operationId;
+                    if (await IsOperationCompleted(operationId).ConfigureAwait(false))
+                        responseOperationId = operationId;
 	            }
             }
         }
@@ -197,7 +210,7 @@ namespace Raven.Client.Document
                 requestUrl.Append("&checkReferencesInIndexes=true");
             if (options.SkipOverwriteIfUnchanged)
                 requestUrl.Append("&skipOverwriteIfUnchanged=true");
-            
+
             switch(options.Format)
             {
                 case BulkInsertFormat.Bson: requestUrl.Append("&format=bson"); break;
@@ -208,7 +221,7 @@ namespace Raven.Client.Document
             {
                 case BulkInsertCompression.None: requestUrl.Append("&compression=none"); break;
                 case BulkInsertCompression.GZip: requestUrl.Append("&compression=gzip"); break;                
-            }
+        }
 
             requestUrl.Append("&operationId=" + OperationId);
 
@@ -301,7 +314,8 @@ namespace Raven.Client.Document
             {
                 var status = await GetOperationStatus(operationId).ConfigureAwait(false);
 
-                if (status == null) return true;
+                if (status == null)
+                    return true;
 
                 if (status.Value<bool>("Completed"))
                     return true;
@@ -336,11 +350,22 @@ namespace Raven.Client.Document
 	        if (disposed)
 		        return -1;
             disposed = true;
+
+            try
+            {
             queue.Add(null);
+            }
+            catch (InvalidOperationException e)
+            {
+                //means that the queue is marked as complete
+                //we ignore this only if there was a bulk insert error on the server
+                if (cancellationTokenSource.IsCancellationRequested == false)
+                    throw;
+            }
+
             if (subscription != null)
             {
                 subscription.Dispose();
-
             }
 
             // The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
@@ -380,9 +405,10 @@ namespace Raven.Client.Document
                 ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
                 if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
                     throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
+
 				if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
 					throw new OperationVetoedException(e.Message, e);
-				throw;
+                throw;
             }
 	        return Total;
         }
@@ -413,11 +439,11 @@ namespace Raven.Client.Document
 
             var sp = Stopwatch.StartNew();
 
-            bufferedStream.SetLength(0);
+	        bufferedStream.SetLength(0);
             long bytesWrittenToServer = WriteToBuffer(options, bufferedStream, localBatch);
 
 	        var requestBinaryWriter = new BinaryWriter(requestStream);
-	        requestBinaryWriter.Write((int) bufferedStream.Position);
+            requestBinaryWriter.Write((int)bufferedStream.Position);
 	        bufferedStream.WriteTo(requestStream);
 	        requestStream.Flush();
 
@@ -425,13 +451,13 @@ namespace Raven.Client.Document
 	        localCount += localBatch.Count;
 	        size += bytesWrittenToServer;
 			
-            if (previousTask == null)
+			if (previousTask == null)
 	        {
 		        ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
 			        localBatch.Count,
-			        bufferedStream.Position/1024d,
+                    bufferedStream.Position / 1024d,
 			        Total,
-			        bytesWrittenToServer/1024d,
+                    bytesWrittenToServer / 1024d,
 			        sp.Elapsed.TotalSeconds);
 	        }
         }
@@ -448,7 +474,7 @@ namespace Raven.Client.Document
                         }
                     }
                 case BulkInsertCompression.None:
-                    {
+        {
                         return WriteBatchToBuffer(options, stream, batch);
                     }
                 default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported", options.Compression.ToString()));
@@ -456,7 +482,7 @@ namespace Raven.Client.Document
         }
 
         private static long WriteBatchToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)
-        {        
+            {
             using (var countingStream = new CountingStream(stream))
             {
                 switch(options.Format )
@@ -481,21 +507,21 @@ namespace Raven.Client.Document
 
         private static void WriteBsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
         {
-            var binaryWriter = new BinaryWriter(stream);
+                var binaryWriter = new BinaryWriter(stream);
             binaryWriter.Write(batch.Count);
             binaryWriter.Flush();
 
-            var bsonWriter = new BsonWriter(binaryWriter)
-            {                
-                DateTimeKindHandling = DateTimeKind.Unspecified
-            };
+                var bsonWriter = new BsonWriter(binaryWriter)
+                                 {
+                                     DateTimeKindHandling = DateTimeKind.Unspecified
+                                 };
 
             foreach (var doc in batch)
-            {
-                doc.WriteTo(bsonWriter);
-            }
+                {
+                    doc.WriteTo(bsonWriter);
+                }
 
-            bsonWriter.Flush();
+                bsonWriter.Flush();
             
         }
 
@@ -503,7 +529,7 @@ namespace Raven.Client.Document
         {
             var binaryWriter = new BinaryWriter(stream);
             binaryWriter.Write(batch.Count);
-            binaryWriter.Flush();
+                binaryWriter.Flush();
 
             var jsonWriter = new JsonTextWriter(new StreamWriter(stream))
             {

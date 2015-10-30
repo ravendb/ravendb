@@ -193,15 +193,12 @@ namespace Raven.Tests.FileSystem
             rfs.Storage.Batch(
                 accessor =>
                 configNames =
-                accessor.GetConfigNames(0, 10).ToArray().Where(x => x.StartsWith(RavenFileNameHelper.DeleteOperationConfigPrefix)).ToList());
+                accessor.GetConfigNames(0, 10).ToArray().Where(x => x.StartsWith(RavenFileNameHelper.DeleteOperationConfigPrefix)).OrderBy(x => x.Length).ToList());
 
-            Assert.Equal(2, configNames.Count());
-
-            foreach (var configName in configNames)
-            {
-                Assert.True(RavenFileNameHelper.DeleteOperationConfigPrefix + RavenFileNameHelper.DeletingFileName("file.bin") == configName ||
-                            RavenFileNameHelper.DeleteOperationConfigPrefix + RavenFileNameHelper.DeletingFileName("file.bin1") == configName); // 1 indicate delete version
-            }
+            Assert.Equal(2, configNames.Count);
+			Assert.Equal(RavenFileNameHelper.DeleteOperationConfigPrefix + RavenFileNameHelper.DeletingFileName("file.bin"), configNames[0]);
+			Assert.True(configNames[1].StartsWith(RavenFileNameHelper.DeleteOperationConfigPrefix + "/file.bin") &&
+				configNames[1].EndsWith(RavenFileNameHelper.DeletingFileSuffix)); // number in the middle is used to avoid duplicates
         }
 
 		[Fact]

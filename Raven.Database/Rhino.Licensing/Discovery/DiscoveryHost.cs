@@ -20,16 +20,16 @@ namespace Rhino.Licensing.Discovery
 		///</summary>
 		public void Start()
 		{
-		    if (socket != null)
-		    {
-		        if (!IsStop) return;
-		        StartListening();
-		        IsStop = false;
-		        return;
-		    }
+            if (socket != null)
+            {
+                if (!IsStop) return;
+                StartListening();
+			IsStop = false;
+                return;
+            }
             IsStop = false;
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-		    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
 			foreach (NetworkInterface adapter in adapters.Where(card => card.OperationalStatus == OperationalStatus.Up))
 			{
@@ -143,13 +143,13 @@ namespace Rhino.Licensing.Discovery
 
 		public void Dispose()
 		{
-		    IsStop = true;
-		    if (socket != null)
-		    {
-		        socket.Dispose();
-		        socket = null;
-		    }
+	        IsStop = true;
+			if (socket != null)
+	        {
+				socket.Dispose();
+	            socket = null;
 		}
+	    }
 
 		public void Stop()
 		{

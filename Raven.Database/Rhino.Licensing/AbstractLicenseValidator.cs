@@ -566,7 +566,7 @@ namespace Rhino.Licensing
 					//setup next lease
 					var time = (ExpirationDate.AddMinutes(-5) - SystemTime.UtcNow);
 					if (Logger.IsDebugEnabled)
-						Logger.Debug("Will lease license again at {0}", time);
+					Logger.Debug("Will lease license again at {0}", time);
 					if (disableFutureChecks == false && nextLeaseTimer != null)
 						nextLeaseTimer.Change(time, time);
 				}
@@ -665,8 +665,7 @@ namespace Rhino.Licensing
 		}
 
 	    public void Dispose()
-        {
-            discoveryHost.Dispose();
-        }
+	    {
+	        discoveryHost.Dispose();
 	}
-}
+}}

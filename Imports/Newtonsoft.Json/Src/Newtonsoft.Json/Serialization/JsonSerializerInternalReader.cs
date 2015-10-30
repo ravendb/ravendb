@@ -2059,9 +2059,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             {
                 try
                 {
-                    object value = CreateValueInternal(reader, null, null, null, contract, member, null);
+                    JToken extensionDataValue = JToken.ReadFrom(reader);
+                    //object value = CreateValueInternal(reader, null, null, null, contract, member, null);
 
-                    contract.ExtensionDataSetter(o, memberName, value);
+                    contract.ExtensionDataSetter(o, memberName, extensionDataValue);
                 }
                 catch (Exception ex)
                 {

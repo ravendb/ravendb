@@ -177,6 +177,7 @@ namespace Raven.Database.Server.Controllers
 
 				writer.WriteEndArray();
 				writer.Flush();
+
 				return new CompletedTask();
 			}
 

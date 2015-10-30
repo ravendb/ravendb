@@ -572,8 +572,6 @@ namespace Raven.Database.Actions
             {
 	            var query = GetQueryForAllMatchingDocumentsForIndex(generator);
 
-	            JsonDocument highestByEtag = null;
-
 				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
 				using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
@@ -585,8 +583,8 @@ namespace Raven.Database.Actions
                 })
                 {
                     op.Init();
-                    if (op.Header.TotalResults == 0 ||
-                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+					
+                    if ((op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
                     {
                         // we don't apply this optimization if the total number of results 
 						// to index is more than the max numbers to index in a single batch. 
@@ -627,19 +625,15 @@ namespace Raven.Database.Actions
 	                    };
 
 	                    docsToIndex.Add(doc);
-
-	                    if (highestByEtag == null || doc.Etag.CompareTo(highestByEtag.Etag) > 0)
-		                    highestByEtag = doc;
                     });
+					result = new PrecomputedIndexingBatch
+					{
+						LastIndexed = op.Header.IndexEtag,
+						LastModified = op.Header.IndexTimestamp,
+						Documents = docsToIndex,
+						Index = index
+					};
                 }
-
-	            result = new PrecomputedIndexingBatch
-                {
-                    LastIndexed = highestByEtag.Etag,
-                    LastModified = highestByEtag.LastModified.Value,
-                    Documents = docsToIndex,
-                    Index = index
-                };
             });
 
 			if (result != null && result.Documents != null && result.Documents.Count > 0)
