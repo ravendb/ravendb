@@ -3,7 +3,7 @@
 
 # Custom for Visual Studio
 *.cs       text diff=csharp eol=crlf filter=raven-spacify
-*.sln      text merge=union eol=crlf filter=raven-spacify
+*.sln      text merge=union eol=crlf
 *.csproj   text merge=union eol=crlf filter=raven-spacify
 *.vbproj   text merge=union filter=raven-spacify
 *.fsproj   text merge=union filter=raven-spacify
