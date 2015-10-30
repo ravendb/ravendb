@@ -80,7 +80,7 @@ namespace Raven.Client.Connection.Implementation
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 		private string url;
-
+        
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -689,13 +689,21 @@ namespace Raven.Client.Connection.Implementation
         public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
-	        return SendRequestInternal(() => new HttpRequestMessage(Method, Url)
+
+	        return SendRequestInternal(() => 
+            {                    
+                HttpContent content = new JsonContent(tokenToWrite);
+                if (!factory.DisableRequestCompression)
+                    content = new CompressedContent(content, "gzip");
+
+                return new HttpRequestMessage(new HttpMethod(Method), Url)
 	        {
-		        Content = new JsonContent(tokenToWrite),
+                    Content = content,
 		        Headers =
 		        {
 						TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix
 		        }
+                };
 	        });
         }
 

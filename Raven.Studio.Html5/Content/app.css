@@ -8563,6 +8563,10 @@ a.global_help_link:focus {
 #matchingDocumentsGrid {
   margin-bottom: -30px;
 }
+.alert-danger a {
+  color: white;
+  text-decoration: underline;
+}
 .experimental {
   font-size: 9px;
   font-weight: bold;

@@ -7,19 +7,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-
-using Raven.Abstractions.Util.Streams;
-using Raven.Abstractions.Util;
 using Sparrow;
 
-namespace Raven.Database.Util.Streams
+namespace Raven.Abstractions.Util.Streams
 {
     public class BufferPoolMemoryStream : Stream
     {       
         protected byte[] _buffer;
         protected ObjectPool<byte[]> _bufferPool;
-
-        private const int BufferPoolLimit = BufferSharedPools.ByteBufferSize / 2;
 		
 		[CLSCompliant(false)]
         protected long _length;
@@ -28,8 +23,8 @@ namespace Raven.Database.Util.Streams
 
         public BufferPoolMemoryStream()
         {
-            _buffer = new byte[64];
-            _bufferPool = null;
+            _bufferPool = BufferSharedPools.MicroByteArray;
+            _buffer = _bufferPool.Allocate();          
         }
 
         protected override void Dispose(bool disposing)
@@ -110,25 +105,33 @@ namespace Raven.Database.Util.Streams
                         
             // We reset the buffer pool
             ObjectPool<byte[]> newBufferPool = null;
-            if (newCapacity > BufferPoolLimit)
-            {
-                // We will ensure to cap out to fit the capacity as best as we can.
-                if (newCapacity <= BufferSharedPools.ByteBufferSize)
-                {
-                    newCapacity = BufferSharedPools.ByteBufferSize;
-                    newBufferPool = BufferSharedPools.ByteArray;
-                }                    
-                else if (newCapacity <= BufferSharedPools.BigByteBufferSize)
-                {
-                    newCapacity = BufferSharedPools.BigByteBufferSize;
-                    newBufferPool = BufferSharedPools.BigByteArray;
 
-                }                    
-                else if ( newCapacity <= BufferSharedPools.HugeByteBufferSize)
-                {
-                    newCapacity = BufferSharedPools.HugeByteBufferSize;
-                    newBufferPool = BufferSharedPools.HugeByteArray;
-                }
+            // We will ensure to cap out to fit the capacity as best as we can.
+            if (newCapacity <= BufferSharedPools.MicroByteBufferSize)
+            {
+                newCapacity = BufferSharedPools.MicroByteBufferSize;
+                newBufferPool = BufferSharedPools.MicroByteArray;
+            }
+            else if (newCapacity <= BufferSharedPools.SmallByteBufferSize)
+            {
+                newCapacity = BufferSharedPools.SmallByteBufferSize;
+                newBufferPool = BufferSharedPools.SmallByteArray;
+            }
+            else if (newCapacity <= BufferSharedPools.ByteBufferSize)
+            {
+                newCapacity = BufferSharedPools.ByteBufferSize;
+                newBufferPool = BufferSharedPools.ByteArray;
+            }
+            else if (newCapacity <= BufferSharedPools.BigByteBufferSize)
+            {
+                newCapacity = BufferSharedPools.BigByteBufferSize;
+                newBufferPool = BufferSharedPools.BigByteArray;
+
+            }                    
+            else if ( newCapacity <= BufferSharedPools.HugeByteBufferSize)
+            {
+                newCapacity = BufferSharedPools.HugeByteBufferSize;
+                newBufferPool = BufferSharedPools.HugeByteArray;
             }
 
             byte[] newBuffer = (newBufferPool == null) ? new byte[newCapacity] : newBufferPool.Allocate();

@@ -64,7 +64,7 @@ namespace Raven.Database.Commercial
 
 		public void Execute(InMemoryRavenConfiguration config)
 		{
-			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));			
+			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
 
 			ExecuteInternal(config);
 		}
@@ -190,11 +190,11 @@ namespace Raven.Database.Commercial
 
 			var fullPath = GetLicensePath(config).ToFullPath();
 
-		    if (IsSameLicense(value, fullPath))
-		        return licenseValidator != null;
+            if (IsSameLicense(value, fullPath))
+                return licenseValidator != null;
 
-		    if (licenseValidator != null)
-		        licenseValidator.Dispose();
+            if (licenseValidator != null)
+                licenseValidator.Dispose();
 
 			if (string.IsNullOrEmpty(value) == false)
 			{
@@ -224,20 +224,20 @@ namespace Raven.Database.Commercial
 			return true;
 		}
 
-	    private bool IsSameLicense(string value, string fullPath)
-	    {
-	        var stringLicenseValidator = licenseValidator as StringLicenseValidator;
-	        if (stringLicenseValidator != null)
-	            return stringLicenseValidator.SameLicense(value);
+        private bool IsSameLicense(string value, string fullPath)
+        {
+            var stringLicenseValidator = licenseValidator as StringLicenseValidator;
+            if (stringLicenseValidator != null)
+                return stringLicenseValidator.SameLicense(value);
 
-	        var validator = licenseValidator as LicenseValidator;
-	        if (validator != null)
-	            return validator.SameFile(fullPath);
+            var validator = licenseValidator as LicenseValidator;
+            if (validator != null)
+                return validator.SameFile(fullPath);
 
-	        return false;
-	    }
+            return false;
+        }
 
-	    private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
 			string version;
 			var errorMessage = string.Empty;

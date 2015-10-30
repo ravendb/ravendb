@@ -29,9 +29,8 @@ namespace Rhino.Licensing
 		/// </summary>
 		protected override string License { get; set; }
 
-	    public bool SameLicense(string lic)
-	    {
-	        return lic == License;
-	    }
+        public bool SameLicense(string lic)
+        {
+            return lic == License;
 	}
-}
+}}

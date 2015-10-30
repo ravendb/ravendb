@@ -242,6 +242,7 @@
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
+    <Compile Include="Bugs\BulkInsert.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />

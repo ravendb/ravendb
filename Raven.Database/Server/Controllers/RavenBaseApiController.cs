@@ -128,7 +128,8 @@ namespace Raven.Database.Server.Controllers
 		public async Task<T> ReadJsonObjectAsync<T>()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
-			using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
+            using (var buffered = new BufferedStream(stream))
+            using (var gzipStream = new GZipStream(buffered, CompressionMode.Decompress))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			{
 				using (var jsonReader = new JsonTextReader(streamReader))
@@ -149,8 +150,9 @@ namespace Raven.Database.Server.Controllers
 
 	    protected async Task<RavenJObject> ReadJsonAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
 		}
@@ -158,7 +160,8 @@ namespace Raven.Database.Server.Controllers
 	    protected async Task<RavenJArray> ReadJsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 			{
 				return RavenJArray.Load(jsonReader);
@@ -168,14 +171,16 @@ namespace Raven.Database.Server.Controllers
 	    protected async Task<string> ReadStringAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
-			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
+            using (var buffered = new BufferedStream(stream))
+			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 				return streamReader.ReadToEnd();
 		}
 
 	    protected async Task<RavenJArray> ReadBsonArrayAsync()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
-			using (var jsonReader = new BsonReader(stream))
+            using (var buffered = new BufferedStream(stream))
+			using (var jsonReader = new BsonReader(buffered))
 			{
 				var jObject = RavenJObject.Load(jsonReader);
 				return new RavenJArray(jObject.Values<RavenJToken>());
@@ -271,7 +276,7 @@ namespace Raven.Database.Server.Controllers
 			    foreach (var queryKey in nvc.AllKeys)
 				    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
 		    }
-		    req.Properties["Raven.QueryString"] = nvc;
+	        req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
 		protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
