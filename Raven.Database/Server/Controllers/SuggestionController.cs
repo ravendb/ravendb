@@ -9,14 +9,14 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SuggestionController : ClusterAwareRavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("suggest/{*id}")]
-		[RavenRoute("databases/{databaseName}/suggest/{*id}")]
-		public HttpResponseMessage SuggestGet(string id)
-		{
-			var index = id;
+    public class SuggestionController : ClusterAwareRavenDbApiController
+    {
+        [HttpGet]
+        [RavenRoute("suggest/{*id}")]
+        [RavenRoute("databases/{databaseName}/suggest/{*id}")]
+        public HttpResponseMessage SuggestGet(string id)
+        {
+            var index = id;
 
             var indexEtag = Database.Indexes.GetIndexEtag(index, null);
             if (MatchEtag(indexEtag))

@@ -253,30 +253,30 @@ namespace Voron.Impl.Paging
                 throw new ObjectDisposedException("The pager is already disposed");
         }
 
-	    public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+        public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
 
-	    public static int GetMaxKeySize(bool keysPrefixing)
-	    {
-		    return keysPrefixing == false 
-				? NodeMaxSize - RequiredSpaceForNewNode 
-				: NodeMaxSizePrefixedKeys - RequiredSpaceForNewNodePrefixedKeys;
-	    }
+        public static int GetMaxKeySize(bool keysPrefixing)
+        {
+            return keysPrefixing == false 
+                ? NodeMaxSize - RequiredSpaceForNewNode 
+                : NodeMaxSizePrefixedKeys - RequiredSpaceForNewNodePrefixedKeys;
+        }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    public static bool IsKeySizeValid(int keySize, bool keysPrefixing)
-	    {
-			if (keysPrefixing == false)
-			{
-				if (keySize + RequiredSpaceForNewNode > NodeMaxSize)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsKeySizeValid(int keySize, bool keysPrefixing)
+        {
+            if (keysPrefixing == false)
+            {
+                if (keySize + RequiredSpaceForNewNode > NodeMaxSize)
                     return false;
 
-				return true;
-			}
+                return true;
+            }
 
-			if (keySize + RequiredSpaceForNewNodePrefixedKeys > NodeMaxSizePrefixedKeys)
-				return false;
+            if (keySize + RequiredSpaceForNewNodePrefixedKeys > NodeMaxSizePrefixedKeys)
+                return false;
 
-			return true;
-	    }
+            return true;
+        }
     }
 }

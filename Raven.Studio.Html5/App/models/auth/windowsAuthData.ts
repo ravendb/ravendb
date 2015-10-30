@@ -1,4 +1,4 @@
-﻿import databaseAccess = require("models/resources/databaseAccess");
+import databaseAccess = require("models/resources/databaseAccess");
 
 class windowsAuthData {
 

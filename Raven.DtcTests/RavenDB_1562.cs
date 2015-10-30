@@ -23,7 +23,7 @@ using Xunit;
 
 namespace Raven.DtcTests
 {
-	public class RavenDB_1562 : ReplicationBase
+    public class RavenDB_1562 : ReplicationBase
     {
         public IDocumentStore PrimaryDocumentStore;
         public IDocumentStore SecondaryDocumentStore;
@@ -263,7 +263,7 @@ namespace Raven.DtcTests
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
+            var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
             req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 

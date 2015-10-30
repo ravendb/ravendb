@@ -756,519 +756,519 @@ namespace NDesk.Options
         }
 #endif
 
-		private static bool Unprocessed(ICollection<string> extra, Option def, OptionContext c, string argument)
-		{
-			if (def == null)
-			{
-				extra.Add(argument);
-				return false;
-			}
-			c.OptionValues.Add(argument);
-			c.Option = def;
-			c.Option.Invoke(c);
-			return false;
-		}
+        private static bool Unprocessed(ICollection<string> extra, Option def, OptionContext c, string argument)
+        {
+            if (def == null)
+            {
+                extra.Add(argument);
+                return false;
+            }
+            c.OptionValues.Add(argument);
+            c.Option = def;
+            c.Option.Invoke(c);
+            return false;
+        }
 
-		private readonly Regex ValueOption = new Regex(
-			@"^(?<flag>--|-|/)(?<name>[^:=]+)((?<sep>[:=])(?<value>.*))?$");
+        private readonly Regex ValueOption = new Regex(
+            @"^(?<flag>--|-|/)(?<name>[^:=]+)((?<sep>[:=])(?<value>.*))?$");
 
-		protected bool GetOptionParts(string argument, out string flag, out string name, out string sep, out string value)
-		{
-			if (argument == null)
-				throw new ArgumentNullException("argument");
+        protected bool GetOptionParts(string argument, out string flag, out string name, out string sep, out string value)
+        {
+            if (argument == null)
+                throw new ArgumentNullException("argument");
 
-			flag = name = sep = value = null;
-			Match m = ValueOption.Match(argument);
-			if (!m.Success)
-			{
-				return false;
-			}
-			flag = m.Groups["flag"].Value;
-			name = m.Groups["name"].Value;
-			if (m.Groups["sep"].Success && m.Groups["value"].Success)
-			{
-				sep = m.Groups["sep"].Value;
-				value = m.Groups["value"].Value;
-			}
-			return true;
-		}
+            flag = name = sep = value = null;
+            Match m = ValueOption.Match(argument);
+            if (!m.Success)
+            {
+                return false;
+            }
+            flag = m.Groups["flag"].Value;
+            name = m.Groups["name"].Value;
+            if (m.Groups["sep"].Success && m.Groups["value"].Success)
+            {
+                sep = m.Groups["sep"].Value;
+                value = m.Groups["value"].Value;
+            }
+            return true;
+        }
 
-		private OptionCategory currentCategory = OptionCategory.None;
+        private OptionCategory currentCategory = OptionCategory.None;
 
-		protected virtual bool Parse(string argument, OptionContext c)
-		{
-			if (c.Option != null)
-			{
-				ParseValue(argument, c);
-				return true;
-			}
+        protected virtual bool Parse(string argument, OptionContext c)
+        {
+            if (c.Option != null)
+            {
+                ParseValue(argument, c);
+                return true;
+            }
 
-			string f, n, s, v;
-			if (!GetOptionParts(argument, out f, out n, out s, out v))
-				return false;
+            string f, n, s, v;
+            if (!GetOptionParts(argument, out f, out n, out s, out v))
+                return false;
 
-			Option p;
-			if (Contains(n))
-			{
-				p = this[n];
+            Option p;
+            if (Contains(n))
+            {
+                p = this[n];
 
-				CheckCategory(p, f, n);
+                CheckCategory(p, f, n);
 
-				c.OptionName = f + n;
-				c.Option = p;
-				switch (p.OptionValueType)
-				{
-					case OptionValueType.None:
-						c.OptionValues.Add(n);
-						c.Option.Invoke(c);
-						break;
-					case OptionValueType.Optional:
-					case OptionValueType.Required:
-						ParseValue(v, c);
-						break;
-				}
-				return true;
-			}
-			// no match; is it a bool option?
-			if (ParseBool(argument, n, c))
-				return true;
-			// is it a bundled option?
-			if (ParseBundledValue(f, string.Concat(n + s + v), c))
-				return true;
+                c.OptionName = f + n;
+                c.Option = p;
+                switch (p.OptionValueType)
+                {
+                    case OptionValueType.None:
+                        c.OptionValues.Add(n);
+                        c.Option.Invoke(c);
+                        break;
+                    case OptionValueType.Optional:
+                    case OptionValueType.Required:
+                        ParseValue(v, c);
+                        break;
+                }
+                return true;
+            }
+            // no match; is it a bool option?
+            if (ParseBool(argument, n, c))
+                return true;
+            // is it a bundled option?
+            if (ParseBundledValue(f, string.Concat(n + s + v), c))
+                return true;
 
-			return false;
-		}
+            return false;
+        }
 
-		private void CheckCategory(Option p, string f, string n)
-		{
-			if (currentCategory == OptionCategory.None)
-			{
-				currentCategory = p.Category;
-			}
-			else if (p.Category.HasFlag(currentCategory) || currentCategory.HasFlag(p.Category) || p.Category == OptionCategory.None)
-			{
-				currentCategory |= p.Category;
-			}
-			else
-			{
-				var category = currentCategory;
-				category &= ~OptionCategory.None;
+        private void CheckCategory(Option p, string f, string n)
+        {
+            if (currentCategory == OptionCategory.None)
+            {
+                currentCategory = p.Category;
+            }
+            else if (p.Category.HasFlag(currentCategory) || currentCategory.HasFlag(p.Category) || p.Category == OptionCategory.None)
+            {
+                currentCategory |= p.Category;
+            }
+            else
+            {
+                var category = currentCategory;
+                category &= ~OptionCategory.None;
 
-				OnWarning(string.Format("Cannot use options from different category. Current category: '{0}'. Invalid option: '{1}' from category '{2}'. Using option from different category might cause unpredictable actions.", category, f + n, p.Category));
-			}
-		}
+                OnWarning(string.Format("Cannot use options from different category. Current category: '{0}'. Invalid option: '{1}' from category '{2}'. Using option from different category might cause unpredictable actions.", category, f + n, p.Category));
+            }
+        }
 
-		private void ParseValue(string option, OptionContext c)
-		{
-			if (option != null)
-				foreach (string o in c.Option.ValueSeparators != null
-						? option.Split(c.Option.ValueSeparators, StringSplitOptions.None)
-						: new string[] { option })
-				{
-					c.OptionValues.Add(o);
-				}
-			if (c.OptionValues.Count == c.Option.MaxValueCount ||
-					c.Option.OptionValueType == OptionValueType.Optional)
-				c.Option.Invoke(c);
-			else if (c.OptionValues.Count > c.Option.MaxValueCount)
-			{
-				throw new OptionException(localizer(string.Format(
-								"Error: Found {0} option values when expecting {1}.",
-								c.OptionValues.Count, c.Option.MaxValueCount)),
-						c.OptionName);
-			}
-		}
+        private void ParseValue(string option, OptionContext c)
+        {
+            if (option != null)
+                foreach (string o in c.Option.ValueSeparators != null
+                        ? option.Split(c.Option.ValueSeparators, StringSplitOptions.None)
+                        : new string[] { option })
+                {
+                    c.OptionValues.Add(o);
+                }
+            if (c.OptionValues.Count == c.Option.MaxValueCount ||
+                    c.Option.OptionValueType == OptionValueType.Optional)
+                c.Option.Invoke(c);
+            else if (c.OptionValues.Count > c.Option.MaxValueCount)
+            {
+                throw new OptionException(localizer(string.Format(
+                                "Error: Found {0} option values when expecting {1}.",
+                                c.OptionValues.Count, c.Option.MaxValueCount)),
+                        c.OptionName);
+            }
+        }
 
-		private bool ParseBool(string option, string n, OptionContext c)
-		{
-			Option p;
-			string rn;
-			if (n.Length >= 1 && (n[n.Length - 1] == '+' || n[n.Length - 1] == '-') &&
-					Contains((rn = n.Substring(0, n.Length - 1))))
-			{
-				p = this[rn];
-				string v = n[n.Length - 1] == '+' ? option : null;
-				c.OptionName = option;
-				c.Option = p;
-				c.OptionValues.Add(v);
-				p.Invoke(c);
-				return true;
-			}
-			return false;
-		}
+        private bool ParseBool(string option, string n, OptionContext c)
+        {
+            Option p;
+            string rn;
+            if (n.Length >= 1 && (n[n.Length - 1] == '+' || n[n.Length - 1] == '-') &&
+                    Contains((rn = n.Substring(0, n.Length - 1))))
+            {
+                p = this[rn];
+                string v = n[n.Length - 1] == '+' ? option : null;
+                c.OptionName = option;
+                c.Option = p;
+                c.OptionValues.Add(v);
+                p.Invoke(c);
+                return true;
+            }
+            return false;
+        }
 
-		private bool ParseBundledValue(string f, string n, OptionContext c)
-		{
-			if (f != "-")
-				return false;
-			for (int i = 0; i < n.Length; ++i)
-			{
-				Option p;
-				string opt = f + n[i].ToString();
-				string rn = n[i].ToString();
-				if (!Contains(rn))
-				{
-					if (i == 0)
-						return false;
-					throw new OptionException(string.Format(localizer(
-									"Cannot bundle unregistered option '{0}'."), opt), opt);
-				}
-				p = this[rn];
-				switch (p.OptionValueType)
-				{
-					case OptionValueType.None:
-						Invoke(c, opt, n, p);
-						break;
-					case OptionValueType.Optional:
-					case OptionValueType.Required:
-						{
-							string v = n.Substring(i + 1);
-							c.Option = p;
-							c.OptionName = opt;
-							ParseValue(v.Length != 0 ? v : null, c);
-							return true;
-						}
-					default:
-						throw new InvalidOperationException("Unknown OptionValueType: " + p.OptionValueType);
-				}
-			}
-			return true;
-		}
+        private bool ParseBundledValue(string f, string n, OptionContext c)
+        {
+            if (f != "-")
+                return false;
+            for (int i = 0; i < n.Length; ++i)
+            {
+                Option p;
+                string opt = f + n[i].ToString();
+                string rn = n[i].ToString();
+                if (!Contains(rn))
+                {
+                    if (i == 0)
+                        return false;
+                    throw new OptionException(string.Format(localizer(
+                                    "Cannot bundle unregistered option '{0}'."), opt), opt);
+                }
+                p = this[rn];
+                switch (p.OptionValueType)
+                {
+                    case OptionValueType.None:
+                        Invoke(c, opt, n, p);
+                        break;
+                    case OptionValueType.Optional:
+                    case OptionValueType.Required:
+                        {
+                            string v = n.Substring(i + 1);
+                            c.Option = p;
+                            c.OptionName = opt;
+                            ParseValue(v.Length != 0 ? v : null, c);
+                            return true;
+                        }
+                    default:
+                        throw new InvalidOperationException("Unknown OptionValueType: " + p.OptionValueType);
+                }
+            }
+            return true;
+        }
 
-		private static void Invoke(OptionContext c, string name, string value, Option option)
-		{
-			c.OptionName = name;
-			c.Option = option;
-			c.OptionValues.Add(value);
-			option.Invoke(c);
-		}
+        private static void Invoke(OptionContext c, string name, string value, Option option)
+        {
+            c.OptionName = name;
+            c.Option = option;
+            c.OptionValues.Add(value);
+            option.Invoke(c);
+        }
 
-		private const int OptionWidth = 29;
+        private const int OptionWidth = 29;
 
-		public void WriteOptionDescriptions(TextWriter o)
-		{
-			var allCategories = Enum.GetValues(typeof(OptionCategory));
-			var results = new Dictionary<OptionCategory, List<Option>>();
-			foreach (OptionCategory category in allCategories)
-			{
-				foreach (Option p in this)
-				{
-					if (!p.Category.HasFlag(category))
-						continue;
+        public void WriteOptionDescriptions(TextWriter o)
+        {
+            var allCategories = Enum.GetValues(typeof(OptionCategory));
+            var results = new Dictionary<OptionCategory, List<Option>>();
+            foreach (OptionCategory category in allCategories)
+            {
+                foreach (Option p in this)
+                {
+                    if (!p.Category.HasFlag(category))
+                        continue;
 
-					if (results.ContainsKey(category) == false)
-						results[category] = new List<Option>();
+                    if (results.ContainsKey(category) == false)
+                        results[category] = new List<Option>();
 
-					results[category].Add(p);
-				}
-			}
+                    results[category].Add(p);
+                }
+            }
 
-			foreach (var key in results.Keys)
-			{
-				if (currentCategory.HasFlag(key) == false && currentCategory != OptionCategory.None && currentCategory != OptionCategory.Help && key != OptionCategory.Help && key != OptionCategory.None)
-					continue;
+            foreach (var key in results.Keys)
+            {
+                if (currentCategory.HasFlag(key) == false && currentCategory != OptionCategory.None && currentCategory != OptionCategory.Help && key != OptionCategory.Help && key != OptionCategory.None)
+                    continue;
 
-				var options = results[key];
-				if (options.Count == 0)
-					continue;
+                var options = results[key];
+                if (options.Count == 0)
+                    continue;
 
-				o.WriteLine();
-				o.WriteLine("----------------------------------------------");
-				o.WriteLine(GetDescription(key));
-				o.WriteLine("----------------------------------------------");
-				o.WriteLine();
+                o.WriteLine();
+                o.WriteLine("----------------------------------------------");
+                o.WriteLine(GetDescription(key));
+                o.WriteLine("----------------------------------------------");
+                o.WriteLine();
 
-				foreach (Option p in options)
-				{
-					int written = 0;
-					if (!WriteOptionPrototype(o, p, ref written))
-						continue;
+                foreach (Option p in options)
+                {
+                    int written = 0;
+                    if (!WriteOptionPrototype(o, p, ref written))
+                        continue;
 
-					if (written < OptionWidth)
-						o.Write(new string(' ', OptionWidth - written));
-					else
-					{
-						o.WriteLine();
-						o.Write(new string(' ', OptionWidth));
-					}
+                    if (written < OptionWidth)
+                        o.Write(new string(' ', OptionWidth - written));
+                    else
+                    {
+                        o.WriteLine();
+                        o.Write(new string(' ', OptionWidth));
+                    }
 
-					List<string> lines = GetLines(localizer(GetDescription(p.Description)));
-					o.WriteLine(lines[0]);
-					string prefix = new string(' ', OptionWidth + 2);
-					for (int i = 1; i < lines.Count; ++i)
-					{
-						o.Write(prefix);
-						o.WriteLine(lines[i]);
-					}
-				}
-			}
-		}
+                    List<string> lines = GetLines(localizer(GetDescription(p.Description)));
+                    o.WriteLine(lines[0]);
+                    string prefix = new string(' ', OptionWidth + 2);
+                    for (int i = 1; i < lines.Count; ++i)
+                    {
+                        o.Write(prefix);
+                        o.WriteLine(lines[i]);
+                    }
+                }
+            }
+        }
 
-		bool WriteOptionPrototype(TextWriter o, Option p, ref int written)
-		{
-			string[] names = p.Names;
+        bool WriteOptionPrototype(TextWriter o, Option p, ref int written)
+        {
+            string[] names = p.Names;
 
-			int i = GetNextOptionIndex(names, 0);
-			if (i == names.Length)
-				return false;
+            int i = GetNextOptionIndex(names, 0);
+            if (i == names.Length)
+                return false;
 
-			if (names[i].Length == 1)
-			{
-				Write(o, ref written, " -");
-				Write(o, ref written, names[0]);
-			}
-			else
-			{
-				Write(o, ref written, "   --");
-				Write(o, ref written, names[0]);
-			}
+            if (names[i].Length == 1)
+            {
+                Write(o, ref written, " -");
+                Write(o, ref written, names[0]);
+            }
+            else
+            {
+                Write(o, ref written, "   --");
+                Write(o, ref written, names[0]);
+            }
 
-			for (i = GetNextOptionIndex(names, i + 1);
-					i < names.Length; i = GetNextOptionIndex(names, i + 1))
-			{
-				Write(o, ref written, ", ");
-				Write(o, ref written, names[i].Length == 1 ? "-" : "--");
-				Write(o, ref written, names[i]);
-			}
+            for (i = GetNextOptionIndex(names, i + 1);
+                    i < names.Length; i = GetNextOptionIndex(names, i + 1))
+            {
+                Write(o, ref written, ", ");
+                Write(o, ref written, names[i].Length == 1 ? "-" : "--");
+                Write(o, ref written, names[i]);
+            }
 
-			if (p.OptionValueType == OptionValueType.Optional ||
-					p.OptionValueType == OptionValueType.Required)
-			{
-				if (p.OptionValueType == OptionValueType.Optional)
-				{
-					Write(o, ref written, localizer("["));
-				}
-				Write(o, ref written, localizer("=" + GetArgumentName(0, p.MaxValueCount, p.Description)));
-				string sep = p.ValueSeparators != null && p.ValueSeparators.Length > 0
-					? p.ValueSeparators[0]
-					: " ";
-				for (int c = 1; c < p.MaxValueCount; ++c)
-				{
-					Write(o, ref written, localizer(sep + GetArgumentName(c, p.MaxValueCount, p.Description)));
-				}
-				if (p.OptionValueType == OptionValueType.Optional)
-				{
-					Write(o, ref written, localizer("]"));
-				}
-			}
-			return true;
-		}
+            if (p.OptionValueType == OptionValueType.Optional ||
+                    p.OptionValueType == OptionValueType.Required)
+            {
+                if (p.OptionValueType == OptionValueType.Optional)
+                {
+                    Write(o, ref written, localizer("["));
+                }
+                Write(o, ref written, localizer("=" + GetArgumentName(0, p.MaxValueCount, p.Description)));
+                string sep = p.ValueSeparators != null && p.ValueSeparators.Length > 0
+                    ? p.ValueSeparators[0]
+                    : " ";
+                for (int c = 1; c < p.MaxValueCount; ++c)
+                {
+                    Write(o, ref written, localizer(sep + GetArgumentName(c, p.MaxValueCount, p.Description)));
+                }
+                if (p.OptionValueType == OptionValueType.Optional)
+                {
+                    Write(o, ref written, localizer("]"));
+                }
+            }
+            return true;
+        }
 
-		static int GetNextOptionIndex(string[] names, int i)
-		{
-			while (i < names.Length && names[i] == "<>")
-			{
-				++i;
-			}
-			return i;
-		}
+        static int GetNextOptionIndex(string[] names, int i)
+        {
+            while (i < names.Length && names[i] == "<>")
+            {
+                ++i;
+            }
+            return i;
+        }
 
-		static void Write(TextWriter o, ref int n, string s)
-		{
-			n += s.Length;
-			o.Write(s);
-		}
+        static void Write(TextWriter o, ref int n, string s)
+        {
+            n += s.Length;
+            o.Write(s);
+        }
 
-		private static string GetArgumentName(int index, int maxIndex, string description)
-		{
-			if (description == null)
-				return maxIndex == 1 ? "VALUE" : "VALUE" + (index + 1);
-			string[] nameStart;
-			if (maxIndex == 1)
-				nameStart = new string[] { "{0:", "{" };
-			else
-				nameStart = new string[] { "{" + index + ":" };
-			for (int i = 0; i < nameStart.Length; ++i)
-			{
-				int start, j = 0;
-				do
-				{
-					start = description.IndexOf(nameStart[i], j);
-				} while (start >= 0 && j != 0 ? description[j++ - 1] == '{' : false);
-				if (start == -1)
-					continue;
-				int end = description.IndexOf("}", start);
-				if (end == -1)
-					continue;
-				return description.Substring(start + nameStart[i].Length, end - start - nameStart[i].Length);
-			}
-			return maxIndex == 1 ? "VALUE" : "VALUE" + (index + 1);
-		}
+        private static string GetArgumentName(int index, int maxIndex, string description)
+        {
+            if (description == null)
+                return maxIndex == 1 ? "VALUE" : "VALUE" + (index + 1);
+            string[] nameStart;
+            if (maxIndex == 1)
+                nameStart = new string[] { "{0:", "{" };
+            else
+                nameStart = new string[] { "{" + index + ":" };
+            for (int i = 0; i < nameStart.Length; ++i)
+            {
+                int start, j = 0;
+                do
+                {
+                    start = description.IndexOf(nameStart[i], j);
+                } while (start >= 0 && j != 0 ? description[j++ - 1] == '{' : false);
+                if (start == -1)
+                    continue;
+                int end = description.IndexOf("}", start);
+                if (end == -1)
+                    continue;
+                return description.Substring(start + nameStart[i].Length, end - start - nameStart[i].Length);
+            }
+            return maxIndex == 1 ? "VALUE" : "VALUE" + (index + 1);
+        }
 
-		private static string GetDescription(string description)
-		{
-			if (description == null)
-				return string.Empty;
-			StringBuilder sb = new StringBuilder(description.Length);
-			int start = -1;
-			for (int i = 0; i < description.Length; ++i)
-			{
-				switch (description[i])
-				{
-					case '{':
-						if (i == start)
-						{
-							sb.Append('{');
-							start = -1;
-						}
-						else if (start < 0)
-							start = i + 1;
-						break;
-					case '}':
-						if (start < 0)
-						{
-							if ((i + 1) == description.Length || description[i + 1] != '}')
-								throw new InvalidOperationException("Invalid option description: " + description);
-							++i;
-							sb.Append("}");
-						}
-						else
-						{
-							sb.Append(description.Substring(start, i - start));
-							start = -1;
-						}
-						break;
-					case ':':
-						if (start < 0)
-							goto default;
-						start = i + 1;
-						break;
-					default:
-						if (start < 0)
-							sb.Append(description[i]);
-						break;
-				}
-			}
-			return sb.ToString();
-		}
+        private static string GetDescription(string description)
+        {
+            if (description == null)
+                return string.Empty;
+            StringBuilder sb = new StringBuilder(description.Length);
+            int start = -1;
+            for (int i = 0; i < description.Length; ++i)
+            {
+                switch (description[i])
+                {
+                    case '{':
+                        if (i == start)
+                        {
+                            sb.Append('{');
+                            start = -1;
+                        }
+                        else if (start < 0)
+                            start = i + 1;
+                        break;
+                    case '}':
+                        if (start < 0)
+                        {
+                            if ((i + 1) == description.Length || description[i + 1] != '}')
+                                throw new InvalidOperationException("Invalid option description: " + description);
+                            ++i;
+                            sb.Append("}");
+                        }
+                        else
+                        {
+                            sb.Append(description.Substring(start, i - start));
+                            start = -1;
+                        }
+                        break;
+                    case ':':
+                        if (start < 0)
+                            goto default;
+                        start = i + 1;
+                        break;
+                    default:
+                        if (start < 0)
+                            sb.Append(description[i]);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
 
-		private static List<string> GetLines(string description)
-		{
-			List<string> lines = new List<string>();
-			if (string.IsNullOrEmpty(description))
-			{
-				lines.Add(string.Empty);
-				return lines;
-			}
-			int length = 80 - OptionWidth - 2;
-			int start = 0, end;
-			do
-			{
-				end = GetLineEnd(start, length, description);
-				bool cont = false;
-				if (end < description.Length)
-				{
-					char c = description[end];
-					if (c == '-' || (char.IsWhiteSpace(c) && c != '\n'))
-						++end;
-					else if (c != '\n')
-					{
-						cont = true;
-						--end;
-					}
-				}
-				lines.Add(description.Substring(start, end - start));
-				if (cont)
-				{
-					lines[lines.Count - 1] += "-";
-				}
-				start = end;
-				if (start < description.Length && description[start] == '\n')
-					++start;
-			} while (end < description.Length);
-			return lines;
-		}
+        private static List<string> GetLines(string description)
+        {
+            List<string> lines = new List<string>();
+            if (string.IsNullOrEmpty(description))
+            {
+                lines.Add(string.Empty);
+                return lines;
+            }
+            int length = 80 - OptionWidth - 2;
+            int start = 0, end;
+            do
+            {
+                end = GetLineEnd(start, length, description);
+                bool cont = false;
+                if (end < description.Length)
+                {
+                    char c = description[end];
+                    if (c == '-' || (char.IsWhiteSpace(c) && c != '\n'))
+                        ++end;
+                    else if (c != '\n')
+                    {
+                        cont = true;
+                        --end;
+                    }
+                }
+                lines.Add(description.Substring(start, end - start));
+                if (cont)
+                {
+                    lines[lines.Count - 1] += "-";
+                }
+                start = end;
+                if (start < description.Length && description[start] == '\n')
+                    ++start;
+            } while (end < description.Length);
+            return lines;
+        }
 
-		private static int GetLineEnd(int start, int length, string description)
-		{
-			int end = Math.Min(start + length, description.Length);
-			int sep = -1;
-			for (int i = start; i < end; ++i)
-			{
-				switch (description[i])
-				{
-					case ' ':
-					case '\t':
-					case '\v':
-					case '-':
-					case ',':
-					case '.':
-					case ';':
-						sep = i;
-						break;
-					case '\n':
-						return i;
-				}
-			}
-			if (sep == -1 || end == description.Length)
-				return end;
-			return sep;
-		}
+        private static int GetLineEnd(int start, int length, string description)
+        {
+            int end = Math.Min(start + length, description.Length);
+            int sep = -1;
+            for (int i = start; i < end; ++i)
+            {
+                switch (description[i])
+                {
+                    case ' ':
+                    case '\t':
+                    case '\v':
+                    case '-':
+                    case ',':
+                    case '.':
+                    case ';':
+                        sep = i;
+                        break;
+                    case '\n':
+                        return i;
+                }
+            }
+            if (sep == -1 || end == description.Length)
+                return end;
+            return sep;
+        }
 
-		private static string GetDescription(Enum enumerationValue)
-		{
-			var type = enumerationValue.GetType();
-			var memberInfo = type.GetMember(enumerationValue.ToString());
-			if (memberInfo.Length > 0)
-			{
-				var attributes = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+        private static string GetDescription(Enum enumerationValue)
+        {
+            var type = enumerationValue.GetType();
+            var memberInfo = type.GetMember(enumerationValue.ToString());
+            if (memberInfo.Length > 0)
+            {
+                var attributes = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
 
-				if (attributes.Length > 0)
-				{
-					return ((DescriptionAttribute)attributes[0]).Description;
-				}
-			}
+                if (attributes.Length > 0)
+                {
+                    return ((DescriptionAttribute)attributes[0]).Description;
+                }
+            }
 
-			return enumerationValue.ToString();
-		}
-	}
+            return enumerationValue.ToString();
+        }
+    }
 
-	[Flags]
-	public enum OptionCategory
-	{
-		[Description("Global (can be used with other categories)")]
-		None = 1 << 0,
+    [Flags]
+    public enum OptionCategory
+    {
+        [Description("Global (can be used with other categories)")]
+        None = 1 << 0,
 
-		General = 1 << 1,
+        General = 1 << 1,
 
-		Service = 1 << 2,
+        Service = 1 << 2,
 
-		[Description("Restore Database")]
-		RestoreDatabase = 1 << 3,
+        [Description("Restore Database")]
+        RestoreDatabase = 1 << 3,
 
-		[Description("Restore FileSystem")]
-		RestoreFileSystem = 1 << 4,
+        [Description("Restore FileSystem")]
+        RestoreFileSystem = 1 << 4,
 
-		[Description("IO Test")]
-		IOTest = 1 << 5,
+        [Description("IO Test")]
+        IOTest = 1 << 5,
 
-		Encryption = 1 << 6,
+        Encryption = 1 << 6,
 
-		SSL = 1 << 7,
+        SSL = 1 << 7,
 
-		Update = 1 << 8,
+        Update = 1 << 8,
 
-		Help = 1 << 9,
+        Help = 1 << 9,
 
-		Other = 1 << 10,
+        Other = 1 << 10,
 
-		[Description("Import/Export Database")]
-		SmugglerDatabase = 1 << 11,
+        [Description("Import/Export Database")]
+        SmugglerDatabase = 1 << 11,
 
-		[Description("Import/Export FileSystem")]
-		SmugglerFileSystem = 1 << 12,
+        [Description("Import/Export FileSystem")]
+        SmugglerFileSystem = 1 << 12,
 
-		[Description("Import Database/FileSystem")]
-		SmugglerImportDatabaseFileSystem = 1 << 13,
+        [Description("Import Database/FileSystem")]
+        SmugglerImportDatabaseFileSystem = 1 << 13,
 
-		[Description("Import/Export Counter")]
-		SmugglerCounter = 1 << 16,
+        [Description("Import/Export Counter")]
+        SmugglerCounter = 1 << 16,
 
-		[Description("Disk IO Monitoring")]
-		DiskIOMonitoring = 1 << 14,
+        [Description("Disk IO Monitoring")]
+        DiskIOMonitoring = 1 << 14,
 
-		[Description("Record/Replay Options")]
+        [Description("Record/Replay Options")]
                 TrafficRecordReplay = 1 << 15,
-	}
+    }
 }
 

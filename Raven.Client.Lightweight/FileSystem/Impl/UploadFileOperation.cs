@@ -22,7 +22,7 @@ namespace Raven.Client.FileSystem.Impl
 
         private Stream Stream { get; set; }
 
-		private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, Etag etag = null)
+        private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, Etag etag = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace!");
@@ -44,7 +44,7 @@ namespace Raven.Client.FileSystem.Impl
             : this(sessionOperations, path, metadata, etag)
         {
             StreamWriter = stream;
-			Size = size;
+            Size = size;
         }
 
         public async Task<FileHeader> Execute(IAsyncFilesSession session)
@@ -60,20 +60,20 @@ namespace Raven.Client.FileSystem.Impl
                 }
             }
 
-	        if (Stream != null)
-	        {
-		        await commands.UploadAsync(FileName, Stream, Metadata, Etag)
+            if (Stream != null)
+            {
+                await commands.UploadAsync(FileName, Stream, Metadata, Etag)
                           .ConfigureAwait(false);
-			}
-	        else if (StreamWriter != null)
-	        {
-		        await commands.UploadAsync(FileName, StreamWriter, null, Size, Metadata, Etag)
-			        .ConfigureAwait(false);
-	        }
-	        else
-	        {
-		        throw new InvalidOperationException("Neither stream not stream writer was specified");
-	        }
+            }
+            else if (StreamWriter != null)
+            {
+                await commands.UploadAsync(FileName, StreamWriter, null, Size, Metadata, Etag)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                throw new InvalidOperationException("Neither stream not stream writer was specified");
+            }
 
             var metadata = await commands.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (metadata == null)

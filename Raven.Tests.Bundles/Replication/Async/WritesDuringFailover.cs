@@ -24,9 +24,9 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             TellFirstInstanceToReplicateToSecondInstance();
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
 
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -55,8 +55,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             TellFirstInstanceToReplicateToSecondInstance();
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -68,88 +68,88 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<Company>("companies/1"));
-			}
-		}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<Company>("companies/1"));
+            }
+        }
 
-		[Fact]
-		public async Task Cannot_failover_writes_by_default()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+        [Fact]
+        public async Task Cannot_failover_writes_by_default()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
 
-			TellFirstInstanceToReplicateToSecondInstance();
+            TellFirstInstanceToReplicateToSecondInstance();
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
-			
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
-				await session.SaveChangesAsync();
-			}
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+                await session.SaveChangesAsync();
+            }
 
-			await WaitForReplication(store2);
+            await WaitForReplication(store2);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				var company = await session.LoadAsync<Company>("companies/1");
-				Assert.NotNull(company);
-				company.Name = "different";
+            using (var session = store1.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("companies/1");
+                Assert.NotNull(company);
+                company.Name = "different";
                 var invalidOperationException = await AssertAsync.Throws<InvalidOperationException>(async () => await session.SaveChangesAsync());
-				Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
-					invalidOperationException.Message);
-			}
-		}
+                Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
+                    invalidOperationException.Message);
+            }
+        }
 
-		[Fact]
-		public async Task Can_explicitly_allow_replication()
-		{
-			var store1 = CreateStore();
-			store1.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries;
-			var store2 = CreateStore();
+        [Fact]
+        public async Task Can_explicitly_allow_replication()
+        {
+            var store1 = CreateStore();
+            store1.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries;
+            var store2 = CreateStore();
 
-			TellFirstInstanceToReplicateToSecondInstance();
+            TellFirstInstanceToReplicateToSecondInstance();
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
-				await session.SaveChangesAsync();
-			}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+                await session.SaveChangesAsync();
+            }
 
-			await WaitForReplication(store2);
+            await WaitForReplication(store2);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				var company = await session.LoadAsync<Company>("companies/1");
-				Assert.NotNull(company);
-				company.Name = "different";
-				await session.SaveChangesAsync();
-			}
-		}
+            using (var session = store1.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("companies/1");
+                Assert.NotNull(company);
+                company.Name = "different";
+                await session.SaveChangesAsync();
+            }
+        }
 
-		private async Task WaitForReplication(IDocumentStore store2)
-		{
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				using (var session = store2.OpenAsyncSession())
-				{
-					var company = await session.LoadAsync<Company>("companies/1");
-					if (company != null)
-						break;
-					Thread.Sleep(100);
-				}
-			}
-		}
-	}
+        private async Task WaitForReplication(IDocumentStore store2)
+        {
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var company = await session.LoadAsync<Company>("companies/1");
+                    if (company != null)
+                        break;
+                    Thread.Sleep(100);
+                }
+            }
+        }
+    }
 }

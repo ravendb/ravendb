@@ -51,7 +51,7 @@ namespace Raven.Database.FileSystem
         private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
-		private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
+        private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
         private volatile bool disposed;
 
@@ -65,9 +65,9 @@ namespace Raven.Database.FileSystem
         {
             ExtensionsState = new AtomicDictionary<object>();
 
-		    Name = name;
-			ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
-			this.systemConfiguration = systemConfiguration;
+            Name = name;
+            ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
+            this.systemConfiguration = systemConfiguration;
 
             systemConfiguration.Container.SatisfyImportsOnce(this);
 
@@ -155,10 +155,10 @@ namespace Raven.Database.FileSystem
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
-					if (Environment.Is64BitProcess == false && configuration.Storage.Voron.AllowOn32Bits == false)
-					{
-						throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
-					}
+                    if (Environment.Is64BitProcess == false && configuration.Storage.Voron.AllowOn32Bits == false)
+                    {
+                        throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+                    }
                     return new TransactionalStorage(configuration);
                 case InMemoryRavenConfiguration.EsentTypeName:
                     return new Storage.Esent.TransactionalStorage(configuration);

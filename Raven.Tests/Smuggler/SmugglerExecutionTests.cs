@@ -340,7 +340,7 @@ namespace Raven.Tests.Smuggler
                 store.DatabaseCommands.Delete(userId, null);
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -442,7 +442,7 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -594,7 +594,7 @@ namespace Raven.Tests.Smuggler
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
                                                                     "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
-																	HttpMethods.Post,
+                                                                    HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 

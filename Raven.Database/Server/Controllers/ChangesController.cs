@@ -9,8 +9,8 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-	public class ChangesController : BaseDatabaseApiController
-	{
+    public class ChangesController : BaseDatabaseApiController
+    {
         [HttpGet]
         [RavenRoute("changes/config")]
         [RavenRoute("databases/{databaseName}/changes/config")]
@@ -27,10 +27,10 @@ namespace Raven.Database.Server.Controllers
             }
 
             var name = (!string.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : string.Empty;
-			var globalConnectionState = Database.TransportState.For(id, this);
-			var connectionState = globalConnectionState.DocumentStore;
+            var globalConnectionState = Database.TransportState.For(id, this);
+            var connectionState = globalConnectionState.DocumentStore;
 
-			var cmd = GetQueryStringValue("command");
+            var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
             {
                 Database.TransportState.Disconnect(id);
@@ -53,11 +53,11 @@ namespace Raven.Database.Server.Controllers
             }
             else if (Match(cmd, "watch-transformers"))
             {
-				connectionState.WatchTransformers();
+                connectionState.WatchTransformers();
             } 
             else if (Match(cmd, "unwatch-transformers"))
             {
-				connectionState.UnwatchTransformers();
+                connectionState.UnwatchTransformers();
             }
             else if (Match(cmd, "watch-doc"))
             {
@@ -139,8 +139,8 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-			return GetMessageWithObject(globalConnectionState);
-		}
+            return GetMessageWithObject(globalConnectionState);
+        }
 
         [HttpGet]
         [RavenRoute("changes/events")]
@@ -149,8 +149,8 @@ namespace Raven.Database.Server.Controllers
         {
             var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-			Database.TransportState.Register(eventsTransport);
-			return new HttpResponseMessage {Content = eventsTransport};
-		}
-	}
+            Database.TransportState.Register(eventsTransport);
+            return new HttpResponseMessage {Content = eventsTransport};
+        }
+    }
 }

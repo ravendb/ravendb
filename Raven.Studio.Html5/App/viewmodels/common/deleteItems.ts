@@ -1,4 +1,4 @@
-﻿import document = require("models/database/documents/document");
+import document = require("models/database/documents/document");
 import file = require("models/filesystem/file");
 import counterSummary = require("models/counter/counterSummary");
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
@@ -40,13 +40,13 @@ class deleteItems extends dialogViewModelBase {
             deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
         }
         else if (firstItem instanceof counterSummary) {
-	        var counters: any = this.items();
-			var groupAndNames: {groupName: string; counterName: string}[] = counters.map((x: counterSummary) => {
-				return {
-					groupName: x.getEntityName(),
-					counterName: x.getId()
-				}
-			});
+            var counters: any = this.items();
+            var groupAndNames: {groupName: string; counterName: string}[] = counters.map((x: counterSummary) => {
+                return {
+                    groupName: x.getEntityName(),
+                    counterName: x.getId()
+                }
+            });
             deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
         } else if (firstItem instanceof timeSeriesPoint) {
             var points = this.items().map((x: timeSeriesPoint) => {
@@ -76,15 +76,15 @@ class deleteItems extends dialogViewModelBase {
         dialog.close(this);
     }
 
-	getDeletedItemName(): string {
-		var item = this.items()[0];
+    getDeletedItemName(): string {
+        var item = this.items()[0];
         if (item instanceof counterSummary) {
             var summary: any = item;
             return " counter name: " + summary.getId() + ", group name: " + summary.getEntityName();
-		}
+        }
 
-		return item.getId();
-	}
+        return item.getId();
+    }
 
     cancel() {
         dialog.close(this);

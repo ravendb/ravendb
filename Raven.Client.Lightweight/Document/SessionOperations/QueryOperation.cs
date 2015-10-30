@@ -95,8 +95,8 @@ namespace Raven.Client.Document.SessionOperations
         public void LogQuery()
         {
             if (log.IsDebugEnabled)
-			log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
-										  indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
+            log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
+                                          indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
             }
 
         public IDisposable EnterQueryContext()
@@ -223,59 +223,59 @@ namespace Raven.Client.Document.SessionOperations
                 }
             }
 
-	        return false;
-	    }
+            return false;
+        }
 
 
-		private T DeserializedResult<T>(RavenJObject result)
-		{
-			if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
-			{
-				var type = typeof(T);
-				if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
-				{
-					return result.Value<T>(projectionFields[0]);
-				}
-			}
+        private T DeserializedResult<T>(RavenJObject result)
+        {
+            if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
+            {
+                var type = typeof(T);
+                if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
+                {
+                    return result.Value<T>(projectionFields[0]);
+                }
+            }
 
-			var jsonSerializer = sessionOperations.Conventions.CreateSerializer();
-			var ravenJTokenReader = new RavenJTokenReader(result);
+            var jsonSerializer = sessionOperations.Conventions.CreateSerializer();
+            var ravenJTokenReader = new RavenJTokenReader(result);
 
-			var resultTypeString = result.Value<string>("$type");
-			if(string.IsNullOrEmpty(resultTypeString) )
-			{
-				return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
-			}
+            var resultTypeString = result.Value<string>("$type");
+            if(string.IsNullOrEmpty(resultTypeString) )
+            {
+                return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
+            }
 
-			var resultType = Type.GetType(resultTypeString, false);
-			if(resultType == null) // couldn't find the type, let us give it our best shot
-			{
-				return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
-			}
+            var resultType = Type.GetType(resultTypeString, false);
+            if(resultType == null) // couldn't find the type, let us give it our best shot
+            {
+                return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
+            }
 
-			return (T) jsonSerializer.Deserialize(ravenJTokenReader, resultType);
-		}
+            return (T) jsonSerializer.Deserialize(ravenJTokenReader, resultType);
+        }
 
-		public void ForceResult(QueryResult result)
-		{
-			currentQueryResults = result;
-			currentQueryResults.EnsureSnapshot();
-		}
+        public void ForceResult(QueryResult result)
+        {
+            currentQueryResults = result;
+            currentQueryResults.EnsureSnapshot();
+        }
 
-		public bool IsAcceptable(QueryResult result)
-		{
-			if (sessionOperations.AllowNonAuthoritativeInformation == false &&
-				result.NonAuthoritativeInformation)
-			{
-				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
-				{
-					sp.Stop();
-					throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.", sp.ElapsedMilliseconds));
-				}
+        public bool IsAcceptable(QueryResult result)
+        {
+            if (sessionOperations.AllowNonAuthoritativeInformation == false &&
+                result.NonAuthoritativeInformation)
+            {
+                if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
+                {
+                    sp.Stop();
+                    throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.", sp.ElapsedMilliseconds));
+                }
 
-				if (log.IsDebugEnabled)
-				log.Debug(
-						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                if (log.IsDebugEnabled)
+                log.Debug(
+                        "Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
                             indexName,
                             sessionOperations.StoreIdentifier,
@@ -291,20 +291,20 @@ namespace Raven.Client.Document.SessionOperations
                     throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
                 }
 
-				if (log.IsDebugEnabled)
-				log.Debug(
-						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                if (log.IsDebugEnabled)
+                log.Debug(
+                        "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
                             indexName,
                             sessionOperations.StoreIdentifier,
                             result.IndexEtag);
                 return false;
-			}
-			currentQueryResults = result;
-			currentQueryResults.EnsureSnapshot();
-			if (log.IsDebugEnabled)
-			log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
-											  result.TotalResults, result.IsStale ? "stale " : "");
+            }
+            currentQueryResults = result;
+            currentQueryResults.EnsureSnapshot();
+            if (log.IsDebugEnabled)
+            log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
+                                              result.TotalResults, result.IsStale ? "stale " : "");
             return true;
         }
     }

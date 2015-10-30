@@ -1,4 +1,4 @@
-﻿import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
@@ -53,11 +53,11 @@ class indexes extends viewModelBase {
             return groups;
         });
 
-		this.corruptedIndexes = ko.computed(() => {
-			var corrupted: index[] = [];
-			this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
+        this.corruptedIndexes = ko.computed(() => {
+            var corrupted: index[] = [];
+            this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
 
-			return corrupted.distinct();
+            return corrupted.distinct();
         });
 
         this.lockModeCommon = ko.computed(() => {
@@ -434,9 +434,9 @@ class indexes extends viewModelBase {
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 
-	forceSideBySide(idx: index) {
-		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
-	}
+    forceSideBySide(idx: index) {
+        new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+    }
 
     tryRecoverCorruptedIndexes() {
         new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();

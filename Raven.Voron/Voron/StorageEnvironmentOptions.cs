@@ -19,49 +19,18 @@ using Voron.Util;
 
 namespace Voron
 {
-	public abstract class StorageEnvironmentOptions : IDisposable
-	{
-		public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
+    public abstract class StorageEnvironmentOptions : IDisposable
+    {
+        public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
 
-		public void InvokeRecoveryError(object sender, string message, Exception e)
-		{
-			var handler = OnRecoveryError;
-			if (handler == null)
-			{
-				throw new InvalidDataException(message + Environment.NewLine +
-					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.", e);
-			}
-
-			handler(this, new RecoveryErrorEventArgs(message, e));
-		}
-
-		public Action<long> OnScratchBufferSizeChanged = delegate { };
-
-		public long? InitialFileSize { get; set; }
-
-		public long MaxLogFileSize
-		{
-			get { return _maxLogFileSize; }
-			set
-			{
-				if (value < _initialLogFileSize)
-					InitialLogFileSize = value;
-				_maxLogFileSize = value;
-			}
-		}
-
-		public long InitialLogFileSize
-		{
-			get { return _initialLogFileSize; }
-			set
-			{
-				if (value > MaxLogFileSize)
-					MaxLogFileSize = value;
-				_initialLogFileSize = value;
-			}
-		}
-
-		public long MaxScratchBufferSize { get; set; }
+        public void InvokeRecoveryError(object sender, string message, Exception e)
+        {
+            var handler = OnRecoveryError;
+            if (handler == null)
+            {
+                throw new InvalidDataException(message + Environment.NewLine +
+                     "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.", e);
+            }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
@@ -91,7 +60,7 @@ namespace Voron
                 _initialLogFileSize = value;
             }
         }
-        
+
         public long MaxScratchBufferSize { get; set; }
 
         public long MaxNumberOfPagesInMergedTransaction { get; set; }
@@ -225,112 +194,112 @@ namespace Voron
             }
 
 
-			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
-			{
-				var name = JournalName(journalNumber);
-				var path = Path.Combine(_journalPath, name);
-				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
-				{
-					if (RunningOnPosix)
-						return new PosixJournalWriter(path, journalSize);
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            {
+                var name = JournalName(journalNumber);
+                var path = Path.Combine(_journalPath, name);
+                var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
+                {
+                    if (RunningOnPosix)
+                        return new PosixJournalWriter(path, journalSize);
 
-					return new Win32FileJournalWriter(path, journalSize);
-				}));
+                    return new Win32FileJournalWriter(path, journalSize);
+                }));
 
-				if (result.Value.Disposed)
-				{
-					var newWriter = new Lazy<IJournalWriter>(() =>
-					{
-						if (RunningOnPosix)
-							return new PosixJournalWriter(path, journalSize);
+                if (result.Value.Disposed)
+                {
+                    var newWriter = new Lazy<IJournalWriter>(() =>
+                    {
+                        if (RunningOnPosix)
+                            return new PosixJournalWriter(path, journalSize);
 
-						return new Win32FileJournalWriter(path, journalSize);
-					});
-					if (_journals.TryUpdate(name, newWriter, result) == false)
-						throw new InvalidOperationException("Could not update journal pager");
-					result = newWriter;
-				}
+                        return new Win32FileJournalWriter(path, journalSize);
+                    });
+                    if (_journals.TryUpdate(name, newWriter, result) == false)
+                        throw new InvalidOperationException("Could not update journal pager");
+                    result = newWriter;
+                }
 
-				return result.Value;
-			}
+                return result.Value;
+            }
 
-			public override void Dispose()
-			{
-				if (Disposed)
-					return;
-				Disposed = true;
-				if (_dataPager.IsValueCreated)
-					_dataPager.Value.Dispose();
-				foreach (var journal in _journals)
-				{
-					if (journal.Value.IsValueCreated)
-						journal.Value.Value.Dispose();
-				}
-			}
+            public override void Dispose()
+            {
+                if (Disposed)
+                    return;
+                Disposed = true;
+                if (_dataPager.IsValueCreated)
+                    _dataPager.Value.Dispose();
+                foreach (var journal in _journals)
+                {
+                    if (journal.Value.IsValueCreated)
+                        journal.Value.Value.Dispose();
+                }
+            }
 
-			public override bool TryDeleteJournal(long number)
-			{
-				var name = JournalName(number);
+            public override bool TryDeleteJournal(long number)
+            {
+                var name = JournalName(number);
 
-				Lazy<IJournalWriter> lazy;
-				if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
-					lazy.Value.Dispose();
+                Lazy<IJournalWriter> lazy;
+                if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
+                    lazy.Value.Dispose();
 
-				var file = Path.Combine(_journalPath, name);
-				if (File.Exists(file) == false)
-					return false;
-				File.Delete(file);
-				return true;
-			}
+                var file = Path.Combine(_journalPath, name);
+                if (File.Exists(file) == false)
+                    return false;
+                File.Delete(file);
+                return true;
+            }
 
-			public unsafe override bool ReadHeader(string filename, FileHeader* header)
-			{
-				var path = Path.Combine(_basePath, filename);
-				if (File.Exists(path) == false)
-				{
-					return false;
-				}
-				if (RunningOnPosix)
-					return PosixHelper.TryReadFileHeader(header, path);
-				return Win32Helper.TryReadFileHeader(header, path);
-			}
-
-
-			public override unsafe void WriteHeader(string filename, FileHeader* header)
-			{
-				var path = Path.Combine(_basePath, filename);
-				if (RunningOnPosix)
-					PosixHelper.WriteFileHeader(header, path);
-				else
-					Win32Helper.WriteFileHeader(header, path);
-			}
+            public unsafe override bool ReadHeader(string filename, FileHeader* header)
+            {
+                var path = Path.Combine(_basePath, filename);
+                if (File.Exists(path) == false)
+                {
+                    return false;
+                }
+                if (RunningOnPosix)
+                    return PosixHelper.TryReadFileHeader(header, path);
+                return Win32Helper.TryReadFileHeader(header, path);
+            }
 
 
-			public override IVirtualPager CreateScratchPager(string name)
-			{
-				var scratchFile = Path.Combine(_tempPath, name);
-				if (File.Exists(scratchFile))
-					File.Delete(scratchFile);
+            public override unsafe void WriteHeader(string filename, FileHeader* header)
+            {
+                var path = Path.Combine(_basePath, filename);
+                if (RunningOnPosix)
+                    PosixHelper.WriteFileHeader(header, path);
+                else
+                    Win32Helper.WriteFileHeader(header, path);
+            }
 
-				if (RunningOnPosix)
-				{
-					return new PosixMemoryMapPager(scratchFile, InitialFileSize)
-					{
-						DeleteOnClose = true
-					};
-				}
-				return new Win32MemoryMapPager(scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
-			}
 
-			public override IVirtualPager OpenJournalPager(long journalNumber)
-			{
-				var name = JournalName(journalNumber);
-				var path = Path.Combine(_journalPath, name);
-				if (File.Exists(path) == false)
-					throw new InvalidOperationException("No such journal " + path);
-				if (RunningOnPosix)
-					return new PosixMemoryMapPager(path);
-			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
+            public override IVirtualPager CreateScratchPager(string name)
+            {
+                var scratchFile = Path.Combine(_tempPath, name);
+                if (File.Exists(scratchFile))
+                    File.Delete(scratchFile);
+
+                if (RunningOnPosix)
+                {
+                    return new PosixMemoryMapPager(scratchFile, InitialFileSize)
+                    {
+                        DeleteOnClose = true
+                    };
+                }
+                return new Win32MemoryMapPager(scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+            }
+
+            public override IVirtualPager OpenJournalPager(long journalNumber)
+            {
+                var name = JournalName(journalNumber);
+                var path = Path.Combine(_journalPath, name);
+                if (File.Exists(path) == false)
+                    throw new InvalidOperationException("No such journal " + path);
+                if (RunningOnPosix)
+                    return new PosixMemoryMapPager(path);
+                var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
                     options:Win32NativeFileAttributes.SequentialScan);
                 win32MemoryMapPager.TryPrefetchingWholeFile();
                 return win32MemoryMapPager;
@@ -450,15 +419,15 @@ namespace Voron
                 return new Win32MemoryMapPager(filename);
             }
 
-			public override IVirtualPager OpenJournalPager(long journalNumber)
-			{
-				var name = JournalName(journalNumber);
-				IJournalWriter value;
-				if (_logs.TryGetValue(name, out value))
-					return value.CreatePager();
-				throw new InvalidOperationException("No such journal " + journalNumber);
-			}
-		}
+            public override IVirtualPager OpenJournalPager(long journalNumber)
+            {
+                var name = JournalName(journalNumber);
+                IJournalWriter value;
+                if (_logs.TryGetValue(name, out value))
+                    return value.CreatePager();
+                throw new InvalidOperationException("No such journal " + journalNumber);
+            }
+        }
 
         public static string JournalName(long number)
         {

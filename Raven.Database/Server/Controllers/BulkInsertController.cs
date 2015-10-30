@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
             {
                 OverwriteExisting = GetOverwriteExisting(),
                 CheckReferencesInIndexes = GetCheckReferencesInIndexes(),
-				SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged(),
+                SkipOverwriteIfUnchanged = GetSkipOverwriteIfUnchanged(),
                 Format = GetFormat(),
                 Compression = GetCompression(),
             };
@@ -209,58 +209,58 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
-		{
-			using (var reader = new BinaryReader(partialStream))
-			{
-				switch (options.Format)
-				{
-					case BulkInsertFormat.Bson:
-						{
+        private IEnumerable<JsonDocument> YieldDocumentsInBatch(CancellationTimeout timeout, Stream partialStream, BulkInsertOptions options, Action<int> increaseDocumentsCount)
+        {
+            using (var reader = new BinaryReader(partialStream))
+            {
+                switch (options.Format)
+                {
+                    case BulkInsertFormat.Bson:
+                        {
                 var count = reader.ReadInt32();
 
-							return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
-						}
-					case BulkInsertFormat.Json:
-						{
-							var count = reader.ReadInt32();
+                            return YieldBsonDocumentsInBatch(timeout, reader, count, increaseDocumentsCount).ToArray();
+                        }
+                    case BulkInsertFormat.Json:
+                        {
+                            var count = reader.ReadInt32();
 
-							return YieldJsonDocumentsInBatch(timeout, partialStream, count, increaseDocumentsCount).ToArray();
-						}
-					default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
-				}
-			}
-		}
+                            return YieldJsonDocumentsInBatch(timeout, partialStream, count, increaseDocumentsCount).ToArray();
+                        }
+                    default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
+                }
+            }
+        }
 
-		private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
-		{
-			using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
-			{
+        private IEnumerable<JsonDocument> YieldBsonDocumentsInBatch(CancellationTimeout timeout, BinaryReader reader, int count, Action<int> increaseDocumentsCount)
+        {
+            using (var jsonReader = new BsonReader(reader) { SupportMultipleContent = true, DateTimeKindHandling = DateTimeKind.Unspecified })
+            {
                 for (var i = 0; i < count; i++)
                 {
                     timeout.Delay();
 
-					while (jsonReader.Read())
+                    while (jsonReader.Read())
                                                                  {
-						if (jsonReader.TokenType == JsonToken.StartObject)
-							break;
-					}
+                        if (jsonReader.TokenType == JsonToken.StartObject)
+                            break;
+                    }
 
-					if (jsonReader.TokenType != JsonToken.StartObject)
-						throw new InvalidOperationException("Could not get document");
+                    if (jsonReader.TokenType != JsonToken.StartObject)
+                        throw new InvalidOperationException("Could not get document");
 
-					var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+                    var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 
-					var jsonDocument = PrepareJsonDocument(doc);
-					if (jsonDocument == null)
-						continue;
+                    var jsonDocument = PrepareJsonDocument(doc);
+                    if (jsonDocument == null)
+                        continue;
 
-					yield return jsonDocument;
-				}
+                    yield return jsonDocument;
+                }
 
-				increaseDocumentsCount(count);
-			}
-		}
+                increaseDocumentsCount(count);
+            }
+        }
 
         private IEnumerable<JsonDocument> YieldJsonDocumentsInBatch(CancellationTimeout timeout, Stream stream, int count, Action<int> increaseDocumentsCount)
         {
@@ -282,44 +282,44 @@ namespace Raven.Database.Server.Controllers
                     var doc = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 
                     var jsonDocument = PrepareJsonDocument(doc);
-	                if (jsonDocument == null)
-		                continue;
+                    if (jsonDocument == null)
+                        continue;
 
-	                yield return jsonDocument;
+                    yield return jsonDocument;
                 }
 
                 increaseDocumentsCount(count);
             }
         }
 
-		private static JsonDocument PrepareJsonDocument(RavenJObject doc)
-		{
-			var metadata = doc.Value<RavenJObject>("@metadata");
-			if (metadata == null)
-				throw new InvalidOperationException("Could not find metadata for document");
+        private static JsonDocument PrepareJsonDocument(RavenJObject doc)
+        {
+            var metadata = doc.Value<RavenJObject>("@metadata");
+            if (metadata == null)
+                throw new InvalidOperationException("Could not find metadata for document");
 
-			var id = metadata.Value<string>("@id");
-			if (string.IsNullOrEmpty(id))
-				throw new InvalidOperationException("Could not get id from metadata");
+            var id = metadata.Value<string>("@id");
+            if (string.IsNullOrEmpty(id))
+                throw new InvalidOperationException("Could not get id from metadata");
 
-			if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
-				return null; //its just a token document, should not get written into the database
-							 //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
-							 //during long pauses in the bulk insert operation.
-							 // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
-							 //continuation token and lots of document skips
+            if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.InvariantCultureIgnoreCase))
+                return null; //its just a token document, should not get written into the database
+                             //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
+                             //during long pauses in the bulk insert operation.
+                             // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
+                             //continuation token and lots of document skips
 
-			doc.Remove("@metadata");
+            doc.Remove("@metadata");
 
-			return new JsonDocument
-			{
-				Key = id,
-				DataAsJson = doc,
-				Metadata = metadata
-			};
-		}
+            return new JsonDocument
+            {
+                Key = id,
+                DataAsJson = doc,
+                Metadata = metadata
+            };
+        }
 
-		public class BulkInsertStatus : IOperationState
+        public class BulkInsertStatus : IOperationState
         {
             public int Documents { get; set; }
             public bool Completed { get; set; }

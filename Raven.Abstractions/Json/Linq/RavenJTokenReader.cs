@@ -349,110 +349,110 @@ namespace Raven.Json.Linq
         }
 #endif
 
-		/// <summary>
-		/// Reads the next JSON token from the stream.
-		/// </summary>
-		/// <returns>
-		/// true if the next token was read successfully; false if there are no more tokens to read.
-		/// </returns>
-		public override bool Read()
-		{
-			if (CurrentState == State.Start)
-				enumerator = ReadRavenJToken(_root).GetEnumerator();
+        /// <summary>
+        /// Reads the next JSON token from the stream.
+        /// </summary>
+        /// <returns>
+        /// true if the next token was read successfully; false if there are no more tokens to read.
+        /// </returns>
+        public override bool Read()
+        {
+            if (CurrentState == State.Start)
+                enumerator = ReadRavenJToken(_root).GetEnumerator();
 
-			if (!enumerator.MoveNext())
-				return false;
+            if (!enumerator.MoveNext())
+                return false;
 
-			SetToken(enumerator.Current.TokenType, enumerator.Current.Value);
-			return true;
-		}
+            SetToken(enumerator.Current.TokenType, enumerator.Current.Value);
+            return true;
+        }
 
-		private static IEnumerable<ReadState> ReadRavenJToken(RavenJToken token)
-		{
-			if (token is RavenJValue)
-			{
-				yield return new ReadState(GetJsonTokenType(token), ((RavenJValue)token).Value);
-			}
-			else if (token is RavenJArray)
-			{
-				yield return new ReadState(JsonToken.StartArray);
-				if (((RavenJArray)token).Length > 0) // to prevent object creation if inner array is null
-				{
-					foreach (var item in ((RavenJArray)token))
-						foreach (var i in ReadRavenJToken(item))
-							yield return i;
-				}
-				yield return new ReadState(JsonToken.EndArray);
-			}
-			else if (token is RavenJObject)
-			{
-				yield return new ReadState(JsonToken.StartObject);
+        private static IEnumerable<ReadState> ReadRavenJToken(RavenJToken token)
+        {
+            if (token is RavenJValue)
+            {
+                yield return new ReadState(GetJsonTokenType(token), ((RavenJValue)token).Value);
+            }
+            else if (token is RavenJArray)
+            {
+                yield return new ReadState(JsonToken.StartArray);
+                if (((RavenJArray)token).Length > 0) // to prevent object creation if inner array is null
+                {
+                    foreach (var item in ((RavenJArray)token))
+                        foreach (var i in ReadRavenJToken(item))
+                            yield return i;
+                }
+                yield return new ReadState(JsonToken.EndArray);
+            }
+            else if (token is RavenJObject)
+            {
+                yield return new ReadState(JsonToken.StartObject);
 
-				foreach (var prop in ((RavenJObject)token))
-				{
-					yield return new ReadState(JsonToken.PropertyName, prop.Key);
-					foreach (var item in ReadRavenJToken(prop.Value))
-						yield return item;
-				}
+                foreach (var prop in ((RavenJObject)token))
+                {
+                    yield return new ReadState(JsonToken.PropertyName, prop.Key);
+                    foreach (var item in ReadRavenJToken(prop.Value))
+                        yield return item;
+                }
 
-				yield return new ReadState(JsonToken.EndObject);
-			}
-		}
+                yield return new ReadState(JsonToken.EndObject);
+            }
+        }
 
-		private static JsonToken GetJsonTokenType(RavenJToken token)
-		{
-			switch (token.Type)
-			{
-				case JTokenType.Integer:
-					return JsonToken.Integer;
-				case JTokenType.Float:
-					return JsonToken.Float;
-				case JTokenType.String:
-					return JsonToken.String;
-				case JTokenType.Boolean:
-					return JsonToken.Boolean;
-				case JTokenType.Null:
-					return JsonToken.Null;
-				case JTokenType.Undefined:
-					return JsonToken.Undefined;
-				case JTokenType.Date:
-					return JsonToken.Date;
-				case JTokenType.Raw:
-					return JsonToken.Raw;
-				case JTokenType.Bytes:
-					return JsonToken.Bytes;
-				case JTokenType.Guid:
-					return JsonToken.String;
-				case JTokenType.TimeSpan:
-					return JsonToken.String;
-				case JTokenType.Uri:
-					return JsonToken.String;
-				default:
-					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
-			}
-		}
+        private static JsonToken GetJsonTokenType(RavenJToken token)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Integer:
+                    return JsonToken.Integer;
+                case JTokenType.Float:
+                    return JsonToken.Float;
+                case JTokenType.String:
+                    return JsonToken.String;
+                case JTokenType.Boolean:
+                    return JsonToken.Boolean;
+                case JTokenType.Null:
+                    return JsonToken.Null;
+                case JTokenType.Undefined:
+                    return JsonToken.Undefined;
+                case JTokenType.Date:
+                    return JsonToken.Date;
+                case JTokenType.Raw:
+                    return JsonToken.Raw;
+                case JTokenType.Bytes:
+                    return JsonToken.Bytes;
+                case JTokenType.Guid:
+                    return JsonToken.String;
+                case JTokenType.TimeSpan:
+                    return JsonToken.String;
+                case JTokenType.Uri:
+                    return JsonToken.String;
+                default:
+                    throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
+            }
+        }
 
-		private static JsonReaderException CreateReaderException(JsonReader reader, string message)
-		{
-			return new JsonReaderException(message);
-		}
+        private static JsonReaderException CreateReaderException(JsonReader reader, string message)
+        {
+            return new JsonReaderException(message);
+        }
 
-		internal static bool IsPrimitiveToken(JsonToken token)
-		{
-			switch (token)
-			{
-				case JsonToken.Integer:
-				case JsonToken.Float:
-				case JsonToken.String:
-				case JsonToken.Boolean:
-				case JsonToken.Undefined:
-				case JsonToken.Null:
-				case JsonToken.Date:
-				case JsonToken.Bytes:
-					return true;
-				default:
-					return false;
-			}
-		}
-	}
+        internal static bool IsPrimitiveToken(JsonToken token)
+        {
+            switch (token)
+            {
+                case JsonToken.Integer:
+                case JsonToken.Float:
+                case JsonToken.String:
+                case JsonToken.Boolean:
+                case JsonToken.Undefined:
+                case JsonToken.Null:
+                case JsonToken.Date:
+                case JsonToken.Bytes:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
 }

@@ -29,13 +29,13 @@ namespace Raven.Tests.Patching
             var manifestResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(name);
             var code = new StreamReader(manifestResourceStream).ReadToEnd();
 
-			var jsonPatcher = new ScriptedJsonPatcher();
-			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
-			{
-				scope.CustomFunctions = new RavenJObject
-				{
-					{"Functions", code}
-				};
+            var jsonPatcher = new ScriptedJsonPatcher();
+            using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+            {
+                scope.CustomFunctions = new RavenJObject
+                {
+                    {"Functions", code}
+                };
 
                 jsonPatcher.Apply(scope, document, new ScriptedPatchRequest
                 {
@@ -61,14 +61,14 @@ namespace Raven.Tests.Patching
             var manifestResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(name);
             var code = new StreamReader(manifestResourceStream).ReadToEnd();
 
-			var jsonPatcher = new ScriptedJsonPatcher();
-			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
-			{
-				scope.CustomFunctions =
-				new RavenJObject
-				{
-					{"Functions", code}
-				};
+            var jsonPatcher = new ScriptedJsonPatcher();
+            using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+            {
+                scope.CustomFunctions =
+                new RavenJObject
+                {
+                    {"Functions", code}
+                };
 
                 jsonPatcher.Apply(scope, document, new ScriptedPatchRequest
                 {

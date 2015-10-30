@@ -1,4 +1,4 @@
-﻿import stopIndexingCommand = require("commands/database/index/stopIndexingCommand");
+import stopIndexingCommand = require("commands/database/index/stopIndexingCommand");
 import startIndexingCommand = require("commands/database/index/startIndexingCommand");
 import getIndexingStatusCommand = require("commands/database/index/getIndexingStatusCommand");
 import viewModelBase = require("viewmodels/viewModelBase");

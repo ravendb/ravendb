@@ -29,16 +29,16 @@ namespace Raven.Database.Util
             get { return databaseTargets.Count; }
         }
 
-		public override void Write(LogEventInfo logEvent)
-		{
-			if (!logEvent.LoggerName.StartsWith("Raven."))
-				return;
-			string databaseName = LogContext.DatabaseName;
-			if (string.IsNullOrWhiteSpace(databaseName))
-				databaseName = Constants.SystemDatabase;
-			BoundedMemoryTarget boundedMemoryTarget = databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget());
-			boundedMemoryTarget.Write(logEvent);
-		}
+        public override void Write(LogEventInfo logEvent)
+        {
+            if (!logEvent.LoggerName.StartsWith("Raven."))
+                return;
+            string databaseName = LogContext.DatabaseName;
+            if (string.IsNullOrWhiteSpace(databaseName))
+                databaseName = Constants.SystemDatabase;
+            BoundedMemoryTarget boundedMemoryTarget = databaseTargets.GetOrAdd(databaseName, _ => new BoundedMemoryTarget());
+            boundedMemoryTarget.Write(logEvent);
+        }
 
         public void Clear(string databaseName)
         {

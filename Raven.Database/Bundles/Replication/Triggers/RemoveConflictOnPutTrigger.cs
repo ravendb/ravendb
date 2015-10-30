@@ -13,22 +13,22 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Triggers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractPutTrigger))]
-	public class RemoveConflictOnPutTrigger : AbstractPutTrigger
-	{
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				if (metadata.Remove(Constants.RavenReplicationConflictSkipResolution))
-				{
-					if (key.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase) == -1)
-					{
-						metadata["@Http-Status-Code"] = 409;
-						metadata["@Http-Status-Description"] = "Conflict";
-					}
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    public class RemoveConflictOnPutTrigger : AbstractPutTrigger
+    {
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+        {
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
+                if (metadata.Remove(Constants.RavenReplicationConflictSkipResolution))
+                {
+                    if (key.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase) == -1)
+                    {
+                        metadata["@Http-Status-Code"] = 409;
+                        metadata["@Http-Status-Description"] = "Conflict";
+                    }
 
                     return;
                 }

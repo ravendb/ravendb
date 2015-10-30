@@ -14,9 +14,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class ConfigController : BaseFileSystemApiController
-	{
-		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
+    public class ConfigController : BaseFileSystemApiController
+    {
+        private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/config")]
@@ -88,16 +88,16 @@ namespace Raven.Database.FileSystem.Controllers
 
         [HttpPut]
         [RavenRoute("fs/{fileSystemName}/config")]
-		public async Task<HttpResponseMessage> Put(string name)
-		{
-			var json = await ReadJsonAsync().ConfigureAwait(false);
+        public async Task<HttpResponseMessage> Put(string name)
+        {
+            var json = await ReadJsonAsync().ConfigureAwait(false);
 
             Storage.Batch(accessor => accessor.SetConfig(name, json));
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
-			if (Log.IsDebugEnabled)
-				Log.Debug("Config '{0}' was inserted", name);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Config '{0}' was inserted", name);
 
             return GetMessageWithObject(json, HttpStatusCode.Created)
                 .WithNoCache();
@@ -111,8 +111,8 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
-			if (Log.IsDebugEnabled)
-				Log.Debug("Config '{0}' was deleted", name);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Config '{0}' was deleted", name);
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }

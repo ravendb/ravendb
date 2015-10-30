@@ -19,17 +19,17 @@ namespace Raven.Tests.Issues
 
             var ravenDbServer = GetServer();
 
-			ravenDbServer.SystemDatabase.Indexes.PutIndex(IndexName,
-				new IndexDefinition
-				{
-					Map =
-						@"
-							from doc in docs
-							let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
-							where expiry != null
-							select new { Expiry = expiry }
-						"
-				});
+            ravenDbServer.SystemDatabase.Indexes.PutIndex(IndexName,
+                new IndexDefinition
+                {
+                    Map =
+                        @"
+                            from doc in docs
+                            let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
+                            where expiry != null
+                            select new { Expiry = expiry }
+                        "
+                });
 
             var currentTime = SystemTime.UtcNow;
             var nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);

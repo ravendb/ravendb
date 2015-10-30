@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="LargeFixedSizeTrees.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -273,7 +273,7 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var random = new Random(seed);
+            var random = new Random(seed);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
             {
@@ -303,9 +303,9 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.Root.FixedTreeFor("test", valSize: 48);
-					if (fst.NumberOfEntries == 0)
-						break;
-					for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status.Set(j, false);
                     }
@@ -357,8 +357,8 @@ namespace Voron.Tests.FixedSize
                 tx.Commit();
             }
 
-			var random = new Random(seed);
-			for (var i = 0; i < count/100; i++)
+            var random = new Random(seed);
+            for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
                 var end = random.Next(start, count);
@@ -366,32 +366,32 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.Root.FixedTreeFor("test", valSize: 48);
-					if (fst.NumberOfEntries == 0)
-						break;
-					for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
                     fst.DeleteRange(start, end);
 
                     tx.Commit();
-				}
-			}
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                }
+            }
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
-	                try
-	                {
-						Assert.Equal(status[i], fst.Contains(i));
-					}
-					catch (Exception)
-	                {
-		                Console.WriteLine(i + " is part of the tree? " + fst.Contains(i));
-						fst.DebugRenderAndShow();
-		                throw;
-	                }
+                    try
+                    {
+                        Assert.Equal(status[i], fst.Contains(i));
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine(i + " is part of the tree? " + fst.Contains(i));
+                        fst.DebugRenderAndShow();
+                        throw;
+                    }
                 }
             }
         }
@@ -427,9 +427,9 @@ namespace Voron.Tests.FixedSize
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     var fst = tx.Root.FixedTreeFor("test", valSize: 48);
-	                if (fst.NumberOfEntries == 0)
-		                break;
-	                for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
@@ -460,14 +460,14 @@ namespace Voron.Tests.FixedSize
             var bytes = new byte[48];
             var slice = new Slice(bytes);
 
-	        int lastId = -1;
-	        using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            int lastId = -1;
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 var fst = tx.Root.FixedTreeFor("test", valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i, slice);
-	                lastId = i;
+                    lastId = i;
                 }
 
                 tx.Commit();
@@ -476,11 +476,11 @@ namespace Voron.Tests.FixedSize
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
                 var fst = tx.Root.FixedTreeFor("test", valSize: 48);
-	            using (var it = fst.Iterate())
-	            {
-		            Assert.True(it.SeekToLast(), "Failed to seek to last");
-		            Assert.Equal(lastId, it.CurrentKey);
-	            }
+                using (var it = fst.Iterate())
+                {
+                    Assert.True(it.SeekToLast(), "Failed to seek to last");
+                    Assert.Equal(lastId, it.CurrentKey);
+                }
             }
         }
     }

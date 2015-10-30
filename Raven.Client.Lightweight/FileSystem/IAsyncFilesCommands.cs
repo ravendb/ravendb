@@ -64,8 +64,8 @@ namespace Raven.Client.FileSystem
 
         Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName, Etag etag = null);
-	    Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
-	    
+        Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
+        
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
@@ -171,6 +171,6 @@ namespace Raven.Client.FileSystem
 
         Task CleanUpAsync();
         Task RetryRenamingAsync();
-	    Task RetryCopyingAsync();
+        Task RetryCopyingAsync();
     }
 }

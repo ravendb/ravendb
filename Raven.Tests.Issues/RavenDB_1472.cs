@@ -81,13 +81,13 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-				using (var session = store.OpenSession())
-				{
-					var cats = session.Query<Cat>()
-						.Customize(q => q.WaitForNonStaleResultsAsOfLastWrite())
-						.OrderBy(x=>x.Id)
-						.Where(cat => cat.Id.In("cats/1", "cats/2") || cat.Id.In("cats/2", "cats/3"))
-						.ToList();
+                using (var session = store.OpenSession())
+                {
+                    var cats = session.Query<Cat>()
+                        .Customize(q => q.WaitForNonStaleResultsAsOfLastWrite())
+                        .OrderBy(x=>x.Id)
+                        .Where(cat => cat.Id.In("cats/1", "cats/2") || cat.Id.In("cats/2", "cats/3"))
+                        .ToList();
 
                     Assert.Equal(3, cats.Count);
                     Assert.Equal(cats.Select(row => row.Id), new[] { "cats/1", "cats/2", "cats/3" });

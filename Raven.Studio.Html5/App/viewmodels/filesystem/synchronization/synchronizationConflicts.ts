@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");

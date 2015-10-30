@@ -25,121 +25,121 @@ using Raven.Storage.Esent.StorageActions;
 
 namespace Raven.Database.Storage.Esent.StorageActions
 {
-	public partial class DocumentStorageActions : IDocumentStorageActions
-	{
-		public long GetDocumentsCount()
-		{
-			if (Api.TryMoveFirst(session, Details))
-				return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["document_count"]).Value;
-			return 0;
-		}
+    public partial class DocumentStorageActions : IDocumentStorageActions
+    {
+        public long GetDocumentsCount()
+        {
+            if (Api.TryMoveFirst(session, Details))
+                return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["document_count"]).Value;
+            return 0;
+        }
 
-		public JsonDocument DocumentByKey(string key)
-		{
-			return DocumentByKeyInternal(key, (metadata, createDocument) =>
-			{
-				System.Diagnostics.Debug.Assert(metadata.Etag != null);
-				return new JsonDocument
-				{
-					DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),
-					Etag = metadata.Etag,
-					Key = metadata.Key,
-					LastModified = metadata.LastModified,
-					Metadata = metadata.Metadata,
-					NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
-				};
-			});
-		}
+        public JsonDocument DocumentByKey(string key)
+        {
+            return DocumentByKeyInternal(key, (metadata, createDocument) =>
+            {
+                System.Diagnostics.Debug.Assert(metadata.Etag != null);
+                return new JsonDocument
+                {
+                    DataAsJson = createDocument(metadata.Key, metadata.Etag, metadata.Metadata),
+                    Etag = metadata.Etag,
+                    Key = metadata.Key,
+                    LastModified = metadata.LastModified,
+                    Metadata = metadata.Metadata,
+                    NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
+                };
+            });
+        }
 
-		public Stream RawDocumentByKey(string key)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Document with key '{0}' was not found", key);
-				return null;
-			}
+        public Stream RawDocumentByKey(string key)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_key");
+            Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found", key);
+                return null;
+            }
 
-			return new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
-		}
+            return new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
+        }
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key)
-		{
-			return DocumentByKeyInternal(key, (metadata, func) => metadata);
-		}
+        public JsonDocumentMetadata DocumentMetadataByKey(string key)
+        {
+            return DocumentByKeyInternal(key, (metadata, func) => metadata);
+        }
 
-		private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
-			where T : class
-		{
+        private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
+            where T : class
+        {
 
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Document with key '{0}' was not found", key);
-				return null;
-			}
-			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-			if (logger.IsDebugEnabled)
-				logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
-			var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
-			return createResult(new JsonDocumentMetadata()
-			{
-				Etag = existingEtag,
-				LastModified = DateTime.FromBinary(lastModifiedInt64),
-				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
-				Metadata = ReadDocumentMetadata(key, existingEtag)
-			}, ReadDocumentData);
-		}
+            Api.JetSetCurrentIndex(session, Documents, "by_key");
+            Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found", key);
+                return null;
+            }
+            var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+            if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
+            var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
+            return createResult(new JsonDocumentMetadata()
+            {
+                Etag = existingEtag,
+                LastModified = DateTime.FromBinary(lastModifiedInt64),
+                Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+                Metadata = ReadDocumentMetadata(key, existingEtag)
+            }, ReadDocumentData);
+        }
 
-		private RavenJObject ReadDocumentMetadata(string key, Etag existingEtag)
-		{
-			try
-			{
-				var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-				if (existingCachedDocument != null)
-					return existingCachedDocument.Metadata;
+        private RavenJObject ReadDocumentMetadata(string key, Etag existingEtag)
+        {
+            try
+            {
+                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+                if (existingCachedDocument != null)
+                    return existingCachedDocument.Metadata;
 
-				return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-			}
-			catch (Exception e)
-			{
-				throw new InvalidDataException("Failed to de-serialize metadata of document " + key, e);
-			}
-		}
+                return Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataException("Failed to de-serialize metadata of document " + key, e);
+            }
+        }
 
-		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
-		{
-		    try
-		    {
-		        var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-		        if (existingCachedDocument != null)
-		            return existingCachedDocument.Document;
-
-
-		        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-		        {
-
-		            var size = stream.Length;
-
-		            using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-		            {
-		                var data = columnStream.ToJObject();
+        private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
+        {
+            try
+            {
+                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+                if (existingCachedDocument != null)
+                    return existingCachedDocument.Document;
 
 
-		                cacher.SetCachedDocument(key, existingEtag, data, metadata, (int) size);
+                using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+                {
 
-		                return data;
-		            }
-		        }
-		    }
-			catch (Exception e)
-			{
+                    var size = stream.Length;
 
-			    InvalidDataException invalidDataException = null;
+                    using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+                    {
+                        var data = columnStream.ToJObject();
+
+
+                        cacher.SetCachedDocument(key, existingEtag, data, metadata, (int) size);
+
+                        return data;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+
+                InvalidDataException invalidDataException = null;
                 try
                 {
                     using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
@@ -376,256 +376,256 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 {
                     stat.System.Update(size, key);
-	            }
+                }
 
 
-		        var entityName = metadata.Value<string>(Constants.RavenEntityName);
-	            if (string.IsNullOrEmpty(entityName))
-	            {
-					stat.NoCollection.Update(size, key);
-	            }
-	            else
-	            {
-					stat.IncrementCollection(entityName, size, key);
-	            }
+                var entityName = metadata.Value<string>(Constants.RavenEntityName);
+                if (string.IsNullOrEmpty(entityName))
+                {
+                    stat.NoCollection.Update(size, key);
+                }
+                else
+                {
+                    stat.IncrementCollection(entityName, size, key);
+                }
 
-	            if (metadata.ContainsKey("Raven-Delete-Marker"))
-	                stat.Tombstones++;
-	        }
-	        stat.TimeToGenerate = sp.Elapsed;
-	       
-	        return stat;
-	    }
+                if (metadata.ContainsKey("Raven-Delete-Marker"))
+                    stat.Tombstones++;
+            }
+            stat.TimeToGenerate = sp.Elapsed;
+           
+            return stat;
+        }
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
-		{
-			if (take <= 0)
-				yield break;
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, skipAfter ?? idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
-				yield break;
+        public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
+        {
+            if (take <= 0)
+                yield break;
+            Api.JetSetCurrentIndex(session, Documents, "by_key");
+            Api.MakeKey(session, Documents, skipAfter ?? idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
+                yield break;
 
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-			if (
-				Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
-				false)
-				yield break;
+            Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+            if (
+                Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
+                false)
+                yield break;
 
-		    if (skipAfter != null && TryMoveTableRecords(Documents, 1, backward: false))
-			    yield break;
+            if (skipAfter != null && TryMoveTableRecords(Documents, 1, backward: false))
+                yield break;
 
-			if (TryMoveTableRecords(Documents, start, backward: false))
-				yield break;
-			do
-			{
-				var keyFromDb = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				if (keyFromDb.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
-					yield break;
+            if (TryMoveTableRecords(Documents, start, backward: false))
+                yield break;
+            do
+            {
+                var keyFromDb = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+                if (keyFromDb.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                    yield break;
 
-				yield return ReadCurrentDocument();
-				take--;
-			} while (Api.TryMoveNext(session, Documents) && take > 0);
-		}
+                yield return ReadCurrentDocument();
+                take--;
+            } while (Api.TryMoveNext(session, Documents) && take > 0);
+        }
 
-		public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_etag");
-			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
-				return etag;
+        public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+                return etag;
 
-			if (TryMoveTableRecords(Documents, take, false))
-			{
-				//skipping failed, will try to move one by one
-				Api.JetSetCurrentIndex(session, Documents, "by_etag");
-				Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
-					return etag;
+            if (TryMoveTableRecords(Documents, take, false))
+            {
+                //skipping failed, will try to move one by one
+                Api.JetSetCurrentIndex(session, Documents, "by_etag");
+                Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+                    return etag;
 
-				bool needPrev;
-				do
-				{
-					needPrev = false;
-					if (take <= 0)
-						break;
-					take--;
-					cancellationToken.ThrowIfCancellationRequested();
+                bool needPrev;
+                do
+                {
+                    needPrev = false;
+                    if (take <= 0)
+                        break;
+                    take--;
+                    cancellationToken.ThrowIfCancellationRequested();
 
-					needPrev = true;
-				} while (Api.TryMoveNext(session, Documents));
+                    needPrev = true;
+                } while (Api.TryMoveNext(session, Documents));
 
-				if (needPrev)
-				{
-					if (Api.TryMovePrevious(session, Documents) == false)
-						return etag;
-				}
-			}
+                if (needPrev)
+                {
+                    if (Api.TryMovePrevious(session, Documents) == false)
+                        return etag;
+                }
+            }
 
-			return Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-		}
+            return Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+        }
 
-		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-			if (isUpdate == false)
-			{
-				preTouchEtag = null;
-				afterTouchEtag = null;
-				return;
-			}
+        public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_key");
+            Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+            if (isUpdate == false)
+            {
+                preTouchEtag = null;
+                afterTouchEtag = null;
+                return;
+            }
 
-			preTouchEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-			afterTouchEtag = newEtag;
-			try
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
-				using (var update = new Update(session, Documents, JET_prep.Replace))
-				{
-					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-					update.Save();
-				}
-			}
-			catch (EsentErrorException e)
-			{
-				switch (e.Error)
-				{
-					case JET_err.WriteConflict:
-					case JET_err.WriteConflictPrimaryIndex:
-						throw new ConcurrencyException("Cannot touch document " + key + " because it is already modified");
-					default:
-						throw;
-				}
-			}
+            preTouchEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+            Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+            afterTouchEtag = newEtag;
+            try
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
+                using (var update = new Update(session, Documents, JET_prep.Replace))
+                {
+                    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+                    update.Save();
+                }
+            }
+            catch (EsentErrorException e)
+            {
+                switch (e.Error)
+                {
+                    case JET_err.WriteConflict:
+                    case JET_err.WriteConflictPrimaryIndex:
+                        throw new ConcurrencyException("Cannot touch document " + key + " because it is already modified");
+                    default:
+                        throw;
+                }
+            }
 
-			etagTouches.Add(preTouchEtag, afterTouchEtag);
-		}
+            etagTouches.Add(preTouchEtag, afterTouchEtag);
+        }
 
-		public void IncrementDocumentCount(int value)
-		{
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], value);
-		}
+        public void IncrementDocumentCount(int value)
+        {
+            if (Api.TryMoveFirst(session, Details))
+                Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], value);
+        }
 
-		public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata)
-		{
-		    if (key == null) throw new ArgumentNullException("key");
-		    var byteCount = Encoding.Unicode.GetByteCount(key);
-		    if (byteCount >= 2048)
-				throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
+        public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+            var byteCount = Encoding.Unicode.GetByteCount(key);
+            if (byteCount >= 2048)
+                throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
 
-			try
-			{
-				Api.JetSetCurrentIndex(session, Documents, "by_key");
-				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+            try
+            {
+                Api.JetSetCurrentIndex(session, Documents, "by_key");
+                Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 
-				Etag existingEtag = null;
-				if (isUpdate)
-				{
-					existingEtag = EnsureDocumentEtagMatch(key, etag, "PUT");
-				}
-				else
-				{
-					if (etag != null && etag != Etag.Empty) // expected something to be there.
-						throw new ConcurrencyException("PUT attempted on document '" + key +
-													   "' using a non current etag (document deleted)")
-						{
-							ExpectedETag = etag
-						};
-					if (Api.TryMoveFirst(session, Details))
-						Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
-				}
-				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+                Etag existingEtag = null;
+                if (isUpdate)
+                {
+                    existingEtag = EnsureDocumentEtagMatch(key, etag, "PUT");
+                }
+                else
+                {
+                    if (etag != null && etag != Etag.Empty) // expected something to be there.
+                        throw new ConcurrencyException("PUT attempted on document '" + key +
+                                                       "' using a non current etag (document deleted)")
+                        {
+                            ExpectedETag = etag
+                        };
+                    if (Api.TryMoveFirst(session, Details))
+                        Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
+                }
+                Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 
-				DateTime savedAt;
-				try
-				{
-					using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
-					{
-						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-						using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
-						{
-							if (isUpdate)
-								columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
-							using (Stream stream = new BufferedStream(columnStream))
-							using (
-								var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current))
-								)
-							{
-								data.WriteTo(finalStream);
-								finalStream.Flush();
-							}
-						}
-						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
-									  newEtag.TransformToValueForEsentSorting());
+                DateTime savedAt;
+                try
+                {
+                    using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+                    {
+                        Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+                        using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+                        {
+                            if (isUpdate)
+                                columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
+                            using (Stream stream = new BufferedStream(columnStream))
+                            using (
+                                var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current))
+                                )
+                            {
+                                data.WriteTo(finalStream);
+                                finalStream.Flush();
+                            }
+                        }
+                        Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+                                      newEtag.TransformToValueForEsentSorting());
 
-						savedAt = SystemTime.UtcNow;
-						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+                        savedAt = SystemTime.UtcNow;
+                        Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-						using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-						{
-							if (isUpdate)
-								columnStream.SetLength(0);
-							using (Stream stream = new BufferedStream(columnStream))
-							{
-								metadata.WriteTo(stream);
-								stream.Flush();
-							}
-						}
-
-
-						update.Save();
-					}
-				}
-				catch (EsentErrorException e)
-				{
-					if (e.Error == JET_err.KeyDuplicate || e.Error == JET_err.WriteConflict)
-						throw new ConcurrencyException("PUT attempted on document '" + key + "' concurrently", e);
-					throw;
-				}
-
-				if (logger.IsDebugEnabled)
-					logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
-							   key, isUpdate);
-
-				cacher.RemoveCachedDocument(key, newEtag);
-				return new AddDocumentResult
-				{
-					Etag = newEtag,
-					PrevEtag = existingEtag,
-					SavedAt = savedAt,
-					Updated = isUpdate
-				};
-			}
-			catch (EsentKeyDuplicateException e)
-			{
-				throw new ConcurrencyException("Illegal duplicate key " + key, e);
-			}
-		}
+                        using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+                        {
+                            if (isUpdate)
+                                columnStream.SetLength(0);
+                            using (Stream stream = new BufferedStream(columnStream))
+                            {
+                                metadata.WriteTo(stream);
+                                stream.Flush();
+                            }
+                        }
 
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
-		{
-			var prep = JET_prep.Insert;
-			bool isUpdate = false;
+                        update.Save();
+                    }
+                }
+                catch (EsentErrorException e)
+                {
+                    if (e.Error == JET_err.KeyDuplicate || e.Error == JET_err.WriteConflict)
+                        throw new ConcurrencyException("PUT attempted on document '" + key + "' concurrently", e);
+                    throw;
+                }
 
-			Etag existingETag = null;
-			if (overwriteExisting)
-			{
-				Api.JetSetCurrentIndex(session, Documents, "by_key");
-				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-				if (isUpdate)
-				{
-					existingETag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-					prep = JET_prep.Replace;
-				}
-			}
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
+                               key, isUpdate);
+
+                cacher.RemoveCachedDocument(key, newEtag);
+                return new AddDocumentResult
+                {
+                    Etag = newEtag,
+                    PrevEtag = existingEtag,
+                    SavedAt = savedAt,
+                    Updated = isUpdate
+                };
+            }
+            catch (EsentKeyDuplicateException e)
+            {
+                throw new ConcurrencyException("Illegal duplicate key " + key, e);
+            }
+        }
+
+
+        public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
+        {
+            var prep = JET_prep.Insert;
+            bool isUpdate = false;
+
+            Etag existingETag = null;
+            if (overwriteExisting)
+            {
+                Api.JetSetCurrentIndex(session, Documents, "by_key");
+                Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+                if (isUpdate)
+                {
+                    existingETag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+                    prep = JET_prep.Replace;
+                }
+            }
 
             try 
             {
@@ -674,35 +674,35 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 throw new ConcurrencyException("Illegal duplicate key " + key, e);
             }
-		}
+        }
 
-		public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)
-		{
-			metadata = null;
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
-				deletedETag = null;
-				return false;
-			}
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
+        public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)
+        {
+            metadata = null;
+            Api.JetSetCurrentIndex(session, Documents, "by_key");
+            Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
+                deletedETag = null;
+                return false;
+            }
+            if (Api.TryMoveFirst(session, Details))
+                Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
 
-			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
+            var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 
-			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-			deletedETag = existingEtag;
+            metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+            deletedETag = existingEtag;
 
-			Api.JetDelete(session, Documents);
-			if (logger.IsDebugEnabled)
-				logger.Debug("Document with key '{0}' was deleted", key);
+            Api.JetDelete(session, Documents);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was deleted", key);
 
-			cacher.RemoveCachedDocument(key, existingEtag);
+            cacher.RemoveCachedDocument(key, existingEtag);
 
-			return true;
-		}
+            return true;
+        }
     }
 }

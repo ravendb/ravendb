@@ -12,10 +12,10 @@
     }
 }(function(ko, exports, undefined) {
     var disposeTopicSubscription, existingSubscribe,
-		subscriptions = {},
-		subId = 1;
+        subscriptions = {},
+        subId = 1;
 
-	exports.subscriptions = subscriptions;
+    exports.subscriptions = subscriptions;
 
     //create a global postbox that supports subscribing/publishing
     ko.subscribable.call(exports);
@@ -50,8 +50,8 @@
             }
 
             subscription = existingSubscribe.call(exports, action, target, topic);
-			subscription.subId = ++subId;
-			subscriptions[ subId ] = subscription;
+            subscription.subId = ++subId;
+            subscriptions[ subId ] = subscription;
 
             if (initializeWithLatestValue) {
                 current = exports.topicCache[topic];
@@ -61,32 +61,32 @@
                 }
             }
 
-			existingDispose = subscription.dispose;
-			subscription.dispose = function() {
-				delete subscriptions[subscription.subId];
-				existingDispose.call(subscription);
-			};
+            existingDispose = subscription.dispose;
+            subscription.dispose = function() {
+                delete subscriptions[subscription.subId];
+                existingDispose.call(subscription);
+            };
 
             return subscription;
         }
     };
 
-	//clean up all subscriptions and references
-	exports.reset = function() {
-		var subscription;
+    //clean up all subscriptions and references
+    exports.reset = function() {
+        var subscription;
 
-		for (var id in subscriptions) {
-			if (subscriptions.hasOwnProperty(id)) {
-				subscription = subscriptions[id];
+        for (var id in subscriptions) {
+            if (subscriptions.hasOwnProperty(id)) {
+                subscription = subscriptions[id];
 
-				if (subscription && typeof subscription.dispose === "function") {
-					subscription.dispose();
-				}
-			}
-		}
+                if (subscription && typeof subscription.dispose === "function") {
+                    subscription.dispose();
+                }
+            }
+        }
 
-		exports.topicCache = {};
-	};
+        exports.topicCache = {};
+    };
 
     //by default publish when the previous cached value does not equal the new value
     exports.defaultComparer = function(newValue, cacheItem) {
@@ -112,25 +112,25 @@
 
             //keep a reference to the subscription, so we can stop publishing
             subscription = this.subscribe(function(newValue) {
-				if (!equalityComparer.call(this, newValue, exports.topicCache[topic])) {
-					exports.publish(topic, newValue);
-				}
-			}, this);
+                if (!equalityComparer.call(this, newValue, exports.topicCache[topic])) {
+                    exports.publish(topic, newValue);
+                }
+            }, this);
 
-			//track the subscription in case of a reset
-			subscription.id = ++subId;
-			subscriptions[subId] = subscription;
+            //track the subscription in case of a reset
+            subscription.id = ++subId;
+            subscriptions[subId] = subscription;
 
-			//ensure that we cleanup pointers to subscription on dispose
-			existingDispose = subscription.dispose;
-			subscription.dispose = function() {
-				delete this.postboxSubs[topic].publishOn;
-				delete subscriptions[subscription.id];
+            //ensure that we cleanup pointers to subscription on dispose
+            existingDispose = subscription.dispose;
+            subscription.dispose = function() {
+                delete this.postboxSubs[topic].publishOn;
+                delete subscriptions[subscription.id];
 
-				existingDispose.call(subscription);
-			}.bind(this);
+                existingDispose.call(subscription);
+            }.bind(this);
 
-			this.postboxSubs[topic].publishOn = subscription;
+            this.postboxSubs[topic].publishOn = subscription;
 
             //do an initial publish
             if (!skipInitialPublish) {
@@ -179,16 +179,16 @@
                 self(transform ? transform.call(self, newValue) : newValue);
             };
 
-			////keep a reference to the subscription, so we can unsubscribe, if necessary
-			subscription = exports.subscribe(topic, callback);
-			this.postboxSubs[topic].subscribeTo = subscription;
+            ////keep a reference to the subscription, so we can unsubscribe, if necessary
+            subscription = exports.subscribe(topic, callback);
+            this.postboxSubs[topic].subscribeTo = subscription;
 
-			//ensure that we cleanup pointers to subscription on dispose
-			existingDispose = subscription.dispose;
-			subscription.dispose = function() {
-				delete this.postboxSubs[topic].subscribeTo;
-				existingDispose.call(subscription);
-			}.bind(this);
+            //ensure that we cleanup pointers to subscription on dispose
+            existingDispose = subscription.dispose;
+            subscription.dispose = function() {
+                delete this.postboxSubs[topic].subscribeTo;
+                existingDispose.call(subscription);
+            }.bind(this);
 
             if (initializeWithLatestValue) {
                 current = exports.topicCache[topic];

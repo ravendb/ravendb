@@ -40,19 +40,19 @@ namespace Raven.Client.Indexes
             // Index the base class.
             AddMap(expr);
 
-			// Index child classes.
-			var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
-			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
-			foreach (var child in children)
-			{
-				if (child.IsGenericTypeDefinition)
-					continue;
-				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
-				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
-				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
-				addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
-			}
-		}
+            // Index child classes.
+            var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+            var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
+            foreach (var child in children)
+            {
+                if (child.IsGenericTypeDefinition)
+                    continue;
+                var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
+                var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
+                var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
+                addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
+            }
+        }
 
         /// <summary>
         /// Creates the index definition.
@@ -63,32 +63,32 @@ namespace Raven.Client.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConvention();
 
-			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
-			{
-				Indexes = Indexes,
-				SortOptions = IndexSortOptions,
-				SortOptionsStrings = IndexSortOptionsStrings,
-				Analyzers = Analyzers,
-				Reduce = Reduce,
-				Stores = Stores,
-				TermVectors = TermVectors,
-				SpatialIndexes = SpatialIndexes,
-				SuggestionsOptions = IndexSuggestions,
-				AnalyzersStrings = AnalyzersStrings,
-				IndexesStrings = IndexesStrings,
-				StoresStrings = StoresStrings,
-				TermVectorsStrings = TermVectorsStrings,
-				SpatialIndexesStrings = SpatialIndexesStrings,
-				DisableInMemoryIndexing = DisableInMemoryIndexing,
-				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
-			}.ToIndexDefinition(Conventions, validateMap: false);
-			foreach (var map in maps.Select(generateMap => generateMap()))
-			{
-				string formattedMap = map;
-			    if (Conventions.PrettifyGeneratedLinqExpressions)
-			    {
-			            formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
-			       
+            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
+            {
+                Indexes = Indexes,
+                SortOptions = IndexSortOptions,
+                SortOptionsStrings = IndexSortOptionsStrings,
+                Analyzers = Analyzers,
+                Reduce = Reduce,
+                Stores = Stores,
+                TermVectors = TermVectors,
+                SpatialIndexes = SpatialIndexes,
+                SuggestionsOptions = IndexSuggestions,
+                AnalyzersStrings = AnalyzersStrings,
+                IndexesStrings = IndexesStrings,
+                StoresStrings = StoresStrings,
+                TermVectorsStrings = TermVectorsStrings,
+                SpatialIndexesStrings = SpatialIndexesStrings,
+                DisableInMemoryIndexing = DisableInMemoryIndexing,
+                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
+            }.ToIndexDefinition(Conventions, validateMap: false);
+            foreach (var map in maps.Select(generateMap => generateMap()))
+            {
+                string formattedMap = map;
+                if (Conventions.PrettifyGeneratedLinqExpressions)
+                {
+                        formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
+                   
                 }
                 indexDefinition.Maps.Add(formattedMap);
             }

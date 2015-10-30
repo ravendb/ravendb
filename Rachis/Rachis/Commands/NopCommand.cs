@@ -1,6 +1,6 @@
-﻿namespace Rachis.Commands
+namespace Rachis.Commands
 {
-	public class NopCommand : Command
-	{
-	}
+    public class NopCommand : Command
+    {
+    }
 }

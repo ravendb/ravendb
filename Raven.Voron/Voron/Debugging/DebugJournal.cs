@@ -226,8 +226,8 @@ namespace Voron.Debugging
                 }
 
                 var line = string.Format("{0},{1},{2},\"{3}\",{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
-				
-				return line;
+                
+                return line;
             }
 
             private string ToCsvWithValueLengthOnly()
@@ -269,7 +269,7 @@ namespace Voron.Debugging
                             type,
                             long.Parse(columnArray[1]),
                             (Slice)columnArray[3].Trim('"'),
-							columnArray[2].Trim('"'),
+                            columnArray[2].Trim('"'),
                             null);
 
                         return activityEntry;
@@ -305,8 +305,8 @@ namespace Voron.Debugging
                     var entry = new WriteActivityEntry(
                         type,
                         long.Parse(columnArray[1]),
-						(Slice)columnArray[3].Trim('"'),
-						columnArray[2].Trim('"'),
+                        (Slice)columnArray[3].Trim('"'),
+                        columnArray[2].Trim('"'),
                         value);
 
                     return entry;

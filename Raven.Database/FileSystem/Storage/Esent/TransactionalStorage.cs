@@ -33,54 +33,54 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Database.FileSystem.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
-	{
-		private readonly InMemoryRavenConfiguration configuration;
+    public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
+    {
+        private readonly InMemoryRavenConfiguration configuration;
 
-		private OrderedPartCollection<AbstractFileCodec> fileCodecs;
-		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
-		private readonly string database;
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-		private readonly string path;
-		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
-		private bool disposed;
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
-		private JET_INSTANCE instance;
-		private UuidGenerator uuidGenerator;
+        private OrderedPartCollection<AbstractFileCodec> fileCodecs;
+        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly string database;
+        private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+        private readonly string path;
+        private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
+        private bool disposed;
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
+        private JET_INSTANCE instance;
+        private UuidGenerator uuidGenerator;
 
-		private static readonly object UpdateLocker = new object();
+        private static readonly object UpdateLocker = new object();
 
-		static TransactionalStorage()
-		{
-			try
-			{
-				SystemParameters.MaxInstances = 1024;
-			}
-			catch (EsentErrorException e)
-			{
-				if (e.Error != JET_err.AlreadyInitialized)
-					throw;
-			}
-		}
+        static TransactionalStorage()
+        {
+            try
+            {
+                SystemParameters.MaxInstances = 1024;
+            }
+            catch (EsentErrorException e)
+            {
+                if (e.Error != JET_err.AlreadyInitialized)
+                    throw;
+            }
+        }
 
-		public TransactionalStorage(InMemoryRavenConfiguration configuration)
-		{
-			configuration.Container.SatisfyImportsOnce(this);
+        public TransactionalStorage(InMemoryRavenConfiguration configuration)
+        {
+            configuration.Container.SatisfyImportsOnce(this);
 
-			this.configuration = configuration;
-			path = configuration.FileSystem.DataDirectory.ToFullPath();
-			database = Path.Combine(path, "Data.ravenfs");
+            this.configuration = configuration;
+            path = configuration.FileSystem.DataDirectory.ToFullPath();
+            database = Path.Combine(path, "Data.ravenfs");
 
-			RecoverFromFailedCompact(database);
+            RecoverFromFailedCompact(database);
 
-			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
+            new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
-			CreateInstance(out instance, database + Guid.NewGuid());
-		}
+            CreateInstance(out instance, database + Guid.NewGuid());
+        }
 
-		[ImportMany]
-		public OrderedPartCollection<IFileSystemSchemaUpdate> Updaters { get; set; }
+        [ImportMany]
+        public OrderedPartCollection<IFileSystemSchemaUpdate> Updaters { get; set; }
 
         public string FriendlyName
         {

@@ -244,42 +244,42 @@ namespace Raven.Database.Server.WebApi
                 return string.Compare(fullRoute, 0, subRoute.fullRoute, 0, subRouteLength, StringComparison.OrdinalIgnoreCase) == 0;
             }
 
-			public override int GetHashCode()
-			{
-				int code = 0;
-				for (int index = 0; index < subRouteLength; index++)
-				{
-					code = code * 397 ^ fullRoute[index];
-				}
-				if (isOriginalRoute)
-					code = code * 397 ^ 7;
-				return code;
-			}
+            public override int GetHashCode()
+            {
+                int code = 0;
+                for (int index = 0; index < subRouteLength; index++)
+                {
+                    code = code * 397 ^ fullRoute[index];
+                }
+                if (isOriginalRoute)
+                    code = code * 397 ^ 7;
+                return code;
+            }
 
-			public void ReduceRouteMatchTemplate(string templateRoute)
-			{
-				var lastIndexOfStar = templateRoute.LastIndexOf("/{*", StringComparison.InvariantCulture);
-				if (lastIndexOfStar == -1)
-					return;
+            public void ReduceRouteMatchTemplate(string templateRoute)
+            {
+                var lastIndexOfStar = templateRoute.LastIndexOf("/{*", StringComparison.InvariantCulture);
+                if (lastIndexOfStar == -1)
+                    return;
 
-				var lastIndexOfDash = Math.Max(templateRoute.LastIndexOf('/', lastIndexOfStar - 1, lastIndexOfStar - 1), 0);
-				while (AtEnd() == false)
-				{
-					var length = lastIndexOfStar - lastIndexOfDash;
-					var fullRouteIndex = subRouteLength - length;
-					if (fullRouteIndex > 0)
-					{
-						var match = string.Compare(fullRoute, fullRouteIndex, templateRoute, lastIndexOfDash, length, StringComparison.OrdinalIgnoreCase) == 0;
-						if (match && (isOriginalRoute || fullRoute[subRouteLength] == '/'))
-						{
-							break;
-						}
-					}
-					NextSubRoute();
-				}
-				if (AtEnd()) throw new InvalidOperationException(String.Format("Could not match route template: {0}, with route: {1}, this should not happen!", templateRoute, fullRoute));
-			}
-		}
+                var lastIndexOfDash = Math.Max(templateRoute.LastIndexOf('/', lastIndexOfStar - 1, lastIndexOfStar - 1), 0);
+                while (AtEnd() == false)
+                {
+                    var length = lastIndexOfStar - lastIndexOfDash;
+                    var fullRouteIndex = subRouteLength - length;
+                    if (fullRouteIndex > 0)
+                    {
+                        var match = string.Compare(fullRoute, fullRouteIndex, templateRoute, lastIndexOfDash, length, StringComparison.OrdinalIgnoreCase) == 0;
+                        if (match && (isOriginalRoute || fullRoute[subRouteLength] == '/'))
+                        {
+                            break;
+                        }
+                    }
+                    NextSubRoute();
+                }
+                if (AtEnd()) throw new InvalidOperationException(String.Format("Could not match route template: {0}, with route: {1}, this should not happen!", templateRoute, fullRoute));
+            }
+        }
 
         private class RavenRouteCollectionRouteData : IHttpRouteData
         {

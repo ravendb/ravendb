@@ -26,7 +26,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
     public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
     {
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
-		private new string dataPath;
+        private new string dataPath;
 
         public EncryptedFileSystemBackupRestore()
         {
@@ -82,151 +82,112 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
             AssertPlainTextIsNotSavedInFileSystem("Secret", "records");
         }
 
-		[Theory]
-		[PropertyData("Storages")]
-		public async Task CanRestoreBackupIfEncryptionEnabledOnServer(string requestedStorage)
-		{
-			using (var client = NewAsyncClientForEncryptedFs(requestedStorage))
-			{
-				var server = GetServer();
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task CanRestoreBackupOfEncryptedFileSystem(string requestedStorage)
+        {
+            dataPath = NewDataPath("CanRestoreBackupOfEncryptedFileSystem", false);
 
-				string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "NewFS");
+            using (var server = CreateServer(8079, requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
+            {
+                var store = server.FilesStore;
 
-				await CreateSampleData(client);
-				// fetch md5 sums for later verification
-				var md5Sums = FetchMd5Sums(client);
+                var fs1Doc = new FileSystemDocument
+                {
+                    Id = Constants.FileSystem.Prefix + "FS1",
+                    Settings =
+                    {
+                        {Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
+                        {Constants.ActiveBundles, "Encryption"}
+                    },
+                    SecuredSettings = new Dictionary<string, string>
+                    {
+                        {
+                            "Raven/Encryption/Key", "arHd5ENxwieUCAGkf4Rns8oPWx3f6npDgAowtIAPox0="
+                        },
+                        {
+                            "Raven/Encryption/Algorithm", "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib"
+                        },
+                    },
+                };
+                await store.AsyncFilesCommands.Admin.CreateFileSystemAsync(fs1Doc);
 
-				// create backup
-				await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
-				WaitForBackup(client, true);
+                using (var session = store.OpenAsyncSession("FS1"))
+                {
+                    session.RegisterUpload("test1.txt", StringToStream("Secret password"));
+                    session.RegisterUpload("test2.txt", StringToStream("Security guard"));
+                    await session.SaveChangesAsync();
+                }
 
-				// restore newly created backup
-				await client.Admin.StartRestore(new FilesystemRestoreRequest
-				{
-					BackupLocation = backupDir,
-					FilesystemName = "NewFS",
-					FilesystemLocation = filesystemDir
-				});
+                await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
+                WaitForBackup(store.AsyncFilesCommands.ForFileSystem("FS1"), true);
 
-				SpinWait.SpinUntil(() => client.Admin.GetNamesAsync().Result.Contains("NewFS"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+                string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
 
-				var restoredMd5Sums = FetchMd5Sums(client.ForFileSystem("NewFS"));
-				Assert.Equal(md5Sums, restoredMd5Sums);
+                await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+                {
+                    BackupLocation = backupDir,
+                    FilesystemName = "FS2",
+                    FilesystemLocation = filesystemDir
+                });
 
-				var restoredClientComputedMd5Sums = ComputeMd5Sums(client.ForFileSystem("NewFS"));
-				Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
-			}
+                SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("FS2"),
+                            Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
 
-			AssertPlainTextIsNotSavedInFileSystem("Secret", "records");
-		}
+                using (var session = server.DocumentStore.OpenAsyncSession(Constants.SystemDatabase))
+                {
+                    var fs2Doc = await session.LoadAsync<FileSystemDocument>(Constants.FileSystem.Prefix + "FS2");
 
-		[Theory]
-		[PropertyData("Storages")]
-		public async Task CanRestoreBackupOfEncryptedFileSystem(string requestedStorage)
-		{
-			dataPath = NewDataPath("CanRestoreBackupOfEncryptedFileSystem", false);
+                    Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Key"], fs2Doc.SecuredSettings["Raven/Encryption/Key"]);
+                    Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Algorithm"], fs2Doc.SecuredSettings["Raven/Encryption/Algorithm"]);
+                }
 
-			using (var server = CreateServer(8079, requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
-			{
-				var store = server.FilesStore;
+                using (var session = store.OpenAsyncSession("FS2"))
+                {
+                    var test1 = StreamToString(await session.DownloadAsync("test1.txt"));
 
-				var fs1Doc = new FileSystemDocument
-				{
-					Id = Constants.FileSystem.Prefix + "FS1",
-					Settings =
-					{
-						{Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
-						{Constants.ActiveBundles, "Encryption"}
-					},
-					SecuredSettings = new Dictionary<string, string>
-					{
-						{
-							"Raven/Encryption/Key", "arHd5ENxwieUCAGkf4Rns8oPWx3f6npDgAowtIAPox0="
-						},
-						{
-							"Raven/Encryption/Algorithm", "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib"
-						},
-					},
-				};
-				await store.AsyncFilesCommands.Admin.CreateFileSystemAsync(fs1Doc);
+                    Assert.Equal("Secret password", test1);
 
-				using (var session = store.OpenAsyncSession("FS1"))
-				{
-					session.RegisterUpload("test1.txt", StringToStream("Secret password"));
-					session.RegisterUpload("test2.txt", StringToStream("Security guard"));
-					await session.SaveChangesAsync();
-				}
+                    var test2 = StreamToString(await session.DownloadAsync("test2.txt"));
 
-				await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
-				WaitForBackup(store.AsyncFilesCommands.ForFileSystem("FS1"), true);
+                    Assert.Equal("Security guard", test2);
+                }
+            }
 
-				string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
+            Close();
 
-				await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
-				{
-					BackupLocation = backupDir,
-					FilesystemName = "FS2",
-					FilesystemLocation = filesystemDir
-				});
+            EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(new[]
+            {
+                "Secret password", "Security guard"
+            }, dataPath, s => true);
+        }
 
-				SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("FS2"),
-							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+        private async Task CreateSampleData(IAsyncFilesCommands commands, int startIndex = 1, int count = 2)
+        {
+            for (var i = startIndex; i < startIndex + count; i++)
+            {
+                await commands.UploadAsync(string.Format("file{0}.bin", i), StringToStream("Secret records / " + i));
+            }
+        }
 
-				using (var session = server.DocumentStore.OpenAsyncSession(Constants.SystemDatabase))
-				{
-					var fs2Doc = await session.LoadAsync<FileSystemDocument>(Constants.FileSystem.Prefix + "FS2");
+        private string[] FetchMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
+        {
+            return Enumerable.Range(1, filesCount).Select(i =>
+            {
+                var meta = filesCommands.GetMetadataForAsync(string.Format("file{0}.bin", i)).Result;
+                return meta.Value<string>("Content-MD5");
+            }).ToArray();
+        }
 
-					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Key"], fs2Doc.SecuredSettings["Raven/Encryption/Key"]);
-					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Algorithm"], fs2Doc.SecuredSettings["Raven/Encryption/Algorithm"]);
-				}
-
-				using (var session = store.OpenAsyncSession("FS2"))
-				{
-					var test1 = StreamToString(await session.DownloadAsync("test1.txt"));
-
-					Assert.Equal("Secret password", test1);
-
-					var test2 = StreamToString(await session.DownloadAsync("test2.txt"));
-
-					Assert.Equal("Security guard", test2);
-				}
-			}
-
-			Close();
-
-			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(new[]
-			{
-				"Secret password", "Security guard"
-			}, dataPath, s => true);
-		}
-
-		private async Task CreateSampleData(IAsyncFilesCommands commands, int startIndex = 1, int count = 2)
-		{
-			for (var i = startIndex; i < startIndex + count; i++)
-			{
-				await commands.UploadAsync(string.Format("file{0}.bin", i), StringToStream("Secret records / " + i));
-			}
-		}
-
-		private string[] FetchMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
-		{
-			return Enumerable.Range(1, filesCount).Select(i =>
-			{
-				var meta = filesCommands.GetMetadataForAsync(string.Format("file{0}.bin", i)).Result;
-				return meta.Value<string>("Content-MD5");
-			}).ToArray();
-		}
-
-		private string[] ComputeMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
-		{
-			return Enumerable.Range(1, filesCount).Select(i =>
-			{
-				using (var stream = filesCommands.DownloadAsync(string.Format("file{0}.bin", i)).Result)
-				{
-					return stream.GetMD5Hash();
-				}
-			}).ToArray();
-		}
-	}
+        private string[] ComputeMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
+        {
+            return Enumerable.Range(1, filesCount).Select(i =>
+            {
+                using (var stream = filesCommands.DownloadAsync(string.Format("file{0}.bin", i)).Result)
+                {
+                    return stream.GetMD5Hash();
+                }
+            }).ToArray();
+        }
+    }
 }

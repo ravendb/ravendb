@@ -13,143 +13,143 @@ using Raven.Abstractions;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
-	public class SigGenerator : CriticalFinalizerObject, IDisposable
-	{
-		private const uint OutputBufferSize = 1024;
-		private const int InputBufferSize = 8 * 1024;
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+    public class SigGenerator : CriticalFinalizerObject, IDisposable
+    {
+        private const uint OutputBufferSize = 1024;
+        private const int InputBufferSize = 8 * 1024;
+        private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
-		private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
 
-		private IRdcLibrary _rdcLibrary;
-		private bool _disposed;
-		private int _recursionDepth;
+        private IRdcLibrary _rdcLibrary;
+        private bool _disposed;
+        private int _recursionDepth;
 
-		public SigGenerator()
-		{
+        public SigGenerator()
+        {
             if (EnvironmentUtils.RunningOnPosix)
-				throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
+                throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
             
-			try
-			{
-				_rdcLibrary = (IRdcLibrary)new RdcLibrary();
-			}
-			catch (InvalidCastException e)
-			{
-				throw new InvalidOperationException("This code must run in an MTA thread", e);
-			}
-			catch (COMException comException)
-			{
-				log.ErrorException("Remote Differential Compression feature is not installed", comException);
-				throw new NotSupportedException("Remote Differential Compression feature is not installed", comException);
-			}
-		}
+            try
+            {
+                _rdcLibrary = (IRdcLibrary)new RdcLibrary();
+            }
+            catch (InvalidCastException e)
+            {
+                throw new InvalidOperationException("This code must run in an MTA thread", e);
+            }
+            catch (COMException comException)
+            {
+                log.ErrorException("Remote Differential Compression feature is not installed", comException);
+                throw new NotSupportedException("Remote Differential Compression feature is not installed", comException);
+            }
+        }
 
-		public void Dispose()
-		{
-			_disposerLock.EnterWriteLock();
-			try
-			{
-				if (_disposed)
-					return;
-				GC.SuppressFinalize(this);
-				DisposeInternal();
-			}
-			finally
-			{
-				_disposed = true;
-				_disposerLock.ExitWriteLock();
-			}
-		}
+        public void Dispose()
+        {
+            _disposerLock.EnterWriteLock();
+            try
+            {
+                if (_disposed)
+                    return;
+                GC.SuppressFinalize(this);
+                DisposeInternal();
+            }
+            finally
+            {
+                _disposed = true;
+                _disposerLock.ExitWriteLock();
+            }
+        }
 
-		public IList<SignatureInfo> GenerateSignatures(Stream source, string fileName,
-													   ISignatureRepository signatureRepository)
-		{
-			_recursionDepth = EvaluateRecursionDepth(source);
-			if (_recursionDepth == 0)
-				return new List<SignatureInfo>();
+        public IList<SignatureInfo> GenerateSignatures(Stream source, string fileName,
+                                                       ISignatureRepository signatureRepository)
+        {
+            _recursionDepth = EvaluateRecursionDepth(source);
+            if (_recursionDepth == 0)
+                return new List<SignatureInfo>();
 
-			var rdcGenerator = InitializeRdcGenerator();
-			try
-			{
-				return Process(source, rdcGenerator, fileName, signatureRepository);
-			}
-			finally
-			{
-				Marshal.ReleaseComObject(rdcGenerator);
-			}
-		}
+            var rdcGenerator = InitializeRdcGenerator();
+            try
+            {
+                return Process(source, rdcGenerator, fileName, signatureRepository);
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(rdcGenerator);
+            }
+        }
 
-		private IList<SignatureInfo> Process(Stream source, IRdcGenerator rdcGenerator, string fileName,
-											 ISignatureRepository signatureRepository)
-		{
-			var result = Enumerable.Range(0, _recursionDepth).Reverse().Select(i => new SignatureInfo(i, fileName)).ToList();
+        private IList<SignatureInfo> Process(Stream source, IRdcGenerator rdcGenerator, string fileName,
+                                             ISignatureRepository signatureRepository)
+        {
+            var result = Enumerable.Range(0, _recursionDepth).Reverse().Select(i => new SignatureInfo(i, fileName)).ToList();
 
-			var eof = false;
-			var eofOutput = false;
-			// prepare streams
-			var sigStreams = result.Select(item => signatureRepository.CreateContent(item.Name)).ToList();
+            var eof = false;
+            var eofOutput = false;
+            // prepare streams
+            var sigStreams = result.Select(item => signatureRepository.CreateContent(item.Name)).ToList();
 
-			var inputBuffer = new RdcBufferPointer
-			{
-				Size = 0,
-				Used = 0,
-				Data = Marshal.AllocCoTaskMem(InputBufferSize + 16)
-			};
+            var inputBuffer = new RdcBufferPointer
+            {
+                Size = 0,
+                Used = 0,
+                Data = Marshal.AllocCoTaskMem(InputBufferSize + 16)
+            };
 
-			var rdcBufferPointers = PrepareRdcBufferPointers();
-			var outputPointers = PrepareOutputPointers(rdcBufferPointers);
-			try
-			{
-				while (!eofOutput)
-				{
-					if (inputBuffer.Size == inputBuffer.Used)
-						inputBuffer = GetInputBuffer(source, InputBufferSize, inputBuffer, ref eof);
+            var rdcBufferPointers = PrepareRdcBufferPointers();
+            var outputPointers = PrepareOutputPointers(rdcBufferPointers);
+            try
+            {
+                while (!eofOutput)
+                {
+                    if (inputBuffer.Size == inputBuffer.Used)
+                        inputBuffer = GetInputBuffer(source, InputBufferSize, inputBuffer, ref eof);
 
-					RdcError rdcErrorCode;
-					var hr = rdcGenerator.Process(
-						eof,
-						ref eofOutput,
-						ref inputBuffer,
-						(uint)_recursionDepth,
-						outputPointers,
-						out rdcErrorCode);
+                    RdcError rdcErrorCode;
+                    var hr = rdcGenerator.Process(
+                        eof,
+                        ref eofOutput,
+                        ref inputBuffer,
+                        (uint)_recursionDepth,
+                        outputPointers,
+                        out rdcErrorCode);
 
-					if (hr != 0)
-						throw new RdcException("RdcGenerator failed to process the signature block.", hr, rdcErrorCode);
+                    if (hr != 0)
+                        throw new RdcException("RdcGenerator failed to process the signature block.", hr, rdcErrorCode);
 
-					RdcBufferTranslate(outputPointers, rdcBufferPointers);
+                    RdcBufferTranslate(outputPointers, rdcBufferPointers);
 
-					for (var i = 0; i < _recursionDepth; i++)
-					{
-						var resultStream = sigStreams[i];
+                    for (var i = 0; i < _recursionDepth; i++)
+                    {
+                        var resultStream = sigStreams[i];
 
-						// Write the signature block to the file.
-						var bytesWritten = RdcBufferTools.IntPtrCopy(
-							rdcBufferPointers[i].Data,
-							resultStream,
-							(int)rdcBufferPointers[i].Used);
-						result[i].Length += bytesWritten;
+                        // Write the signature block to the file.
+                        var bytesWritten = RdcBufferTools.IntPtrCopy(
+                            rdcBufferPointers[i].Data,
+                            resultStream,
+                            (int)rdcBufferPointers[i].Used);
+                        result[i].Length += bytesWritten;
 
-						if (rdcBufferPointers[i].Used != bytesWritten)
-						{
-							throw new RdcException("Failed to write to the signature file.");
-						}
+                        if (rdcBufferPointers[i].Used != bytesWritten)
+                        {
+                            throw new RdcException("Failed to write to the signature file.");
+                        }
 
 
-						rdcBufferPointers[i].Used = 0;
-					}
+                        rdcBufferPointers[i].Used = 0;
+                    }
 
-					RdcBufferTranslate(rdcBufferPointers, outputPointers);
-				}
-			}
-			finally
-			{
-				if (inputBuffer.Data != IntPtr.Zero)
-					Marshal.FreeCoTaskMem(inputBuffer.Data);
+                    RdcBufferTranslate(rdcBufferPointers, outputPointers);
+                }
+            }
+            finally
+            {
+                if (inputBuffer.Data != IntPtr.Zero)
+                    Marshal.FreeCoTaskMem(inputBuffer.Data);
 
-				foreach (var item in outputPointers)
-					Marshal.FreeCoTaskMem(item);
+                foreach (var item in outputPointers)
+                    Marshal.FreeCoTaskMem(item);
 
                 foreach (var item in rdcBufferPointers)
                     Marshal.FreeCoTaskMem(item.Data);

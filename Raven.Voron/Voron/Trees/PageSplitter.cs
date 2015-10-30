@@ -49,7 +49,7 @@ namespace Voron.Trees
 
             if (_cursor.PageCount == 0) // we need to do a root split
             {
-				Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
+                Page newRootPage = _tree.NewPage(_tree.KeysPrefixing ? PageFlags.Branch | PageFlags.KeysPrefixed : PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
                 _tree.State.RootPageNumber = newRootPage.PageNumber;
                 _tree.State.Depth++;
@@ -324,7 +324,7 @@ namespace Voron.Trees
             {
                 _cursor.Push(p);
 
-				var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor);
+                var pageSplitter = new PageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor);
 
                 return pageSplitter.Execute();
             }
@@ -340,12 +340,12 @@ namespace Voron.Trees
 
             var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
 
-			if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-			{
-				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-					0, _cursor);
-				return pageSplitter.Execute();
-			}
+            if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
+            {
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+                    0, _cursor);
+                return pageSplitter.Execute();
+            }
 
             return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
         }

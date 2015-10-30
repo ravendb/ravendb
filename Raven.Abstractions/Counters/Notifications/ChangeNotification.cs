@@ -1,28 +1,28 @@
-﻿namespace Raven.Abstractions.Counters.Notifications
+namespace Raven.Abstractions.Counters.Notifications
 {
-	public class ChangeNotification : CounterStorageNotification
-	{
-		public string GroupName { get; set; }
+    public class ChangeNotification : CounterStorageNotification
+    {
+        public string GroupName { get; set; }
 
-		public string CounterName { get; set; }
+        public string CounterName { get; set; }
 
-		public CounterChangeAction Action { get; set; }
+        public CounterChangeAction Action { get; set; }
 
-		public long Delta { get; set; }
+        public long Delta { get; set; }
 
-		public long Total { get; set; }
-	}
+        public long Total { get; set; }
+    }
 
-	public enum CounterChangeAction
-	{
-		Add,
-		Increment,
-		Decrement,
-		Delete
-	}
+    public enum CounterChangeAction
+    {
+        Add,
+        Increment,
+        Decrement,
+        Delete
+    }
 
-	public class StartingWithNotification : ChangeNotification
-	{
+    public class StartingWithNotification : ChangeNotification
+    {
         public override string ToString()
         {
             var sign = Delta >= 0 ? "+" : "";
@@ -30,7 +30,7 @@
         }
     }
 
-	public class InGroupNotification : ChangeNotification
+    public class InGroupNotification : ChangeNotification
     {
         public override string ToString()
         {

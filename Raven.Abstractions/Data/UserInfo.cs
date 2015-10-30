@@ -17,11 +17,11 @@ namespace Raven.Abstractions.Data
         public AccessTokenBody AccessTokenBody { get; set; }
     }
 
-	public class DatabaseInfo
-	{
-		public string Database { get; set; }
-		public bool IsAdmin { get; set; }
-		public bool IsReadOnly { get; set; }
-		
-	}
+    public class DatabaseInfo
+    {
+        public string Database { get; set; }
+        public bool IsAdmin { get; set; }
+        public bool IsReadOnly { get; set; }
+        
+    }
 }

@@ -188,15 +188,15 @@ namespace Raven.Database.Server.Tenancy
             return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
 
-	    public override async Task<RavenFileSystem> GetResourceInternal(string resourceName)
-	    {
-			Task<RavenFileSystem> db;
-			if (TryGetOrCreateResourceStore(resourceName, out db))
-				return await db.ConfigureAwait(false);
-			return null;
-		}
+        public override async Task<RavenFileSystem> GetResourceInternal(string resourceName)
+        {
+            Task<RavenFileSystem> db;
+            if (TryGetOrCreateResourceStore(resourceName, out db))
+                return await db.ConfigureAwait(false);
+            return null;
+        }
 
-	    public override bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
+        public override bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
             if (Locks.Contains(DisposingLock))
                 throw new ObjectDisposedException("FileSystem", "Server is shutting down, can't access any file systems");
@@ -270,12 +270,12 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-	        if (Authentication.IsLicensedForRavenFs == false)
-	        {
-				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
-	        }
+            if (Authentication.IsLicensedForRavenFs == false)
+            {
+                throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
+            }
 
-			Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
         protected override DateTime LastWork(RavenFileSystem resource)

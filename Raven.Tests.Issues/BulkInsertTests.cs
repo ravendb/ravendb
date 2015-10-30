@@ -9,17 +9,17 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class BulkInsertTests : RavenTest
-	{
-		[Fact]
-		public void CanCreateAndDisposeUsingBulk2()
-		{
-			using (var store = NewRemoteDocumentStore(fiddler:true))
-			{
-				using (var bulkInsert = store.BulkInsert())
-				{
-					bulkInsert.Store(new UserNoId { Name = "Fitzchak" }, "users/1");
-				}
+    public class BulkInsertTests : RavenTest
+    {
+        [Fact]
+        public void CanCreateAndDisposeUsingBulk2()
+        {
+            using (var store = NewRemoteDocumentStore(fiddler:true))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new UserNoId { Name = "Fitzchak" }, "users/1");
+                }
 
                 using (var session = store.OpenSession())
                 {

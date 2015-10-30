@@ -12,7 +12,7 @@ namespace Rhino.Licensing
     {
         private readonly string licensePath;
         private DateTime lastModified;
-		private string inMemoryLicense;
+        private string inMemoryLicense;
 
         /// <summary>
         /// Creates a new instance of <seealso cref="LicenseValidator"/>.
@@ -24,7 +24,7 @@ namespace Rhino.Licensing
         {
             this.licensePath = licensePath;
             lastModified = File.GetLastWriteTimeUtc(licensePath);
-		}
+        }
 
         /// <summary>
         /// Creates a new instance of <seealso cref="LicenseValidator"/>.
@@ -38,7 +38,7 @@ namespace Rhino.Licensing
         {
             this.licensePath = licensePath;
             lastModified = File.GetLastWriteTimeUtc(licensePath);
-		}
+        }
 
         /// <summary>
         /// Gets or Sets the license content
@@ -92,6 +92,6 @@ namespace Rhino.Licensing
         {
             return fullPath == licensePath &&
                    lastModified == File.GetLastWriteTimeUtc(licensePath);
-	}
+    }
 }
 }

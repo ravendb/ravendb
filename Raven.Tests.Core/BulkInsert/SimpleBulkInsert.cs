@@ -13,21 +13,21 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Core.BulkInsert
 {
-	public class SimpleBulkInsert : RavenCoreTestBase
-	{
+    public class SimpleBulkInsert : RavenCoreTestBase
+    {
         [Theory]
         [PropertyData("InsertOptions")]
         public void BasicBulkInsert(BulkInsertOptions options)
-		{
-			using (var store = GetDocumentStore())
-			{
+        {
+            using (var store = GetDocumentStore())
+            {
                 using (var bulkInsert = store.BulkInsert(options: options))
-				{
-					for (int i = 0; i < 100; i++)
-					{
-						bulkInsert.Store(new User { Name = "User - " + i });
-					}
-				}
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        bulkInsert.Store(new User { Name = "User - " + i });
+                    }
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -40,36 +40,36 @@ namespace Raven.Tests.Core.BulkInsert
         [Theory]
         [PropertyData("InsertOptions")]
         public void BulkInsertShouldNotOverwriteWithOverwriteExistingSetToFalse(BulkInsertOptions options)
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User
-					              {
-						              Id = "users/1", 
-									  Name = "User - 1"
-					              });
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                                  {
+                                      Id = "users/1", 
+                                      Name = "User - 1"
+                                  });
 
                     session.SaveChanges();
                 }
 
                 options.OverwriteExisting = false;
 
-				var e = Assert.Throws<ConcurrencyException>(() =>
-				{
+                var e = Assert.Throws<ConcurrencyException>(() =>
+                {
                     using (var bulkInsert = store.BulkInsert(options: options))
-					{
-						for (var i = 0; i < 10; i++)
-						{
-							bulkInsert.Store(new User
-							                 {
-								                 Id = "users/" + (i + 1), 
-												 Name = "resU - " + (i + 1)
-							                 });
-						}
-					}
-				});
+                    {
+                        for (var i = 0; i < 10; i++)
+                        {
+                            bulkInsert.Store(new User
+                                             {
+                                                 Id = "users/" + (i + 1), 
+                                                 Name = "resU - " + (i + 1)
+                                             });
+                        }
+                    }
+                });
 
                 Assert.Contains("users/1", e.Message);
 
@@ -85,34 +85,34 @@ namespace Raven.Tests.Core.BulkInsert
         [Theory]
         [PropertyData("InsertOptions")]
         public void BulkInsertShouldOverwriteWithOverwriteExistingSetToTrue(BulkInsertOptions options)
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var bulkInsert = store.BulkInsert())
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						bulkInsert.Store(new User
-						                 {
-							                 Id = "users/" + (i + 1), 
-											 Name = "User - " + (i + 1)
-						                 });
-					}
-				}
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        bulkInsert.Store(new User
+                                         {
+                                             Id = "users/" + (i + 1), 
+                                             Name = "User - " + (i + 1)
+                                         });
+                    }
+                }
 
                 options.OverwriteExisting = true;
 
                 using (var bulkInsert = store.BulkInsert(options: options))
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						bulkInsert.Store(new User
-						                 {
-							                 Id = "users/" + (i + 1), 
-											 Name = "resU - " + (i + 1)
-						                 });
-					}
-				}
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        bulkInsert.Store(new User
+                                         {
+                                             Id = "users/" + (i + 1), 
+                                             Name = "resU - " + (i + 1)
+                                         });
+                    }
+                }
 
                 using (var session = store.OpenSession())
                 {

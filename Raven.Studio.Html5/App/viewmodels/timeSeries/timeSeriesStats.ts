@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class timeSeriesStats extends viewModelBase {
     canActivate(args: any): any {

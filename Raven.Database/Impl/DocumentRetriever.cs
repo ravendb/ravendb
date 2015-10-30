@@ -321,8 +321,8 @@ namespace Raven.Database.Impl
                                                       }
                         };
                     case ReadVetoResult.ReadAllow.Ignore:
-						if (log.IsDebugEnabled)
-							log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
                         return null;
                     default:
                         throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());

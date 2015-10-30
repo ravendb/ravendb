@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import licenseCheckConnectivityCommand = require("commands/auth/licenseCheckConnectivityCommand");
 import forceLicenseUpdate = require("commands/auth/forceLicenseUpdate");
 import licensingStatus = require("viewmodels/common/licensingStatus");

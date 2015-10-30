@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
@@ -16,7 +16,7 @@ namespace Raven.Client.Connection.Async
         private const int DefaultNumberOfCachedRequests = 2048;
 
         protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
-									 Guid? sessionId, NameValueCollection operationsHeaders, Func<string, TReplicationInformer> replicationInformerGetter, string resourceName)
+                                     Guid? sessionId, NameValueCollection operationsHeaders, Func<string, TReplicationInformer> replicationInformerGetter, string resourceName)
         {
             WasDisposed = false;
 
@@ -25,10 +25,10 @@ namespace Raven.Client.Connection.Async
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
             SessionId = sessionId;
-			OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
+            OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
             
-			ReplicationInformerGetter = replicationInformerGetter ?? DefaultReplicationInformerGetter();
-			replicationInformer = new Lazy<TReplicationInformer>(() => ReplicationInformerGetter(resourceName), true);
+            ReplicationInformerGetter = replicationInformerGetter ?? DefaultReplicationInformerGetter();
+            replicationInformer = new Lazy<TReplicationInformer>(() => ReplicationInformerGetter(resourceName), true);
             MaxQuerySizeForGetRequest = 8 * 1024;
         }
 

@@ -41,10 +41,10 @@ class collection implements ICollectionBase {
         return this.documentsList;
     }
 
-	invalidateCache() {
-		var documentsList = this.getDocuments();
-		documentsList.invalidateCache();
-	}
+    invalidateCache() {
+        var documentsList = this.getDocuments();
+        documentsList.invalidateCache();
+    }
 
     clearCollection() {
         if (this.isAllDocuments && !!this.documentsList) {

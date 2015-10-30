@@ -16,16 +16,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.FileSystem.Extensions
 {
-	internal static class AsyncFilesServerClientExtension
-	{
-		internal static async Task<RavenJObject> GetMetadataForAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
-			NameValueCollection operationsHeaders, string filename, string baseUrl, OperationCredentials credentials)
-		{
-			using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), HttpMethod.Head, credentials, conventions)).AddOperationHeaders(operationsHeaders))
-			{
-				try
-				{
-					await request.ExecuteRequestAsync().ConfigureAwait(false);
+    internal static class AsyncFilesServerClientExtension
+    {
+        internal static async Task<RavenJObject> GetMetadataForAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
+            NameValueCollection operationsHeaders, string filename, string baseUrl, OperationCredentials credentials)
+        {
+            using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + "/files?name=" + Uri.EscapeDataString(filename), HttpMethod.Head, credentials, conventions)).AddOperationHeaders(operationsHeaders))
+            {
+                try
+                {
+                    await request.ExecuteRequestAsync().ConfigureAwait(false);
 
                     var response = request.Response;
 
@@ -47,10 +47,10 @@ namespace Raven.Client.FileSystem.Extensions
             }
         }
 
-		internal static async Task<Stream> DownloadAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
-			NameValueCollection operationsHeaders, string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, string baseUrl, OperationCredentials credentials)
-		{
-			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + Uri.EscapeDataString(filename), HttpMethod.Get, credentials, conventions)).AddOperationHeaders(operationsHeaders);
+        internal static async Task<Stream> DownloadAsyncImpl(IHoldProfilingInformation self, HttpJsonRequestFactory requestFactory, FilesConvention conventions,
+            NameValueCollection operationsHeaders, string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, string baseUrl, OperationCredentials credentials)
+        {
+            var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(self, baseUrl + path + Uri.EscapeDataString(filename), HttpMethod.Get, credentials, conventions)).AddOperationHeaders(operationsHeaders);
 
             if (@from != null)
             {

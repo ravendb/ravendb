@@ -10,15 +10,15 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractPutTrigger))]
-	public class PreventConflictDocumentsPutTrigger : AbstractPutTrigger
-	{
-		public override void OnPut(string key, Json.Linq.RavenJObject jsonReplicationDocument, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
-		{
-			if (metadata.Remove(Constants.RavenReplicationConflictDocumentForcePut))
-				return;
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    public class PreventConflictDocumentsPutTrigger : AbstractPutTrigger
+    {
+        public override void OnPut(string key, Json.Linq.RavenJObject jsonReplicationDocument, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
+        {
+            if (metadata.Remove(Constants.RavenReplicationConflictDocumentForcePut))
+                return;
 
             metadata.Remove(Constants.RavenReplicationConflictDocument); // or conflict documents
         }

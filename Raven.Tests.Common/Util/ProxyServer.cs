@@ -112,10 +112,10 @@ namespace Raven.Tests.Common.Util
 
         }
         private bool IsEmptyResponse(byte[] buffer, int i, int read)
-		{
-			var payload = Encoding.UTF8.GetString(buffer, 0, read);
-			return payload.Contains("HTTP/1.1") && payload.Contains("Content-Length: 0");
-		}
+        {
+            var payload = Encoding.UTF8.GetString(buffer, 0, read);
+            return payload.Contains("HTTP/1.1") && payload.Contains("Content-Length: 0");
+        }
 
     private static bool IsEndOfChunkEncoding(byte[] buffer, int offset, int count)
         {

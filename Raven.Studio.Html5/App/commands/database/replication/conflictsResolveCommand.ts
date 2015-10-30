@@ -8,8 +8,8 @@ import getOperationStatusCommand = require('commands/operations/getOperationStat
 class conflictsResolveCommand extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private ownerDb: database, private resolution: string) {
         super();
 

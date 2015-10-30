@@ -51,19 +51,19 @@ namespace Raven.Database.Actions
             return pendingTasks.Select(x =>
             {
                 var ex = (x.Value.Task.IsFaulted || x.Value.Task.IsCanceled) ? x.Value.Task.Exception.ExtractSingleInnerException() : null;
-	            var taskStatus = x.Value.Task.Status;
-	            if (taskStatus == TaskStatus.WaitingForActivation)
-					taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
+                var taskStatus = x.Value.Task.Status;
+                if (taskStatus == TaskStatus.WaitingForActivation)
+                    taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
 
-	            if (ex == null && x.Value.Task.IsCompleted && x.Value.State != null)
-	            {
-		            // alternatively try to override task status based on stored status
-		            if (x.Value.State.Faulted)
-		            {
-			            taskStatus = TaskStatus.Faulted;
-			            ex = new Exception(x.Value.State.State.Value<string>("Error"));
-		            }
-	            }
+                if (ex == null && x.Value.Task.IsCompleted && x.Value.State != null)
+                {
+                    // alternatively try to override task status based on stored status
+                    if (x.Value.State.Faulted)
+                    {
+                        taskStatus = TaskStatus.Faulted;
+                        ex = new Exception(x.Value.State.State.Value<string>("Error"));
+                    }
+                }
 
                 return new PendingTaskDescriptionAndStatus
                        {
@@ -196,15 +196,15 @@ namespace Raven.Database.Actions
 
             IoTest,
 
-			NewIndexPrecomputedBatch,
+            NewIndexPrecomputedBatch,
 
-			ServerSmuggling,
+            ServerSmuggling,
 
-			CounterBatchOperation,
+            CounterBatchOperation,
 
-			TimeSeriesBatchOperation,
+            TimeSeriesBatchOperation,
 
-			RecoverCorruptedIndexOperation,
-		}
+            RecoverCorruptedIndexOperation,
+        }
     }
 }

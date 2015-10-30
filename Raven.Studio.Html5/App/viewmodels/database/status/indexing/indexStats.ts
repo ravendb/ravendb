@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
 import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
 import d3 = require("d3/d3");

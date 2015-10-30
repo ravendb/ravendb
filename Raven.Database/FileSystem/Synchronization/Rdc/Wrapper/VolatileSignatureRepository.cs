@@ -15,12 +15,12 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         private readonly string _fileName;
         private readonly string _tempDirectory;
 
-		public VolatileSignatureRepository(string fileName, InMemoryRavenConfiguration configuration)
-		{
-			_tempDirectory = TempDirectoryTools.Create(configuration);
-			_fileName = fileName;
-			_createdFiles = new Dictionary<string, FileStream>();
-		}
+        public VolatileSignatureRepository(string fileName, InMemoryRavenConfiguration configuration)
+        {
+            _tempDirectory = TempDirectoryTools.Create(configuration);
+            _fileName = fileName;
+            _createdFiles = new Dictionary<string, FileStream>();
+        }
 
         public Stream GetContentForReading(string sigName)
         {

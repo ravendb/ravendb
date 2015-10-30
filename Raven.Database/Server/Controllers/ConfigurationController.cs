@@ -1,4 +1,4 @@
-﻿// )-----------------------------------------------------------------------
+// )-----------------------------------------------------------------------
 //  <copyright file="ConfigurationController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,22 +20,22 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class ConfigurationController : BaseDatabaseApiController
-	{
-		[HttpGet]
-		[RavenRoute("configuration/document/{*docId}")]
+    public class ConfigurationController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("configuration/document/{*docId}")]
         [RavenRoute("databases/{databaseName}/configuration/document/{*docId}")]
-		public HttpResponseMessage ConfigurationGet(string docId)
-		{
-			if (Database == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        public HttpResponseMessage ConfigurationGet(string docId)
+        {
+            if (Database == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocumentAsJson(docId);
-			if (configurationDocument == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+            var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocumentAsJson(docId);
+            if (configurationDocument == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(configurationDocument);
-		}
+            return GetMessageWithObject(configurationDocument);
+        }
 
         [HttpGet]
         [RavenRoute("configuration/global/settings")]
@@ -62,63 +62,63 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(configurationSettings);
         }
 
-		[HttpPut]
-		[RavenRoute("configuration/global/settings")]
-		public async Task<HttpResponseMessage> GlobalSettingsPut()
-		{
-			var etag = GetEtag();
-			var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>().ConfigureAwait(false);
+        [HttpPut]
+        [RavenRoute("configuration/global/settings")]
+        public async Task<HttpResponseMessage> GlobalSettingsPut()
+        {
+            var etag = GetEtag();
+            var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>().ConfigureAwait(false);
 
-			GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
-			var json = RavenJObject.FromObject(globalSettingsDoc);
+            GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
+            var json = RavenJObject.FromObject(globalSettingsDoc);
 
-			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
+            var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
+            var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
 
-			return GetMessageWithObject(putResult);
-		}
+            return GetMessageWithObject(putResult);
+        }
 
-		[HttpGet]
-		[RavenRoute("configuration/replication")]
+        [HttpGet]
+        [RavenRoute("configuration/replication")]
         [RavenRoute("databases/{databaseName}/configuration/replication")]
-		public HttpResponseMessage ReplicationConfigurationGet()
-		{
-			if (Database == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        public HttpResponseMessage ReplicationConfigurationGet()
+        {
+            if (Database == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
-			if (configurationDocument == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+            var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+            if (configurationDocument == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(configurationDocument.MergedDocument);
-		}
+            return GetMessageWithObject(configurationDocument.MergedDocument);
+        }
 
-		[HttpGet]
-		[RavenRoute("configuration/versioning")]
-		[RavenRoute("databases/{databaseName}/configuration/versioning")]
-		public HttpResponseMessage VersioningConfigurationGet()
-		{
-			if (Database == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        [HttpGet]
+        [RavenRoute("configuration/versioning")]
+        [RavenRoute("databases/{databaseName}/configuration/versioning")]
+        public HttpResponseMessage VersioningConfigurationGet()
+        {
+            if (Database == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			int nextPageStart = 0;
-			var systemDbPrefixes =
-				ConfigurationRetriever.IsGlobalConfigurationEnabled ?
-					DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.Global.VersioningDocumentPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart) :
-					new RavenJArray();
-			var localDbPrefixes = Database.Documents.GetDocumentsWithIdStartingWith(Constants.Versioning.RavenVersioningPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
-			var systemDbIds = systemDbPrefixes.Select(x =>
-				x
-					.Value<RavenJObject>("@metadata")
-					.Value<string>("@id")
-					.Replace(Constants.Global.VersioningDocumentPrefix, Constants.Versioning.RavenVersioningPrefix)).ToList();
-			var localIds = localDbPrefixes.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id")).ToList();
+            int nextPageStart = 0;
+            var systemDbPrefixes =
+                ConfigurationRetriever.IsGlobalConfigurationEnabled ?
+                    DatabasesLandlord.SystemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.Global.VersioningDocumentPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart) :
+                    new RavenJArray();
+            var localDbPrefixes = Database.Documents.GetDocumentsWithIdStartingWith(Constants.Versioning.RavenVersioningPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextPageStart);
+            var systemDbIds = systemDbPrefixes.Select(x =>
+                x
+                    .Value<RavenJObject>("@metadata")
+                    .Value<string>("@id")
+                    .Replace(Constants.Global.VersioningDocumentPrefix, Constants.Versioning.RavenVersioningPrefix)).ToList();
+            var localIds = localDbPrefixes.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id")).ToList();
 
-			var idsToFetch = systemDbIds.Union(localIds);
+            var idsToFetch = systemDbIds.Union(localIds);
 
-			var configurations = idsToFetch.Select(id => Database.ConfigurationRetriever.GetConfigurationDocumentAsJson(id)).ToList();
+            var configurations = idsToFetch.Select(id => Database.ConfigurationRetriever.GetConfigurationDocumentAsJson(id)).ToList();
 
-			return GetMessageWithObject(configurations);
-		}
-	}
+            return GetMessageWithObject(configurations);
+        }
+    }
 }

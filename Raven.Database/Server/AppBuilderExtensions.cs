@@ -80,52 +80,52 @@ namespace Owin
             app.UseInterceptor();
 #endif
 
-			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
 
             app.Use<CustomExceptionMiddleware>().UseWebApi(CreateHttpCfg(options));
 
 
-			return app;
-		}
+            return app;
+        }
 
-		private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
-		{
-			var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
-			if (accept == null)
-			{
-				// Not a websocket request
-				await next().ConfigureAwait(false);
-				return;
-			}
+        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+        {
+            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+            if (accept == null)
+            {
+                // Not a websocket request
+                await next().ConfigureAwait(false);
+                return;
+            }
 
-			WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
 
-			if (webSocketsTrasport != null)
-			{
-				if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
-				{
-					accept(new Dictionary<string, object>()
-					{
-						{"websocket.ReceiveBufferSize", 256},
-						{"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
-						{"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
-					}, webSocketsTrasport.Run);
-			}
-		}
-		}
+            if (webSocketsTrasport != null)
+            {
+                if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
+                {
+                    accept(new Dictionary<string, object>()
+                    {
+                        {"websocket.ReceiveBufferSize", 256},
+                        {"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
+                        {"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
+                    }, webSocketsTrasport.Run);
+            }
+        }
+        }
 
-		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
-		{
-			var cfg = new HttpConfiguration();
+        private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
+        {
+            var cfg = new HttpConfiguration();
 
-			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
-			cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
-			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
-			cfg.Properties[typeof(TimeSeriesLandlord)] = options.TimeSeriesLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
-			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
-			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
+            cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
+            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
+            cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+            cfg.Properties[typeof(TimeSeriesLandlord)] = options.TimeSeriesLandlord;
+            cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+            cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+            cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
+            cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
             cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
             cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
@@ -267,58 +267,58 @@ namespace Owin
                                         return true;
                                 }
                             default:
-				                return true;
-				        }
-				    }
-				}
+                                return true;
+                        }
+                    }
+                }
 
-				return true;
-			}
+                return true;
+            }
 
-			public bool UseBufferedOutputStream(HttpResponseMessage response)
-			{
-				var content = response.Content;
-				var compressedContent = content as CompressedContent;
-				if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
-					return ShouldBuffer(compressedContent.OriginalContent);
-				return ShouldBuffer(content);
-			}
+            public bool UseBufferedOutputStream(HttpResponseMessage response)
+            {
+                var content = response.Content;
+                var compressedContent = content as CompressedContent;
+                if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
+                    return ShouldBuffer(compressedContent.OriginalContent);
+                return ShouldBuffer(content);
+            }
 
-			private bool ShouldBuffer(HttpContent content)
-			{
-				return (content is IEventsTransport ||
-						content is StreamsController.StreamQueryContent ||
-						content is StreamContent ||
-						content is PushStreamContent ||
-						content is JsonContent ||
-						content is MultiGetController.MultiGetContent) == false;
-			}
-		}
+            private bool ShouldBuffer(HttpContent content)
+            {
+                return (content is IEventsTransport ||
+                        content is StreamsController.StreamQueryContent ||
+                        content is StreamContent ||
+                        content is PushStreamContent ||
+                        content is JsonContent ||
+                        content is MultiGetController.MultiGetContent) == false;
+            }
+        }
 
-		private class InterceptMiddleware : OwinMiddleware
-		{
+        private class InterceptMiddleware : OwinMiddleware
+        {
             private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-			public InterceptMiddleware(OwinMiddleware next)
-				: base(next)
-			{
-			}
+            public InterceptMiddleware(OwinMiddleware next)
+                : base(next)
+            {
+            }
 
-			public override async Task Invoke(IOwinContext context)
-			{
-				// Pre request stuff
+            public override async Task Invoke(IOwinContext context)
+            {
+                // Pre request stuff
                 try
                 {
                     await Next.Invoke(context).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-					if (Log.IsDebugEnabled)
-						Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
-				// Post request stuff
-			}
-		}
+                // Post request stuff
+            }
+        }
 
         private class CustomExceptionMiddleware : OwinMiddleware
         {
@@ -335,10 +335,10 @@ namespace Owin
                 }
                 catch (Exception ex)
                 {
-					if (Log.IsDebugEnabled)
-						Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
                 }
             }
         }
-	}
+    }
 }

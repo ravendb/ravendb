@@ -10,35 +10,35 @@ using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class SimilarIndexNames : RavenTest
-	{
-		private readonly DocumentDatabase db;
+    public class SimilarIndexNames : RavenTest
+    {
+        private readonly DocumentDatabase db;
 
-		public SimilarIndexNames()
-		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				RunInMemory= true
-			}, null);
-		}
+        public SimilarIndexNames()
+        {
+            db = new DocumentDatabase(new RavenConfiguration
+            {
+                RunInMemory= true
+            }, null);
+        }
 
 
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            db.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void Index_with_similar_names_update_first()
-		{
-			db.Indexes.PutIndex("Leases/SearchIndex",
-						new IndexDefinition
-						{
-							Map = @"
-	from doc in docs
-	where doc.type == ""page""
-	select new { Key = doc.title, Value = doc.content, Size = doc.size };
+        [Fact]
+        public void Index_with_similar_names_update_first()
+        {
+            db.Indexes.PutIndex("Leases/SearchIndex",
+                        new IndexDefinition
+                        {
+                            Map = @"
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
                         });
 

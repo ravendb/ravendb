@@ -64,110 +64,110 @@ namespace Raven.Abstractions.Logging.LogProviders
             {
                 return null;
             }
-		}
+        }
 
-		public class Log4NetLogger : ILog
-		{
-			private readonly dynamic logger;
+        public class Log4NetLogger : ILog
+        {
+            private readonly dynamic logger;
 
-			internal Log4NetLogger(object logger)
-			{
-				this.logger = logger;
-			}
+            internal Log4NetLogger(object logger)
+            {
+                this.logger = logger;
+            }
 
-			public bool IsInfoEnabled
-			{
-				get { return logger.IsInfoEnabled; }
-			}
+            public bool IsInfoEnabled
+            {
+                get { return logger.IsInfoEnabled; }
+            }
 
-			public bool IsDebugEnabled
-			{
-				get { return logger.IsDebugEnabled; }
-			}
+            public bool IsDebugEnabled
+            {
+                get { return logger.IsDebugEnabled; }
+            }
 
-			public bool IsWarnEnabled
-			{
-				get { return logger.IsWarnEnabled; }
-			}
+            public bool IsWarnEnabled
+            {
+                get { return logger.IsWarnEnabled; }
+            }
 
-			public void Log(LogLevel logLevel, Func<string> messageFunc)
-			{
-				switch (logLevel)
-				{
-					case LogLevel.Info:
-						if (logger.IsInfoEnabled)
-						{
-							logger.Info(messageFunc());
-						}
-						break;
-					case LogLevel.Warn:
-						if (logger.IsWarnEnabled)
-						{
-							logger.Warn(messageFunc());
-						}
-						break;
-					case LogLevel.Error:
-						if (logger.IsErrorEnabled)
-						{
-							logger.Error(messageFunc());
-						}
-						break;
-					case LogLevel.Fatal:
-						if (logger.IsFatalEnabled)
-						{
-							logger.Fatal(messageFunc());
-						}
-						break;
-					default:
-						if (logger.IsDebugEnabled)
-						{
-							logger.Debug(messageFunc());
-								// Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
-						}
-						break;
-				}
-			}
+            public void Log(LogLevel logLevel, Func<string> messageFunc)
+            {
+                switch (logLevel)
+                {
+                    case LogLevel.Info:
+                        if (logger.IsInfoEnabled)
+                        {
+                            logger.Info(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Warn:
+                        if (logger.IsWarnEnabled)
+                        {
+                            logger.Warn(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Error:
+                        if (logger.IsErrorEnabled)
+                        {
+                            logger.Error(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Fatal:
+                        if (logger.IsFatalEnabled)
+                        {
+                            logger.Fatal(messageFunc());
+                        }
+                        break;
+                    default:
+                        if (logger.IsDebugEnabled)
+                        {
+                            logger.Debug(messageFunc());
+                                // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
+                        }
+                        break;
+                }
+            }
 
-			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
-				where TException : Exception
-			{
-				switch (logLevel)
-				{
-					case LogLevel.Info:
-						if (logger.IsDebugEnabled)
-						{
-							logger.Info(messageFunc(), exception);
-						}
-						break;
-					case LogLevel.Warn:
-						if (logger.IsWarnEnabled)
-						{
-							logger.Warn(messageFunc(), exception);
-						}
-						break;
-					case LogLevel.Error:
-						if (logger.IsErrorEnabled)
-						{
-							logger.Error(messageFunc(), exception);
-						}
-						break;
-					case LogLevel.Fatal:
-						if (logger.IsFatalEnabled)
-						{
-							logger.Fatal(messageFunc(), exception);
-						}
-						break;
-					default:
-						if (logger.IsDebugEnabled)
-						{
-							logger.Debug(messageFunc(), exception);
-						}
-						break;
-				}
-			}
+            public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
+                where TException : Exception
+            {
+                switch (logLevel)
+                {
+                    case LogLevel.Info:
+                        if (logger.IsDebugEnabled)
+                        {
+                            logger.Info(messageFunc(), exception);
+                        }
+                        break;
+                    case LogLevel.Warn:
+                        if (logger.IsWarnEnabled)
+                        {
+                            logger.Warn(messageFunc(), exception);
+                        }
+                        break;
+                    case LogLevel.Error:
+                        if (logger.IsErrorEnabled)
+                        {
+                            logger.Error(messageFunc(), exception);
+                        }
+                        break;
+                    case LogLevel.Fatal:
+                        if (logger.IsFatalEnabled)
+                        {
+                            logger.Fatal(messageFunc(), exception);
+                        }
+                        break;
+                    default:
+                        if (logger.IsDebugEnabled)
+                        {
+                            logger.Debug(messageFunc(), exception);
+                        }
+                        break;
+                }
+            }
 
-		    public bool ShouldLog(LogLevel logLevel)
-		    {
+            public bool ShouldLog(LogLevel logLevel)
+            {
                 switch (logLevel)
                 {
                     case LogLevel.Warn:

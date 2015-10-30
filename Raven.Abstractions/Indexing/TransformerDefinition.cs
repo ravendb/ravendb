@@ -12,14 +12,14 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public int TransfomerId { get; set; }
 
-		/// <summary>
-		/// Temporary (used for data exploration - internal)
-		/// </summary>
-		public bool Temporary { get; set; }
+        /// <summary>
+        /// Temporary (used for data exploration - internal)
+        /// </summary>
+        public bool Temporary { get; set; }
 
-		/// <summary>
-		/// Transformer name.
-		/// </summary>
+        /// <summary>
+        /// Transformer name.
+        /// </summary>
         public string Name { get; set; }
 
         public TransformerLockMode LockMode { get; set; } 

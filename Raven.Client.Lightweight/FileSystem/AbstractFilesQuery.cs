@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -731,7 +731,7 @@ namespace Raven.Client.FileSystem
         {
             Session.IncrementRequestCount();
 
-			if (log.IsDebugEnabled)
+            if (log.IsDebugEnabled)
             log.Debug("Executing query on file system '{0}' in '{1}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
 
             var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize).ConfigureAwait(false);

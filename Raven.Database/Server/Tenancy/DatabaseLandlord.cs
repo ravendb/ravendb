@@ -25,9 +25,9 @@ namespace Raven.Database.Server.Tenancy
     {
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
-		public event Action<string> OnDatabaseLoaded = delegate { };
+        public event Action<string> OnDatabaseLoaded = delegate { };
 
-	    private bool initialized;
+        private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
@@ -37,44 +37,44 @@ namespace Raven.Database.Server.Tenancy
 
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-			int val;
-			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-				val = 900;
+            int val;
+            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+                val = 900;
 
-	        MaxIdleTimeForTenantDatabaseInSec = val;
+            MaxIdleTimeForTenantDatabaseInSec = val;
 
-			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-				val = 60;
+            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
+                val = 60;
 
-	        FrequencyToCheckForIdleDatabasesInSec = val;
+            FrequencyToCheckForIdleDatabasesInSec = val;
 
-			string tempPath = SystemConfiguration.TempPath;
-			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
-	        if (File.Exists(fullTempPath))
-	        {
-		        try
-		        {
-			        File.Delete(fullTempPath);
-		        }
-		        catch (Exception)
-		        {
-			        // we ignore this issue, nothing to do now, and we'll only see
-					// this as an error if there are actually uploads
-		        }
-	        }
-	        if (Directory.Exists(fullTempPath))
-	        {
-		        try
-		        {
-			        Directory.Delete(fullTempPath, true);
-		        }
-		        catch (Exception)
-		        {
-			        // there is nothing that we can do here, and it is possible that we have
-					// another database doing uploads for the same user, so we'll just 
-					// not any cleanup. Worst case, we'll waste some memory.
-		        }
-	        }
+            string tempPath = SystemConfiguration.TempPath;
+            var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+            if (File.Exists(fullTempPath))
+            {
+                try
+                {
+                    File.Delete(fullTempPath);
+                }
+                catch (Exception)
+                {
+                    // we ignore this issue, nothing to do now, and we'll only see
+                    // this as an error if there are actually uploads
+                }
+            }
+            if (Directory.Exists(fullTempPath))
+            {
+                try
+                {
+                    Directory.Delete(fullTempPath, true);
+                }
+                catch (Exception)
+                {
+                    // there is nothing that we can do here, and it is possible that we have
+                    // another database doing uploads for the same user, so we'll just 
+                    // not any cleanup. Worst case, we'll waste some memory.
+                }
+            }
 
             Init();
         }
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-			return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
+            return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
         }
 
         private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
@@ -112,8 +112,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			if (document.Settings[Constants.RavenDataDir] == null)
-				throw new InvalidOperationException("Could not find " + Constants.RavenDataDir);
+            if (document.Settings[Constants.RavenDataDir] == null)
+                throw new InvalidOperationException("Could not find " + Constants.RavenDataDir);
 
             if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
@@ -121,18 +121,18 @@ namespace Raven.Database.Server.Tenancy
             return document;
         }
 
-		public override async Task<DocumentDatabase> GetResourceInternal(string resourceName)
-		{
-			if (string.Equals("<system>", resourceName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(resourceName))
-				return systemDatabase;
+        public override async Task<DocumentDatabase> GetResourceInternal(string resourceName)
+        {
+            if (string.Equals("<system>", resourceName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(resourceName))
+                return systemDatabase;
 
-			Task<DocumentDatabase> db;
-			if (TryGetOrCreateResourceStore(resourceName, out db))
-				return await db.ConfigureAwait(false);
-			return null;
-		}
+            Task<DocumentDatabase> db;
+            if (TryGetOrCreateResourceStore(resourceName, out db))
+                return await db.ConfigureAwait(false);
+            return null;
+        }
 
-		public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
+        public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (Locks.Contains(DisposingLock))
                 throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
@@ -179,12 +179,12 @@ namespace Raven.Database.Server.Tenancy
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-	            documentDatabase.RequestManager = SystemDatabase.RequestManager;
+                documentDatabase.RequestManager = SystemDatabase.RequestManager;
                 return documentDatabase;
             }).ContinueWith(task =>
             {
-	            if (task.Status == TaskStatus.RanToCompletion) 
-					OnDatabaseLoaded(tenantId);
+                if (task.Status == TaskStatus.RanToCompletion) 
+                    OnDatabaseLoaded(tenantId);
 
                 if (task.Status == TaskStatus.Faulted) // this observes the task exception
                 {
@@ -225,8 +225,8 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
             }
 
-			if (config.Settings[Constants.TempPath] == null)
-				config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
+            if (config.Settings[Constants.TempPath] == null)
+                config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
 
             SetupTenantConfiguration(config);
 
@@ -316,7 +316,7 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-			Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.ActiveBundles);
                 }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)

@@ -113,15 +113,15 @@ namespace Raven.Tests.FileSystem.Auth
             var client = (IAsyncFilesCommandsImpl) NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
             var adminClient = client.Admin;
 
-			await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
+            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
 
             var names = await adminClient.GetNamesAsync();
 
             Assert.Equal(2, names.Length);
             Assert.Contains("AdminClientWorkWithOAuthEnabled", names);
 
-			var stats = await adminClient.GetStatisticsAsync();
-			Assert.Equal(0, stats.Length); // 0 because our fs aren't active
+            var stats = await adminClient.GetStatisticsAsync();
+            Assert.Equal(0, stats.Length); // 0 because our fs aren't active
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName"))
             {

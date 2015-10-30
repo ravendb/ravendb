@@ -62,13 +62,13 @@
                             <option value="14">14</option>
                         </select>
                     </div>
-	                <div class="form-group" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible">
-		                <label for="clusterWide"> Cluster-wide</label>
-		                <input type="checkbox" id="clusterWide" data-bind="checked: isClusterWideChecked"/>
-	                </div>
-	                <div class="alert alert-info" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible() && !isClusterWideChecked()">
-		                Notice: Global configuration will be inherited by newly created database even when you unselect cluster-wide database.
-	                </div>
+                    <div class="form-group" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible">
+                        <label for="clusterWide"> Cluster-wide</label>
+                        <input type="checkbox" id="clusterWide" data-bind="checked: isClusterWideChecked"/>
+                    </div>
+                    <div class="alert alert-info" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible() && !isClusterWideChecked()">
+                        Notice: Global configuration will be inherited by newly created database even when you unselect cluster-wide database.
+                    </div>
                 </div>
             </div>
         </div>
@@ -94,9 +94,9 @@
         <button type="button" class="btn btn-default" data-bind="click: toggleQuotasBundle, css: { 'license-inactive': !isBundleActive('quotas') }">
             <i data-bind="css: {'fa-check': isQuotasBundleEnabled }" class="fa fa-fw"></i> Quotas
         </button>
-		<button type="button" class="btn btn-default" data-bind="click: toggleReplicationBundle, disable: replicationBundleChangeDisabled(), css: { 'license-inactive': !isBundleActive('replication') }">
-			<i data-bind="css: {'fa-check': isReplicationBundleEnabled }" class="fa fa-fw"></i> Replication
-		</button>
+        <button type="button" class="btn btn-default" data-bind="click: toggleReplicationBundle, disable: replicationBundleChangeDisabled(), css: { 'license-inactive': !isBundleActive('replication') }">
+            <i data-bind="css: {'fa-check': isReplicationBundleEnabled }" class="fa fa-fw"></i> Replication
+        </button>
         <button type="button" class="btn btn-default" data-bind="click: toggleScriptedIndexBundle">
             <i data-bind="css: {'fa-check': isScriptedIndexBundleEnabled }" class="fa fa-fw"></i> Scripted Index
         </button>

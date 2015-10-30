@@ -758,14 +758,14 @@ namespace Raven.Client.Document
             return DocumentQuery<T>(index.IndexName, index.IsMapReduce);
         }
 
-		/// <summary>
-		/// Query the specified index using Lucene syntax
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
-		/// <returns></returns>
-		[Obsolete("Use DocumentQuery instead.")]
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="indexName">Name of the index.</param>
+        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
+        /// <returns></returns>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
         {
             return DocumentQuery<T>(indexName, isMapReduce);
@@ -776,25 +776,14 @@ namespace Raven.Client.Document
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="indexName">Name of the index.</param>
+        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
             return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
 
-	    /// <summary>
-	    /// Query the specified index using Lucene syntax
-	    /// </summary>
-	    /// <typeparam name="T"></typeparam>
-	    /// <param name="indexName">Name of the index.</param>
-	    /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
-	    /// <returns></returns>
-	    public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
-		{
-			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
-		}
-
-		/// <summary>
+        /// <summary>
         /// Commits the specified tx id.
         /// </summary>
         /// <param name="txId">The tx id.</param>

@@ -7,7 +7,7 @@ class globalConfig extends viewModelBase {
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
 
-	constructor() {
+    constructor() {
         super();
 
         this.router = adminSettings.adminSettingsRouter.createChildRouter()

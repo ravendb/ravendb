@@ -258,7 +258,7 @@ namespace Raven.Database.Server.Connections
 
         protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
+            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
         }
 
         public WebSocketsRequestParser WebSocketsRequestParser
@@ -518,7 +518,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
+            return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
         }
 
         protected override void RegisterTransportState()
@@ -543,7 +543,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-			return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
+            return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
         }
 
         protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)

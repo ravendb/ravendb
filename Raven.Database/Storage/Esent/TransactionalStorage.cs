@@ -665,7 +665,7 @@ namespace Raven.Storage.Esent
                         }
                         return false;
                     case JET_err.DatabaseDirtyShutdown:
-						Output("Dirty shutdown detected, attempting to recover...");
+                        Output("Dirty shutdown detected, attempting to recover...");
                         try
                         {
                             Api.JetTerm2(instance, TermGrbit.Complete);
@@ -833,35 +833,35 @@ namespace Raven.Storage.Esent
             if (transactionContext != null)
                 Monitor.Enter(transactionContext, ref lockTaken);
 
-	        try
-	        {
-		        using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
-		        {
-			        var storageActionsAccessor = new StorageActionsAccessor(pht);
-			        if (disableBatchNesting.Value == null)
-				        current.Value = storageActionsAccessor;
-			        action(storageActionsAccessor);
-			        storageActionsAccessor.SaveAllTasks();
-			        pht.ExecuteBeforeStorageCommit();
+            try
+            {
+                using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
+                {
+                    var storageActionsAccessor = new StorageActionsAccessor(pht);
+                    if (disableBatchNesting.Value == null)
+                        current.Value = storageActionsAccessor;
+                    action(storageActionsAccessor);
+                    storageActionsAccessor.SaveAllTasks();
+                    pht.ExecuteBeforeStorageCommit();
 
-			        if (pht.UsingLazyCommit)
-				        txMode = CommitTransactionGrbit.None;
+                    if (pht.UsingLazyCommit)
+                        txMode = CommitTransactionGrbit.None;
 
-			        try
-			        {
-				        return pht.Commit(txMode);
-			        }
-			        finally
-			        {
-				        pht.ExecuteAfterStorageCommit();
-			        }
-		        }
-	        }
-	        catch (Exception e)
-	        {
-		        log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
-		        throw;
-	        }
+                    try
+                    {
+                        return pht.Commit(txMode);
+                    }
+                    finally
+                    {
+                        pht.ExecuteAfterStorageCommit();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                throw;
+            }
             finally
             {
                 if (lockTaken)

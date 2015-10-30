@@ -117,12 +117,12 @@ namespace Raven.Bundles.UniqueConstraints
             return VetoResult.Allowed;
         }
 
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			if (key.StartsWith("Raven/"))
-			{
-				return;
-			}
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+        {
+            if (key.StartsWith("Raven/"))
+            {
+                return;
+            }
 
             var entityName = metadata.Value<string>(Constants.RavenEntityName) + "/";
 

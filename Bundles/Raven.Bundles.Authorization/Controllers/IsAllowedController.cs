@@ -14,14 +14,14 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Bundles.Authorization.Controllers
 {
-	public class IsAllowedController : BaseDatabaseApiController
-	{
-		[HttpGet]
-		[RavenRoute("authorization/IsAllowed/{*userId}")]
-		[RavenRoute("databases/{databaseName}/authorization/IsAllowed/{*userId}")]
-		public HttpResponseMessage IsAllowed(string userId)
-		{
-			//var userId = id;
+    public class IsAllowedController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("authorization/IsAllowed/{*userId}")]
+        [RavenRoute("databases/{databaseName}/authorization/IsAllowed/{*userId}")]
+        public HttpResponseMessage IsAllowed(string userId)
+        {
+            //var userId = id;
 
             var docIds = GetQueryStringValues("id");
             var operation = GetQueryStringValue("operation");

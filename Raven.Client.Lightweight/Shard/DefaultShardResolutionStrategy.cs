@@ -73,104 +73,104 @@ namespace Raven.Client.Shard
 {0}: \s* (?<Open>"")(?<shardId>[^""]+)(?<Close-Open>"") |
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 
-			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern,
-				RegexOptions.Compiled |
-				RegexOptions.IgnorePatternWhitespace);
+            regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern,
+                RegexOptions.Compiled |
+                RegexOptions.IgnorePatternWhitespace);
 
-			var compiled = shardingProperty.Compile();
+            var compiled = shardingProperty.Compile();
 
-			shardResultToStringByType[typeof(TEntity)] = o => valueTranslator(compiled((TEntity)o));
-			queryResultToStringByType[typeof(TEntity)] = o => queryTranslator(o);
+            shardResultToStringByType[typeof(TEntity)] = o => valueTranslator(compiled((TEntity)o));
+            queryResultToStringByType[typeof(TEntity)] = o => queryTranslator(o);
 
-			return this;
-		}
+            return this;
+        }
 
 
-		/// <summary>
-		///  Generate a shard id for the specified entity
-		///  </summary>
-		public virtual string GenerateShardIdFor(object entity, object owner)
-		{
-			if (shardResultToStringByType.Count == 0)
-			{ 
-				// one shard per session
-				return ShardIds[owner.GetHashCode() % ShardIds.Count];
-			}
+        /// <summary>
+        ///  Generate a shard id for the specified entity
+        ///  </summary>
+        public virtual string GenerateShardIdFor(object entity, object owner)
+        {
+            if (shardResultToStringByType.Count == 0)
+            { 
+                // one shard per session
+                return ShardIds[owner.GetHashCode() % ShardIds.Count];
+            }
 
-			Func<object, string> func;
-			if (shardResultToStringByType.TryGetValue(entity.GetType(), out func) == false)
-				throw new InvalidOperationException(
-					"Entity " + entity.GetType().FullName + " was not setup in " + GetType().FullName + " even though other entities have been setup using ShardingOn<T>()." + Environment.NewLine +
-					"Did you forget to call ShardingOn<" + entity.GetType().FullName + ">() and provide the sharding function required?");
+            Func<object, string> func;
+            if (shardResultToStringByType.TryGetValue(entity.GetType(), out func) == false)
+                throw new InvalidOperationException(
+                    "Entity " + entity.GetType().FullName + " was not setup in " + GetType().FullName + " even though other entities have been setup using ShardingOn<T>()." + Environment.NewLine +
+                    "Did you forget to call ShardingOn<" + entity.GetType().FullName + ">() and provide the sharding function required?");
 
-			return func(entity);
-		}
+            return func(entity);
+        }
 
-		/// <summary>
-		///  The shard id for the server that contains the metadata (such as the HiLo documents)
-		///  for the given entity
-		///  </summary>
-		public virtual string MetadataShardIdFor(object entity)
-		{
-			return ShardIds.First();
-		}
+        /// <summary>
+        ///  The shard id for the server that contains the metadata (such as the HiLo documents)
+        ///  for the given entity
+        ///  </summary>
+        public virtual string MetadataShardIdFor(object entity)
+        {
+            return ShardIds.First();
+        }
 
-		/// <summary>
-		/// Selects the shard ids appropriate for the specified data.
-		/// </summary>
-		/// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
-		public virtual IList<string> PotentialShardsFor(ShardRequestData requestData, List<string> potentialShardIds)
-		{
-			return potentialShardIds;
-		}
+        /// <summary>
+        /// Selects the shard ids appropriate for the specified data.
+        /// </summary>
+        /// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
+        public virtual IList<string> PotentialShardsFor(ShardRequestData requestData, List<string> potentialShardIds)
+        {
+            return potentialShardIds;
+        }
 
-		/// <summary>
-		///  Selects the shard ids appropriate for the specified data.
-		///  </summary>
-		/// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
-		public virtual IList<string> PotentialShardsFor(ShardRequestData requestData)
-		{
-			if (requestData.Query != null)
-			{
-				Regex regex;
-				if (regexToCaptureShardIdFromQueriesByType.TryGetValue(requestData.EntityType, out regex) == false)
-					return PotentialShardsFor(requestData, null); // we have no special knowledge, let us just query everything
-	
-				var collection = regex.Matches(requestData.Query.Query);
-				if (collection.Count == 0)
-					return PotentialShardsFor(requestData, null); // we don't have the sharding field, we have to query over everything
+        /// <summary>
+        ///  Selects the shard ids appropriate for the specified data.
+        ///  </summary>
+        /// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
+        public virtual IList<string> PotentialShardsFor(ShardRequestData requestData)
+        {
+            if (requestData.Query != null)
+            {
+                Regex regex;
+                if (regexToCaptureShardIdFromQueriesByType.TryGetValue(requestData.EntityType, out regex) == false)
+                    return PotentialShardsFor(requestData, null); // we have no special knowledge, let us just query everything
+    
+                var collection = regex.Matches(requestData.Query.Query);
+                if (collection.Count == 0)
+                    return PotentialShardsFor(requestData, null); // we don't have the sharding field, we have to query over everything
 
-				var translateQueryValueToShardId = queryResultToStringByType[requestData.EntityType];
+                var translateQueryValueToShardId = queryResultToStringByType[requestData.EntityType];
 
-				var potentialShardsFor = collection.Cast<Match>().Select(match => translateQueryValueToShardId(match.Groups["shardId"].Value)).ToList();
+                var potentialShardsFor = collection.Cast<Match>().Select(match => translateQueryValueToShardId(match.Groups["shardId"].Value)).ToList();
 
-				if (potentialShardsFor.Any(queryShardId => ShardIds.Contains(queryShardId, StringComparer.OrdinalIgnoreCase)) == false)
-					return PotentialShardsFor(requestData, null); // we couldn't find the shard ids here, maybe there is something wrong in the query, sending to all shards
+                if (potentialShardsFor.Any(queryShardId => ShardIds.Contains(queryShardId, StringComparer.OrdinalIgnoreCase)) == false)
+                    return PotentialShardsFor(requestData, null); // we couldn't find the shard ids here, maybe there is something wrong in the query, sending to all shards
 
-				return PotentialShardsFor(requestData, potentialShardsFor);
-			}
+                return PotentialShardsFor(requestData, potentialShardsFor);
+            }
 
-			if (requestData.Keys.Count == 0) // we are only optimized for keys
-				return PotentialShardsFor(requestData, null);
+            if (requestData.Keys.Count == 0) // we are only optimized for keys
+                return PotentialShardsFor(requestData, null);
 
-			// we are looking for search by key, let us see if we can narrow it down by using the 
-			// embedded shard id.
-			var list = new List<string>();
-			foreach (var key in requestData.Keys)
-			{
-				var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
-				if (start == -1)
-					return PotentialShardsFor(requestData, null); // if we couldn't figure it out, select from all
+            // we are looking for search by key, let us see if we can narrow it down by using the 
+            // embedded shard id.
+            var list = new List<string>();
+            foreach (var key in requestData.Keys)
+            {
+                var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
+                if (start == -1)
+                    return PotentialShardsFor(requestData, null); // if we couldn't figure it out, select from all
 
-				var maybeShardId = key.Substring(0, start);
+                var maybeShardId = key.Substring(0, start);
 
-				if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.OrdinalIgnoreCase)))
-					list.Add(maybeShardId);
-				else
-					return PotentialShardsFor(requestData, null); // we couldn't find it there, select from all
-		
-			}
-			return PotentialShardsFor(requestData, list);
-		}
-	}
+                if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.OrdinalIgnoreCase)))
+                    list.Add(maybeShardId);
+                else
+                    return PotentialShardsFor(requestData, null); // we couldn't find it there, select from all
+        
+            }
+            return PotentialShardsFor(requestData, list);
+        }
+    }
 }

@@ -30,7 +30,7 @@ namespace Raven.Client.FileSystem
         private FilesConvention conventions;
         private readonly AtomicDictionary<IFilesChanges> fileSystemChanges = new AtomicDictionary<IFilesChanges>(StringComparer.OrdinalIgnoreCase);
         private readonly AtomicDictionary<IAsyncFilesCommandsImpl> fileSystemCommands = new AtomicDictionary<IAsyncFilesCommandsImpl>(StringComparer.OrdinalIgnoreCase);
-		private readonly ConcurrentDictionary<string, IFilesReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IFilesReplicationInformer>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, IFilesReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IFilesReplicationInformer>(StringComparer.OrdinalIgnoreCase);
         
         private bool initialized;
         private FilesSessionListeners listeners = new FilesSessionListeners();
@@ -51,9 +51,9 @@ namespace Raven.Client.FileSystem
         public ICredentials Credentials 
         {
             get { return credentials; }
-	        set
-	        {
-		        credentials = value ?? CredentialCache.DefaultNetworkCredentials;
+            set
+            {
+                credentials = value ?? CredentialCache.DefaultNetworkCredentials;
         }
         }
         private ICredentials credentials;
@@ -126,18 +126,18 @@ namespace Raven.Client.FileSystem
             }
         }
 
-	    public string DefaultFileSystem { get; set; }
+        public string DefaultFileSystem { get; set; }
         private bool disableReplicationInformerGeneration = false;
-	    public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
-	    {
-	        if (disableReplicationInformerGeneration)
-	            return null;
+        public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
+        {
+            if (disableReplicationInformerGeneration)
+                return null;
 
             var key = Url;
-			fsName = fsName ?? DefaultFileSystem;
-			if (string.IsNullOrEmpty(fsName) == false)
-			{
-				key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
+            fsName = fsName ?? DefaultFileSystem;
+            if (string.IsNullOrEmpty(fsName) == false)
+            {
+                key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
             }
 
             var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
@@ -256,14 +256,14 @@ namespace Raven.Client.FileSystem
         protected virtual void InitializeInternal()
         {
             AsyncFilesCommandsGenerator = () => 
-				new AsyncFilesServerClient(Url, 
-					DefaultFileSystem, 
-					Conventions, 
-					new OperationCredentials(ApiKey, Credentials),
-					jsonRequestFactory, 
-					currentSessionId, 
- 					GetReplicationInformerForFileSystem,
-					Listeners.ConflictListeners);
+                new AsyncFilesServerClient(Url, 
+                    DefaultFileSystem, 
+                    Conventions, 
+                    new OperationCredentials(ApiKey, Credentials),
+                    jsonRequestFactory, 
+                    currentSessionId, 
+                    GetReplicationInformerForFileSystem,
+                    Listeners.ConflictListeners);
         }
 
         /// <summary>
@@ -375,20 +375,20 @@ namespace Raven.Client.FileSystem
 
         private void HandleConnectionStringOptions()
         {
-	        if (!String.IsNullOrWhiteSpace(ConnectionStringName))
-	        {
+            if (!String.IsNullOrWhiteSpace(ConnectionStringName))
+            {
             var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
             parser.Parse();
 
             var options = parser.ConnectionStringOptions;
             if (options.Credentials != null)
-			        Credentials = options.Credentials;
+                    Credentials = options.Credentials;
             if (string.IsNullOrEmpty(options.Url) == false)
-			        Url = options.Url;
+                    Url = options.Url;
             if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
-			        DefaultFileSystem = options.DefaultFileSystem;
+                    DefaultFileSystem = options.DefaultFileSystem;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
-			        ApiKey = options.ApiKey;
+                    ApiKey = options.ApiKey;
         }
         }
 

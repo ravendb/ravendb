@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Raven.Abstractions.Util;
 using Raven.Database.Config;

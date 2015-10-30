@@ -67,52 +67,52 @@ namespace Raven.Abstractions.Logging
                 return;
 
             Targets.Add(new T());
-		}
+        }
 
-		public static T GetTarget<T>() where T: Target
-		{
-			return Targets.OfType<T>().FirstOrDefault();
-		}
+        public static T GetTarget<T>() where T: Target
+        {
+            return Targets.OfType<T>().FirstOrDefault();
+        }
 
-		public class NoOpLogger : ILog
-		{
-			public bool IsInfoEnabled { get { return false; } }
+        public class NoOpLogger : ILog
+        {
+            public bool IsInfoEnabled { get { return false; } }
 
-			public bool IsDebugEnabled { get { return false; } }
+            public bool IsDebugEnabled { get { return false; } }
 
-			public bool IsWarnEnabled { get { return false; } }
+            public bool IsWarnEnabled { get { return false; } }
 
-			public void Log(LogLevel logLevel, Func<string> messageFunc)
-			{}
+            public void Log(LogLevel logLevel, Func<string> messageFunc)
+            {}
 
-			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
-				where TException : Exception
-			{}
+            public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
+                where TException : Exception
+            {}
 
-		    public bool ShouldLog(LogLevel logLevel)
-		    {
-		        return false;
-		    }
-		}
+            public bool ShouldLog(LogLevel logLevel)
+            {
+                return false;
+            }
+        }
 
-		public static IDisposable OpenNestedConext(string context)
-		{
-			ILogManager logManager = CurrentLogManager;
-			return logManager == null ? new DisposableAction(() =>{}) : logManager.OpenNestedConext(context);
-		}
+        public static IDisposable OpenNestedConext(string context)
+        {
+            ILogManager logManager = CurrentLogManager;
+            return logManager == null ? new DisposableAction(() =>{}) : logManager.OpenNestedConext(context);
+        }
 
-		public static IDisposable OpenMappedContext(string key, string value)
-		{
-			ILogManager logManager = CurrentLogManager;
-			return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
-		}
+        public static IDisposable OpenMappedContext(string key, string value)
+        {
+            ILogManager logManager = CurrentLogManager;
+            return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
+        }
 
-		public static void ClearTargets()
-		{
-		    Targets.Clear();
-		}
+        public static void ClearTargets()
+        {
+            Targets.Clear();
+        }
 
-	    public static bool ShouldLogToTargets(LogLevel logLevel, ILog logger)
+        public static bool ShouldLogToTargets(LogLevel logLevel, ILog logger)
         {
             switch (logLevel)
             {

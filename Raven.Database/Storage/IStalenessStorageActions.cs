@@ -14,13 +14,13 @@ namespace Raven.Database.Storage
 
         bool IsIndexStaleByTask(int view, DateTime? cutOff);
 
-		bool IsReduceStale(int view);
+        bool IsReduceStale(int view);
 
-		bool IsMapStale(int view);
+        bool IsMapStale(int view);
 
-		Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
+        Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
 
-		Etag GetMostRecentDocumentEtag();
+        Etag GetMostRecentDocumentEtag();
 
         [Obsolete("Use RavenFS instead.")]
         Etag GetMostRecentAttachmentEtag();

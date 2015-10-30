@@ -142,248 +142,248 @@ namespace Voron.Trees
             {
                 var tempPagePointer = tmp.TempPagePointer;
                 Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
-				Delete(key); // release our current page
-				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
+                Delete(key); // release our current page
+                Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
 
-				var ptr = DirectAdd(key, newSize);
+                var ptr = DirectAdd(key, newSize);
 
-				var newNestedPage = new Page(ptr, "multi tree", newSize)
-				{
-					Lower = (ushort)Constants.PageHeaderSize,
-					Upper = KeysPrefixing ? (ushort) (newSize - Constants.PrefixInfoSectionSize) : newSize,
-					Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
-					PageNumber = -1L // mark as invalid page number
-				};
+                var newNestedPage = new Page(ptr, "multi tree", newSize)
+                {
+                    Lower = (ushort)Constants.PageHeaderSize,
+                    Upper = KeysPrefixing ? (ushort) (newSize - Constants.PrefixInfoSectionSize) : newSize,
+                    Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
+                    PageNumber = -1L // mark as invalid page number
+                };
 
-				newNestedPage.ClearPrefixInfo();
+                newNestedPage.ClearPrefixInfo();
 
-				MemorySlice nodeKey = nestedPage.CreateNewEmptyKey();
-				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-				{
-					var nodeHeader = nestedPage.GetNode(i);
-					nestedPage.SetNodeKey(nodeHeader, ref nodeKey);
-					nodeKey = newNestedPage.PrepareKeyToInsert(nodeKey, i);
-					newNestedPage.AddDataNode(i, nodeKey, 0,
-						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
-				}
+                MemorySlice nodeKey = nestedPage.CreateNewEmptyKey();
+                for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+                {
+                    var nodeHeader = nestedPage.GetNode(i);
+                    nestedPage.SetNodeKey(nodeHeader, ref nodeKey);
+                    nodeKey = newNestedPage.PrepareKeyToInsert(nodeKey, i);
+                    newNestedPage.AddDataNode(i, nodeKey, 0,
+                        (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+                }
 
-				newNestedPage.Search(value);
-				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.PrepareKeyToInsert(value, newNestedPage.LastSearchPosition), 0, 0);
-			}
-		}
+                newNestedPage.Search(value);
+                newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, newNestedPage.PrepareKeyToInsert(value, newNestedPage.LastSearchPosition), 0, 0);
+            }
+        }
 
-		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
-		{
-			MemorySlice valueToInsert;
-			
-			if(KeysPrefixing)
-				valueToInsert = new PrefixedSlice(value); // first item is never prefixed
-			else
-				valueToInsert = value;
+        private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
+        {
+            MemorySlice valueToInsert;
+            
+            if(KeysPrefixing)
+                valueToInsert = new PrefixedSlice(value); // first item is never prefixed
+            else
+                valueToInsert = value;
 
-			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
-			if (requiredPageSize > maxNodeSize)
-			{
-				// no choice, very big value, we might as well just put it in its own tree from the get go...
-				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
+            var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
+            if (requiredPageSize > maxNodeSize)
+            {
+                // no choice, very big value, we might as well just put it in its own tree from the get go...
+                // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
 
-				var tree = Create(tx, KeysPrefixing, TreeFlags.MultiValue);
-				tree.DirectAdd(value, 0);
-				tx.AddMultiValueTree(this, key, tree);
+                var tree = Create(tx, KeysPrefixing, TreeFlags.MultiValue);
+                tree.DirectAdd(value, 0);
+                tx.AddMultiValueTree(this, key, tree);
 
-				DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
-				return;
-			}
+                DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+                return;
+            }
 
-			var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize);
+            var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize);
 
-			var ptr = DirectAdd(key, actualPageSize);
+            var ptr = DirectAdd(key, actualPageSize);
 
-			var nestedPage = new Page(ptr, "multi tree", actualPageSize)
-			{
-				PageNumber = -1L,// hint that this is an inner page
-				Lower = (ushort) Constants.PageHeaderSize,
-				Upper = KeysPrefixing ? (ushort)(actualPageSize - Constants.PrefixInfoSectionSize) : actualPageSize,
-				Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
-			};
+            var nestedPage = new Page(ptr, "multi tree", actualPageSize)
+            {
+                PageNumber = -1L,// hint that this is an inner page
+                Lower = (ushort) Constants.PageHeaderSize,
+                Upper = KeysPrefixing ? (ushort)(actualPageSize - Constants.PrefixInfoSectionSize) : actualPageSize,
+                Flags = KeysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf,
+            };
 
-			nestedPage.ClearPrefixInfo();
+            nestedPage.ClearPrefixInfo();
 
-			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
+            CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
-			nestedPage.AddDataNode(0, valueToInsert, 0, 0);
-		}
+            nestedPage.AddDataNode(0, valueToInsert, 0, 0);
+        }
 
-		public void MultiDelete(Slice key, Slice value, ushort? version = null)
-		{
-			State.IsModified = true;
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
-			var page = FindPageFor(key, out node, out lazy);
-			if (page == null || page.LastMatch != 0)
-			{
-				return; //nothing to delete - key not found
-			}
+        public void MultiDelete(Slice key, Slice value, ushort? version = null)
+        {
+            State.IsModified = true;
+            Lazy<Cursor> lazy;
+            NodeHeader* node;
+            var page = FindPageFor(key, out node, out lazy);
+            if (page == null || page.LastMatch != 0)
+            {
+                return; //nothing to delete - key not found
+            }
 
-			page = _tx.ModifyPage(page.PageNumber, this, page);
+            page = _tx.ModifyPage(page.PageNumber, this, page);
 
-			var item = page.GetNode(page.LastSearchPosition);
+            var item = page.GetNode(page.LastSearchPosition);
 
-			if (item->Flags == NodeFlags.MultiValuePageRef) //multi-value tree exists
-			{
-				var tree = OpenMultiValueTree(_tx, key, item);
+            if (item->Flags == NodeFlags.MultiValuePageRef) //multi-value tree exists
+            {
+                var tree = OpenMultiValueTree(_tx, key, item);
 
-				tree.Delete(value, version);
+                tree.Delete(value, version);
 
-				// previously, we would convert back to a simple model if we dropped to a single entry
-				// however, it doesn't really make sense, once you got enough values to go to an actual nested 
-				// tree, you are probably going to remain that way, or be removed completely.
-				if (tree.State.EntriesCount != 0) 
-					return;
-				_tx.TryRemoveMultiValueTree(this, key);
-				_tx.FreePage(tree.State.RootPageNumber);
+                // previously, we would convert back to a simple model if we dropped to a single entry
+                // however, it doesn't really make sense, once you got enough values to go to an actual nested 
+                // tree, you are probably going to remain that way, or be removed completely.
+                if (tree.State.EntriesCount != 0) 
+                    return;
+                _tx.TryRemoveMultiValueTree(this, key);
+                _tx.FreePage(tree.State.RootPageNumber);
 
-				Delete(key);
-			}
-			else // we use a nested page here
-			{
-				var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
-				var nestedItem = nestedPage.Search(value);
-				if (nestedPage.LastMatch != 0) // value not found
-					return;
+                Delete(key);
+            }
+            else // we use a nested page here
+            {
+                var nestedPage = new Page(NodeHeader.DirectAccess(_tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
+                var nestedItem = nestedPage.Search(value);
+                if (nestedPage.LastMatch != 0) // value not found
+                    return;
 
-				byte* nestedPagePtr;
-				if (item->Flags == NodeFlags.PageRef)
-				{
-					var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
-					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
-				}
-				else
-				{
-					nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
-				}
+                byte* nestedPagePtr;
+                if (item->Flags == NodeFlags.PageRef)
+                {
+                    var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
+                    nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+                }
+                else
+                {
+                    nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
+                }
 
-				nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item))
-				{
-					LastSearchPosition = nestedPage.LastSearchPosition
-				};
+                nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item))
+                {
+                    LastSearchPosition = nestedPage.LastSearchPosition
+                };
 
-				CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
-				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
-				if (nestedPage.NumberOfEntries == 0)
-					Delete(key);
-			}
-		}
+                CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
+                nestedPage.RemoveNode(nestedPage.LastSearchPosition);
+                if (nestedPage.NumberOfEntries == 0)
+                    Delete(key);
+            }
+        }
 
-		//TODO: write a test for this
-		public long MultiCount(Slice key)
-		{
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
-			var page = FindPageFor(key, out node, out lazy);
-			if (page == null || page.LastMatch != 0)
-				return 0;
+        //TODO: write a test for this
+        public long MultiCount(Slice key)
+        {
+            Lazy<Cursor> lazy;
+            NodeHeader* node;
+            var page = FindPageFor(key, out node, out lazy);
+            if (page == null || page.LastMatch != 0)
+                return 0;
 
-			Debug.Assert(node != null);
+            Debug.Assert(node != null);
 
-			var fetchedNodeKey = page.GetNodeKey(node);
-			if (fetchedNodeKey.Compare(key) != 0)
-			{
-				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
-			}
+            var fetchedNodeKey = page.GetNodeKey(node);
+            if (fetchedNodeKey.Compare(key) != 0)
+            {
+                throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+            }
 
-			if (node->Flags == NodeFlags.MultiValuePageRef)
-			{
-				var tree = OpenMultiValueTree(_tx, key, node);
+            if (node->Flags == NodeFlags.MultiValuePageRef)
+            {
+                var tree = OpenMultiValueTree(_tx, key, node);
 
-				return tree.State.EntriesCount;
-			}
+                return tree.State.EntriesCount;
+            }
 
-			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+            var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
 
-			return nestedPage.NumberOfEntries;
-		}
+            return nestedPage.NumberOfEntries;
+        }
 
-		public IIterator MultiRead(Slice key)
-		{
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
-			var page = FindPageFor(key, out node, out lazy);
-			if (page == null || page.LastMatch != 0)
-				return new EmptyIterator();
+        public IIterator MultiRead(Slice key)
+        {
+            Lazy<Cursor> lazy;
+            NodeHeader* node;
+            var page = FindPageFor(key, out node, out lazy);
+            if (page == null || page.LastMatch != 0)
+                return new EmptyIterator();
 
-			Debug.Assert(node != null);
+            Debug.Assert(node != null);
 
-			var fetchedNodeKey = page.GetNodeKey(node);
-			if (fetchedNodeKey.Compare(key) != 0)
-			{
-				throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
-			}
+            var fetchedNodeKey = page.GetNodeKey(node);
+            if (fetchedNodeKey.Compare(key) != 0)
+            {
+                throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+            }
 
-			if (node->Flags == NodeFlags.MultiValuePageRef)
-			{
-				var tree = OpenMultiValueTree(_tx, key, node);
+            if (node->Flags == NodeFlags.MultiValuePageRef)
+            {
+                var tree = OpenMultiValueTree(_tx, key, node);
 
-				return tree.Iterate();
-			}
+                return tree.Iterate();
+            }
 
-			var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
-				
-			return new PageIterator(nestedPage);
-		}
+            var nestedPage = new Page(NodeHeader.DirectAccess(_tx, node), "multi tree", (ushort)NodeHeader.GetDataSize(_tx, node));
+                
+            return new PageIterator(nestedPage);
+        }
 
-		private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
-		{
-			Tree tree;
-			if (tx.TryGetMultiValueTree(this, key, out tree))
-				return tree;
+        private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
+        {
+            Tree tree;
+            if (tx.TryGetMultiValueTree(this, key, out tree))
+                return tree;
 
-			var childTreeHeader =
-				(TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
+            var childTreeHeader =
+                (TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
 
-			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
-			Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
-			
-			tree = Open(tx, childTreeHeader);
+            Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
+            Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
+            
+            tree = Open(tx, childTreeHeader);
 
-			tx.AddMultiValueTree(this, key, tree);
-			return tree;
-		}
+            tx.AddMultiValueTree(this, key, tree);
+            return tree;
+        }
 
-		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, MemorySlice key, int len,
-														NodeFlags requestedNodeType, ushort? version,
-														out byte* pos)
-		{
-			switch (requestedNodeType)
-			{
-				case NodeFlags.Data:
-				case NodeFlags.MultiValuePageRef:
-					{
-						if (updatedNode->DataSize == len &&
-							(updatedNode->Flags == NodeFlags.Data || updatedNode->Flags == NodeFlags.MultiValuePageRef))
-						{
-							CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
+        private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, MemorySlice key, int len,
+                                                        NodeFlags requestedNodeType, ushort? version,
+                                                        out byte* pos)
+        {
+            switch (requestedNodeType)
+            {
+                case NodeFlags.Data:
+                case NodeFlags.MultiValuePageRef:
+                    {
+                        if (updatedNode->DataSize == len &&
+                            (updatedNode->Flags == NodeFlags.Data || updatedNode->Flags == NodeFlags.MultiValuePageRef))
+                        {
+                            CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
 
-							if (updatedNode->Version == ushort.MaxValue)
-								updatedNode->Version = 0;
-							updatedNode->Version++;
+                            if (updatedNode->Version == ushort.MaxValue)
+                                updatedNode->Version = 0;
+                            updatedNode->Version++;
 
-							updatedNode->Flags = requestedNodeType;
+                            updatedNode->Flags = requestedNodeType;
 
-							{
-								pos = (byte*)updatedNode + Constants.NodeHeaderSize + updatedNode->KeySize;
-								return true;
-							}
-						}
-						break;
-					}
-				case NodeFlags.PageRef:
-					throw new InvalidOperationException("We never add PageRef explicitly");
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-			pos = null;
-			return false;
-		}
-	}
+                            {
+                                pos = (byte*)updatedNode + Constants.NodeHeaderSize + updatedNode->KeySize;
+                                return true;
+                            }
+                        }
+                        break;
+                    }
+                case NodeFlags.PageRef:
+                    throw new InvalidOperationException("We never add PageRef explicitly");
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+            pos = null;
+            return false;
+        }
+    }
 }

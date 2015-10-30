@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
@@ -86,7 +86,7 @@ namespace Raven.Database.Counters.Controllers
 
 namespace Raven.Database.TimeSeries.Controllers
 {
-	public class TimeSeriesSingleAuthTokenController : BaseTimeSeriesApiController
+    public class TimeSeriesSingleAuthTokenController : BaseTimeSeriesApiController
     {
         [HttpGet]
         [RavenRoute("ts/{timeSeriesName}/singleAuthToken")]

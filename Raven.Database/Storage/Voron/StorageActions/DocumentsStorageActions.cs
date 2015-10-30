@@ -318,26 +318,26 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return documentReadResult.Reader.AsStream();
         }
 
-		public JsonDocument DocumentByKey(string key)
-		{
-			if (string.IsNullOrEmpty(key))
-			{
-				if (logger.IsDebugEnabled)
-				logger.Debug("Document with empty key was not found");
-				return null;
-			}
+        public JsonDocument DocumentByKey(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with empty key was not found");
+                return null;
+            }
 
             var normalizedKey = CreateKey(key);
             var sliceKey = (Slice)normalizedKey;
 
-		    int metadataSize;
-		    var metadataDocument = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize);
-			if (metadataDocument == null)
-			{
-				if (logger.IsDebugEnabled)
-				logger.Debug("Document with key='{0}' was not found", key);
-				return null;
-			}
+            int metadataSize;
+            var metadataDocument = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize);
+            if (metadataDocument == null)
+            {
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with key='{0}' was not found", key);
+                return null;
+            }
 
             int sizeOnDisk;
             var documentData = ReadDocumentData(normalizedKey, sliceKey, metadataDocument.Etag, metadataDocument.Metadata, out sizeOnDisk);
@@ -373,10 +373,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return ReadDocumentMetadata(normalizedKey, sliceKey, out _);
             }
 
-			if (logger.IsDebugEnabled)
-			logger.Debug("Document with key='{0}' was not found", key);
-			return null;
-		}
+            if (logger.IsDebugEnabled)
+            logger.Debug("Document with key='{0}' was not found", key);
+            return null;
+        }
 
         public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)
         {
@@ -391,13 +391,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             ushort? existingVersion;
             if (!tableStorage.Documents.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value, out existingVersion))
-			{
-				if (logger.IsDebugEnabled)
-				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
-				metadata = null;
-				deletedETag = null;
-				return false;
-			}
+            {
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
+                metadata = null;
+                deletedETag = null;
+                return false;
+            }
 
             if (!metadataIndex.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
             {
@@ -418,8 +418,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
                           .Delete(writeBatch.Value, deletedETag);
 
-			documentCacher.RemoveCachedDocument(normalizedKey, etag);
-			if (logger.IsDebugEnabled)
+            documentCacher.RemoveCachedDocument(normalizedKey, etag);
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("Deleted document with key = '{0}'", key); }
 
             return true;
@@ -430,13 +430,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException("key");
 
-			Etag existingEtag;
-			Etag newEtag;
+            Etag existingEtag;
+            Etag newEtag;
 
             DateTime savedAt;
             var normalizedKey = CreateKey(key);
             var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
-			if (logger.IsDebugEnabled)
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
             return new AddDocumentResult
@@ -486,13 +486,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var normalizedKeySlice = (Slice)normalizedKey;
 
             if (!tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value))
-			{
-				if (logger.IsDebugEnabled)
-				logger.Debug("Document with dataKey='{0}' was not found", key);
-				preTouchEtag = null;
-				afterTouchEtag = null;
-				return;
-			}
+            {
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with dataKey='{0}' was not found", key);
+                preTouchEtag = null;
+                afterTouchEtag = null;
+                return;
+            }
 
             int _;
             var metadata = ReadDocumentMetadata(normalizedKey, normalizedKeySlice, out _);
@@ -506,10 +506,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
-			keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
-			keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
-			etagTouches.Add(preTouchEtag, afterTouchEtag);
-			if (logger.IsDebugEnabled)
+            keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
+            keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
+            etagTouches.Add(preTouchEtag, afterTouchEtag);
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }
         }
 

@@ -45,10 +45,10 @@ namespace Raven.Database.Server.Connections
         public string ResourceName { get; set; }
 
         public ChangesPushContent(RavenBaseApiController controller)
-		{
-			Connected = true;
+        {
+            Connected = true;
             ResourceName = controller.ResourceName;
-			Id = controller.GetQueryStringValue("id");
+            Id = controller.GetQueryStringValue("id");
             
             if (string.IsNullOrEmpty(Id))
                 throw new ArgumentException("Id is mandatory");
@@ -104,8 +104,8 @@ namespace Raven.Database.Server.Connections
                         catch (Exception e)
                         {
                             Connected = false;
-							if (log.IsDebugEnabled)
-								log.DebugException("Error when using events transport", e);
+                            if (log.IsDebugEnabled)
+                                log.DebugException("Error when using events transport", e);
                             try
                             {
                                 writer.WriteLine(e.ToString());
@@ -133,27 +133,27 @@ namespace Raven.Database.Server.Connections
             await writer.WriteAsync(o.ToString(Formatting.None)).ConfigureAwait(false);
             await writer.WriteAsync("\r\n\r\n").ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
-			lastMessageEnqueuedAndNotSent = null;
-			lastMessageSentTick = Environment.TickCount;
-		}
+            lastMessageEnqueuedAndNotSent = null;
+            lastMessageSentTick = Environment.TickCount;
+        }
 
-		protected override bool TryComputeLength(out long length)
-		{
-			length = 0;
-			return false;
-		}
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
 
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			Connected = false;
-			manualResetEvent.Set();
-		}
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            Connected = false;
+            manualResetEvent.Set();
+        }
 
-		public void SendAsync(object msg)
-		{
-			msgs.Enqueue(msg);
-			manualResetEvent.Set();
-		}
-	}
+        public void SendAsync(object msg)
+        {
+            msgs.Enqueue(msg);
+            manualResetEvent.Set();
+        }
+    }
 }

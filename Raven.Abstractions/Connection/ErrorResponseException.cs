@@ -18,11 +18,11 @@ namespace Raven.Abstractions.Connection
             get { return Response.StatusCode; }
         }
 
-	    public ErrorResponseException()
-	    {				
-	    }
+        public ErrorResponseException()
+        {				
+        }
 
-	    public ErrorResponseException(ErrorResponseException e, string message)
+        public ErrorResponseException(ErrorResponseException e, string message)
             :base(message)
         {
             Response = e.Response;
@@ -42,19 +42,19 @@ namespace Raven.Abstractions.Connection
             ResponseString = responseString;
         }
 
-	    public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
-	    {
-		    var ex = new ErrorResponseException
-		    {
-				Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
-				ResponseString = exception.Message
-		    };
+        public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
+        {
+            var ex = new ErrorResponseException
+            {
+                Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+                ResponseString = exception.Message
+            };
 
-		    foreach (var key in exception.Data.Keys)
-			    ex.Data[key] = exception.Data[key];
+            foreach (var key in exception.Data.Keys)
+                ex.Data[key] = exception.Data[key];
 
-		    return ex;
-	    }
+            return ex;
+        }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
         {

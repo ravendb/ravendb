@@ -30,16 +30,16 @@ class evalByQueryCommand extends commandBase {
         new getOperationStatusCommand(this.db, operationId)
             .execute()
             .done((result: operationStatusDto) => {
-			if (result.Completed) {
-				if (result.Faulted) {
-					this.reportError("Patch failed", result.State.Error);
-				} else {
-					this.reportSuccess("Patching completed");
+            if (result.Completed) {
+                if (result.Faulted) {
+                    this.reportError("Patch failed", result.State.Error);
+                } else {
+                    this.reportSuccess("Patching completed");
 }
-			} else {
-				setTimeout(() => this.monitorPatching(operationId), 500);
-			}
-		});
+            } else {
+                setTimeout(() => this.monitorPatching(operationId), 500);
+            }
+        });
     }
 }
 

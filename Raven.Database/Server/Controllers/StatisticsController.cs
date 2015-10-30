@@ -5,14 +5,14 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StatisticsController : BaseDatabaseApiController
-	{
-		[HttpGet]
-		[RavenRoute("stats")]
-		[RavenRoute("databases/{databaseName}/stats")]
-		public HttpResponseMessage Get()
-		{
-			return GetMessageWithObject(Database.Statistics);
-		}
-	}
+    public class StatisticsController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("stats")]
+        [RavenRoute("databases/{databaseName}/stats")]
+        public HttpResponseMessage Get()
+        {
+            return GetMessageWithObject(Database.Statistics);
+        }
+    }
 }

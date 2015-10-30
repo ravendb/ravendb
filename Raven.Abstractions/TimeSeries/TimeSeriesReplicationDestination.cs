@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TimeSeriesReplicationDestination.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,19 +11,19 @@ namespace Raven.Abstractions.TimeSeries
 {
     public class TimeSeriesReplicationDestination
     {
-	    public string ServerUrl { get; set; }
+        public string ServerUrl { get; set; }
 
-	    public string TimeSeriesName { get; set; }
+        public string TimeSeriesName { get; set; }
 
         public string TimeSeriesUrl
         {
-	        get
-	        {
-				Debug.Assert(String.IsNullOrWhiteSpace(TimeSeriesName) == false);
-				Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
+            get
+            {
+                Debug.Assert(String.IsNullOrWhiteSpace(TimeSeriesName) == false);
+                Debug.Assert(String.IsNullOrWhiteSpace(ServerUrl) == false);
 
-		        return string.Format("{0}ts/{1}", ServerUrl, TimeSeriesName);
-	        }
+                return string.Format("{0}ts/{1}", ServerUrl, TimeSeriesName);
+            }
         }
 
         public string Username { get; set; }

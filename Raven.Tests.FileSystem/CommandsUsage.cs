@@ -363,21 +363,21 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(1, client.GetStatisticsAsync().Result.FileCount);
         }
 
-		[Fact]
-		public void File_system_stats_after_copy()
-		{
-			var client = NewAsyncClient();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 })).Wait();
+        [Fact]
+        public void File_system_stats_after_copy()
+        {
+            var client = NewAsyncClient();
+            client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 })).Wait();
 
-			client.CopyAsync("file.bin", "newName.bin").Wait();
+            client.CopyAsync("file.bin", "newName.bin").Wait();
 
-			Assert.Equal(2, client.GetStatisticsAsync().Result.FileCount);
-		}
+            Assert.Equal(2, client.GetStatisticsAsync().Result.FileCount);
+        }
 
-		[Fact]
-		public async Task Can_back_to_previous_name()
-		{
-			var client = NewAsyncClient();
+        [Fact]
+        public async Task Can_back_to_previous_name()
+        {
+            var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
             await client.RenameAsync("file.bin", "renamed.bin");
@@ -410,59 +410,59 @@ namespace Raven.Tests.FileSystem
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
             var files = await client.BrowseAsync();
-			Assert.Equal(2, files.Length);
-			Assert.True("file.bin" == files[0].Name || "renamed.bin" == files[0].Name);
-			Assert.True("file.bin" == files[1].Name || "renamed.bin" == files[1].Name);
-		}
+            Assert.Equal(2, files.Length);
+            Assert.True("file.bin" == files[0].Name || "renamed.bin" == files[0].Name);
+            Assert.True("file.bin" == files[1].Name || "renamed.bin" == files[1].Name);
+        }
 
-		[Fact]
-		public async Task Should_refuse_to_rename_if_file_with_the_same_name_already_exists()
-		{
-			var client = NewAsyncClient();
-			await client.UploadAsync("file1.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
-			await client.UploadAsync("file2.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
+        [Fact]
+        public async Task Should_refuse_to_rename_if_file_with_the_same_name_already_exists()
+        {
+            var client = NewAsyncClient();
+            await client.UploadAsync("file1.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
+            await client.UploadAsync("file2.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 
-			Exception ex = null;
-			try
-			{
-				await client.RenameAsync("file1.bin", "file2.bin");
-			}
-			catch (ErrorResponseException e)
-			{
-				ex = e.GetBaseException();
-			}
-			Assert.Contains(string.Format("Cannot rename because file {0} already exists", FileHeader.Canonize("file2.bin")), ex.Message);
-		}
+            Exception ex = null;
+            try
+            {
+                await client.RenameAsync("file1.bin", "file2.bin");
+            }
+            catch (ErrorResponseException e)
+            {
+                ex = e.GetBaseException();
+            }
+            Assert.Contains(string.Format("Cannot rename because file {0} already exists", FileHeader.Canonize("file2.bin")), ex.Message);
+        }
 
-		[Fact]
-	    public async Task Can_copy_file()
-		{
-			var client = NewAsyncClient();
-			await client.UploadAsync("file1.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject
-			{
-				{"first", "aa"},
-				{"second", "bb"}
-			});
-			await client.CopyAsync("file1.bin", "file2.bin");
-			var files = await client.BrowseAsync();
-			Assert.Equal(2, files.Length);
-			Assert.True("file1.bin" == files[0].Name || "file2.bin" == files[0].Name);
-			Assert.True("file2.bin" == files[1].Name || "file1.bin" == files[1].Name);
+        [Fact]
+        public async Task Can_copy_file()
+        {
+            var client = NewAsyncClient();
+            await client.UploadAsync("file1.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject
+            {
+                {"first", "aa"},
+                {"second", "bb"}
+            });
+            await client.CopyAsync("file1.bin", "file2.bin");
+            var files = await client.BrowseAsync();
+            Assert.Equal(2, files.Length);
+            Assert.True("file1.bin" == files[0].Name || "file2.bin" == files[0].Name);
+            Assert.True("file2.bin" == files[1].Name || "file1.bin" == files[1].Name);
 
-			var metadata = await client.GetMetadataForAsync("file2.bin");
-			Assert.Equal("aa", metadata.Value<string>("first"));
-			Assert.Equal("bb", metadata.Value<string>("second"));
-		}
+            var metadata = await client.GetMetadataForAsync("file2.bin");
+            Assert.Equal("aa", metadata.Value<string>("first"));
+            Assert.Equal("bb", metadata.Value<string>("second"));
+        }
 
-		[Fact]
-		public void Can_upload_file_with_hash_in_name()
-		{
-			var client = NewAsyncClient();
+        [Fact]
+        public void Can_upload_file_with_hash_in_name()
+        {
+            var client = NewAsyncClient();
 
-			client.UploadAsync("name#.bin", new MemoryStream(new byte[] {1, 2, 3})).Wait();
+            client.UploadAsync("name#.bin", new MemoryStream(new byte[] {1, 2, 3})).Wait();
 
-			Assert.NotNull(client.GetMetadataForAsync("name#.bin").Result);
-		}
+            Assert.NotNull(client.GetMetadataForAsync("name#.bin").Result);
+        }
 
         private void ExecuteWithSimplifiedException ( Action action )
         {
@@ -485,55 +485,55 @@ namespace Raven.Tests.FileSystem
             Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.RenameAsync("not_existing_file", "abc").Wait()));
             Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.DeleteAsync("not_existing_file").Wait()));
             Assert.Throws<FileNotFoundException>(() => ExecuteWithSimplifiedException(() => client.UpdateMetadataAsync("not_existing_file", new RavenJObject()).Wait()));
-		}
+        }
 
-		[Fact]
-		public async Task Must_not_rename_tombstone()
-		{
-			var client = NewAsyncClient();
+        [Fact]
+        public async Task Must_not_rename_tombstone()
+        {
+            var client = NewAsyncClient();
 
-			await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
-			await client.RenameAsync("file.bin", "newname.bin");
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
+            await client.RenameAsync("file.bin", "newname.bin");
 
-			try
-			{
-				await client.RenameAsync("file.bin", "file2.bin");
-				Assert.Equal(true, false); // Should not get here
-			}
-			catch (Exception ex)
-			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
-			}
-		}
+            try
+            {
+                await client.RenameAsync("file.bin", "file2.bin");
+                Assert.Equal(true, false); // Should not get here
+            }
+            catch (Exception ex)
+            {
+                Assert.IsType<FileNotFoundException>(ex.GetBaseException());
+            }
+        }
 
-		[Fact]
-		public async Task Next_file_delete_should_throw_file_not_found_exception()
-		{
-			var client = NewAsyncClient();
+        [Fact]
+        public async Task Next_file_delete_should_throw_file_not_found_exception()
+        {
+            var client = NewAsyncClient();
 
-			await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
-			await client.DeleteAsync("file.bin");
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3}));
+            await client.DeleteAsync("file.bin");
 
-			try
-			{
-				await client.DeleteAsync("file.bin");
-				Assert.Equal(true, false); // Should not get here
-			}
-			catch (Exception ex)
-			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
-			}
-		}
+            try
+            {
+                await client.DeleteAsync("file.bin");
+                Assert.Equal(true, false); // Should not get here
+            }
+            catch (Exception ex)
+            {
+                Assert.IsType<FileNotFoundException>(ex.GetBaseException());
+            }
+        }
 
-	    [Fact]
-	    public async Task Can_get_stats_for_all_active_file_systems()
-	    {
+        [Fact]
+        public async Task Can_get_stats_for_all_active_file_systems()
+        {
             var store = NewStore();
             var failoverConvention = store.Conventions.FailoverBehavior;
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
             
-	        try
-	        {
+            try
+            {
                 using (var client = store.AsyncFilesCommands)
                 using (var anotherClient = client.ForFileSystem("test"))
                 {
@@ -560,13 +560,13 @@ namespace Raven.Tests.FileSystem
                     Assert.Equal(0, stats2.ActiveSyncs.Count);
                     Assert.Equal(0, stats2.PendingSyncs.Count);
                 }
-	        }
-	        finally
-	        {
+            }
+            finally
+            {
                 store.Conventions.FailoverBehavior= failoverConvention;
             }
 
-	        
+            
         }
         protected override void ModifyStore(FilesStore store)
         {
@@ -574,8 +574,8 @@ namespace Raven.Tests.FileSystem
         }
 
         [Fact]
-	    public async Task Will_not_return_stats_of_inactive_file_systems()
-	    {
+        public async Task Will_not_return_stats_of_inactive_file_systems()
+        {
             var client = NewAsyncClient(); // will create a file system but it remain inactive until any request will go there
 
             var stats = (await client.Admin.GetStatisticsAsync()).FirstOrDefault();
@@ -654,7 +654,7 @@ namespace Raven.Tests.FileSystem
 
             var fileSystemSpec = new FileSystemDocument
             {
-				Id = Constants.FileSystem.Prefix + newFileSystemName,
+                Id = Constants.FileSystem.Prefix + newFileSystemName,
                 Settings =
                  {
                      {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}

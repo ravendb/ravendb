@@ -1,7 +1,7 @@
 // Interface
 interface computedAppUrls {
-	adminSettings: KnockoutComputed<string>;
-	adminSettingsCluster: KnockoutComputed<string>;
+    adminSettings: KnockoutComputed<string>;
+    adminSettingsCluster: KnockoutComputed<string>;
 
     hasApiKey: KnockoutComputed<string>;
 
@@ -42,7 +42,7 @@ interface computedAppUrls {
     quotas: KnockoutComputed<string>;
     periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
-	hotSpare: KnockoutComputed<string>;
+    hotSpare: KnockoutComputed<string>;
     versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     sqlReplicationsConnections: KnockoutComputed<string>;

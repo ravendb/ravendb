@@ -16,20 +16,20 @@ namespace Raven.Tests.Issues
 
     using Xunit;
 
-	public class RavenDB_1187 : RavenTest
-	{
-		[Fact]
-		public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOnShouldNotThrow()
-		{
-			Assert.DoesNotThrow(() =>
-				   {
-					   using (var store = this.NewDocumentStore())
-					   {
-						   store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-						   {
-							   Map = "from doc in docs select new { doc.Name, doc.Other }",
-							   SuggestionsOptions = new HashSet<string> { "Name" }
-						   });
+    public class RavenDB_1187 : RavenTest
+    {
+        [Fact]
+        public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOnShouldNotThrow()
+        {
+            Assert.DoesNotThrow(() =>
+                   {
+                       using (var store = this.NewDocumentStore())
+                       {
+                           store.DatabaseCommands.PutIndex("Test", new IndexDefinition
+                           {
+                               Map = "from doc in docs select new { doc.Name, doc.Other }",
+                               SuggestionsOptions = new HashSet<string> { "Name" }
+                           });
 
                            store.DatabaseCommands.Suggest("Test", new SuggestionQuery
                            {
@@ -41,18 +41,18 @@ namespace Raven.Tests.Issues
                    });
         }
 
-		[Fact]
-		public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOffShouldThrow()
-		{
-			var e = Assert.Throws<ErrorResponseException>(() =>
-					{
-						using (var store = this.NewDocumentStore())
-						{
-							store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-							{
-								Map = "from doc in docs select new { doc.Name, doc.Other }",
-								SuggestionsOptions = new HashSet<string> { "Name"}
-							});
+        [Fact]
+        public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOffShouldThrow()
+        {
+            var e = Assert.Throws<ErrorResponseException>(() =>
+                    {
+                        using (var store = this.NewDocumentStore())
+                        {
+                            store.DatabaseCommands.PutIndex("Test", new IndexDefinition
+                            {
+                                Map = "from doc in docs select new { doc.Name, doc.Other }",
+                                SuggestionsOptions = new HashSet<string> { "Name"}
+                            });
 
                             store.DatabaseCommands.Suggest("Test", new SuggestionQuery
                             {

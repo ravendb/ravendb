@@ -17,95 +17,95 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
 {
-	/// <summary>
-	/// Generate hilo numbers against a RavenDB document
-	/// </summary>
-	public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
-	{
-		private SpinLock generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
+    /// <summary>
+    /// Generate hilo numbers against a RavenDB document
+    /// </summary>
+    public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
+    {
+        private SpinLock generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
-		/// </summary>
-		public AsyncHiLoKeyGenerator(string tag, long capacity)
-			: base(tag, capacity)
-		{
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
+        /// </summary>
+        public AsyncHiLoKeyGenerator(string tag, long capacity)
+            : base(tag, capacity)
+        {
+        }
 
-		/// <summary>
-		/// Generates the document key.
-		/// </summary>
-		/// <param name="databaseCommands">The commands.</param>
-		/// <param name="convention">The convention.</param>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
-		{
-			return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
-		}
+        /// <summary>
+        /// Generates the document key.
+        /// </summary>
+        /// <param name="databaseCommands">The commands.</param>
+        /// <param name="convention">The convention.</param>
+        /// <param name="entity">The entity.</param>
+        /// <returns></returns>
+        public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+        {
+            return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+        }
 
-		///<summary>
-		/// Create the next id (numeric)
-		///</summary>
-		public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
-		{
-			var myRange = Range; // thread safe copy
-			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
-			if (incrementedCurrent <= myRange.Max)
-			{
-				return CompletedTask.With(incrementedCurrent);
-			}
+        ///<summary>
+        /// Create the next id (numeric)
+        ///</summary>
+        public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
+        {
+            var myRange = Range; // thread safe copy
+            long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
+            if (incrementedCurrent <= myRange.Max)
+            {
+                return CompletedTask.With(incrementedCurrent);
+            }
 
-			bool lockTaken = false;
-			try
-			{
-				generatorLock.Enter(ref lockTaken);
-				if (Range != myRange)
-				{
-					// Lock was contended, and the max has already been changed. Just get a new id as usual.
-					generatorLock.Exit();
-					return NextIdAsync(databaseCommands);
-				}
-				// Get a new max, and use the current value.
-				return GetNextRangeAsync(databaseCommands)
-					.ContinueWith(task =>
-					{
-						try
-						{
-							Range = task.Result;
-						}
-						finally
-						{
-							generatorLock.Exit();
-						}
+            bool lockTaken = false;
+            try
+            {
+                generatorLock.Enter(ref lockTaken);
+                if (Range != myRange)
+                {
+                    // Lock was contended, and the max has already been changed. Just get a new id as usual.
+                    generatorLock.Exit();
+                    return NextIdAsync(databaseCommands);
+                }
+                // Get a new max, and use the current value.
+                return GetNextRangeAsync(databaseCommands)
+                    .ContinueWith(task =>
+                    {
+                        try
+                        {
+                            Range = task.Result;
+                        }
+                        finally
+                        {
+                            generatorLock.Exit();
+                        }
 
-						return NextIdAsync(databaseCommands);
-					}).Unwrap();
-			}
-			catch
-			{
-				// We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
-				// unlocked or will have started a task that will unlock in the future.
-				if (lockTaken)
-					generatorLock.Exit();
-				throw;
-			}
-		}
+                        return NextIdAsync(databaseCommands);
+                    }).Unwrap();
+            }
+            catch
+            {
+                // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
+                // unlocked or will have started a task that will unlock in the future.
+                if (lockTaken)
+                    generatorLock.Exit();
+                throw;
+            }
+        }
 
-		private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
-		{
-			ModifyCapacityIfRequired();
+        private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
+        {
+            ModifyCapacityIfRequired();
 
-			return GetNextMaxAsyncInner(databaseCommands);
-		}
+            return GetNextMaxAsyncInner(databaseCommands);
+        }
 
-	    private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
-	    {
-	        var minNextMax = Range.Max;
+        private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+        {
+            var minNextMax = Range.Max;
 
-			using (databaseCommands.ForceReadFromMaster())
-	        while (true)
-	        {
+            using (databaseCommands.ForceReadFromMaster())
+            while (true)
+            {
                 try
                 {
                     ConflictException ce = null;

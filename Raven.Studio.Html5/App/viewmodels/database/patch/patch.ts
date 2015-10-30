@@ -45,10 +45,10 @@ class patch extends viewModelBase {
     beforePatchEditor: AceAjax.Editor;
 
     afterPatch = ko.observable<string>();
-	afterPatchDoc = ko.observable<string>();
-	afterPatchMeta = ko.observable<string>();
-	afterPatchDocMode = ko.observable<boolean>(true);
-	afterPatchEditor: AceAjax.Editor;
+    afterPatchDoc = ko.observable<string>();
+    afterPatchMeta = ko.observable<string>();
+    afterPatchDocMode = ko.observable<boolean>(true);
+    afterPatchEditor: AceAjax.Editor;
 
     loadedDocuments = ko.observableArray<string>();
     putDocuments = ko.observableArray<any>();

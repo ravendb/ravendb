@@ -71,16 +71,16 @@ namespace Raven.Abstractions.Extensions
                 token.ThrowIfCancellationRequested();
         }
 
-	    public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
-		{
-			if (timeout == null)
-			{
-				await task.ConfigureAwait(false);
-				return true;
-			}
-			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
-				return true;
-			return false;
-		}
-	}
+        public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
+        {
+            if (timeout == null)
+            {
+                await task.ConfigureAwait(false);
+                return true;
+            }
+            if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
+                return true;
+            return false;
+        }
+    }
 }

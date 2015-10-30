@@ -35,16 +35,16 @@ namespace Raven.Tests.Issues
             }
         }
 
-		[Fact]
-		public void ReplicationInformerCanUseFailoverServersConfiguredInConnectionString()
-		{
-			using (var store = new DocumentStore() { ConnectionStringName = "FailoverServers" }.Initialize())
-			{
-				// for default database
-				var serverClient = (ServerClient) store.DatabaseCommands;
+        [Fact]
+        public void ReplicationInformerCanUseFailoverServersConfiguredInConnectionString()
+        {
+            using (var store = new DocumentStore() { ConnectionStringName = "FailoverServers" }.Initialize())
+            {
+                // for default database
+                var serverClient = (ServerClient) store.DatabaseCommands;
 
-				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
-				var servers = GetReplicationInformer(serverClient).ReplicationDestinations; 
+                GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+                var servers = GetReplicationInformer(serverClient).ReplicationDestinations; 
 
                 Assert.Equal(4, servers.Count);
                 Assert.Equal("http://localhost:8078", servers[0].Url);
@@ -55,11 +55,11 @@ namespace Raven.Tests.Issues
                 Assert.Equal("http://localhost:8074", servers[3].Url);
                 Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", servers[3].Credentials.ApiKey);
 
-				// for Northwind database configured in App.config
-				serverClient = (ServerClient) store.DatabaseCommands.ForDatabase("Northwind");
-				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+                // for Northwind database configured in App.config
+                serverClient = (ServerClient) store.DatabaseCommands.ForDatabase("Northwind");
+                GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-				servers = GetReplicationInformer(serverClient).ReplicationDestinations;
+                servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
                 Assert.Equal(1, servers.Count);
                 Assert.Equal("http://localhost:8076", servers[0].Url);
@@ -93,8 +93,8 @@ namespace Raven.Tests.Issues
                 // for default database
                 var serverClient = (ServerClient)store.DatabaseCommands;
 
-				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
-				var servers = GetReplicationInformer(serverClient).ReplicationDestinations;
+                GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+                var servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
                 Assert.Equal(2, servers.Count);
                 Assert.Equal("http://localhost:8078", servers[0].Url);
@@ -103,11 +103,11 @@ namespace Raven.Tests.Issues
                 Assert.Equal("user", (servers[1].Credentials.Credentials as NetworkCredential).UserName);
                 Assert.Equal("secret", (servers[1].Credentials.Credentials as NetworkCredential).Password);
 
-				// for Northwind database
-				serverClient = (ServerClient)store.DatabaseCommands.ForDatabase("Northwind");
-				GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+                // for Northwind database
+                serverClient = (ServerClient)store.DatabaseCommands.ForDatabase("Northwind");
+                GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-				servers = GetReplicationInformer(serverClient).ReplicationDestinations;
+                servers = GetReplicationInformer(serverClient).ReplicationDestinations;
 
                 Assert.Equal(1, servers.Count);
                 Assert.Equal("http://localhost:8076", servers[0].Url);

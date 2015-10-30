@@ -21,34 +21,34 @@ namespace Raven.Bundles.Replication.Plugins
             if (success == false)
                 return false;
 
-			var docToSave = documentToSave;
-			var metaToSave = metadataToSave;
-			if (log.IsDebugEnabled)
-				log.Debug(() =>
-				{
-					var builder = new StringBuilder();
-					builder.AppendLine(string.Format("Conflict on document with key '{0}' resolved by '{1}'.", id, GetType().Name));
-					builder.AppendLine(string.Format("Existing document:"));
-					if (existingDoc != null && existingDoc.DataAsJson != null)
-						builder.AppendLine(existingDoc.DataAsJson.ToString());
-					builder.AppendLine(string.Format("Existing metadata:"));
-					if (existingDoc != null && existingDoc.Metadata != null)
-						builder.AppendLine(existingDoc.Metadata.ToString());
-					builder.AppendLine(string.Format("Incoming document:"));
-					if (document != null)
-						builder.AppendLine(document.ToString());
-					builder.AppendLine(string.Format("Incoming metadata:"));
-					if (metadata != null)
-						builder.AppendLine(metadata.ToString());
-					builder.AppendLine(string.Format("Output document:"));
-					if (docToSave != null)
-						builder.AppendLine(docToSave.ToString());
-					builder.AppendLine(string.Format("Output metadata:"));
-					if (metaToSave != null)
-						builder.AppendLine(metaToSave.ToString());
+            var docToSave = documentToSave;
+            var metaToSave = metadataToSave;
+            if (log.IsDebugEnabled)
+                log.Debug(() =>
+                {
+                    var builder = new StringBuilder();
+                    builder.AppendLine(string.Format("Conflict on document with key '{0}' resolved by '{1}'.", id, GetType().Name));
+                    builder.AppendLine(string.Format("Existing document:"));
+                    if (existingDoc != null && existingDoc.DataAsJson != null)
+                        builder.AppendLine(existingDoc.DataAsJson.ToString());
+                    builder.AppendLine(string.Format("Existing metadata:"));
+                    if (existingDoc != null && existingDoc.Metadata != null)
+                        builder.AppendLine(existingDoc.Metadata.ToString());
+                    builder.AppendLine(string.Format("Incoming document:"));
+                    if (document != null)
+                        builder.AppendLine(document.ToString());
+                    builder.AppendLine(string.Format("Incoming metadata:"));
+                    if (metadata != null)
+                        builder.AppendLine(metadata.ToString());
+                    builder.AppendLine(string.Format("Output document:"));
+                    if (docToSave != null)
+                        builder.AppendLine(docToSave.ToString());
+                    builder.AppendLine(string.Format("Output metadata:"));
+                    if (metaToSave != null)
+                        builder.AppendLine(metaToSave.ToString());
 
-					return builder.ToString();
-				});
+                    return builder.ToString();
+                });
 
             return true;
         }

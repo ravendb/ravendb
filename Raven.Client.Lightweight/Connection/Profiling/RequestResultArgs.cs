@@ -26,38 +26,38 @@ namespace Raven.Client.Connection.Profiling
         /// </summary>
         public IDictionary<string, string> AdditionalInformation { get; set; }
 
-		/// <summary>
-		/// When the request completed
-		/// </summary>
-		public DateTime At { get; set; }
-		/// <summary>
-		/// The request status
-		/// </summary>
-		public RequestStatus Status { get; set; }
-		/// <summary>
-		/// The request Url
-		/// </summary>
-		public string Url { get; set; }
-		/// <summary>
-		/// How long this request took
-		/// </summary>
-		public double DurationMilliseconds { get; set; }
-		/// <summary>
-		/// The request method
-		/// </summary>
-		public HttpMethod Method { get; set; }
-		/// <summary>
-		/// The data posted to the server
-		/// </summary>
-		public string PostedData { get; set; }
-		/// <summary>
-		/// The HTTP result for this request
-		/// </summary>
-		public int HttpResult { get; set; }
-		/// <summary>
-		/// The result of this request
-		/// </summary>
-		public string Result { get; set; }
+        /// <summary>
+        /// When the request completed
+        /// </summary>
+        public DateTime At { get; set; }
+        /// <summary>
+        /// The request status
+        /// </summary>
+        public RequestStatus Status { get; set; }
+        /// <summary>
+        /// The request Url
+        /// </summary>
+        public string Url { get; set; }
+        /// <summary>
+        /// How long this request took
+        /// </summary>
+        public double DurationMilliseconds { get; set; }
+        /// <summary>
+        /// The request method
+        /// </summary>
+        public HttpMethod Method { get; set; }
+        /// <summary>
+        /// The data posted to the server
+        /// </summary>
+        public string PostedData { get; set; }
+        /// <summary>
+        /// The HTTP result for this request
+        /// </summary>
+        public int HttpResult { get; set; }
+        /// <summary>
+        /// The result of this request
+        /// </summary>
+        public string Result { get; set; }
 
         /// <summary>
         /// Total amount of memory used by strings here

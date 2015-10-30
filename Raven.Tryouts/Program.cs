@@ -1,4 +1,4 @@
-﻿namespace Raven.Tryouts
+namespace Raven.Tryouts
 {
     public class Program
     {

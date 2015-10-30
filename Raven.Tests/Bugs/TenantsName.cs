@@ -28,10 +28,10 @@ namespace Raven.Tests.Bugs
                 var exception = Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(tenantName));
                 Assert.Equal("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + tenantName, exception.Message);
 
-				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
-				var exception2 = Assert.Throws<ErrorResponseException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
-				Assert.Equal("Could not find a resource named: " + tenantName, exception2.Message);
-			}
-		}
-	}
+                var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
+                var exception2 = Assert.Throws<ErrorResponseException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
+                Assert.Equal("Could not find a resource named: " + tenantName, exception2.Message);
+            }
+        }
+    }
 }

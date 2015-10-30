@@ -16,18 +16,18 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	/// <summary>
-	/// We can't allow real deletes when using replication, because
-	/// then we won't have any way to replicate the delete. Instead
-	/// we allow the delete but don't do actual delete, we replace it 
-	/// with a delete marker instead
-	/// </summary>
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractDeleteTrigger))]
-	public class VirtualDeleteTrigger : AbstractDeleteTrigger
-	{
-		readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
+    /// <summary>
+    /// We can't allow real deletes when using replication, because
+    /// then we won't have any way to replicate the delete. Instead
+    /// we allow the delete but don't do actual delete, we replace it 
+    /// with a delete marker instead
+    /// </summary>
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    public class VirtualDeleteTrigger : AbstractDeleteTrigger
+    {
+        readonly Raven.Abstractions.Threading.ThreadLocal<RavenJArray> deletedHistory = new Raven.Abstractions.Threading.ThreadLocal<RavenJArray>();
 
         public override void OnDelete(string key, TransactionInformation transactionInformation)
         {

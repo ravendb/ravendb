@@ -6,11 +6,11 @@
 
 namespace Raven.Abstractions.Counters
 {
-	public static class CounterUtils
-	{
-		public static string GetFullCounterName(string groupName, string counterName)
-		{
-			return string.Concat(groupName, "/", counterName);
-		}
-	}
+    public static class CounterUtils
+    {
+        public static string GetFullCounterName(string groupName, string counterName)
+        {
+            return string.Concat(groupName, "/", counterName);
+        }
+    }
 }

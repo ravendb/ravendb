@@ -78,26 +78,26 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
 
-				update.Save();
-			}
+                update.Save();
+            }
 
-			if (logger.IsDebugEnabled)
-				logger.Debug("Adding attachment {0}", key);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Adding attachment {0}", key);
 
             return newETag;
         }
 
         [Obsolete("Use RavenFS instead.")]
-		public void DeleteAttachment(string key, Etag etag)
-		{
-			Api.JetSetCurrentIndex(session, Files, "by_name");
-			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
-				return;
-			}
+        public void DeleteAttachment(string key, Etag etag)
+        {
+            Api.JetSetCurrentIndex(session, Files, "by_name");
+            Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+                return;
+            }
 
             var fileEtag = Etag.Parse(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]));
             if (fileEtag != etag && etag != null)
@@ -112,11 +112,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             Api.JetDelete(session, Files);
 
-			if (Api.TryMoveFirst(session, Details))
-				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
-			if (logger.IsDebugEnabled)
-				logger.Debug("Attachment with key '{0}' was deleted", key);
-		}
+            if (Api.TryMoveFirst(session, Details))
+                Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["attachment_count"], -1);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Attachment with key '{0}' was deleted", key);
+        }
 
         [Obsolete("Use RavenFS instead.")]
         public long GetAttachmentsCount()

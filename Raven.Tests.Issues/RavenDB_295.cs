@@ -13,25 +13,25 @@ namespace Raven.Tests.Issues
 {
     using System.Collections.Generic;
 
-	public class RavenDB_295 : RavenTest
-	{
-		[Fact]
-		public void CanUpdateSuggestions()
-		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new { Name = "john" });
-					session.Store(new { Name = "darsy" });
-					session.SaveChanges();
-				}
-				store.DatabaseCommands.PutIndex("test",
-												new IndexDefinition
-												{
-													Map = "from doc in docs select new { doc.Name}",
-													SuggestionsOptions = new HashSet<string> {"Name"}
-												});
+    public class RavenDB_295 : RavenTest
+    {
+        [Fact]
+        public void CanUpdateSuggestions()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "john" });
+                    session.Store(new { Name = "darsy" });
+                    session.SaveChanges();
+                }
+                store.DatabaseCommands.PutIndex("test",
+                                                new IndexDefinition
+                                                {
+                                                    Map = "from doc in docs select new { doc.Name}",
+                                                    SuggestionsOptions = new HashSet<string> {"Name"}
+                                                });
 
                 WaitForIndexing(store);
 
@@ -58,23 +58,23 @@ namespace Raven.Tests.Issues
             }
         }
 
-		[Fact]
-		public void CanUpdateSuggestions_AfterRestart()
-		{
-			var dataDir = NewDataPath();
-			using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new { Name = "john" });
-					session.Store(new { Name = "darsy" });
-					session.SaveChanges();
-				}
-				store.DatabaseCommands.PutIndex("test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name}",
-					SuggestionsOptions = new HashSet<string> { "Name" }
-				});
+        [Fact]
+        public void CanUpdateSuggestions_AfterRestart()
+        {
+            var dataDir = NewDataPath();
+            using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "john" });
+                    session.Store(new { Name = "darsy" });
+                    session.SaveChanges();
+                }
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Map = "from doc in docs select new { doc.Name}",
+                    SuggestionsOptions = new HashSet<string> { "Name" }
+                });
 
                 WaitForIndexing(store);
 

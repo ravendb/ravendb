@@ -96,10 +96,10 @@ namespace Raven.Tests.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
                 null,
                 sourceUrl.LastReplicatedEtagFor(destinationUrl, destinationStatistics.DatabaseId.ToString()),
-				HttpMethods.Get,
-				new OperationCredentials(source.ApiKey, source.Credentials),
-				source.Conventions);
-			var httpJsonRequest = source.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+                HttpMethods.Get,
+                new OperationCredentials(source.ApiKey, source.Credentials),
+                source.Conventions);
+            var httpJsonRequest = source.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 
             var json = httpJsonRequest.ReadResponseJson();
 

@@ -32,32 +32,32 @@ namespace Raven.Client.Document
             if (localFullName.TryGetValue(entityType, out result))
                 return result;
 
-			var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
-			if (entityType.IsGenericType)
-			{
-				var genericTypeDefinition = entityType.GetGenericTypeDefinition();
-				var sb = new StringBuilder(genericTypeDefinition.FullName);
-				sb.Append("[");
-				bool first = true;
-				foreach (var genericArgument in entityType.GetGenericArguments())
-				{
-					if (first == false)
-					{
-						sb.Append(", ");
-					}
-					first = false;
-					sb.Append("[")
-						.Append(GetFullNameWithoutVersionInformation(genericArgument))
-						.Append("]");
-				}
-				sb.Append("], ")
-					.Append(asmName);
-				result = sb.ToString();
-			}
-			else
-			{
-				result = entityType.FullName + ", " + asmName;
-			}
+            var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
+            if (entityType.IsGenericType)
+            {
+                var genericTypeDefinition = entityType.GetGenericTypeDefinition();
+                var sb = new StringBuilder(genericTypeDefinition.FullName);
+                sb.Append("[");
+                bool first = true;
+                foreach (var genericArgument in entityType.GetGenericArguments())
+                {
+                    if (first == false)
+                    {
+                        sb.Append(", ");
+                    }
+                    first = false;
+                    sb.Append("[")
+                        .Append(GetFullNameWithoutVersionInformation(genericArgument))
+                        .Append("]");
+                }
+                sb.Append("], ")
+                    .Append(asmName);
+                result = sb.ToString();
+            }
+            else
+            {
+                result = entityType.FullName + ", " + asmName;
+            }
 
             fullnameCache = new Dictionary<Type, string>(localFullName)
             {

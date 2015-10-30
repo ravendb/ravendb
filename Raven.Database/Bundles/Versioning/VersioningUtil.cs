@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
@@ -15,24 +15,24 @@ namespace Raven.Bundles.Versioning
         public const string RavenDocumentParentRevision = "Raven-Document-Parent-Revision";
         public const string RavenDocumentRevisionStatus = "Raven-Document-Revision-Status";
 
-		public static VersioningConfiguration GetDocumentVersioningConfiguration(this DocumentDatabase database, RavenJObject metadata)
-		{
-			ConfigurationDocument<VersioningConfiguration> config = null;
-			var entityName = metadata.Value<string>("Raven-Entity-Name");
-			if (entityName != null)
-				config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/" + entityName);
+        public static VersioningConfiguration GetDocumentVersioningConfiguration(this DocumentDatabase database, RavenJObject metadata)
+        {
+            ConfigurationDocument<VersioningConfiguration> config = null;
+            var entityName = metadata.Value<string>("Raven-Entity-Name");
+            if (entityName != null)
+                config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/" + entityName);
 
-			if (config == null)
-				config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/DefaultConfiguration");
+            if (config == null)
+                config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/DefaultConfiguration");
 
-			return config == null ? null : config.MergedDocument;
-		}
+            return config == null ? null : config.MergedDocument;
+        }
 
-		public static bool IsVersioningDisabledForImport(this DocumentDatabase database, RavenJObject metadata)
-		{
-			var ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
-			return ignoreVersioning != null && ignoreVersioning.Equals("True");
-		}
+        public static bool IsVersioningDisabledForImport(this DocumentDatabase database, RavenJObject metadata)
+        {
+            var ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
+            return ignoreVersioning != null && ignoreVersioning.Equals("True");
+        }
 
         public static bool IsVersioningActive(this DocumentDatabase database, RavenJObject metadata)
         {

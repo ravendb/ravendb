@@ -10,16 +10,16 @@ using Raven.Database.Util;
 namespace Raven.Database.Server.Controllers
 {
     [RavenRoute("databases/{databaseName}/logs/{action=logsget}")]
-	[RavenRoute("logs/{action=logsget}")]
-	[RavenRoute("logs/fs/{action=RavenFSLogsGet}")]
-	public class LogsController : BaseDatabaseApiController
-	{
-		[HttpGet]		
-		public HttpResponseMessage RavenFsLogsGet(string type = null)
-		{
-			DatabaseMemoryTarget.BoundedMemoryTarget boundedMemoryTarget = null;
-			if (NLog.LogManager.Configuration != null && NLog.LogManager.Configuration.AllTargets != null)
-				boundedMemoryTarget = NLog.LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget.BoundedMemoryTarget>().FirstOrDefault();
+    [RavenRoute("logs/{action=logsget}")]
+    [RavenRoute("logs/fs/{action=RavenFSLogsGet}")]
+    public class LogsController : BaseDatabaseApiController
+    {
+        [HttpGet]		
+        public HttpResponseMessage RavenFsLogsGet(string type = null)
+        {
+            DatabaseMemoryTarget.BoundedMemoryTarget boundedMemoryTarget = null;
+            if (NLog.LogManager.Configuration != null && NLog.LogManager.Configuration.AllTargets != null)
+                boundedMemoryTarget = NLog.LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget.BoundedMemoryTarget>().FirstOrDefault();
 
             if (boundedMemoryTarget == null)
                 throw new HttpResponseException(Request.CreateErrorResponse((HttpStatusCode)420,

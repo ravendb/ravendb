@@ -14,67 +14,67 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Actions
 {
-	public class LastCollectionEtags
-	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+    public class LastCollectionEtags
+    {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		private readonly WorkContext context;
-		private ConcurrentDictionary<string, Entry> lastCollectionEtags;
+        private readonly WorkContext context;
+        private ConcurrentDictionary<string, Entry> lastCollectionEtags;
 
-		public LastCollectionEtags(WorkContext context)
-		{
-			this.context = context;
+        public LastCollectionEtags(WorkContext context)
+        {
+            this.context = context;
             this.lastCollectionEtags = new ConcurrentDictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
-		}
+        }
 
-		public void InitializeBasedOnIndexingResults()
-		{
-			if (Log.IsDebugEnabled)
-				Log.Debug("Starting to initialize last collection etags based on indexes ...");
+        public void InitializeBasedOnIndexingResults()
+        {
+            if (Log.IsDebugEnabled)
+                Log.Debug("Starting to initialize last collection etags based on indexes ...");
 
-			var indexDefinitions = context.IndexDefinitionStorage.IndexDefinitions.Values.ToList();
+            var indexDefinitions = context.IndexDefinitionStorage.IndexDefinitions.Values.ToList();
 
-			if (indexDefinitions.Count == 0)
-			{
-				lastCollectionEtags = new ConcurrentDictionary<string, Entry>(StringComparer.InvariantCultureIgnoreCase);
-				return;
-			}
+            if (indexDefinitions.Count == 0)
+            {
+                lastCollectionEtags = new ConcurrentDictionary<string, Entry>(StringComparer.InvariantCultureIgnoreCase);
+                return;
+            }
 
-			var indexesStats = new List<IndexStats>();
+            var indexesStats = new List<IndexStats>();
 
-			foreach (var definition in indexDefinitions)
-			{
-				var indexId = definition.IndexId;
+            foreach (var definition in indexDefinitions)
+            {
+                var indexId = definition.IndexId;
 
-				IndexStats stats = null;
-				context.Database.TransactionalStorage.Batch(accessor =>
-				{
-					var isStale = accessor.Staleness.IsIndexStale(indexId, null, null);
-					if (isStale == false)
-						stats = accessor.Indexing.GetIndexStats(indexId);
-				});
+                IndexStats stats = null;
+                context.Database.TransactionalStorage.Batch(accessor =>
+                {
+                    var isStale = accessor.Staleness.IsIndexStale(indexId, null, null);
+                    if (isStale == false)
+                        stats = accessor.Indexing.GetIndexStats(indexId);
+                });
 
-				if (stats == null)
-					continue;
+                if (stats == null)
+                    continue;
 
-				var abstractViewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexId);
-				if (abstractViewGenerator == null)
-					continue;
+                var abstractViewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexId);
+                if (abstractViewGenerator == null)
+                    continue;
 
-				stats.ForEntityName = abstractViewGenerator.ForEntityNames.ToArray();
+                stats.ForEntityName = abstractViewGenerator.ForEntityNames.ToArray();
 
-				indexesStats.Add(stats);
-			}
+                indexesStats.Add(stats);
+            }
 
-			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Length > 0)
-										.SelectMany(x => x.ForEntityName, (stats, collectionName) => new Tuple<string, Etag>(collectionName, stats.LastIndexedEtag))
-										.GroupBy(x => x.Item1, StringComparer.OrdinalIgnoreCase)
-										.Select(x => new
-										{
-											CollectionName = x.Key,
-											MaxEtag = x.Min(y => y.Item2)
-										})
-										.ToDictionary(x => x.CollectionName, y => new Entry { Etag = y.MaxEtag, Updated = SystemTime.UtcNow });
+            var collectionEtags = indexesStats.Where(x => x.ForEntityName.Length > 0)
+                                        .SelectMany(x => x.ForEntityName, (stats, collectionName) => new Tuple<string, Etag>(collectionName, stats.LastIndexedEtag))
+                                        .GroupBy(x => x.Item1, StringComparer.OrdinalIgnoreCase)
+                                        .Select(x => new
+                                        {
+                                            CollectionName = x.Key,
+                                            MaxEtag = x.Min(y => y.Item2)
+                                        })
+                                        .ToDictionary(x => x.CollectionName, y => new Entry { Etag = y.MaxEtag, Updated = SystemTime.UtcNow });
 
             lastCollectionEtags = new ConcurrentDictionary<string, Entry>(collectionEtags, StringComparer.OrdinalIgnoreCase);
         }

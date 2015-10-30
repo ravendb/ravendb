@@ -536,17 +536,17 @@ namespace Voron.Impl
             }
         }
 
-		public bool IsDisposed
-		{
-			get { return _disposed; }
-		}
+        public bool IsDisposed
+        {
+            get { return _disposed; }
+        }
 
-		public void Dispose()
-		{
-		    if (_disposed)
-		        return;
-			if (Environment.IsDebugRecording)
-				RecordTransactionState(this, DebugActionType.TransactionDisposing);
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            if (Environment.IsDebugRecording)
+                RecordTransactionState(this, DebugActionType.TransactionDisposing);
 
             if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
                 Rollback();

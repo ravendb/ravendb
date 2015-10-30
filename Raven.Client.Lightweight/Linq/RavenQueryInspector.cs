@@ -168,69 +168,69 @@ namespace Raven.Client.Linq
 
         
 
-		/// <summary>
-		/// Returns a <see cref="System.String"/> that represents this instance.
-		/// </summary>
-		/// <returns>
-		/// A <see cref="System.String"/> that represents this instance.
-		/// </returns>
-		public override string ToString()
-		{
-			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			string query;
-			if (asyncDatabaseCommands != null)
-			{
-				var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
-				query = asyncDocumentQuery.GetIndexQuery(true).ToString();
-			}
-			else
-			{
-				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
-				query = documentQuery.ToString();
-			}
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+            string query;
+            if (asyncDatabaseCommands != null)
+            {
+                var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+                query = asyncDocumentQuery.GetIndexQuery(true).ToString();
+            }
+            else
+            {
+                var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+                query = documentQuery.ToString();
+            }
 
-			string fields = "";
-			if (ravenQueryProvider.FieldsToFetch.Count > 0)
-				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + query;
-		}
+            string fields = "";
+            if (ravenQueryProvider.FieldsToFetch.Count > 0)
+                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
+            return fields + query;
+        }
  
-		public IndexQuery GetIndexQuery(bool isAsync = true)
-		{
-			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			if (isAsync == false)
-			{
-				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
-				return documentQuery.GetIndexQuery(false);
-			}
-			var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
-			return asyncDocumentQuery.GetIndexQuery(true);
-		}
+        public IndexQuery GetIndexQuery(bool isAsync = true)
+        {
+            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+            if (isAsync == false)
+            {
+                var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+                return documentQuery.GetIndexQuery(false);
+            }
+            var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+            return asyncDocumentQuery.GetIndexQuery(true);
+        }
 
-		public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
-		{
-			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facetSetupDoc, start, pageSize);
-		}
+        public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
+        {
+            return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facetSetupDoc, start, pageSize);
+        }
 
-		public virtual FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
-		{
-			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facets, start, pageSize);
-		}
+        public virtual FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
+        {
+            return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facets, start, pageSize);
+        }
 
-		public virtual Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
-		{
-			return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facetSetupDoc, start, pageSize, token);
-		}
+        public virtual Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        {
+            return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facetSetupDoc, start, pageSize, token);
+        }
 
-		public virtual Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
-		{
-			return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facets, start, pageSize, token);
-		}
+        public virtual Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        {
+            return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facets, start, pageSize, token);
+        }
 
-		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
-		{
-		    return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null,null, indexName,
-		                                              new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+        private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
+        {
+            return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null,null, indexName,
+                                                      new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                                                       provider.ResultTransformer, provider.TransformerParameters);
         }
 

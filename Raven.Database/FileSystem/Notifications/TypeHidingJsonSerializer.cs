@@ -17,11 +17,11 @@ namespace Raven.Database.FileSystem.Notifications
         {
             Type type;
 
-			if (!cachedTypes.TryGetValue(typeName, out type))
-			{
-				var @namespace = typeof(FileSystemNotification).Namespace;
-				var fullTypeName = @namespace + "." + typeName;
-				type = Type.GetType(fullTypeName);
+            if (!cachedTypes.TryGetValue(typeName, out type))
+            {
+                var @namespace = typeof(FileSystemNotification).Namespace;
+                var fullTypeName = @namespace + "." + typeName;
+                type = Type.GetType(fullTypeName);
 
                 cachedTypes.TryAdd(typeName, type);
             }

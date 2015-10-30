@@ -61,9 +61,9 @@ FolderType=Generic
                                                         icon));
 
 
-			File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
-			if (EnvironmentUtils.RunningOnPosix == false) // Posix directory must be writeable in order to remove files in it
-				File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);
-		}
-	}
+            File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
+            if (EnvironmentUtils.RunningOnPosix == false) // Posix directory must be writeable in order to remove files in it
+                File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);
+        }
+    }
 }

@@ -42,11 +42,11 @@ namespace Raven.Database.Client.Aws
             AwsRegion = GetAwsRegion(awsRegionEndpoint);
         }
 
-		public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
-		{
-			string signedHeaders;
-			var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out signedHeaders);
-			var signingKey = CalculateSigningKey(date, ServiceName);
+        public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
+        {
+            string signedHeaders;
+            var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out signedHeaders);
+            var signingKey = CalculateSigningKey(date, ServiceName);
 
             using (var hash = new HMACSHA256(signingKey))
             {
@@ -77,9 +77,9 @@ namespace Raven.Database.Client.Aws
 
         public abstract string GetHost(string bucketName);
 
-		private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
-		{
-			var isGet = httpMethod == HttpMethods.Get;
+        private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
+        {
+            var isGet = httpMethod == HttpMethods.Get;
 
             var uri = new Uri(url);
             var queryStringCollection = uri.ParseQueryString();
@@ -111,10 +111,10 @@ namespace Raven.Database.Client.Aws
             if (signedHeaders.EndsWith(";"))
                 signedHeaders = signedHeaders.Substring(0, signedHeaders.Length - 1);
 
-			using (var hash = SHA256.Create())
-			{
-				var hashedPayload = httpHeaders["x-amz-content-sha256"];
-				var canonicalRequest = string.Format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", httpMethod, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, hashedPayload);
+            using (var hash = SHA256.Create())
+            {
+                var hashedPayload = httpHeaders["x-amz-content-sha256"];
+                var canonicalRequest = string.Format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", httpMethod, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, hashedPayload);
 
                 return RavenAwsHelper.ConvertToHex(hash.ComputeHash(Encoding.UTF8.GetBytes(canonicalRequest)));
             }

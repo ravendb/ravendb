@@ -37,19 +37,19 @@ namespace Raven.Tests.Bugs
             public string Name { get; set; }
         }
 
-		public class PutTrigger : AbstractPutTrigger
-		{
-			public override void OnPut(string key,
-			                           RavenJObject jsonReplicationDocument,
-			                           RavenJObject metadata,
-			                           TransactionInformation transactionInformation)
-			{
-				using (Database.DisableAllTriggersForCurrentThread())
-				{
-					var revisionCopy = new RavenJObject(jsonReplicationDocument);
-					Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
-				}
-			}
-		}
-	}
+        public class PutTrigger : AbstractPutTrigger
+        {
+            public override void OnPut(string key,
+                                       RavenJObject jsonReplicationDocument,
+                                       RavenJObject metadata,
+                                       TransactionInformation transactionInformation)
+            {
+                using (Database.DisableAllTriggersForCurrentThread())
+                {
+                    var revisionCopy = new RavenJObject(jsonReplicationDocument);
+                    Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
+                }
+            }
+        }
+    }
 }

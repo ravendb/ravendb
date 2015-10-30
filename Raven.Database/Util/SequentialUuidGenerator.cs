@@ -13,79 +13,79 @@ namespace Raven.Database.Util
         [Obsolete("Use RavenFS instead.")]
         private long sequentialUuidCounterAttachments;
 
-		private long sequentialUuidCounterDocumentsTransactions;
-		private long sequentialUuidCounterMappedResults;
-		private long sequentialUuidCounterReduceResults;
-		private long sequentialUuidCounterQueue;
-		private long sequentialUuidCounterTasks;
-		private long sequentialUuidCounterScheduledReductions;
-		private long sequentialUuidCounterIndexing;
-		private long sequentialUuidCounterTransformers;
-		private long sequentialUuidDocumentReferences;
-		private long sequentialUuidSubscriptions;
-		private long sequentialUuidLicensing;
-		public long EtagBase
-		{
-			set
-			{
-				ticksAsBytes = BitConverter.GetBytes(value);
-				Array.Reverse(ticksAsBytes);
-			}
-		}
+        private long sequentialUuidCounterDocumentsTransactions;
+        private long sequentialUuidCounterMappedResults;
+        private long sequentialUuidCounterReduceResults;
+        private long sequentialUuidCounterQueue;
+        private long sequentialUuidCounterTasks;
+        private long sequentialUuidCounterScheduledReductions;
+        private long sequentialUuidCounterIndexing;
+        private long sequentialUuidCounterTransformers;
+        private long sequentialUuidDocumentReferences;
+        private long sequentialUuidSubscriptions;
+        private long sequentialUuidLicensing;
+        public long EtagBase
+        {
+            set
+            {
+                ticksAsBytes = BitConverter.GetBytes(value);
+                Array.Reverse(ticksAsBytes);
+            }
+        }
 
         public long LastDocumentTransactionEtag
         {
             get { return Interlocked.Read(ref sequentialUuidCounterMappedResults); }
         }
 
-	
-		public Etag CreateSequentialUuid(UuidType type)
-		{
-			long increment;
-			switch (type)
-			{
-				case UuidType.Documents:
-					increment = Interlocked.Increment(ref sequentialUuidCounterDocuments);
-					break;
-				case UuidType.Attachments:
-					increment = Interlocked.Increment(ref sequentialUuidCounterAttachments);
-					break;
-				case UuidType.DocumentTransactions:
-					increment = Interlocked.Increment(ref sequentialUuidCounterDocumentsTransactions);
-					break;
-				case UuidType.MappedResults:
-					increment = Interlocked.Increment(ref sequentialUuidCounterMappedResults);
-					break;
-				case UuidType.ReduceResults:
-					increment = Interlocked.Increment(ref sequentialUuidCounterReduceResults);
-					break;
-				case UuidType.Queue:
-					increment = Interlocked.Increment(ref sequentialUuidCounterQueue);
-					break;
-				case UuidType.Tasks:
-					increment = Interlocked.Increment(ref sequentialUuidCounterTasks);
-					break;
-				case UuidType.ScheduledReductions:
-					increment = Interlocked.Increment(ref sequentialUuidCounterScheduledReductions);
-					break;
-				case UuidType.Indexing:
-					increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
-					break;
-				case UuidType.Transformers:
-					increment = Interlocked.Increment(ref sequentialUuidCounterTransformers);
-					break;
-				case UuidType.DocumentReferences:
-					increment = Interlocked.Increment(ref sequentialUuidDocumentReferences);
-					break;
-				case UuidType.Subscriptions:
-					increment = Interlocked.Increment(ref sequentialUuidSubscriptions);
-					break;
-				case UuidType.Licensing:
-					increment = Interlocked.Increment(ref sequentialUuidLicensing);
-					break;
-				default:
-					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);
-			}
+    
+        public Etag CreateSequentialUuid(UuidType type)
+        {
+            long increment;
+            switch (type)
+            {
+                case UuidType.Documents:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterDocuments);
+                    break;
+                case UuidType.Attachments:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterAttachments);
+                    break;
+                case UuidType.DocumentTransactions:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterDocumentsTransactions);
+                    break;
+                case UuidType.MappedResults:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterMappedResults);
+                    break;
+                case UuidType.ReduceResults:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterReduceResults);
+                    break;
+                case UuidType.Queue:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterQueue);
+                    break;
+                case UuidType.Tasks:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterTasks);
+                    break;
+                case UuidType.ScheduledReductions:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterScheduledReductions);
+                    break;
+                case UuidType.Indexing:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
+                    break;
+                case UuidType.Transformers:
+                    increment = Interlocked.Increment(ref sequentialUuidCounterTransformers);
+                    break;
+                case UuidType.DocumentReferences:
+                    increment = Interlocked.Increment(ref sequentialUuidDocumentReferences);
+                    break;
+                case UuidType.Subscriptions:
+                    increment = Interlocked.Increment(ref sequentialUuidSubscriptions);
+                    break;
+                case UuidType.Licensing:
+                    increment = Interlocked.Increment(ref sequentialUuidLicensing);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);
+            }
 
             var currentAsBytes = BitConverter.GetBytes(increment);
             Array.Reverse(currentAsBytes);

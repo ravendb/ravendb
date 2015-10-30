@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -32,15 +32,15 @@ namespace Raven.Client.Changes
         
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
-		public RemoteDatabaseChanges(string url, string apiKey,
-									   ICredentials credentials,
-									   HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
-									   Action onDispose,
-									   Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-			: base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
-		{
-			this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
-		}
+        public RemoteDatabaseChanges(string url, string apiKey,
+                                       ICredentials credentials,
+                                       HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
+                                       Action onDispose,
+                                       Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+        {
+            this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        }
 
         protected override async Task SubscribeOnServer()
         {
@@ -68,12 +68,12 @@ namespace Raven.Client.Changes
 
             foreach (var watchedCollection in watchedCollections)
             {
-				await Send("watch-collection", watchedCollection).ConfigureAwait(false);
+                await Send("watch-collection", watchedCollection).ConfigureAwait(false);
             }
 
             foreach (var watchedType in watchedTypes)
             {
-				await Send("watch-type", watchedType).ConfigureAwait(false);
+                await Send("watch-type", watchedType).ConfigureAwait(false);
             }
 
             foreach (var watchedIndex in watchedIndexes)
@@ -139,8 +139,8 @@ namespace Raven.Client.Changes
 
                                 if (t.Result)
                                 {
-									if (Logger.IsDebugEnabled)
-										Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+                                    if (Logger.IsDebugEnabled)
+                                        Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
                                                  replicationConflictNotification.Id);
                                 }
                             });
@@ -366,33 +366,33 @@ namespace Raven.Client.Changes
             return taskedObservable;
         }
 
-	    public IObservableWithTask<DataSubscriptionChangeNotification> ForAllDataSubscriptions()
-	    {
-			var counter = GetOrAddConnectionState("all-data-subscriptions", "watch-data-subscriptions", "unwatch-data-subscriptions", () => watchAllDataSubscriptions = true, () => watchAllDataSubscriptions = false, null);
+        public IObservableWithTask<DataSubscriptionChangeNotification> ForAllDataSubscriptions()
+        {
+            var counter = GetOrAddConnectionState("all-data-subscriptions", "watch-data-subscriptions", "unwatch-data-subscriptions", () => watchAllDataSubscriptions = true, () => watchAllDataSubscriptions = false, null);
 
-			var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
-				counter,
-				notification => true);
+            var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
+                counter,
+                notification => true);
 
-			counter.OnDataSubscriptionNotification += taskedObservable.Send;
-			counter.OnError += taskedObservable.Error;
+            counter.OnDataSubscriptionNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
 
-			return taskedObservable;
-	    }
+            return taskedObservable;
+        }
 
-		public IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long subscriptionId)
-		{
-			var counter = GetOrAddConnectionState("subscriptions/" + subscriptionId, "watch-data-subscription", "unwatch-data-subscription", () => watchedDataSubscriptions.TryAdd(subscriptionId), 
-													() => watchedDataSubscriptions.TryRemove(subscriptionId), subscriptionId.ToString(CultureInfo.InvariantCulture));
+        public IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long subscriptionId)
+        {
+            var counter = GetOrAddConnectionState("subscriptions/" + subscriptionId, "watch-data-subscription", "unwatch-data-subscription", () => watchedDataSubscriptions.TryAdd(subscriptionId), 
+                                                    () => watchedDataSubscriptions.TryRemove(subscriptionId), subscriptionId.ToString(CultureInfo.InvariantCulture));
 
-			var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
-				counter,
-				notification => notification.Id == subscriptionId);
+            var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
+                counter,
+                notification => notification.Id == subscriptionId);
 
-			counter.OnDataSubscriptionNotification += taskedObservable.Send;
-			counter.OnError += taskedObservable.Error;
+            counter.OnDataSubscriptionNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
 
-			return taskedObservable;
-		}
+            return taskedObservable;
+        }
     }
 }

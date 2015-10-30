@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
 import document = require("models/database/documents/document");

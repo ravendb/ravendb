@@ -19,25 +19,25 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         private IRdcLibrary _rdcLibrary;
         private bool _disposed;
 
-		public RdcVersionChecker()
-		{
+        public RdcVersionChecker()
+        {
             if (EnvironmentUtils.RunningOnPosix)
-				throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
+                throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
             
-			try
-			{
-				_rdcLibrary = (IRdcLibrary)new RdcLibrary();
-			}
-			catch (InvalidCastException e)
-			{
-				throw new InvalidOperationException("This code must run in an MTA thread", e);
-			}
-			catch (COMException comException)
-			{
-				log.ErrorException("Remote Differential Compression feature is not installed", comException);
-				throw new NotSupportedException("Remote Differential Compression feature is not installed", comException);
-			}
-		}
+            try
+            {
+                _rdcLibrary = (IRdcLibrary)new RdcLibrary();
+            }
+            catch (InvalidCastException e)
+            {
+                throw new InvalidOperationException("This code must run in an MTA thread", e);
+            }
+            catch (COMException comException)
+            {
+                log.ErrorException("Remote Differential Compression feature is not installed", comException);
+                throw new NotSupportedException("Remote Differential Compression feature is not installed", comException);
+            }
+        }
 
         public void Dispose()
         {

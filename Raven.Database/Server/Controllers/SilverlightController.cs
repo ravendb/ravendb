@@ -9,20 +9,20 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
-	public class SilverlightController : BaseDatabaseApiController
-	{
-		[HttpGet]
-		[RavenRoute("silverlight/ensureStartup")]
-		[RavenRoute("databases/{databaseName}/silverlight/ensureStartup")]
-		public HttpResponseMessage SilverlightEnsureStartup()
-		{
-			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
-			{
-				var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
-				if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false &&
-					"true".Equals(skipCreatingStudioIndexes, StringComparison.OrdinalIgnoreCase))
-					return true;
+    [RoutePrefix("")]
+    public class SilverlightController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("silverlight/ensureStartup")]
+        [RavenRoute("databases/{databaseName}/silverlight/ensureStartup")]
+        public HttpResponseMessage SilverlightEnsureStartup()
+        {
+            Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
+            {
+                var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
+                if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false &&
+                    "true".Equals(skipCreatingStudioIndexes, StringComparison.OrdinalIgnoreCase))
+                    return true;
 
                 new CreateSilverlightIndexes().SilverlightWasRequested(Database);
                 return true;

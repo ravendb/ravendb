@@ -39,8 +39,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StudioTasksController : BaseDatabaseApiController
-	{
+    public class StudioTasksController : BaseDatabaseApiController
+    {
         const int CsvImportBatchSize = 512;
 
 
@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Controllers
             if (httpResponseMessage.StatusCode != HttpStatusCode.NotFound)
                 return httpResponseMessage.WithNoCache();
 
-			documentsController.SetResource(DatabasesLandlord.SystemDatabase);
+            documentsController.SetResource(DatabasesLandlord.SystemDatabase);
             return documentsController.DocGet("Raven/StudioConfig").WithNoCache();
         }
         [HttpGet]
@@ -116,76 +116,76 @@ for(var customFunction in customFunctions) {{
         }
     
 
-		[HttpPost]
-		[RavenRoute("studio-tasks/import")]
-		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
-		{
-			if (!Request.Content.IsMimeMultipartContent())
-			{
-				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
-			}
+        [HttpPost]
+        [RavenRoute("studio-tasks/import")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/import")]
+        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+        {
+            if (!Request.Content.IsMimeMultipartContent())
+            {
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
+            }
 
-			string tempPath = Database.Configuration.TempPath;
-			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
-			if (File.Exists(fullTempPath))
-				File.Delete(fullTempPath);
-			if (Directory.Exists(fullTempPath) == false)
-				Directory.CreateDirectory(fullTempPath);
+            string tempPath = Database.Configuration.TempPath;
+            var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+            if (File.Exists(fullTempPath))
+                File.Delete(fullTempPath);
+            if (Directory.Exists(fullTempPath) == false)
+                Directory.CreateDirectory(fullTempPath);
 
-			var streamProvider = new MultipartFileStreamProvider(fullTempPath);
-			await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
-			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
-			
-			string fileName = null;
-			var fileContent = streamProvider.Contents.SingleOrDefault();
-			if (fileContent != null)
-			{
-				fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
-			}
+            var streamProvider = new MultipartFileStreamProvider(fullTempPath);
+            await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
+            var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
+            
+            string fileName = null;
+            var fileContent = streamProvider.Contents.SingleOrDefault();
+            if (fileContent != null)
+            {
+                fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+            }
 
-			var status = new ImportOperationStatus();
-			var cts = new CancellationTokenSource();
-			
-			var task = Task.Run(async () =>
-			{
-				try
-				{
-					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
-					{
-						var dataDumper = new DatabaseDataDumper(Database);
-						dataDumper.Progress += s => status.LastProgress = s;
+            var status = new ImportOperationStatus();
+            var cts = new CancellationTokenSource();
+            
+            var task = Task.Run(async () =>
+            {
+                try
+                {
+                    using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
+                    {
+                        var dataDumper = new DatabaseDataDumper(Database);
+                        dataDumper.Progress += s => status.LastProgress = s;
                         var smugglerOptions = dataDumper.Options;
-						smugglerOptions.BatchSize = batchSize;
-						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
-					    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
-						smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
-						smugglerOptions.OperateOnTypes = operateOnTypes;
-						smugglerOptions.TransformScript = transformScript;
-						smugglerOptions.CancelToken = cts;
+                        smugglerOptions.BatchSize = batchSize;
+                        smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
+                        smugglerOptions.StripReplicationInformation = stripReplicationInformation;
+                        smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
+                        smugglerOptions.OperateOnTypes = operateOnTypes;
+                        smugglerOptions.TransformScript = transformScript;
+                        smugglerOptions.CancelToken = cts;
 
-						// Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
-						// Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
-						if (filtersPipeDelimited != null)
-						{
-							smugglerOptions.Filters.AddRange(filtersPipeDelimited
-								.Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
-								.Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
-								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
-						}
+                        // Filters are passed in without the aid of the model binder. Instead, we pass in a list of FilterSettings using a string like this: pathHere;;;valueHere;;;true|||againPathHere;;;anotherValue;;;false
+                        // Why? Because I don't see a way to pass a list of a values to a WebAPI method that accepts a file upload, outside of passing in a simple string value and parsing it ourselves.
+                        if (filtersPipeDelimited != null)
+                        {
+                            smugglerOptions.Filters.AddRange(filtersPipeDelimited
+                                .Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+                                .Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
+                        }
 
-						await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
-					}
-				}
-				catch (Exception e)
-				{
-				    status.Faulted = true;
-				    status.State = RavenJObject.FromObject(new
-				                                           {
-				                                               Error = e.ToString()
-				                                           });
-					if (cts.Token.IsCancellationRequested)
-					{
+                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception e)
+                {
+                    status.Faulted = true;
+                    status.State = RavenJObject.FromObject(new
+                                                           {
+                                                               Error = e.ToString()
+                                                           });
+                    if (cts.Token.IsCancellationRequested)
+                    {
                         status.State = RavenJObject.FromObject(new { Error = "Task was cancelled"  });
                         cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
                     }
@@ -198,46 +198,46 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
-					else if (e is OperationVetoedException)
-					{
-						status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
-					}
+                    else if (e is OperationVetoedException)
+                    {
+                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
+                    }
                     else
                     {
                         status.ExceptionDetails = e.ToString();
                     }
-					throw;
-				}
-				finally
-				{
-					status.Completed = true;
-					File.Delete(uploadedFilePath);
-				}
-			}, cts.Token);
+                    throw;
+                }
+                finally
+                {
+                    status.Completed = true;
+                    File.Delete(uploadedFilePath);
+                }
+            }, cts.Token);
 
-			long id;
-			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
-			{
-				StartTime = SystemTime.UtcNow,
-				TaskType = TaskActions.PendingTaskType.ImportDatabase,
-				Payload = fileName,
-				
-			}, out id, cts);
+            long id;
+            Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.ImportDatabase,
+                Payload = fileName,
+                
+            }, out id, cts);
 
-			return GetMessageWithObject(new
-			{
-				OperationId = id
-			}, HttpStatusCode.Accepted);
-		}
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
+        }
 
-	    public class ExportData
-	    {
+        public class ExportData
+        {
             public string SmugglerOptions { get; set; }
-	    }
+        }
         
-		[HttpPost]
-		[RavenRoute("studio-tasks/exportDatabase")]
-		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
+        [HttpPost]
+        [RavenRoute("studio-tasks/exportDatabase")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
         {
             var requestString = smugglerOptionsJson.SmugglerOptions;
@@ -295,7 +295,7 @@ for(var customFunction in customFunctions) {{
             {
                 var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
                 await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
-			}
+            }
 
             return GetEmptyMessage();
         }
@@ -597,209 +597,209 @@ for(var customFunction in customFunctions) {{
             }
 
             return GetEmptyMessage();
-	    }
+        }
 
-		[HttpGet]
-		[RavenRoute("studio-tasks/collection/counts")]
-		[RavenRoute("databases/{databaseName}/studio-tasks/collection/counts")]
-		public Task<HttpResponseMessage> CollectionCount()
-		{
-			var fromDate = GetQueryStringValue("fromDate");
+        [HttpGet]
+        [RavenRoute("studio-tasks/collection/counts")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/collection/counts")]
+        public Task<HttpResponseMessage> CollectionCount()
+        {
+            var fromDate = GetQueryStringValue("fromDate");
 
-			DateTime date;
-			if (string.IsNullOrEmpty(fromDate) || DateTime.TryParse(fromDate, out date) == false)
-				date = DateTime.MinValue;
+            DateTime date;
+            if (string.IsNullOrEmpty(fromDate) || DateTime.TryParse(fromDate, out date) == false)
+                date = DateTime.MinValue;
 
-			var collections = Database
-				.LastCollectionEtags
-				.GetLastChangedCollections(date.ToUniversalTime());
+            var collections = Database
+                .LastCollectionEtags
+                .GetLastChangedCollections(date.ToUniversalTime());
 
-			var results = new ConcurrentBag<CollectionNameAndCount>();
+            var results = new ConcurrentBag<CollectionNameAndCount>();
 
-			Parallel.ForEach(collections, collectionName =>
-			{
-				var result = Database
-					.Queries
-					.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:" + collectionName, PageSize = 0 }, CancellationToken.None);
+            Parallel.ForEach(collections, collectionName =>
+            {
+                var result = Database
+                    .Queries
+                    .Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:" + collectionName, PageSize = 0 }, CancellationToken.None);
 
-				results.Add(new CollectionNameAndCount { CollectionName = collectionName, Count = result.TotalResults });
-			});
+                results.Add(new CollectionNameAndCount { CollectionName = collectionName, Count = result.TotalResults });
+            });
 
-			return GetMessageWithObjectAsTask(results);
-		}
+            return GetMessageWithObjectAsTask(results);
+        }
 
-		[HttpPost]
-		[RavenRoute("studio-tasks/replication/conflicts/resolve")]
-		[RavenRoute("databases/{databaseName}/studio-tasks/replication/conflicts/resolve")]
-		public Task<HttpResponseMessage> ResolveAllConflicts()
-		{
-			var resolutionAsString = GetQueryStringValue("resolution");
-			StraightforwardConflictResolution resolution;
-			if (Enum.TryParse(resolutionAsString, true, out resolution) == false || resolution == StraightforwardConflictResolution.None)
-				return GetMessageWithStringAsTask("Invalid conflict resolution.", HttpStatusCode.BadRequest);
+        [HttpPost]
+        [RavenRoute("studio-tasks/replication/conflicts/resolve")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/replication/conflicts/resolve")]
+        public Task<HttpResponseMessage> ResolveAllConflicts()
+        {
+            var resolutionAsString = GetQueryStringValue("resolution");
+            StraightforwardConflictResolution resolution;
+            if (Enum.TryParse(resolutionAsString, true, out resolution) == false || resolution == StraightforwardConflictResolution.None)
+                return GetMessageWithStringAsTask("Invalid conflict resolution.", HttpStatusCode.BadRequest);
 
-			if (Database.IndexDefinitionStorage.Contains("Raven/ConflictDocuments") == false)
-				return GetMessageWithStringAsTask("Raven/ConflictDocuments index does not exist.", HttpStatusCode.BadRequest);
+            if (Database.IndexDefinitionStorage.Contains("Raven/ConflictDocuments") == false)
+                return GetMessageWithStringAsTask("Raven/ConflictDocuments index does not exist.", HttpStatusCode.BadRequest);
 
-			var cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
 
-			var task = Task.Factory.StartNew(() => Database.TransactionalStorage.Batch(accessor =>
-			{
-				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
-				{
-					var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
-					bool stale;
-					foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
-					{
-						var conflicts = accessor
-							.Documents
-							.GetDocumentsWithIdStartingWith(documentId, 0, Int32.MaxValue, null)
-							.Where(x => x.Key.Contains("/conflicts/"))
-							.ToList();
+            var task = Task.Factory.StartNew(() => Database.TransactionalStorage.Batch(accessor =>
+            {
+                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
+                {
+                    var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
+                    bool stale;
+                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
+                    {
+                        var conflicts = accessor
+                            .Documents
+                            .GetDocumentsWithIdStartingWith(documentId, 0, Int32.MaxValue, null)
+                            .Where(x => x.Key.Contains("/conflicts/"))
+                            .ToList();
 
-						KeyValuePair<JsonDocument, DateTime> local;
-						KeyValuePair<JsonDocument, DateTime> remote;
-						GetConflictDocuments(conflicts, accessor, documentId, transactionalStorageId, out local, out remote);
+                        KeyValuePair<JsonDocument, DateTime> local;
+                        KeyValuePair<JsonDocument, DateTime> remote;
+                        GetConflictDocuments(conflicts, accessor, documentId, transactionalStorageId, out local, out remote);
 
-						var documentToSave = GetDocumentToSave(resolution, local, remote);
-						if (documentToSave == null)
-							continue;
+                        var documentToSave = GetDocumentToSave(resolution, local, remote);
+                        if (documentToSave == null)
+                            continue;
 
-						documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                        documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
 
-						if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
-							Database.Documents.Delete(documentId, null, null);
-						else
-							Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
-					}
-				}
-			}));
+                        if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+                            Database.Documents.Delete(documentId, null, null);
+                        else
+                            Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
+                    }
+                }
+            }));
 
-			long id;
-			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
-																			{
-																				StartTime = SystemTime.UtcNow,
-																				TaskType = TaskActions.PendingTaskType.BulkInsert,
-																			}, out id, cts);
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+                                                                            {
+                                                                                StartTime = SystemTime.UtcNow,
+                                                                                TaskType = TaskActions.PendingTaskType.BulkInsert,
+                                                                            }, out id, cts);
 
-			return GetMessageWithObjectAsTask(new
-			{
-				OperationId = id
-			}, HttpStatusCode.Accepted);
-		}
+            return GetMessageWithObjectAsTask(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
+        }
 
-		private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
-		{
-			DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
-			JsonDocument localDocument = null, newestRemote = null;
-			foreach (var conflict in conflicts)
-			{
-				var lastModified = conflict.LastModified.HasValue ? conflict.LastModified.Value : DateTime.MinValue;
-				var replicationSource = conflict.Metadata.Value<string>(Constants.RavenReplicationSource);
+        private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
+        {
+            DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
+            JsonDocument localDocument = null, newestRemote = null;
+            foreach (var conflict in conflicts)
+            {
+                var lastModified = conflict.LastModified.HasValue ? conflict.LastModified.Value : DateTime.MinValue;
+                var replicationSource = conflict.Metadata.Value<string>(Constants.RavenReplicationSource);
 
-				if (string.Equals(replicationSource, transactionalStorageId, StringComparison.OrdinalIgnoreCase))
-				{
-					localModified = lastModified;
-					localDocument = conflict;
-					continue;
-				}
+                if (string.Equals(replicationSource, transactionalStorageId, StringComparison.OrdinalIgnoreCase))
+                {
+                    localModified = lastModified;
+                    localDocument = conflict;
+                    continue;
+                }
 
-				if (lastModified <= remoteModified)
-					continue;
+                if (lastModified <= remoteModified)
+                    continue;
 
-				newestRemote = conflict;
-				remoteModified = lastModified;
-			}
-			
-			local = new KeyValuePair<JsonDocument, DateTime>(localDocument, localModified);
-			remote = new KeyValuePair<JsonDocument, DateTime>(newestRemote, remoteModified);
-		}
+                newestRemote = conflict;
+                remoteModified = lastModified;
+            }
+            
+            local = new KeyValuePair<JsonDocument, DateTime>(localDocument, localModified);
+            remote = new KeyValuePair<JsonDocument, DateTime>(newestRemote, remoteModified);
+        }
 
-		private static JsonDocument GetDocumentToSave(StraightforwardConflictResolution resolution, KeyValuePair<JsonDocument, DateTime> local, KeyValuePair<JsonDocument, DateTime> remote)
-		{
-			if (local.Key == null && remote.Key == null) 
-				return null;
+        private static JsonDocument GetDocumentToSave(StraightforwardConflictResolution resolution, KeyValuePair<JsonDocument, DateTime> local, KeyValuePair<JsonDocument, DateTime> remote)
+        {
+            if (local.Key == null && remote.Key == null) 
+                return null;
 
-			if (local.Key == null) 
-				return remote.Key;
+            if (local.Key == null) 
+                return remote.Key;
 
-			if (remote.Key == null) 
-				return local.Key;
+            if (remote.Key == null) 
+                return local.Key;
 
-			JsonDocument documentToSave;
-			switch (resolution)
-			{
-				case StraightforwardConflictResolution.ResolveToLatest:
-					documentToSave = local.Value >= remote.Value ? local.Key : remote.Key;
-					break;
-				case StraightforwardConflictResolution.ResolveToLocal:
-					documentToSave = local.Key;
-					break;
-				case StraightforwardConflictResolution.ResolveToRemote:
-					documentToSave = remote.Key;
-					break;
-				default:
-					throw new NotSupportedException(resolution.ToString());
-			}
+            JsonDocument documentToSave;
+            switch (resolution)
+            {
+                case StraightforwardConflictResolution.ResolveToLatest:
+                    documentToSave = local.Value >= remote.Value ? local.Key : remote.Key;
+                    break;
+                case StraightforwardConflictResolution.ResolveToLocal:
+                    documentToSave = local.Key;
+                    break;
+                case StraightforwardConflictResolution.ResolveToRemote:
+                    documentToSave = remote.Key;
+                    break;
+                default:
+                    throw new NotSupportedException(resolution.ToString());
+            }
 
-			return documentToSave;
-		}
+            return documentToSave;
+        }
 
-		private static RavenJToken SetValueInDocument(string value)
-		{
-			if (string.IsNullOrEmpty(value))
-				return value;
+        private static RavenJToken SetValueInDocument(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
 
-			var ch = value[0];
-			if (ch == '[' || ch == '{')
-			{
-				try
-				{
-					return RavenJToken.Parse(value);
-				}
-				catch (Exception)
-				{
-					// ignoring failure to parse, will proceed to insert as a string value
-				}
-			}
-			else if (char.IsDigit(ch) || ch == '-' || ch == '.')
-			{
-				// maybe it is a number?
-				long longResult;
-				if (long.TryParse(value, out longResult))
-				{
-					return longResult;
-				}
+            var ch = value[0];
+            if (ch == '[' || ch == '{')
+            {
+                try
+                {
+                    return RavenJToken.Parse(value);
+                }
+                catch (Exception)
+                {
+                    // ignoring failure to parse, will proceed to insert as a string value
+                }
+            }
+            else if (char.IsDigit(ch) || ch == '-' || ch == '.')
+            {
+                // maybe it is a number?
+                long longResult;
+                if (long.TryParse(value, out longResult))
+                {
+                    return longResult;
+                }
 
-				decimal decimalResult;
-				if (decimal.TryParse(value, out decimalResult))
-				{
-					return decimalResult;
-				}
-			}
-			else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
-			{
-				return value.Substring(1, value.Length - 2);
-			}
+                decimal decimalResult;
+                if (decimal.TryParse(value, out decimalResult))
+                {
+                    return decimalResult;
+                }
+            }
+            else if (ch == '"' && value.Length > 1 && value[value.Length - 1] == '"')
+            {
+                return value.Substring(1, value.Length - 2);
+            }
 
-			return value;
-		}
+            return value;
+        }
 
-		private class ImportOperationStatus : IOperationState
-		{
-			public bool Completed { get; set; }
-			public string LastProgress { get; set; }
-			public string ExceptionDetails { get; set; }
-		    public bool Faulted { get; set; }
-		    public RavenJToken State { get; set; }
-		}
+        private class ImportOperationStatus : IOperationState
+        {
+            public bool Completed { get; set; }
+            public string LastProgress { get; set; }
+            public string ExceptionDetails { get; set; }
+            public bool Faulted { get; set; }
+            public RavenJToken State { get; set; }
+        }
 
-		private class CollectionNameAndCount
-		{
-			public string CollectionName { get; set; }
+        private class CollectionNameAndCount
+        {
+            public string CollectionName { get; set; }
 
-			public int Count { get; set; }
-		}
-	}
+            public int Count { get; set; }
+        }
+    }
 }
 

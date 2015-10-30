@@ -42,7 +42,7 @@ class trafficWatch extends viewModelBase {
             if (!!this.startTraceTime()) {
                 return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
             }
-			return "";
+            return "";
         });
         this.filter.throttle(250).subscribe(() => this.filterEntries());
         this.filterDuration.throttle(250).subscribe(() => this.filterEntries());

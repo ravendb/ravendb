@@ -69,90 +69,90 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found,
 but the attachment itself was found. Data corruption?", key));
-				}
+                }
 
-				Etag existingEtag = null;
-				if (etag != null && !IsAttachmentEtagMatch(loweredKey, etag, out existingEtag))
-				{
-					throw new ConcurrencyException("PUT attempted on attachment '" + key +
-					"' using a non current etag")
-					{
-						ActualETag = existingEtag,
-						ExpectedETag = etag
-					};
-				}
+                Etag existingEtag = null;
+                if (etag != null && !IsAttachmentEtagMatch(loweredKey, etag, out existingEtag))
+                {
+                    throw new ConcurrencyException("PUT attempted on attachment '" + key +
+                    "' using a non current etag")
+                    {
+                        ActualETag = existingEtag,
+                        ExpectedETag = etag
+                    };
+                }
 
-				if (existingEtag != null) //existingEtag can be null if etag parameter is null
-					keyByETagIndice.Delete(writeBatch.Value, existingEtag.ToString());
-				else
-				{
-					var currentEtag = ReadCurrentEtag(loweredKey);
-					keyByETagIndice.Delete(writeBatch.Value, currentEtag.ToString());
-				}
-			}
-			else
-			{
-				if (data == null)
-					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
+                if (existingEtag != null) //existingEtag can be null if etag parameter is null
+                    keyByETagIndice.Delete(writeBatch.Value, existingEtag.ToString());
+                else
+                {
+                    var currentEtag = ReadCurrentEtag(loweredKey);
+                    keyByETagIndice.Delete(writeBatch.Value, currentEtag.ToString());
+                }
+            }
+            else
+            {
+                if (data == null)
+                    throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
 
-				if (!data.CanRead) //precaution
-					throw new InvalidOperationException("When adding/updating attachment, the attachment data stream must be readable");
-			}
-
-			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
-
-			if (data != null)
-			{
-				if (data.CanSeek)
-				{
-					data.Seek(0, SeekOrigin.Begin);
-					attachmentsTable.Add(writeBatch.Value, loweredKey, data, version ?? 0);
-				}
-				else //handle streams like GzipStream
-				{
-					try
-					{
-					    var tempStream = CreateStream();
-						data.CopyTo(tempStream);
-						tempStream.Seek(0, SeekOrigin.Begin);
-						attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream, version ?? 0);
-					}
-					finally
-					{
-						data.Dispose();
-					}
-				}
-			}
-
-			keyByETagIndice.Add(writeBatch.Value, newETag.ToString(), key);
-
-			WriteAttachmentMetadata(loweredKey, newETag, headers);
-
-			if (logger.IsDebugEnabled)
-			{
-				var message = data != null && data.CanSeek
-					? string.Format("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length)
-					: string.Format("Fetched document attachment (key = '{0}')", key);
-
-				logger.Debug(message);
+                if (!data.CanRead) //precaution
+                    throw new InvalidOperationException("When adding/updating attachment, the attachment data stream must be readable");
             }
 
-			return newETag;
-		}
+            var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 
-		public void DeleteAttachment(string key, Etag etag)
-		{
-			if (String.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
+            if (data != null)
+            {
+                if (data.CanSeek)
+                {
+                    data.Seek(0, SeekOrigin.Begin);
+                    attachmentsTable.Add(writeBatch.Value, loweredKey, data, version ?? 0);
+                }
+                else //handle streams like GzipStream
+                {
+                    try
+                    {
+                        var tempStream = CreateStream();
+                        data.CopyTo(tempStream);
+                        tempStream.Seek(0, SeekOrigin.Begin);
+                        attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream, version ?? 0);
+                    }
+                    finally
+                    {
+                        data.Dispose();
+                    }
+                }
+            }
+
+            keyByETagIndice.Add(writeBatch.Value, newETag.ToString(), key);
+
+            WriteAttachmentMetadata(loweredKey, newETag, headers);
+
+            if (logger.IsDebugEnabled)
+            {
+                var message = data != null && data.CanSeek
+                    ? string.Format("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length)
+                    : string.Format("Fetched document attachment (key = '{0}')", key);
+
+                logger.Debug(message);
+            }
+
+            return newETag;
+        }
+
+        public void DeleteAttachment(string key, Etag etag)
+        {
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException("key");
 
             var loweredKey = (Slice) CreateKey(key);
 
             if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value) )
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
-				return;
-			}
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+                return;
+            }
 
             var existingEtag = ReadCurrentEtag(loweredKey);
             if (existingEtag == null) //precaution --> should never be null at this stage
@@ -169,11 +169,11 @@ but the attachment itself was found. Data corruption?", key));
 
             attachmentsTable.Delete(writeBatch.Value, loweredKey);
             metadataIndex.Delete(writeBatch.Value, loweredKey);
-			attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-							.Delete(writeBatch.Value, existingEtag);
-			if (logger.IsDebugEnabled)
-				logger.Debug("Deleted document attachment (key = '{0}')", key);
-		}
+            attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
+                            .Delete(writeBatch.Value, existingEtag);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Deleted document attachment (key = '{0}')", key);
+        }
 
         public Attachment GetAttachment(string key)
         {
@@ -205,18 +205,18 @@ but the attachment itself was found. Data corruption?", key));
                             throw new InvalidOperationException("Something is very wrong here. Storage actions define invalid attachment storage actions object");
 
                         var attachmentDataStream = attachmentStorageActions.GetAttachmentStream(loweredKey);
-						return attachmentDataStream;
-					},
-					Size = (int) stream.Length
-				};
-				if (logger.IsDebugEnabled)
-					logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, stream.Length);
-				return attachment;
-			}
-		}
+                        return attachmentDataStream;
+                    },
+                    Size = (int) stream.Length
+                };
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, stream.Length);
+                return attachment;
+            }
+        }
 
-	    public long GetAttachmentsCount()
-	    {
+        public long GetAttachmentsCount()
+        {
             return tableStorage.GetEntriesCount(tableStorage.Attachments);
         }
 

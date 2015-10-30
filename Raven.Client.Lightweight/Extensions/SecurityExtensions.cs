@@ -9,34 +9,34 @@ using Raven.Client.Connection;
 
 namespace Raven.Client.Extensions
 {
-	internal static class SecurityExtensions
-	{
-		//TODO: this can be used in document store/counter stores/time series store
-		internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
-		{
-			if (conventions.HandleUnauthorizedResponseAsync != null)
-				return; // already setup by the user
+    internal static class SecurityExtensions
+    {
+        //TODO: this can be used in document store/counter stores/time series store
+        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
+        {
+            if (conventions.HandleUnauthorizedResponseAsync != null)
+                return; // already setup by the user
 
-			var basicAuthenticator = new BasicAuthenticator(requestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-			var securedAuthenticator = new SecuredAuthenticator();
+            var basicAuthenticator = new BasicAuthenticator(requestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
+            var securedAuthenticator = new SecuredAuthenticator();
 
-			requestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
-			requestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
+            requestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
+            requestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
-			conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
-			{
-				if (credentials.ApiKey == null)
-				{
-					AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
-					return null;
-				}
+            conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
+            {
+                if (credentials.ApiKey == null)
+                {
+                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
+                    return null;
+                }
 
-				return null;
-			};
+                return null;
+            };
 
-			conventions.HandleUnauthorizedResponseAsync = async (unauthorizedResponse, credentials) =>
-			{
-				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
+            conventions.HandleUnauthorizedResponseAsync = async (unauthorizedResponse, credentials) =>
+            {
+                var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
 #if DEBUG && FIDDLER
                 // Make sure to avoid a cross DNS security issue, when running with Fiddler

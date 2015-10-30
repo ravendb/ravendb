@@ -7,23 +7,23 @@ namespace Raven.Abstractions.Data
     {
     }
 
-	public class DatabaseMetrics
-	{
-		public double DocsWritesPerSecond { get; set; }
-		public double IndexedPerSecond { get; set; }
-		public double ReducedPerSecond { get; set; }
-		public double RequestsPerSecond { get; set; }
-		public MeterData Requests { get; set; }
-		public HistogramData RequestsDuration { get; set; }
-		public OneMinuteMetricData RequestDurationLastMinute { get; set; }
-		public HistogramData StaleIndexMaps { get; set; }
-		public HistogramData StaleIndexReduces { get; set; }
-		public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
-		public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
-		public Dictionary<string, MeterData> ReplicationDurationMeter { get; set; }
-		public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
-		public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
-	}
+    public class DatabaseMetrics
+    {
+        public double DocsWritesPerSecond { get; set; }
+        public double IndexedPerSecond { get; set; }
+        public double ReducedPerSecond { get; set; }
+        public double RequestsPerSecond { get; set; }
+        public MeterData Requests { get; set; }
+        public HistogramData RequestsDuration { get; set; }
+        public OneMinuteMetricData RequestDurationLastMinute { get; set; }
+        public HistogramData StaleIndexMaps { get; set; }
+        public HistogramData StaleIndexReduces { get; set; }
+        public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
+        public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
+        public Dictionary<string, MeterData> ReplicationDurationMeter { get; set; }
+        public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
+        public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
+    }
 
     public class HistogramData : IMetricsData
     {
@@ -52,17 +52,17 @@ namespace Raven.Abstractions.Data
     }
 
 
-	public class OneMinuteMetricData : IMetricsData
-	{
-		public int Count { get; set; }
-		public long Min { get; set; }
-		public long Max { get; set; }
-		public double Avg { get; set; }
-	}
+    public class OneMinuteMetricData : IMetricsData
+    {
+        public int Count { get; set; }
+        public long Min { get; set; }
+        public long Max { get; set; }
+        public double Avg { get; set; }
+    }
 
-	public enum MetricType
-	{
-		Meter = 1,
-		Histogram = 2
-	}
+    public enum MetricType
+    {
+        Meter = 1,
+        Histogram = 2
+    }
 }

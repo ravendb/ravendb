@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import counterChange = require("models/counter/counterChange");
 import counterStorage = require("models/counter/counterStorage");
 

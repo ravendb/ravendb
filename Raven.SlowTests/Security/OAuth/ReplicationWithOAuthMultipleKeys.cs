@@ -75,8 +75,8 @@ namespace Raven.SlowTests.Security.OAuth
             var company = WaitForDocument<Company>(store2, "companies/1");
             Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             servers[0].Dispose();
 
@@ -95,25 +95,25 @@ namespace Raven.SlowTests.Security.OAuth
 
             TellFirstInstanceToReplicateToSecondInstance(apiKeys[1]);
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" }).ConfigureAwait(false);
-				await session.SaveChangesAsync();
-			}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" }).ConfigureAwait(false);
+                await session.SaveChangesAsync();
+            }
 
             var company = WaitForDocument<Company>(store2, "companies/1");
             Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = (ServerClient)store1.DatabaseCommands;
-			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+            var serverClient = (ServerClient)store1.DatabaseCommands;
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				Assert.NotNull(await session.LoadAsync<Company>(1).ConfigureAwait(false));
-			}
-		}
+            using (var session = store1.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<Company>(1).ConfigureAwait(false));
+            }
+        }
 
         [Fact]
         public void Can_replicate_indexes()
@@ -126,8 +126,8 @@ namespace Raven.SlowTests.Security.OAuth
 
             new MyIndex().Execute(store1);
 
-			Assert.True(WaitForIndexToReplicate(store2.DatabaseCommands, "MyIndex"));
-		}
+            Assert.True(WaitForIndexToReplicate(store2.DatabaseCommands, "MyIndex"));
+        }
 
         [Fact]
         public async Task Can_replicate_indexes_async()
@@ -138,9 +138,9 @@ namespace Raven.SlowTests.Security.OAuth
 
             TellFirstInstanceToReplicateToSecondInstance(apiKeys[1]);
 
-			await new MyIndex().ExecuteAsync(store1.AsyncDatabaseCommands, store1.Conventions).ConfigureAwait(false);
-			Assert.True(WaitForIndexToReplicate(store2.AsyncDatabaseCommands, "MyIndex"));
-		}
+            await new MyIndex().ExecuteAsync(store1.AsyncDatabaseCommands, store1.Conventions).ConfigureAwait(false);
+            Assert.True(WaitForIndexToReplicate(store2.AsyncDatabaseCommands, "MyIndex"));
+        }
 
         public class MyIndex : AbstractIndexCreationTask<Company>
         {

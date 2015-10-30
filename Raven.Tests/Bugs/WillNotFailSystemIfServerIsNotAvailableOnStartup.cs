@@ -17,17 +17,17 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
-	{
-		[Fact]
-		public void CanStartWithoutServer()
-		{
-			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
-			{
-				using (var session = store.OpenSession())
-				{
-					Assert.Throws<ErrorResponseException>(() => session.Load<User>("user/1"));
-				}
+    public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
+    {
+        [Fact]
+        public void CanStartWithoutServer()
+        {
+            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<ErrorResponseException>(() => session.Load<User>("user/1"));
+                }
 
                 using (GetNewServer())
                 {
@@ -39,15 +39,15 @@ namespace Raven.Tests.Bugs
             }
         }
 
-		[Fact]
-		public async Task CanStartWithoutServerAsync()
-		{
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<User>("user/1"));
-				}
+        [Fact]
+        public async Task CanStartWithoutServerAsync()
+        {
+            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<User>("user/1"));
+                }
 
                 using (GetNewServer())
                 {

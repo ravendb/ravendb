@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using GeoAPI.Geometries;
 using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;

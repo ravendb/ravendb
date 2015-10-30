@@ -46,7 +46,7 @@ class documents extends viewModelBase {
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     currentExportUrl: KnockoutComputed<string>;
-	isSystemDocumentsCollection: KnockoutComputed<boolean>;
+    isSystemDocumentsCollection: KnockoutComputed<boolean>;
     isRegularCollection: KnockoutComputed<boolean>;
 
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
@@ -59,8 +59,8 @@ class documents extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
-	static isInitialized = ko.observable<boolean>(false);
-	isInitialized = documents.isInitialized;
+    static isInitialized = ko.observable<boolean>(false);
+    isInitialized = documents.isInitialized;
 
     constructor() {
         super();
@@ -98,7 +98,7 @@ class documents extends viewModelBase {
             return false;
         });
 
-		this.isSystemDocumentsCollection = ko.computed(() => {
+        this.isSystemDocumentsCollection = ko.computed(() => {
             var collection: collection = this.selectedCollection();
             return !!collection && collection.isSystemDocuments;
         });
@@ -142,8 +142,8 @@ class documents extends viewModelBase {
         var db = this.activeDatabase();
         this.fetchAlerts();
         this.fetchCollections(db).done(results => {
-	        this.collectionsLoaded(results, db);
-			documents.isInitialized(true);
+            this.collectionsLoaded(results, db);
+            documents.isInitialized(true);
         });
     }
 
@@ -157,29 +157,29 @@ class documents extends viewModelBase {
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
-	    this.registerCollectionsResize();
+        this.registerCollectionsResize();
     }
 
-	deactivate() {
-		super.deactivate();
-		documents.isInitialized(false);
+    deactivate() {
+        super.deactivate();
+        documents.isInitialized(false);
         this.unregisterCollectionsResizing();
     }
 
-	private registerCollectionsResize() {
-		var resizingColumn = false;
-		var startX = 0;
-		var startingLeftWidth = 0;
-		var startingRightWidth = 0;
-		var totalStartingWidth = 0;
+    private registerCollectionsResize() {
+        var resizingColumn = false;
+        var startX = 0;
+        var startingLeftWidth = 0;
+        var startingRightWidth = 0;
+        var totalStartingWidth = 0;
 
-		$(document).on("mousedown.collectionsResize", ".collection-resize",(e: any) => {
-			startX = e.pageX;
-			resizingColumn = true;
-			startingLeftWidth = $("#documents-page-container").innerWidth();
-			startingRightWidth = $("#documents-page-right-container").innerWidth();
-			totalStartingWidth = startingLeftWidth + startingRightWidth;
-		});
+        $(document).on("mousedown.collectionsResize", ".collection-resize",(e: any) => {
+            startX = e.pageX;
+            resizingColumn = true;
+            startingLeftWidth = $("#documents-page-container").innerWidth();
+            startingRightWidth = $("#documents-page-right-container").innerWidth();
+            totalStartingWidth = startingLeftWidth + startingRightWidth;
+        });
 
         $(document).on("mouseup.collectionsResize", "", (e: any) => {
             resizingColumn = false;
@@ -188,11 +188,11 @@ class documents extends viewModelBase {
         $(document).on("mousemove.collectionsResize", "", (e: any) => {
             if (resizingColumn) {
 
-				// compute new percentage values
-				var diff = e.pageX - startX;
-				
-				$("#documents-page-container").innerWidth(((startingLeftWidth + diff) * 100.0 / totalStartingWidth) + "%");
-				$("#documents-page-right-container").innerWidth(((startingRightWidth - diff) * 100.0 / totalStartingWidth) + "%");
+                // compute new percentage values
+                var diff = e.pageX - startX;
+                
+                $("#documents-page-container").innerWidth(((startingLeftWidth + diff) * 100.0 / totalStartingWidth) + "%");
+                $("#documents-page-right-container").innerWidth(((startingRightWidth - diff) * 100.0 / totalStartingWidth) + "%");
 
                 // Stop propagation of the event so the text selection doesn't fire up
                 if (e.stopPropagation) e.stopPropagation();
@@ -203,23 +203,23 @@ class documents extends viewModelBase {
                 return false;
             }
         });
-	}
+    }
 
-	unregisterCollectionsResizing() {
+    unregisterCollectionsResizing() {
         $(document).off("mousedown.collectionsResize");
         $(document).off("mouseup.collectionsResize");
         $(document).off("mousemove.collectionsResize");
     }
 
-	createPostboxSubscriptions(): Array<KnockoutSubscription> {
+    createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
             ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db)),
-			ko.postbox.subscribe("SortCollections", () => this.sortCollections())
+            ko.postbox.subscribe("SortCollections", () => this.sortCollections())
         ];
     }
 
-	createNotifications(): Array<changeSubscription> {
+    createNotifications(): Array<changeSubscription> {
         return [
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
@@ -262,7 +262,7 @@ class documents extends viewModelBase {
 
         this.fetchCollections(db).done(results => {
             this.updateCollections(results);
-	        this.refreshCollectionsData();
+            this.refreshCollectionsData();
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
             deferred.resolve();
         });
@@ -277,20 +277,20 @@ class documents extends viewModelBase {
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
-		systemDocumentsCollection.documentCount = ko.computed(() => {
-		    var regularCollections = this.collections().filter((c: collection) => c.isAllDocuments === false && c.isSystemDocuments === false);
-			if (regularCollections.length === 0)
-				return 0;
-			var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
-		    return this.allDocumentsCollection.documentCount() - sum;
-	    });
+        systemDocumentsCollection.documentCount = ko.computed(() => {
+            var regularCollections = this.collections().filter((c: collection) => c.isAllDocuments === false && c.isSystemDocuments === false);
+            if (regularCollections.length === 0)
+                return 0;
+            var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
+            return this.allDocumentsCollection.documentCount() - sum;
+        });
 
         // All systems a-go. Load them into the UI and select the first one.
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
         var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
-	    
+        
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
@@ -442,7 +442,7 @@ class documents extends viewModelBase {
             }
         });
 
-		var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
+        var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
@@ -455,12 +455,12 @@ class documents extends viewModelBase {
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
-	refresh() {
-		this.getDocumentsGrid().refreshCollectionData();
-		var selectedCollection = this.selectedCollection();
-		selectedCollection.invalidateCache();
-		this.selectNone();
-	}
+    refresh() {
+        this.getDocumentsGrid().refreshCollectionData();
+        var selectedCollection = this.selectedCollection();
+        selectedCollection.invalidateCache();
+        this.selectNone();
+    }
 
     toggleSelectAll() {
         var docsGrid = this.getDocumentsGrid();
@@ -554,35 +554,35 @@ class documents extends viewModelBase {
         return appUrl.forAlerts(this.activeDatabase()) + "&item=" + index;
     }
 
-	private sortCollections() {
-		this.collections.sort((c1: collection, c2: collection) => {
-		    if (c1.isAllDocuments)
-			    return -1;
-		    if (c2.isAllDocuments)
-			    return 1;
-			if (c1.isSystemDocuments)
-				return -1;
-			if (c2.isSystemDocuments)
-				return 1;
-		    return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-	    });
-	}
+    private sortCollections() {
+        this.collections.sort((c1: collection, c2: collection) => {
+            if (c1.isAllDocuments)
+                return -1;
+            if (c2.isAllDocuments)
+                return 1;
+            if (c1.isSystemDocuments)
+                return -1;
+            if (c2.isSystemDocuments)
+                return 1;
+            return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+        });
+    }
 
-	// Animation callbacks for the groups list
-	showCollectionElement(element) {
-		if (element.nodeType === 1 && documents.isInitialized()) {
-			$(element).hide().slideDown(500, () => {
-				ko.postbox.publish("SortCollections");
-				$(element).highlight();
-			});
-		}
-	}
+    // Animation callbacks for the groups list
+    showCollectionElement(element) {
+        if (element.nodeType === 1 && documents.isInitialized()) {
+            $(element).hide().slideDown(500, () => {
+                ko.postbox.publish("SortCollections");
+                $(element).highlight();
+            });
+        }
+    }
 
-	hideCollectionElement(element) {
-		if (element.nodeType === 1) {
-			$(element).slideUp(1000, () => { $(element).remove(); });
-		}
-	}
+    hideCollectionElement(element) {
+        if (element.nodeType === 1) {
+            $(element).slideUp(1000, () => { $(element).remove(); });
+        }
+    }
 }
 
 export = documents;

@@ -24,11 +24,11 @@ namespace Raven.Client.Document.SessionOperations
             this.id = id;
         }
 
-		public void LogOperation()
-		{
-			if (log.IsDebugEnabled)
-			log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
-		}
+        public void LogOperation()
+        {
+            if (log.IsDebugEnabled)
+            log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+        }
 
         public IDisposable EnterLoadContext()
         {

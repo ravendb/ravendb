@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem.Auth
 
             using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
-				await client.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(client.FileSystemName));
+                await client.Admin.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(client.FileSystemName));
 
                 await client.UploadAsync("a", new MemoryStream(new byte[] { 1, 2 }));
                 await client.UploadAsync("b", new MemoryStream(new byte[] { 2, 1, 0 }));

@@ -91,49 +91,49 @@ namespace Raven.Server
         {
             get { return configuration.RunInMemory; }
             set { configuration.RunInMemory = value; }
-	    }
+        }
 
-		public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
-		{
-			if (configuration.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
-			{
-				// we ignore either all or none at the moment
-				ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-			}
-			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+        public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
+        {
+            if (configuration.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
+            {
+                // we ignore either all or none at the moment
+                ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+            }
+            BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
-			BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+            BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
-			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
-			options = owinHttpServer.Options;
-			
-			serverThingsForTests = new ServerThingsForTests(options);
-			Func<HttpMessageHandler> httpMessageHandlerFactory = ()=>new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
-			documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
-			documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
-			documentStore.Initialize();
+            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
+            options = owinHttpServer.Options;
+            
+            serverThingsForTests = new ServerThingsForTests(options);
+            Func<HttpMessageHandler> httpMessageHandlerFactory = ()=>new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
+            documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
+            documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
+            documentStore.Initialize();
 
-			filesStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
-			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
-			filesStore.Initialize();
+            filesStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
+            filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
+            filesStore.Initialize();
 
-	        return this;
-	    }
+            return this;
+        }
 
-		public void EnableHttpServer()
-		{
-			owinHttpServer.EnableHttpServer(configuration);
-		}
+        public void EnableHttpServer()
+        {
+            owinHttpServer.EnableHttpServer(configuration);
+        }
 
-		public void DisableHttpServer()
-		{
-			owinHttpServer.DisableHttpServer();
-		}
+        public void DisableHttpServer()
+        {
+            owinHttpServer.DisableHttpServer();
+        }
 
-	    public RavenDBOptions Options
-	    {
-	        get { return options; }
-	    }
+        public RavenDBOptions Options
+        {
+            get { return options; }
+        }
 
         public string Url
         {
@@ -194,10 +194,10 @@ namespace Raven.Server
                 options.RequestManager.ResetNumberOfRequests();
             }
 
-			public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
-			{
-				return options.DatabaseLandlord.GetResourceInternal(databaseName);
-			}
+            public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
+            {
+                return options.DatabaseLandlord.GetResourceInternal(databaseName);
+            }
 
             public Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName)
             {

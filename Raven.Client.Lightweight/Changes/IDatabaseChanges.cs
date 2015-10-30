@@ -35,50 +35,50 @@ namespace Raven.Client.Changes
         /// </summary>
         IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 
-		/// <summary>
-		/// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName);
+        /// <summary>
+        /// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName);
 
-		/// <summary>
-		/// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>();
+        /// <summary>
+        /// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>();
 
-		/// <summary>
-		/// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName);
+        /// <summary>
+        /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName);
 
-		/// <summary>
-		/// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type);
+        /// <summary>
+        /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type);
 
-		/// <summary>
-		/// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>();
+        /// <summary>
+        /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>();
 
-		/// <summary>
-		/// Subscribe to all replication conflicts.
-		/// </summary>
+        /// <summary>
+        /// Subscribe to all replication conflicts.
+        /// </summary>
                 IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts();
 
                 /// <summary>
-		/// Subscribe to all bulk insert operation changes that belong to a operation with given Id.
-		/// </summary>
-		IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null);
+        /// Subscribe to all bulk insert operation changes that belong to a operation with given Id.
+        /// </summary>
+        IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null);
 
-		/// <summary>
-		/// Subscribe to changes for all data subscriptions.
-		/// </summary>
-		IObservableWithTask<DataSubscriptionChangeNotification> ForAllDataSubscriptions();
+        /// <summary>
+        /// Subscribe to changes for all data subscriptions.
+        /// </summary>
+        IObservableWithTask<DataSubscriptionChangeNotification> ForAllDataSubscriptions();
 
-		/// <summary>
-		/// Subscribe to changes for a specified data subscription.
-		/// </summary>
-		IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long id);
+        /// <summary>
+        /// Subscribe to changes for a specified data subscription.
+        /// </summary>
+        IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long id);
 
-	}
+    }
 }

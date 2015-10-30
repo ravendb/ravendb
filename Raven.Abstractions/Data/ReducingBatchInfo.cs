@@ -10,11 +10,11 @@ using System.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	public class ReducingBatchInfo
-	{
+    public class ReducingBatchInfo
+    {
         public long Id { get; set; }
 
-		public List<string> IndexesToWorkOn { get; set; }
+        public List<string> IndexesToWorkOn { get; set; }
 
         public DateTime StartedAt { get; set; }
 

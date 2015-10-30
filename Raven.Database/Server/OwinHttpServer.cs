@@ -41,22 +41,22 @@ namespace Raven.Database.Server
 
             var schema = config.Encryption.UseSsl ? "https" : "http";
 
-			server = WebApp.Start(schema + "://+:" + config.Port, app => //TODO DH: configuration.ServerUrl doesn't bind properly
-			{
-				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
-				if (listener != null)
-				{
-					new WindowsAuthConfigureHttpListener().Configure(listener, config);
-				}
-				startup.Configuration(app);
-				app.Use(async (context, _) =>
-				{
-					context.Response.StatusCode = 404;
-					context.Response.ReasonPhrase = "Not Found";
-					await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length).ConfigureAwait(false);
-				});
-			});
-		}
+            server = WebApp.Start(schema + "://+:" + config.Port, app => //TODO DH: configuration.ServerUrl doesn't bind properly
+            {
+                var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
+                if (listener != null)
+                {
+                    new WindowsAuthConfigureHttpListener().Configure(listener, config);
+                }
+                startup.Configuration(app);
+                app.Use(async (context, _) =>
+                {
+                    context.Response.StatusCode = 404;
+                    context.Response.ReasonPhrase = "Not Found";
+                    await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length).ConfigureAwait(false);
+                });
+            });
+        }
 
         public void DisableHttpServer()
         {

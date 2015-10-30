@@ -3,236 +3,236 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Util.Conversion
 {
-	/// <summary>
-	/// Equivalent of System.BitConverter, but with either endianness.
-	/// </summary>
-	public abstract class EndianBitConverter
-	{
-		#region Endianness of this converter
-		/// <summary>
-		/// Indicates the byte order ("endianess") in which data is converted using this class.
-		/// </summary>
-		/// <remarks>
-		/// Different computer architectures store data using different byte orders. "Big-endian"
-		/// means the most significant byte is on the left end of a word. "Little-endian" means the 
-		/// most significant byte is on the right end of a word.
-		/// </remarks>
-		/// <returns>true if this converter is little-endian, false otherwise.</returns>
-		public abstract bool IsLittleEndian();
+    /// <summary>
+    /// Equivalent of System.BitConverter, but with either endianness.
+    /// </summary>
+    public abstract class EndianBitConverter
+    {
+        #region Endianness of this converter
+        /// <summary>
+        /// Indicates the byte order ("endianess") in which data is converted using this class.
+        /// </summary>
+        /// <remarks>
+        /// Different computer architectures store data using different byte orders. "Big-endian"
+        /// means the most significant byte is on the left end of a word. "Little-endian" means the 
+        /// most significant byte is on the right end of a word.
+        /// </remarks>
+        /// <returns>true if this converter is little-endian, false otherwise.</returns>
+        public abstract bool IsLittleEndian();
 
-		/// <summary>
-		/// Indicates the byte order ("endianess") in which data is converted using this class.
-		/// </summary>
-		public abstract Endianness Endianness { get; }
-		#endregion
+        /// <summary>
+        /// Indicates the byte order ("endianess") in which data is converted using this class.
+        /// </summary>
+        public abstract Endianness Endianness { get; }
+        #endregion
 
-		#region Factory properties
-		static readonly LittleEndianBitConverter little = new LittleEndianBitConverter();
-		/// <summary>
-		/// Returns a little-endian bit converter instance. The same instance is
-		/// always returned.
-		/// </summary>
-		public static LittleEndianBitConverter Little
-		{
-			get { return little; }
-		}
+        #region Factory properties
+        static readonly LittleEndianBitConverter little = new LittleEndianBitConverter();
+        /// <summary>
+        /// Returns a little-endian bit converter instance. The same instance is
+        /// always returned.
+        /// </summary>
+        public static LittleEndianBitConverter Little
+        {
+            get { return little; }
+        }
 
-		static BigEndianBitConverter big = new BigEndianBitConverter();
-		/// <summary>
-		/// Returns a big-endian bit converter instance. The same instance is
-		/// always returned.
-		/// </summary>
-		public static BigEndianBitConverter Big
-		{
-			get { return big; }
-		}
-		#endregion
+        static BigEndianBitConverter big = new BigEndianBitConverter();
+        /// <summary>
+        /// Returns a big-endian bit converter instance. The same instance is
+        /// always returned.
+        /// </summary>
+        public static BigEndianBitConverter Big
+        {
+            get { return big; }
+        }
+        #endregion
 
-		#region Double/primitive conversions
-		/// <summary>
-		/// Converts the specified double-precision floating point number to a 
-		/// 64-bit signed integer. Note: the endianness of this converter does not
-		/// affect the returned value.
-		/// </summary>
-		/// <param name="value">The number to convert. </param>
-		/// <returns>A 64-bit signed integer whose value is equivalent to value.</returns>
-		public long DoubleToInt64Bits(double value)
-		{
-			return BitConverter.DoubleToInt64Bits(value);
-		}
+        #region Double/primitive conversions
+        /// <summary>
+        /// Converts the specified double-precision floating point number to a 
+        /// 64-bit signed integer. Note: the endianness of this converter does not
+        /// affect the returned value.
+        /// </summary>
+        /// <param name="value">The number to convert. </param>
+        /// <returns>A 64-bit signed integer whose value is equivalent to value.</returns>
+        public long DoubleToInt64Bits(double value)
+        {
+            return BitConverter.DoubleToInt64Bits(value);
+        }
 
-		/// <summary>
-		/// Converts the specified 64-bit signed integer to a double-precision 
-		/// floating point number. Note: the endianness of this converter does not
-		/// affect the returned value.
-		/// </summary>
-		/// <param name="value">The number to convert. </param>
-		/// <returns>A double-precision floating point number whose value is equivalent to value.</returns>
-		public double Int64BitsToDouble (long value)
-		{
-			return BitConverter.Int64BitsToDouble(value);
-		}
+        /// <summary>
+        /// Converts the specified 64-bit signed integer to a double-precision 
+        /// floating point number. Note: the endianness of this converter does not
+        /// affect the returned value.
+        /// </summary>
+        /// <param name="value">The number to convert. </param>
+        /// <returns>A double-precision floating point number whose value is equivalent to value.</returns>
+        public double Int64BitsToDouble (long value)
+        {
+            return BitConverter.Int64BitsToDouble(value);
+        }
 
-		/// <summary>
-		/// Converts the specified single-precision floating point number to a 
-		/// 32-bit signed integer. Note: the endianness of this converter does not
-		/// affect the returned value.
-		/// </summary>
-		/// <param name="value">The number to convert. </param>
-		/// <returns>A 32-bit signed integer whose value is equivalent to value.</returns>
-		public int SingleToInt32Bits(float value)
-		{
-			return new Int32SingleUnion(value).AsInt32;
-		}
+        /// <summary>
+        /// Converts the specified single-precision floating point number to a 
+        /// 32-bit signed integer. Note: the endianness of this converter does not
+        /// affect the returned value.
+        /// </summary>
+        /// <param name="value">The number to convert. </param>
+        /// <returns>A 32-bit signed integer whose value is equivalent to value.</returns>
+        public int SingleToInt32Bits(float value)
+        {
+            return new Int32SingleUnion(value).AsInt32;
+        }
 
-		/// <summary>
-		/// Converts the specified 32-bit signed integer to a single-precision floating point 
-		/// number. Note: the endianness of this converter does not
-		/// affect the returned value.
-		/// </summary>
-		/// <param name="value">The number to convert. </param>
-		/// <returns>A single-precision floating point number whose value is equivalent to value.</returns>
-		public float Int32BitsToSingle (int value)
-		{
-			return new Int32SingleUnion(value).AsSingle;
-		}
-		#endregion
+        /// <summary>
+        /// Converts the specified 32-bit signed integer to a single-precision floating point 
+        /// number. Note: the endianness of this converter does not
+        /// affect the returned value.
+        /// </summary>
+        /// <param name="value">The number to convert. </param>
+        /// <returns>A single-precision floating point number whose value is equivalent to value.</returns>
+        public float Int32BitsToSingle (int value)
+        {
+            return new Int32SingleUnion(value).AsSingle;
+        }
+        #endregion
 
-		#region To(PrimitiveType) conversions
-		/// <summary>
-		/// Returns a Boolean value converted from one byte at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>true if the byte at startIndex in value is nonzero; otherwise, false.</returns>
-		public bool ToBoolean (byte[] value, int startIndex)
-		{
-			CheckByteArgument(value, startIndex, 1);
-			return BitConverter.ToBoolean(value, startIndex);
-		}
+        #region To(PrimitiveType) conversions
+        /// <summary>
+        /// Returns a Boolean value converted from one byte at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>true if the byte at startIndex in value is nonzero; otherwise, false.</returns>
+        public bool ToBoolean (byte[] value, int startIndex)
+        {
+            CheckByteArgument(value, startIndex, 1);
+            return BitConverter.ToBoolean(value, startIndex);
+        }
 
-		/// <summary>
-		/// Returns a Unicode character converted from two bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A character formed by two bytes beginning at startIndex.</returns>
-		public char ToChar (byte[] value, int startIndex)
-		{
-			return unchecked((char) (CheckedFromBytes(value, startIndex, 2)));
-		}
+        /// <summary>
+        /// Returns a Unicode character converted from two bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A character formed by two bytes beginning at startIndex.</returns>
+        public char ToChar (byte[] value, int startIndex)
+        {
+            return unchecked((char) (CheckedFromBytes(value, startIndex, 2)));
+        }
 
-		/// <summary>
-		/// Returns a double-precision floating point number converted from eight bytes 
-		/// at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A double precision floating point number formed by eight bytes beginning at startIndex.</returns>
-		public double ToDouble (byte[] value, int startIndex)
-		{
-			return Int64BitsToDouble(ToInt64(value, startIndex));
-		}
+        /// <summary>
+        /// Returns a double-precision floating point number converted from eight bytes 
+        /// at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A double precision floating point number formed by eight bytes beginning at startIndex.</returns>
+        public double ToDouble (byte[] value, int startIndex)
+        {
+            return Int64BitsToDouble(ToInt64(value, startIndex));
+        }
 
-		/// <summary>
-		/// Returns a single-precision floating point number converted from four bytes 
-		/// at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A single precision floating point number formed by four bytes beginning at startIndex.</returns>
-		public float ToSingle (byte[] value, int startIndex)
-		{
-			return Int32BitsToSingle(ToInt32(value, startIndex));
-		}
+        /// <summary>
+        /// Returns a single-precision floating point number converted from four bytes 
+        /// at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A single precision floating point number formed by four bytes beginning at startIndex.</returns>
+        public float ToSingle (byte[] value, int startIndex)
+        {
+            return Int32BitsToSingle(ToInt32(value, startIndex));
+        }
 
-		/// <summary>
-		/// Returns a 16-bit signed integer converted from two bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 16-bit signed integer formed by two bytes beginning at startIndex.</returns>
-		public short ToInt16 (byte[] value, int startIndex)
-		{
-			return unchecked((short) (CheckedFromBytes(value, startIndex, 2)));
-		}
+        /// <summary>
+        /// Returns a 16-bit signed integer converted from two bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 16-bit signed integer formed by two bytes beginning at startIndex.</returns>
+        public short ToInt16 (byte[] value, int startIndex)
+        {
+            return unchecked((short) (CheckedFromBytes(value, startIndex, 2)));
+        }
 
-		/// <summary>
-		/// Returns a 32-bit signed integer converted from four bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 32-bit signed integer formed by four bytes beginning at startIndex.</returns>
-		public int ToInt32 (byte[] value, int startIndex)
-		{
-			return unchecked((int) (CheckedFromBytes(value, startIndex, 4)));
-		}
+        /// <summary>
+        /// Returns a 32-bit signed integer converted from four bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 32-bit signed integer formed by four bytes beginning at startIndex.</returns>
+        public int ToInt32 (byte[] value, int startIndex)
+        {
+            return unchecked((int) (CheckedFromBytes(value, startIndex, 4)));
+        }
 
-		/// <summary>
-		/// Returns a 64-bit signed integer converted from eight bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 64-bit signed integer formed by eight bytes beginning at startIndex.</returns>
-		public long ToInt64 (byte[] value, int startIndex)
-		{
-			return CheckedFromBytes(value, startIndex, 8);
-		}
+        /// <summary>
+        /// Returns a 64-bit signed integer converted from eight bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 64-bit signed integer formed by eight bytes beginning at startIndex.</returns>
+        public long ToInt64 (byte[] value, int startIndex)
+        {
+            return CheckedFromBytes(value, startIndex, 8);
+        }
 
-		/// <summary>
-		/// Returns a 16-bit unsigned integer converted from two bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 16-bit unsigned integer formed by two bytes beginning at startIndex.</returns>
-		public ushort ToUInt16 (byte[] value, int startIndex)
-		{
-			return unchecked((ushort) (CheckedFromBytes(value, startIndex, 2)));
-		}
+        /// <summary>
+        /// Returns a 16-bit unsigned integer converted from two bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 16-bit unsigned integer formed by two bytes beginning at startIndex.</returns>
+        public ushort ToUInt16 (byte[] value, int startIndex)
+        {
+            return unchecked((ushort) (CheckedFromBytes(value, startIndex, 2)));
+        }
 
-		/// <summary>
-		/// Returns a 32-bit unsigned integer converted from four bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 32-bit unsigned integer formed by four bytes beginning at startIndex.</returns>
-		public uint ToUInt32 (byte[] value, int startIndex)
-		{
-			return unchecked((uint) (CheckedFromBytes(value, startIndex, 4)));
-		}
+        /// <summary>
+        /// Returns a 32-bit unsigned integer converted from four bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 32-bit unsigned integer formed by four bytes beginning at startIndex.</returns>
+        public uint ToUInt32 (byte[] value, int startIndex)
+        {
+            return unchecked((uint) (CheckedFromBytes(value, startIndex, 4)));
+        }
 
-		/// <summary>
-		/// Returns a 64-bit unsigned integer converted from eight bytes at a specified position in a byte array.
-		/// </summary>
-		/// <param name="value">An array of bytes.</param>
-		/// <param name="startIndex">The starting position within value.</param>
-		/// <returns>A 64-bit unsigned integer formed by eight bytes beginning at startIndex.</returns>
-		public ulong ToUInt64 (byte[] value, int startIndex)
-		{
-			return unchecked((ulong) (CheckedFromBytes(value, startIndex, 8)));
-		}
+        /// <summary>
+        /// Returns a 64-bit unsigned integer converted from eight bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <param name="startIndex">The starting position within value.</param>
+        /// <returns>A 64-bit unsigned integer formed by eight bytes beginning at startIndex.</returns>
+        public ulong ToUInt64 (byte[] value, int startIndex)
+        {
+            return unchecked((ulong) (CheckedFromBytes(value, startIndex, 8)));
+        }
 
-		/// <summary>
-		/// Checks the given argument for validity.
-		/// </summary>
-		/// <param name="value">The byte array passed in</param>
-		/// <param name="startIndex">The start index passed in</param>
-		/// <param name="bytesRequired">The number of bytes required</param>
-		/// <exception cref="ArgumentNullException">value is a null reference</exception>
-		/// <exception cref="ArgumentOutOfRangeException">
-		/// startIndex is less than zero or greater than the length of value minus bytesRequired.
-		/// </exception>
-		static void CheckByteArgument(byte[] value, int startIndex, int bytesRequired)
-		{
-			if (value==null)
-			{
-				throw new ArgumentNullException("value");
-			}
-			if (startIndex < 0 || startIndex > value.Length-bytesRequired)
-			{
-				throw new ArgumentOutOfRangeException("startIndex");
-			}
-		}
+        /// <summary>
+        /// Checks the given argument for validity.
+        /// </summary>
+        /// <param name="value">The byte array passed in</param>
+        /// <param name="startIndex">The start index passed in</param>
+        /// <param name="bytesRequired">The number of bytes required</param>
+        /// <exception cref="ArgumentNullException">value is a null reference</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// startIndex is less than zero or greater than the length of value minus bytesRequired.
+        /// </exception>
+        static void CheckByteArgument(byte[] value, int startIndex, int bytesRequired)
+        {
+            if (value==null)
+            {
+                throw new ArgumentNullException("value");
+            }
+            if (startIndex < 0 || startIndex > value.Length-bytesRequired)
+            {
+                throw new ArgumentOutOfRangeException("startIndex");
+            }
+        }
 
         /// <summary>
         /// Checks the arguments for validity before calling FromBytes

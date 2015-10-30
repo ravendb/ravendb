@@ -47,14 +47,14 @@ namespace Raven.Tests.Core.Streaming
 
                 count = 0;
 
-				using (var session = store.OpenSession())
-				{
-					var query = session.Advanced.DocumentQuery<User, Users_ByName>();
-					var reader = session.Advanced.Stream(query);
-					while (reader.MoveNext())
-					{
-						count++;
-						Assert.IsType<User>(reader.Current.Document);
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.DocumentQuery<User, Users_ByName>();
+                    var reader = session.Advanced.Stream(query);
+                    while (reader.MoveNext())
+                    {
+                        count++;
+                        Assert.IsType<User>(reader.Current.Document);
 
                     }
                 }

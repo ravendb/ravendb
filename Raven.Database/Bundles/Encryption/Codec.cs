@@ -12,124 +12,124 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Bundles.Encryption
 {
-	public class Codec
-	{
-		private static readonly Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
+    public class Codec
+    {
+        private static readonly Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new Raven.Abstractions.Threading.ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 
-		private readonly EncryptionSettings encryptionSettings;
-		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;
-		private int? encryptionKeySize;
-		private int? encryptionIVSize;
-		
-		private int usingSha1; //1 -> true, 0 -> false
+        private readonly EncryptionSettings encryptionSettings;
+        private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;
+        private int? encryptionKeySize;
+        private int? encryptionIVSize;
+        
+        private int usingSha1; //1 -> true, 0 -> false
 
-		public bool UsingSha1
-		{
-			get { return usingSha1 == 1; }
-			private set { usingSha1 = value ? 1 : 0; }
-		}
+        public bool UsingSha1
+        {
+            get { return usingSha1 == 1; }
+            private set { usingSha1 = value ? 1 : 0; }
+        }
 
-		public Codec(EncryptionSettings settings)
-		{
-			encryptionSettings = settings;
-			UsingSha1 = false;
-		}
+        public Codec(EncryptionSettings settings)
+        {
+            encryptionSettings = settings;
+            UsingSha1 = false;
+        }
 
-		public Stream Encode(string key, Stream dataStream)
-		{
-			SymmetricAlgorithm provider = null;
-			ICryptoTransform encryptor = null;
-			Stream stream = null;
-			try
-			{
-				provider = GetCryptoProvider(null);
-				encryptor = provider.CreateEncryptor();
-				stream = new CryptoStream(dataStream, encryptor, CryptoStreamMode.Write);
-				var disposingStream = stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
-				return disposingStream;
-			}
-			catch
-			{
-				try
-				{
-					if (provider != null)
-						provider.Dispose();
-				}
-				catch { }
-				try
-				{
-					if (encryptor != null)
-						encryptor.Dispose();
-				}
-				catch { }
-				try
-				{
-					if (stream != null)
-						stream.Dispose();
-				}
-				catch { }
-				throw;
-			}
-		}
+        public Stream Encode(string key, Stream dataStream)
+        {
+            SymmetricAlgorithm provider = null;
+            ICryptoTransform encryptor = null;
+            Stream stream = null;
+            try
+            {
+                provider = GetCryptoProvider(null);
+                encryptor = provider.CreateEncryptor();
+                stream = new CryptoStream(dataStream, encryptor, CryptoStreamMode.Write);
+                var disposingStream = stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+                return disposingStream;
+            }
+            catch
+            {
+                try
+                {
+                    if (provider != null)
+                        provider.Dispose();
+                }
+                catch { }
+                try
+                {
+                    if (encryptor != null)
+                        encryptor.Dispose();
+                }
+                catch { }
+                try
+                {
+                    if (stream != null)
+                        stream.Dispose();
+                }
+                catch { }
+                throw;
+            }
+        }
 
-		public Stream Decode(string key, Stream dataStream)
-		{
-			SymmetricAlgorithm provider = null;
-			ICryptoTransform decryptor = null;
-			Stream stream = null;
-			try
-			{
-				provider = GetCryptoProvider(null);
-				decryptor = provider.CreateDecryptor();
-				stream = new CryptoStream(dataStream, decryptor, CryptoStreamMode.Read);
-				return stream.ReadSalt(key).DisposeTogetherWith(provider, decryptor);
-			}
-			catch
-			{
-				try
-				{
-					if (provider != null)
-						provider.Dispose();
-				}
-				catch { }
-				try
-				{
-					if (decryptor != null)
-						decryptor.Dispose();
-				}
-				catch { }
-				try
-				{
-					if (stream != null)
-						stream.Dispose();
-				}
-				catch { }
-				throw;
-			}
-		}
+        public Stream Decode(string key, Stream dataStream)
+        {
+            SymmetricAlgorithm provider = null;
+            ICryptoTransform decryptor = null;
+            Stream stream = null;
+            try
+            {
+                provider = GetCryptoProvider(null);
+                decryptor = provider.CreateDecryptor();
+                stream = new CryptoStream(dataStream, decryptor, CryptoStreamMode.Read);
+                return stream.ReadSalt(key).DisposeTogetherWith(provider, decryptor);
+            }
+            catch
+            {
+                try
+                {
+                    if (provider != null)
+                        provider.Dispose();
+                }
+                catch { }
+                try
+                {
+                    if (decryptor != null)
+                        decryptor.Dispose();
+                }
+                catch { }
+                try
+                {
+                    if (stream != null)
+                        stream.Dispose();
+                }
+                catch { }
+                throw;
+            }
+        }
 
-		public EncodedBlock EncodeBlock(string key, byte[] data)
-		{
-			byte[] iv;
-			var transform = GetCryptoProviderWithRandomIV(out iv).CreateEncryptor();
+        public EncodedBlock EncodeBlock(string key, byte[] data)
+        {
+            byte[] iv;
+            var transform = GetCryptoProviderWithRandomIV(out iv).CreateEncryptor();
 
-			return new EncodedBlock(iv, transform.TransformEntireBlock(data));
-		}
+            return new EncodedBlock(iv, transform.TransformEntireBlock(data));
+        }
 
-		public byte[] DecodeBlock(string key, EncodedBlock block)
-		{
-			var transform = GetCryptoProvider(block.IV).CreateDecryptor();
+        public byte[] DecodeBlock(string key, EncodedBlock block)
+        {
+            var transform = GetCryptoProvider(block.IV).CreateDecryptor();
 
-			return transform.TransformEntireBlock(block.Data);
-		}
+            return transform.TransformEntireBlock(block.Data);
+        }
 
-		private int GetIVLength()
-		{
-			if (encryptionIVSize == null)
-			{
-				// This will force detection of the iv size
-				GetCryptoProvider(null);
-			}
+        private int GetIVLength()
+        {
+            if (encryptionIVSize == null)
+            {
+                // This will force detection of the iv size
+                GetCryptoProvider(null);
+            }
 
 // ReSharper disable once PossibleInvalidOperationException
             return encryptionIVSize.Value;

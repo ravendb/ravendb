@@ -1,4 +1,4 @@
-﻿import DeleteTransformerCommand = require("commands/database/transformers/deleteTransformerCommand");
+import DeleteTransformerCommand = require("commands/database/transformers/deleteTransformerCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");

@@ -20,12 +20,12 @@ namespace Raven.Tests.FileSystem.Synchronization
         private readonly IAsyncFilesCommandsImpl source;
         private readonly RavenFileSystem sourceRfs;
 
-	    private InMemoryRavenConfiguration configuration;
+        private InMemoryRavenConfiguration configuration;
 
-	    public SynchronizationStorageTests()
-		{
-			configuration = new InMemoryRavenConfiguration();
-		    configuration.Initialize();
+        public SynchronizationStorageTests()
+        {
+            configuration = new InMemoryRavenConfiguration();
+            configuration.Initialize();
 
             source = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
             destination = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
@@ -52,7 +52,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             destinationContent.Position = 0;
             await destination.UploadAsync(filename, destinationContent);
 
-			var contentUpdate = new ContentUpdateWorkItem(filename, "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator, configuration);
+            var contentUpdate = new ContentUpdateWorkItem(filename, "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator, configuration);
 
             // force to upload entire file, we just want to check which pages will be reused
             await contentUpdate.UploadToAsync(destination.Synchronization);
@@ -96,7 +96,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             destination.UploadAsync(filename, destinationContent).Wait();
 
             var contentUpdate = new ContentUpdateWorkItem(filename, "http://localhost:12345", sourceRfs.Storage,
-														  sourceRfs.SigGenerator, configuration);
+                                                          sourceRfs.SigGenerator, configuration);
 
 
             sourceContent.Position = 0;
@@ -136,7 +136,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             destinationContent.Position = 0;
             await destination.UploadAsync(filename, destinationContent);
 
-			var contentUpdate = new ContentUpdateWorkItem(filename, "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator, configuration);
+            var contentUpdate = new ContentUpdateWorkItem(filename, "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator, configuration);
 
 
             sourceContent.Position = 0;

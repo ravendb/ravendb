@@ -24,53 +24,53 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Server.Controllers
 {
-	
-	public class MultiGetController : ClusterAwareRavenDbApiController
-	{
-		
-		private static Raven.Abstractions.Threading.ThreadLocal<bool> recursive = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
+    
+    public class MultiGetController : ClusterAwareRavenDbApiController
+    {
+        
+        private static Raven.Abstractions.Threading.ThreadLocal<bool> recursive = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
-		[HttpPost]
-		[RavenRoute("multi_get")]
-		[RavenRoute("databases/{databaseName}/multi_get")]
-		public async Task<HttpResponseMessage> MultiGet()
-		{
-			
-			if (recursive.Value)
-				throw new InvalidOperationException("Nested requests to multi_get are not supported");
+        [HttpPost]
+        [RavenRoute("multi_get")]
+        [RavenRoute("databases/{databaseName}/multi_get")]
+        public async Task<HttpResponseMessage> MultiGet()
+        {
+            
+            if (recursive.Value)
+                throw new InvalidOperationException("Nested requests to multi_get are not supported");
 
-			
-			recursive.Value = true;
-			try
-			{
-				var requests = await ReadJsonObjectAsync<GetRequest[]>().ConfigureAwait(false);
-				var results = new Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[requests.Length];
+            
+            recursive.Value = true;
+            try
+            {
+                var requests = await ReadJsonObjectAsync<GetRequest[]>().ConfigureAwait(false);
+                var results = new Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[requests.Length];
 
-			    string clientVersion = null;
-			    IEnumerable<string> values;
-			    if (Request.Headers.TryGetValues("Raven-Client-Version", out values))
-			    {
-			        clientVersion = values.FirstOrDefault(x => string.IsNullOrEmpty(x) == false);
-			    }
+                string clientVersion = null;
+                IEnumerable<string> values;
+                if (Request.Headers.TryGetValues("Raven-Client-Version", out values))
+                {
+                    clientVersion = values.FirstOrDefault(x => string.IsNullOrEmpty(x) == false);
+                }
 
-				foreach (var getRequest in requests.Where(getRequest => getRequest != null))
-				{
-					getRequest.Headers["Raven-Internal-Request"] = "true";
-					if (string.IsNullOrEmpty(clientVersion) == false)
-						getRequest.Headers["Raven-Client-Version"] = clientVersion;
-					if (DatabaseName != null)
-					{
-						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;
-					}
-				}
+                foreach (var getRequest in requests.Where(getRequest => getRequest != null))
+                {
+                    getRequest.Headers["Raven-Internal-Request"] = "true";
+                    if (string.IsNullOrEmpty(clientVersion) == false)
+                        getRequest.Headers["Raven-Client-Version"] = clientVersion;
+                    if (DatabaseName != null)
+                    {
+                        getRequest.Url = "databases/" + DatabaseName + getRequest.Url;
+                    }
+                }
 
-			    DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Wait();
-			    try
-			    {
+                DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Wait();
+                try
+                {
                     await ExecuteRequests(results, requests).ConfigureAwait(false);
-			    }
-			    finally
-			    {
+                }
+                finally
+                {
                     DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Release();
                 }
 
@@ -163,153 +163,160 @@ namespace Raven.Database.Server.Controllers
                             writer.WritePropertyName("Error");
                             writer.WriteValue(stringContent.Content);
                             writer.WriteEndObject();
-					    }
-					}
-				    writer.WriteEndObject();
-				}
+                        }
+                        else
+                        {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Error");
+                            writer.WriteValue("Content not valid for multi_get " + result.Content);
+                            writer.WriteEndObject();
+                        }
+                    }
+                    writer.WriteEndObject();
+                }
 
-				writer.WriteEndArray();
-				writer.Flush();
+                writer.WriteEndArray();
+                writer.Flush();
 
-				return new CompletedTask();
-			}
+                return new CompletedTask();
+            }
 
 
-			protected override bool TryComputeLength(out long length)
-			{
-				length = 0;
-				return false;
-			}
-		}
+            protected override bool TryComputeLength(out long length)
+            {
+                length = 0;
+                return false;
+            }
+        }
 
-		private async Task ExecuteRequests(Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, GetRequest[] requests)
-		{
-			// Need to create this here to preserve any current TLS data that we have to copy
-			if ("yes".Equals(GetQueryStringValue("parallel"), StringComparison.OrdinalIgnoreCase))
-			{
-				var tasks = new Task[requests.Length];
-				Parallel.For(0, requests.Length, position =>
-					tasks[position] = HandleRequestAsync(requests, results, position)
-					);
-				await Task.WhenAll(tasks).ConfigureAwait(false);
-			}
-			else
-			{
-				for (var i = 0; i < requests.Length; i++)
-				{
+        private async Task ExecuteRequests(Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, GetRequest[] requests)
+        {
+            // Need to create this here to preserve any current TLS data that we have to copy
+            if ("yes".Equals(GetQueryStringValue("parallel"), StringComparison.OrdinalIgnoreCase))
+            {
+                var tasks = new Task[requests.Length];
+                Parallel.For(0, requests.Length, position =>
+                    tasks[position] = HandleRequestAsync(requests, results, position)
+                    );
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+            }
+            else
+            {
+                for (var i = 0; i < requests.Length; i++)
+                {
                     // as we perform requests sequentially we can pass parent trace info
-					await HandleRequestAsync(requests, results, i).ConfigureAwait(false);
-				}
-			}
-		}
+                    await HandleRequestAsync(requests, results, i).ConfigureAwait(false);
+                }
+            }
+        }
 
-		private async Task HandleRequestAsync(GetRequest[] requests, Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, int i)
-		{
-			var request = requests[i];
-			if (request == null)
-				return;
+        private async Task HandleRequestAsync(GetRequest[] requests, Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, int i)
+        {
+            var request = requests[i];
+            if (request == null)
+                return;
 
-			results[i] = await HandleActualRequestAsync(request).ConfigureAwait(false);
+            results[i] = await HandleActualRequestAsync(request).ConfigureAwait(false);
 
-		}
+        }
 
-		private async Task<Tuple<HttpResponseMessage, List<Action<StringBuilder>>>> HandleActualRequestAsync(GetRequest request)
-		{
-			var query = "";
-			if (request.Query != null)
-				query = request.Query.TrimStart('?').Replace("+", "%2B");
+        private async Task<Tuple<HttpResponseMessage, List<Action<StringBuilder>>>> HandleActualRequestAsync(GetRequest request)
+        {
+            var query = "";
+            if (request.Query != null)
+                query = request.Query.TrimStart('?').Replace("+", "%2B");
 
-			string indexQuery = null;
-			string modifiedQuery;
+            string indexQuery = null;
+            string modifiedQuery;
 
-			// to avoid UriFormatException: Invalid URI: The Uri string is too long. [see RavenDB-1517]
-			if (query.Length > 32760 && TryExtractIndexQuery(query, out modifiedQuery, out indexQuery))
-			{
-				query = modifiedQuery;
-			}
-			HttpRequestMessage msg;
-			if (request.Method == "POST")
-			{
-				msg = new HttpRequestMessage(HttpMethod.Post, new UriBuilder
-				{
-					Host = "multi.get",
+            // to avoid UriFormatException: Invalid URI: The Uri string is too long. [see RavenDB-1517]
+            if (query.Length > 32760 && TryExtractIndexQuery(query, out modifiedQuery, out indexQuery))
+            {
+                query = modifiedQuery;
+            }
+            HttpRequestMessage msg;
+            if (request.Method == "POST")
+            {
+                msg = new HttpRequestMessage(HttpMethod.Post, new UriBuilder
+                {
+                    Host = "multi.get",
                     Query = query,
                     Path = request.Url
-				}.Uri);
-				msg.Content = new StringContent(request.Content);
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-				
-			}
-			else
-			{
-				msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
-				{
-					Host = "multi.get",
-					Query = query,
-					Path = request.Url
-				}.Uri);
-			}
+                }.Uri);
+                msg.Content = new StringContent(request.Content);
+                msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+                
+            }
+            else
+            {
+                msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
+                {
+                    Host = "multi.get",
+                    Query = query,
+                    Path = request.Url
+                }.Uri);
+            }
 
-			IncrementInnerRequestsCount();
+            IncrementInnerRequestsCount();
 
-			msg.SetConfiguration(Configuration);
-			var route = Configuration.Routes.GetRouteData(msg);
-			msg.SetRouteData(route);
-			var controllerSelector = new DefaultHttpControllerSelector(Configuration);
-			var descriptor = controllerSelector.SelectController(msg);
+            msg.SetConfiguration(Configuration);
+            var route = Configuration.Routes.GetRouteData(msg);
+            msg.SetRouteData(route);
+            var controllerSelector = new DefaultHttpControllerSelector(Configuration);
+            var descriptor = controllerSelector.SelectController(msg);
 
-			foreach (var header in request.Headers)
-			{
-				msg.Headers.TryAddWithoutValidation(header.Key, header.Value);
-			}
+            foreach (var header in request.Headers)
+            {
+                msg.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
 
-			msg.Headers.TryAddWithoutValidation("Raven-internal-request", "true");
+            msg.Headers.TryAddWithoutValidation("Raven-internal-request", "true");
 
-			var controller = (RavenBaseApiController)descriptor.CreateController(msg);
-			controller.Configuration = Configuration;
-			var controllerContext = new HttpControllerContext(Configuration, route, msg)
-			{
-				ControllerDescriptor = descriptor,
-				Controller = controller,
-				RequestContext = new HttpRequestContext(),
-				RouteData = route
-			};
-			controller.SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized = true;
-			controller.ControllerContext = controllerContext;
-			controllerContext.Request = msg;
-			controller.RequestContext = controllerContext.RequestContext;
-			controller.Configuration = Configuration;
+            var controller = (RavenBaseApiController)descriptor.CreateController(msg);
+            controller.Configuration = Configuration;
+            var controllerContext = new HttpControllerContext(Configuration, route, msg)
+            {
+                ControllerDescriptor = descriptor,
+                Controller = controller,
+                RequestContext = new HttpRequestContext(),
+                RouteData = route
+            };
+            controller.SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized = true;
+            controller.ControllerContext = controllerContext;
+            controllerContext.Request = msg;
+            controller.RequestContext = controllerContext.RequestContext;
+            controller.Configuration = Configuration;
 
-			if (string.IsNullOrEmpty(indexQuery) == false && (controller as BaseDatabaseApiController) != null)
-			{
-				((BaseDatabaseApiController)controller).SetPostRequestQuery(indexQuery);
-			}
+            if (string.IsNullOrEmpty(indexQuery) == false && (controller as BaseDatabaseApiController) != null)
+            {
+                ((BaseDatabaseApiController)controller).SetPostRequestQuery(indexQuery);
+            }
 
-			var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None).ConfigureAwait(false);
-			return Tuple.Create(httpResponseMessage, controller.CustomRequestTraceInfo);
-		}
+            var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None).ConfigureAwait(false);
+            return Tuple.Create(httpResponseMessage, controller.CustomRequestTraceInfo);
+        }
 
-		private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
-		{
-			var parameters = HttpUtility.ParseQueryString(query);
-			if (parameters["query"] != null)
-			{
-				indexQuery = parameters["query"];
+        private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
+        {
+            var parameters = HttpUtility.ParseQueryString(query);
+            if (parameters["query"] != null)
+            {
+                indexQuery = parameters["query"];
 
-				var array = (from key in parameters.AllKeys
-							 where key != null && key != "query"
-							 from value in parameters.GetValues(key)
-							 select string.Format("{0}={1}", key, value))
-					.ToArray();
+                var array = (from key in parameters.AllKeys
+                             where key != null && key != "query"
+                             from value in parameters.GetValues(key)
+                             select string.Format("{0}={1}", key, value))
+                    .ToArray();
 
-				withoutIndexQuery = string.Join("&", array);
-				return true;
-			}
+                withoutIndexQuery = string.Join("&", array);
+                return true;
+            }
 
-			withoutIndexQuery = null;
-			indexQuery = null;
+            withoutIndexQuery = null;
+            indexQuery = null;
 
-			return false;
-		}
-	}
+            return false;
+        }
+    }
 }

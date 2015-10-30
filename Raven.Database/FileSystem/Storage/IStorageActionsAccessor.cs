@@ -48,7 +48,7 @@ namespace Raven.Database.FileSystem.Storage
 
         void RenameFile(string filename, string rename, bool commitPeriodically = false);
 
-	    void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false);
+        void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false);
 
         RavenJObject GetConfig(string name);
 

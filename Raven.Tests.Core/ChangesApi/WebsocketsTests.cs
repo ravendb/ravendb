@@ -40,15 +40,15 @@ namespace Raven.Tests.Core.ChangesApi
             }
         }
 
-	    public class Node
-	    {
-		    public string Name { get; set; }
-	    }
+        public class Node
+        {
+            public string Name { get; set; }
+        }
 
-	    [Fact]
-	    public void AreWebsocketsDestroyedAfterGC()
-	    {
-		    var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
+        [Fact]
+        public void AreWebsocketsDestroyedAfterGC()
+        {
+            var counter = new ConcurrentQueue<BulkInsertChangeNotification>();
 
             using (var store = NewRemoteDocumentStore())
             {
@@ -95,57 +95,57 @@ namespace Raven.Tests.Core.ChangesApi
             }
         }
 
-	    private static DateTime GetLastForcedGCDateTimeRequest(DocumentStore store)
-	    {
-		    var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(null,
+        private static DateTime GetLastForcedGCDateTimeRequest(DocumentStore store)
+        {
+            var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null,
                     store.Url + "/debug/gc-info",
-					HttpMethod.Get,
-					store.DatabaseCommands.PrimaryCredentials,
-					store.Conventions));
+                    HttpMethod.Get,
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
 
-		    var response = request.ReadResponseJson();
-		    return response.Value<DateTime>("LastForcedGCTime");
+            var response = request.ReadResponseJson();
+            return response.Value<DateTime>("LastForcedGCTime");
 
-	    }
+        }
 
-		private static RavenJArray IssueGetChangesRequest(DocumentStore store)
-	    {
-		    var getChangesRequest = store
-			    .JsonRequestFactory
-			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-				    store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
-					HttpMethod.Get,
-				    store.DatabaseCommands.PrimaryCredentials,
-				    store.Conventions));
+        private static RavenJArray IssueGetChangesRequest(DocumentStore store)
+        {
+            var getChangesRequest = store
+                .JsonRequestFactory
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
+                    store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
+                    HttpMethod.Get,
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
 
             var getChangesResponse = (RavenJArray)getChangesRequest.ReadResponseJson();
-		    return getChangesResponse;
-	    }
+            return getChangesResponse;
+        }
 
-	    private static void IssueGCRequest(DocumentStore store)
-	    {
-		    var gcRequest = store
-			    .JsonRequestFactory
-			    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-				    store.Url.ForDatabase(null) + "/admin/gc",
-					HttpMethod.Get,
-				    store.DatabaseCommands.PrimaryCredentials,
-				    store.Conventions));
-		    var gcResponse = gcRequest.ReadResponseBytesAsync();
-		    gcResponse.Wait();
-	    }
+        private static void IssueGCRequest(DocumentStore store)
+        {
+            var gcRequest = store
+                .JsonRequestFactory
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
+                    store.Url.ForDatabase(null) + "/admin/gc",
+                    HttpMethod.Get,
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
+            var gcResponse = gcRequest.ReadResponseBytesAsync();
+            gcResponse.Wait();
+        }
 
-	    private static ClientWebSocket TryCreateClientWebSocket()
-	    {
-		    try
-		    {
-			    return new ClientWebSocket();
-		    }
-		    catch (PlatformNotSupportedException)
-		    {
-			    throw new SkipException("Cannot run this test on this platform");
-		    }
-	    }
+        private static ClientWebSocket TryCreateClientWebSocket()
+        {
+            try
+            {
+                return new ClientWebSocket();
+            }
+            catch (PlatformNotSupportedException)
+            {
+                throw new SkipException("Cannot run this test on this platform");
+            }
+        }
     }
 }

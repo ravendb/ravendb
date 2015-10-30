@@ -259,202 +259,202 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-		public void SetIndexesPriority(int[] ids, IndexingPriority[] priorities)
-		{
-			for (int i = 0; i < ids.Length; i++)
-			{
-				var id = ids[i];
-				var priority = priorities[i];
-				Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-				Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				{
-					throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
-				}
+        public void SetIndexesPriority(int[] ids, IndexingPriority[] priorities)
+        {
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var id = ids[i];
+                var priority = priorities[i];
+                Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+                Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                {
+                    throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
+                }
 
-				using (var update = new Update(session, IndexesStats, JET_prep.Replace))
-				{
-					Api.SetColumn(session, IndexesStats,
-						tableColumnsCache.IndexesStatsColumns["priority"],
-						(int)priority);
-					update.Save();
-				}
-			}
-		}
-		public void UpdateIndexingStats(int id, IndexingWorkStats stats)
-		{
-			SetCurrentIndexStatsToImpl(id);
-			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
-			{
-				var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]) ?? 0;
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"],
-					oldAttempts + stats.IndexingAttempts);
+                using (var update = new Update(session, IndexesStats, JET_prep.Replace))
+                {
+                    Api.SetColumn(session, IndexesStats,
+                        tableColumnsCache.IndexesStatsColumns["priority"],
+                        (int)priority);
+                    update.Save();
+                }
+            }
+        }
+        public void UpdateIndexingStats(int id, IndexingWorkStats stats)
+        {
+            SetCurrentIndexStatsToImpl(id);
+            using (var update = new Update(session, IndexesStats, JET_prep.Replace))
+            {
+                var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]) ?? 0;
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"],
+                    oldAttempts + stats.IndexingAttempts);
 
-				var oldErrors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]) ?? 0;
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"],
-					oldErrors + stats.IndexingErrors);
+                var oldErrors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]) ?? 0;
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"],
+                    oldErrors + stats.IndexingErrors);
 
-				var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]) ?? 0;
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"],
-					olsSuccesses + stats.IndexingSuccesses);
+                var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]) ?? 0;
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"],
+                    olsSuccesses + stats.IndexingSuccesses);
 
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"],
-					SystemTime.UtcNow.ToBinary());
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"],
+                    SystemTime.UtcNow.ToBinary());
 
-				update.Save();
-			}
-		}
+                update.Save();
+            }
+        }
 
-		public void UpdateReduceStats(int id, IndexingWorkStats stats)
-		{
-			SetCurrentIndexStatsToImpl(id);
-			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
-			{
-				var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) ?? 0;
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"],
-					oldAttempts + stats.ReduceAttempts);
+        public void UpdateReduceStats(int id, IndexingWorkStats stats)
+        {
+            SetCurrentIndexStatsToImpl(id);
+            using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
+            {
+                var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) ?? 0;
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"],
+                    oldAttempts + stats.ReduceAttempts);
 
-				var oldErrors = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) ?? 0;
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"],
-					oldErrors + stats.ReduceErrors);
+                var oldErrors = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) ?? 0;
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"],
+                    oldErrors + stats.ReduceErrors);
 
-				var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) ?? 0;
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"],
-					olsSuccesses + stats.ReduceSuccesses);
+                var olsSuccesses = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) ?? 0;
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"],
+                    olsSuccesses + stats.ReduceSuccesses);
 
-				update.Save();
-			}
-		}
+                update.Save();
+            }
+        }
 
-		public void TouchIndexEtag(int id)
-		{
-			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no reduce index named: " + id);
+        public void TouchIndexEtag(int id)
+        {
+            Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+            Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no reduce index named: " + id);
 
-			Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
-		}
+            Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
+        }
 
-		public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
-		{
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no reduce index named: " + id.ToString());
+        public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no reduce index named: " + id.ToString());
 
-			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
-			{
-				Api.SetColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],etag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStatsReduce,
-							  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
-							  timestamp.ToBinary());
-				update.Save();
-			}
-		}
+            using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
+            {
+                Api.SetColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"],etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce,
+                              tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"],
+                              timestamp.ToBinary());
+                update.Save();
+            }
+        }
 
-		public void RemoveAllDocumentReferencesFrom(string key)
-		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				return;
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
-			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+        public void RemoveAllDocumentReferencesFrom(string key)
+        {
+            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+                return;
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+                                 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
-			do
-			{
-				Api.JetDelete(session, IndexedDocumentsReferences);
-			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-		}
+            do
+            {
+                Api.JetDelete(session, IndexedDocumentsReferences);
+            } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+        }
 
-		public void UpdateDocumentReferences(int id, string key, HashSet<string> references)
-		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_view_and_key");
-			Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
-			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ))
-			{
-				Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
-				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
-				Api.JetSetIndexRange(session, IndexedDocumentsReferences,
-				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-				do
-				{
-					var reference = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-					                                           tableColumnsCache.IndexedDocumentsReferencesColumns["ref"],
-					                                           Encoding.Unicode);
+        public void UpdateDocumentReferences(int id, string key, HashSet<string> references)
+        {
+            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_view_and_key");
+            Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
+            if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ))
+            {
+                Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
+                Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
+                Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+                                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+                do
+                {
+                    var reference = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+                                                               tableColumnsCache.IndexedDocumentsReferencesColumns["ref"],
+                                                               Encoding.Unicode);
 
-					if (references.Contains(reference))
-					{						
-						references.Remove(reference);
-						continue;
-					}
+                    if (references.Contains(reference))
+                    {						
+                        references.Remove(reference);
+                        continue;
+                    }
 
-					if (logger.IsDebugEnabled)
-						logger.Debug("UpdateDocumentReferences() --> delete {0} -> {1} on index {2}", key, reference, id);
-					Api.JetDelete(session, IndexedDocumentsReferences);
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("UpdateDocumentReferences() --> delete {0} -> {1} on index {2}", key, reference, id);
+                    Api.JetDelete(session, IndexedDocumentsReferences);
 
-				} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-			}
+                } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+            }
 
-			foreach (var reference in references)
-			{
-				if (logger.IsDebugEnabled)
-					logger.Debug("Adding reference {0} -> {1} on index {2}", key, reference, id);
-				using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
-				{
-					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);
-				    Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["view"], id);
-					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], reference, Encoding.Unicode);
-					update.Save();
-				}
-			}
-		}
+            foreach (var reference in references)
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Adding reference {0} -> {1} on index {2}", key, reference, id);
+                using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
+                {
+                    Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);
+                    Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["view"], id);
+                    Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], reference, Encoding.Unicode);
+                    update.Save();
+                }
+            }
+        }
 
-		public IEnumerable<string> GetDocumentsReferencing(string key)
-		{
-			return QueryReferences(key, "by_ref", "key");
-		}
+        public IEnumerable<string> GetDocumentsReferencing(string key)
+        {
+            return QueryReferences(key, "by_ref", "key");
+        }
 
-		public int GetCountOfDocumentsReferencing(string key)
-		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				return 0;
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
-								 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+        public int GetCountOfDocumentsReferencing(string key)
+        {
+            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_ref");
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+                return 0;
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+                                 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
-			int records;
-			Api.JetIndexRecordCount(session, IndexedDocumentsReferences, out records, 0);
-			return records;
-		}
+            int records;
+            Api.JetIndexRecordCount(session, IndexedDocumentsReferences, out records, 0);
+            return records;
+        }
 
-		public Dictionary<string, int> GetDocumentReferencesStats()
-		{
-			var results = new Dictionary<string, int>();
-			Api.JetSetCurrentIndex(Session, IndexedDocumentsReferences, "by_ref");
-			if (Api.TryMoveFirst(Session, IndexedDocumentsReferences) == false)
-				return results;
-			do
-			{
-				var key = Api.RetrieveColumnAsString(Session, IndexedDocumentsReferences,
-					tableColumnsCache.IndexedDocumentsReferencesColumns["by_ref"]);
-				int value;
-				results.TryGetValue(key, out value);
-				results[key] = value + 1;
+        public Dictionary<string, int> GetDocumentReferencesStats()
+        {
+            var results = new Dictionary<string, int>();
+            Api.JetSetCurrentIndex(Session, IndexedDocumentsReferences, "by_ref");
+            if (Api.TryMoveFirst(Session, IndexedDocumentsReferences) == false)
+                return results;
+            do
+            {
+                var key = Api.RetrieveColumnAsString(Session, IndexedDocumentsReferences,
+                    tableColumnsCache.IndexedDocumentsReferencesColumns["by_ref"]);
+                int value;
+                results.TryGetValue(key, out value);
+                results[key] = value + 1;
 
-			} while (Api.TryMoveNext(Session, IndexedDocumentsReferences));
-			return results;
-		}
+            } while (Api.TryMoveNext(Session, IndexedDocumentsReferences));
+            return results;
+        }
 
-		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
-		{
-			return QueryReferences(key, "by_key", "ref");
-		}
+        public IEnumerable<string> GetDocumentsReferencesFrom(string key)
+        {
+            return QueryReferences(key, "by_key", "ref");
+        }
 
         public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs)
         {

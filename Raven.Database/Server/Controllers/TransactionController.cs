@@ -7,18 +7,18 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
-	public class TransactionController : BaseDatabaseApiController
-	{
-		[HttpPost]
-		[RavenRoute("transaction/rollback")]
-		[RavenRoute("databases/{databaseName}/transaction/rollback")]
-		public HttpResponseMessage Rollback()
-		{
-			var txId = GetQueryStringValue("tx");
-			Database.Rollback(txId);
-			return GetMessageWithObject(new { Rollbacked = txId });
-		}
+    [RoutePrefix("")]
+    public class TransactionController : BaseDatabaseApiController
+    {
+        [HttpPost]
+        [RavenRoute("transaction/rollback")]
+        [RavenRoute("databases/{databaseName}/transaction/rollback")]
+        public HttpResponseMessage Rollback()
+        {
+            var txId = GetQueryStringValue("tx");
+            Database.Rollback(txId);
+            return GetMessageWithObject(new { Rollbacked = txId });
+        }
 
         [HttpGet]
         [RavenRoute("transaction/status")]
@@ -38,12 +38,12 @@ namespace Raven.Database.Server.Controllers
 
             var resourceManagerIdStr = GetQueryStringValue("resourceManagerId");
 
-			Guid resourceManagerId;
-			if (Guid.TryParse(resourceManagerIdStr, out resourceManagerId))
-			{
-				var recoveryInformation = await Request.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-				if (recoveryInformation == null || recoveryInformation.Length == 0)
-					throw new InvalidOperationException("Recovery information is mandatory if resourceManagerId is specified");
+            Guid resourceManagerId;
+            if (Guid.TryParse(resourceManagerIdStr, out resourceManagerId))
+            {
+                var recoveryInformation = await Request.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                if (recoveryInformation == null || recoveryInformation.Length == 0)
+                    throw new InvalidOperationException("Recovery information is mandatory if resourceManagerId is specified");
 
                 Database.PrepareTransaction(txId, resourceManagerId, recoveryInformation);
             }

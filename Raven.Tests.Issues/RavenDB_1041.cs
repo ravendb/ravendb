@@ -125,11 +125,11 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
         }
 
-		[Fact]
-		public void ShouldThrowTimeoutException()
-		{
-			var store1 = CreateStore(requestedStorageType: "esent");
-			var store2 = CreateStore(requestedStorageType: "esent");
+        [Fact]
+        public void ShouldThrowTimeoutException()
+        {
+            var store1 = CreateStore(requestedStorageType: "esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
 
             SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
@@ -139,10 +139,10 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-		    Assert.Throws<TimeoutException>(() => 
-			    // ReSharper disable once RedundantArgumentDefaultValue
-				AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
-		}
+            Assert.Throws<TimeoutException>(() => 
+                // ReSharper disable once RedundantArgumentDefaultValue
+                AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
+        }
 
         [Fact]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers()

@@ -20,11 +20,11 @@ namespace Raven.Database.Indexing
             return previousTokenStream;
         }
 
-		public override TokenStream TokenStream(string fieldName, TextReader reader)
-		{
-			var res = new LowerCaseKeywordTokenizer(reader);
-			PreviousTokenStream = res;
-			return res;
-		}
-	}
+        public override TokenStream TokenStream(string fieldName, TextReader reader)
+        {
+            var res = new LowerCaseKeywordTokenizer(reader);
+            PreviousTokenStream = res;
+            return res;
+        }
+    }
 }

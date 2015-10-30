@@ -36,7 +36,7 @@ namespace Raven.Client.Connection
 
         int GetReadStripingBase(bool increment);
 
-		FailureCounters FailureCounters { get; }
+        FailureCounters FailureCounters { get; }
 
         Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, string primaryUrl, OperationCredentials primaryCredentials, RequestTimeMetric primaryRequestTimeMetric, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
     }

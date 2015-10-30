@@ -16,15 +16,15 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class DynamicQueryMapping : RavenTest
-	{
-		private DocumentDatabase CreateDocumentDatabase()
-		{
-			var configuration = new RavenConfiguration();
-			configuration.DataDirectory = Path.Combine(NewDataPath(), "System");
-			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
-			return new DocumentDatabase(configuration, null);
-		}
+    public class DynamicQueryMapping : RavenTest
+    {
+        private DocumentDatabase CreateDocumentDatabase()
+        {
+            var configuration = new RavenConfiguration();
+            configuration.DataDirectory = Path.Combine(NewDataPath(), "System");
+            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            return new DocumentDatabase(configuration, null);
+        }
 
         [Fact]
         public void CanExtractTermsFromRangedQuery()

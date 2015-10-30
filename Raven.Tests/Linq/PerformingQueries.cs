@@ -60,8 +60,8 @@ namespace Raven.Tests.Linq
             var documents =
                 GetDocumentsFromString(
                     @"[{loc: 4, lang: 3, '@metadata': {'@id': 1}}]");
-	        var configuration = new InMemoryRavenConfiguration();
-	        configuration.Initialize();
+            var configuration = new InMemoryRavenConfiguration();
+            configuration.Initialize();
             var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition
             {
                 Map = @"
@@ -70,9 +70,9 @@ select new { GeoHash = PerformingQueries.SampleGeoLocation.GeoHash(doc.loc, doc.
 "
             },
                                                       new OrderedPartCollection<AbstractDynamicCompilationExtension>
-													  {
-													  	new SampleDynamicCompilationExtension()
-													  }, ".", configuration);
+                                                      {
+                                                        new SampleDynamicCompilationExtension()
+                                                      }, ".", configuration);
             var compiledQuery = transformer.GenerateInstance();
             var actual = compiledQuery.MapDefinitions[0](documents)
                 .Cast<object>().ToArray();

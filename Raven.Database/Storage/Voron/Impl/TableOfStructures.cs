@@ -23,11 +23,11 @@ namespace Raven.Database.Storage.Voron.Impl
             return snapshot.ReadStruct(TableName, key, Schema, writeBatch);
         }
 
-		public virtual void AddStruct(WriteBatch writeBatch, Slice key, IStructure value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
-		{
-			AssertKey(key);
+        public virtual void AddStruct(WriteBatch writeBatch, Slice key, IStructure value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
+        {
+            AssertKey(key);
 
-			writeBatch.AddStruct(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
-		}
-	}
+            writeBatch.AddStruct(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
+        }
+    }
 }

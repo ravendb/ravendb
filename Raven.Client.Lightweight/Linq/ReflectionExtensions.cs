@@ -9,8 +9,8 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
 {
-	internal static class ReflectionExtensions
-	{
+    internal static class ReflectionExtensions
+    {
 
         public static Type GetMemberType(this MemberInfo member)
         {

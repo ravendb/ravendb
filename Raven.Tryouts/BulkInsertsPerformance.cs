@@ -1,4 +1,4 @@
-﻿using ICSharpCode.SharpZipLib.BZip2;
+using ICSharpCode.SharpZipLib.BZip2;
 using ICSharpCode.SharpZipLib.Tar;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -185,24 +185,24 @@ namespace Raven.Tryouts
                          }",
                 Indexes =  
                 {
-				    {
-					    "Query",
-					    FieldIndexing.Analyzed
-				    },
-				    {
-					    "Tracks",
-					    FieldIndexing.Analyzed
-				    }
-			    },
+                    {
+                        "Query",
+                        FieldIndexing.Analyzed
+                    },
+                    {
+                        "Tracks",
+                        FieldIndexing.Analyzed
+                    }
+                },
                 Analyzers =  
                 {
-				    {
-					    "Query", "StandardAnalyzer"
-				    },
-				    {
-					    "Tracks", "StandardAnalyzer"
-				    }
-			    }
+                    {
+                        "Query", "StandardAnalyzer"
+                    },
+                    {
+                        "Tracks", "StandardAnalyzer"
+                    }
+                }
             };
         }
     }
@@ -276,7 +276,7 @@ namespace Raven.Tryouts
 
         private static void ParseDisks(BulkInsertOperation insert)
         {
-	        var parser = new Parser();
+            var parser = new Parser();
             var buffer = new byte[1024 * 1024];// more than big enough for all files
 
             using (var bz2 = new BZip2InputStream(File.Open(@"I:\Temp\freedb-complete-20150101.tar.bz2", FileMode.Open)))

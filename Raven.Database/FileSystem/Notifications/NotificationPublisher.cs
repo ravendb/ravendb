@@ -12,9 +12,9 @@ namespace Raven.Database.FileSystem.Notifications
             this.transportState = transportState;
         }
 
-		public void Publish(FileSystemNotification change)
-		{
-			transportState.Send(change);
-		}
-	}
+        public void Publish(FileSystemNotification change)
+        {
+            transportState.Send(change);
+        }
+    }
 }

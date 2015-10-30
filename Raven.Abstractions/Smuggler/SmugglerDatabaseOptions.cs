@@ -19,14 +19,14 @@ namespace Raven.Abstractions.Smuggler
     public class SmugglerDatabaseOptions : SmugglerOptions<RavenConnectionStringOptions>
     {
         public new const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
-	    private int chunkSize;
-	   
-	    private long totalDocumentSizeInChunkLimitInBytes;
+        private int chunkSize;
+       
+        private long totalDocumentSizeInChunkLimitInBytes;
 
         public SmugglerDatabaseOptions()
         {
-	        DisableCompressionOnImport = false;
-			Filters = new List<FilterSetting>();
+            DisableCompressionOnImport = false;
+            Filters = new List<FilterSetting>();
             ConfigureDefaultFilters();
             ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
@@ -75,42 +75,42 @@ namespace Raven.Abstractions.Smuggler
         }
 
         /// <summary>
-		/// Limit total size of documents in each chunk
-		/// </summary>
+        /// Limit total size of documents in each chunk
+        /// </summary>
         public long TotalDocumentSizeInChunkLimitInBytes
-		{
-			get { return totalDocumentSizeInChunkLimitInBytes; }
-			set
-			{
-				if (value < 1024)
-					throw new InvalidOperationException("Total document size in a chunk cannot be less than 1kb");
+        {
+            get { return totalDocumentSizeInChunkLimitInBytes; }
+            set
+            {
+                if (value < 1024)
+                    throw new InvalidOperationException("Total document size in a chunk cannot be less than 1kb");
 
-				totalDocumentSizeInChunkLimitInBytes = value;
-			}
-		}
+                totalDocumentSizeInChunkLimitInBytes = value;
+            }
+        }
 
-		/// <summary>
-		/// The number of documents to import before new connection will be opened.
-		/// </summary>
-		public int ChunkSize
-		{
-			get { return chunkSize; }
-			set
-			{
-				if (value < 1)
-					throw new InvalidOperationException("Chunk size cannot be zero or a negative number");
-				chunkSize = value;
-			}
-		}
+        /// <summary>
+        /// The number of documents to import before new connection will be opened.
+        /// </summary>
+        public int ChunkSize
+        {
+            get { return chunkSize; }
+            set
+            {
+                if (value < 1)
+                    throw new InvalidOperationException("Chunk size cannot be zero or a negative number");
+                chunkSize = value;
+            }
+        }
 
-		/// <summary>
-		/// If this flag is true, during import of documents the smuggler won't use compression. False by default.
-		/// </summary>
-		public bool DisableCompressionOnImport { get; set; }
+        /// <summary>
+        /// If this flag is true, during import of documents the smuggler won't use compression. False by default.
+        /// </summary>
+        public bool DisableCompressionOnImport { get; set; }
 
-	    public bool ExportDeletions { get; set; }
+        public bool ExportDeletions { get; set; }
 
-		/// <summary>
+        /// <summary>
         /// Start exporting from the specified documents etag
         /// </summary>
         public Etag StartDocsEtag { get; set; }

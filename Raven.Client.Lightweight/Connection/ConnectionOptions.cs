@@ -9,14 +9,14 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
-	public static class ConnectionOptions
-	{
-		private static IDisposable Expect100Continue(Uri uri)
-		{
-			var servicePoint = ServicePointManager.FindServicePoint(uri);
-			servicePoint.Expect100Continue = true;
-			return new DisposableAction(() => servicePoint.Expect100Continue = false);
-		}
+    public static class ConnectionOptions
+    {
+        private static IDisposable Expect100Continue(Uri uri)
+        {
+            var servicePoint = ServicePointManager.FindServicePoint(uri);
+            servicePoint.Expect100Continue = true;
+            return new DisposableAction(() => servicePoint.Expect100Continue = false);
+        }
 
         public static IDisposable Expect100Continue(string url)
         {

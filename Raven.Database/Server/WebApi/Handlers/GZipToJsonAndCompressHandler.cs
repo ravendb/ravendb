@@ -16,20 +16,20 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.WebApi.Handlers
 {
-	public class GZipToJsonAndCompressHandler : DelegatingHandler
-	{
-		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-															   CancellationToken cancellationToken)
-		{
-			HttpResponseMessage response;
-			// Handle only if content type is 'application/gzip'
-			var contentEncoding = request.Content.Headers.ContentEncoding.FirstOrDefault();
-			if (contentEncoding == null ||
-				contentEncoding.Contains("gzip") == false)
-			{
-				response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-				return Compress(response);
-			}
+    public class GZipToJsonAndCompressHandler : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+                                                               CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response;
+            // Handle only if content type is 'application/gzip'
+            var contentEncoding = request.Content.Headers.ContentEncoding.FirstOrDefault();
+            if (contentEncoding == null ||
+                contentEncoding.Contains("gzip") == false)
+            {
+                response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                return Compress(response);
+            }
 
             // Read in the input stream, then decompress in to the output stream.
             // Doing this asynchronously, but not really required at this point
@@ -43,8 +43,8 @@ namespace Raven.Database.Server.WebApi.Handlers
                 gzipStream.CopyTo(outputStream);
                 gzipStream.Dispose();
 
-				outputStream.Seek(0, SeekOrigin.Begin);
-			}, cancellationToken).ConfigureAwait(false);
+                outputStream.Seek(0, SeekOrigin.Begin);
+            }, cancellationToken).ConfigureAwait(false);
 
             // This next section is the key...
 
@@ -63,9 +63,9 @@ namespace Raven.Database.Server.WebApi.Handlers
                 }
             }
 
-			response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-			return Compress(response);
-		}
+            response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return Compress(response);
+        }
 
         public HttpResponseMessage Compress(HttpResponseMessage response)
         {

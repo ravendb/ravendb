@@ -16,18 +16,18 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
             {
                 token.ThrowIfCancellationRequested();
 
-				switch (item.BlockType)
-				{
-					case RdcNeedType.Source:
-						await source.CopyToAsync(output, Convert.ToInt64(item.FileOffset), Convert.ToInt64(item.BlockLength)).ConfigureAwait(false);
-						break;
-					case RdcNeedType.Seed:
-						await seed.CopyToAsync(output, Convert.ToInt64(item.FileOffset), Convert.ToInt64(item.BlockLength)).ConfigureAwait(false);
-						break;
-					default:
-						throw new NotSupportedException();
-				}
-			}
-		}
-	}
+                switch (item.BlockType)
+                {
+                    case RdcNeedType.Source:
+                        await source.CopyToAsync(output, Convert.ToInt64(item.FileOffset), Convert.ToInt64(item.BlockLength)).ConfigureAwait(false);
+                        break;
+                    case RdcNeedType.Seed:
+                        await seed.CopyToAsync(output, Convert.ToInt64(item.FileOffset), Convert.ToInt64(item.BlockLength)).ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+            }
+        }
+    }
 }

@@ -319,90 +319,90 @@ namespace Raven.Database.Impl.DTC
         protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
         {
             changes = null;
-			TransactionState value;
-		    if (transactionStates.TryGetValue(id, out value) == false)
-		        return null; // no transaction, cannot do anything to this
+            TransactionState value;
+            if (transactionStates.TryGetValue(id, out value) == false)
+                return null; // no transaction, cannot do anything to this
 
-			changes = value.Changes;
-			lock (value)
-			{
-				value.LastSeen = new Reference<DateTime>
-				{
-					Value = SystemTime.UtcNow
-				};
-				currentlyCommittingTransaction.Value = id;
-				try
-				{
-				    var documentIdsToTouch = new HashSet<string>();
-					foreach (var change in value.Changes)
-					{
-						var doc = new DocumentInTransactionData
-						{
-							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
-							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
-							Delete = change.Delete,
-							Etag = change.Etag,
-							LastModified = change.LastModified,
-							Key = change.Key
-						};
+            changes = value.Changes;
+            lock (value)
+            {
+                value.LastSeen = new Reference<DateTime>
+                {
+                    Value = SystemTime.UtcNow
+                };
+                currentlyCommittingTransaction.Value = id;
+                try
+                {
+                    var documentIdsToTouch = new HashSet<string>();
+                    foreach (var change in value.Changes)
+                    {
+                        var doc = new DocumentInTransactionData
+                        {
+                            Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
+                            Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
+                            Delete = change.Delete,
+                            Etag = change.Etag,
+                            LastModified = change.LastModified,
+                            Key = change.Key
+                        };
 
-						if (log.IsDebugEnabled)
-							log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
 
-						// doc.Etag - represent the _modified_ document etag, and we already
-						// checked etags on previous PUT/DELETE, so we don't pass it here
-						if (doc.Delete)
-						{
-							DatabaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
-							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
-						}
-						else
-						{
-							DatabasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
-							documentIdsToTouch.Add(doc.Key);
-						}
-					}
-				    return documentIdsToTouch;
-				}
-				finally
-				{
-					currentlyCommittingTransaction.Value = null;
-				}
-			}
-		}
+                        // doc.Etag - represent the _modified_ document etag, and we already
+                        // checked etags on previous PUT/DELETE, so we don't pass it here
+                        if (doc.Delete)
+                        {
+                            DatabaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
+                            documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
+                        }
+                        else
+                        {
+                            DatabasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
+                            documentIdsToTouch.Add(doc.Key);
+                        }
+                    }
+                    return documentIdsToTouch;
+                }
+                finally
+                {
+                    currentlyCommittingTransaction.Value = null;
+                }
+            }
+        }
 
-	    public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
-	    {
-		    var txInfo = new TransactionInformation
-		    {
-			    Id = id,
-			    Timeout = TimeSpan.FromMinutes(5)
-		    };
-		    if (changes == null)
-		    {
-			    log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
+        public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+        {
+            var txInfo = new TransactionInformation
+            {
+                Id = id,
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+            if (changes == null)
+            {
+                log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
 
-			    return false;
-		    }
-		    foreach (var changedDoc in changes)
-		    {
-			    if (changedDoc == null)
-			    {
-				    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
-				    return false;
-			    }
-			    
-				changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-			    changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+                return false;
+            }
+            foreach (var changedDoc in changes)
+            {
+                if (changedDoc == null)
+                {
+                    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
+                    return false;
+                }
+                
+                changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+                changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
 
-			    //we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
-			    //that happened during the transaction, which changed the committed etag. That is fine when we are just running
-			    //the transaction, since we can just report the error and abort. But it isn't fine when we recover
-			    //var etag = changedDoc.CommittedEtag;
-			    Etag etag = null;
-			    AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
-		    }
-		    return true;
-	    }
-	}
+                //we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
+                //that happened during the transaction, which changed the committed etag. That is fine when we are just running
+                //the transaction, since we can just report the error and abort. But it isn't fine when we recover
+                //var etag = changedDoc.CommittedEtag;
+                Etag etag = null;
+                AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
+            }
+            return true;
+        }
+    }
 }

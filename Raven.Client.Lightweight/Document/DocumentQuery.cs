@@ -165,110 +165,110 @@ namespace Raven.Client.Document
                 showQueryTimings = showQueryTimings,
                 lastEquality = lastEquality,
                 defaultOperator = defaultOperator,
-				shouldExplainScores = shouldExplainScores
-			};
-			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
-			return documentQuery;
-		}
+                shouldExplainScores = shouldExplainScores
+            };
+            documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+            return documentQuery;
+        }
 
-		/// <summary>
-		/// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
-		/// This shouldn't be used outside of unit tests unless you are well aware of the implications
-		/// </summary>
-		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
-		{
-			WaitForNonStaleResults(waitTimeout);
-			return this;
-		}
+        /// <summary>
+        /// EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
+        /// This shouldn't be used outside of unit tests unless you are well aware of the implications
+        /// </summary>
+        /// <param name="waitTimeout">The wait timeout.</param>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        {
+            WaitForNonStaleResults(waitTimeout);
+            return this;
+        }
 
-		/// <summary>
-		/// Adds an ordering for a specific field to the query
-		/// </summary>
-		/// <param name="fieldName">Name of the field.</param>
-		/// <param name="descending">if set to <c>true</c> [descending].</param>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
-		{
-			AddOrder(fieldName, descending);
-			return this;
-		}
+        /// <summary>
+        /// Adds an ordering for a specific field to the query
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="descending">if set to <c>true</c> [descending].</param>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
+        {
+            AddOrder(fieldName, descending);
+            return this;
+        }
 
-		/// <summary>
-		///   Adds an ordering for a specific field to the query
-		/// </summary>
-		/// <param name = "propertySelector">Property selector for the field.</param>
-		/// <param name = "descending">if set to <c>true</c> [descending].</param>
-		public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
-		{
-			AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
-			return this;
-		}
+        /// <summary>
+        ///   Adds an ordering for a specific field to the query
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        /// <param name = "descending">if set to <c>true</c> [descending].</param>
+        public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
+        {
+            AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
+            return this;
+        }
 
-		/// <summary>
-		/// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
-		/// </summary>
-		/// <param name="fieldName">Name of the field.</param>
-		/// <param name="descending">if set to <c>true</c> [descending].</param>
-		/// <param name="fieldType">the type of the field to be sorted.</param>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending, Type fieldType)
-		{
-			AddOrder(fieldName, descending, fieldType);
-			return this;
-		}
+        /// <summary>
+        /// Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="descending">if set to <c>true</c> [descending].</param>
+        /// <param name="fieldType">the type of the field to be sorted.</param>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending, Type fieldType)
+        {
+            AddOrder(fieldName, descending, fieldType);
+            return this;
+        }
 
-		/// <summary>
-		/// Simplified method for opening a new clause within the query
-		/// </summary>
-		/// <returns></returns>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OpenSubclause()
-		{
-			OpenSubclause();
-			return this;
-		}
+        /// <summary>
+        /// Simplified method for opening a new clause within the query
+        /// </summary>
+        /// <returns></returns>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OpenSubclause()
+        {
+            OpenSubclause();
+            return this;
+        }
 
-		/// <summary>
-		/// Simplified method for closing a clause within the query
-		/// </summary>
-		/// <returns></returns>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CloseSubclause()
-		{
-			CloseSubclause();
-			return this;
-		}
+        /// <summary>
+        /// Simplified method for closing a clause within the query
+        /// </summary>
+        /// <returns></returns>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CloseSubclause()
+        {
+            CloseSubclause();
+            return this;
+        }
 
-		/// <summary>
-		/// Perform a search for documents which fields that match the searchTerms.
-		/// If there is more than a single term, each of them will be checked independently.
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions)
-		{
-			Search(fieldName, searchTerms, escapeQueryOptions);
-			return this;
-		}
+        /// <summary>
+        /// Perform a search for documents which fields that match the searchTerms.
+        /// If there is more than a single term, each of them will be checked independently.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions)
+        {
+            Search(fieldName, searchTerms, escapeQueryOptions);
+            return this;
+        }
 
-		/// <summary>
-		/// Perform a search for documents which fields that match the searchTerms.
-		/// If there is more than a single term, each of them will be checked independently.
-		/// </summary>
-		public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
-		{
-			Search(GetMemberQueryPath(propertySelector.Body), searchTerms, escapeQueryOptions);
-			return this;
-		}
+        /// <summary>
+        /// Perform a search for documents which fields that match the searchTerms.
+        /// If there is more than a single term, each of them will be checked independently.
+        /// </summary>
+        public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
+        {
+            Search(GetMemberQueryPath(propertySelector.Body), searchTerms, escapeQueryOptions);
+            return this;
+        }
 
-		/// <summary>
-		/// Partition the query so we can intersect different parts of the query
-		/// across different index entries.
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
-		{
-			Intersect();
-			return this;
-		}
+        /// <summary>
+        /// Partition the query so we can intersect different parts of the query
+        /// across different index entries.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
+        {
+            Intersect();
+            return this;
+        }
 
-		/// <summary>
-		/// Performs a query matching ANY of the provided values against the given field (OR)
-		/// </summary>
+        /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
         {
             ContainsAny(fieldName, values);
@@ -667,107 +667,107 @@ namespace Raven.Client.Document
         {
             AndAlso();
             return this;
-		}
+        }
 
-		/// <summary>
-		/// Add an OR to the query
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrElse()
-		{
-			OrElse();
-			return this;
-		}
+        /// <summary>
+        /// Add an OR to the query
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrElse()
+        {
+            OrElse();
+            return this;
+        }
 
-		/// <summary>
-		/// Specifies a boost weight to the last where clause.
-		/// The higher the boost factor, the more relevant the term will be.
-		/// </summary>
-		/// <param name="boost">boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight</param>
-		/// <returns></returns>
-		/// <remarks>
-		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Boost(decimal boost)
-		{
-			Boost(boost);
-			return this;
-		}
+        /// <summary>
+        /// Specifies a boost weight to the last where clause.
+        /// The higher the boost factor, the more relevant the term will be.
+        /// </summary>
+        /// <param name="boost">boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
+        /// </remarks>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Boost(decimal boost)
+        {
+            Boost(boost);
+            return this;
+        }
 
-		/// <summary>
-		/// Specifies a fuzziness factor to the single word term in the last where clause
-		/// </summary>
-		/// <param name="fuzzy">0.0 to 1.0 where 1.0 means closer match</param>
-		/// <returns></returns>
-		/// <remarks>
-		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Fuzzy(decimal fuzzy)
-		{
-			Fuzzy(fuzzy);
-			return this;
-		}
+        /// <summary>
+        /// Specifies a fuzziness factor to the single word term in the last where clause
+        /// </summary>
+        /// <param name="fuzzy">0.0 to 1.0 where 1.0 means closer match</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
+        /// </remarks>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Fuzzy(decimal fuzzy)
+        {
+            Fuzzy(fuzzy);
+            return this;
+        }
 
-		/// <summary>
-		/// Specifies a proximity distance for the phrase in the last where clause
-		/// </summary>
-		/// <param name="proximity">number of words within</param>
-		/// <returns></returns>
-		/// <remarks>
-		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Proximity(int proximity)
-		{
-			Proximity(proximity);
-			return this;
-		}
+        /// <summary>
+        /// Specifies a proximity distance for the phrase in the last where clause
+        /// </summary>
+        /// <param name="proximity">number of words within</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
+        /// </remarks>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Proximity(int proximity)
+        {
+            Proximity(proximity);
+            return this;
+        }
 
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
-		{
-			AlphaNumericOrdering(fieldName, descending);
-			return this;
-		}
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
+        {
+            AlphaNumericOrdering(fieldName, descending);
+            return this;
+        }
 
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
-		{
-			var fieldName = GetMemberQueryPath(propertySelector);
-			AlphaNumericOrdering(fieldName, descending);
-			return this;
-		}
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+        {
+            var fieldName = GetMemberQueryPath(propertySelector);
+            AlphaNumericOrdering(fieldName, descending);
+            return this;
+        }
 
-		/// <summary>
-		/// Order the search results randomly
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering()
-		{
-			RandomOrdering();
-			return this;
-		}
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering()
+        {
+            RandomOrdering();
+            return this;
+        }
 
-		/// <summary>
-		/// Order the search results randomly using the specified seed
-		/// this is useful if you want to have repeatable random queries
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering(string seed)
-		{
-			RandomOrdering(seed);
-			return this;
-		}
+        /// <summary>
+        /// Order the search results randomly using the specified seed
+        /// this is useful if you want to have repeatable random queries
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering(string seed)
+        {
+            RandomOrdering(seed);
+            return this;
+        }
 
-		/// <summary>
-		/// Order the search results randomly
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
-		{
-			CustomSortUsing(typeName, descending);
-			return this;
-		}
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
 
-		/// <summary>
-		/// Filter matches to be inside the specified radius
-		/// </summary>
-		/// <param name="radius">The radius.</param>
-		/// <param name="latitude">The latitude.</param>
-		/// <param name="longitude">The longitude.</param>
+        /// <summary>
+        /// Filter matches to be inside the specified radius
+        /// </summary>
+        /// <param name="radius">The radius.</param>
+        /// <param name="latitude">The latitude.</param>
+        /// <param name="longitude">The longitude.</param>
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
         public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
         {

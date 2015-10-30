@@ -9,9 +9,9 @@ using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class AdminBundlesApiController : BaseAdminDatabaseApiController
-	{
-		public abstract string BundleName { get; }
+    public abstract class AdminBundlesApiController : BaseAdminDatabaseApiController
+    {
+        public abstract string BundleName { get; }
 
         public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-			return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
-		}
-	}
+            return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
+        }
+    }
 }

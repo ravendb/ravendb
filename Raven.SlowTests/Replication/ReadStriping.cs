@@ -40,45 +40,45 @@ namespace Raven.SlowTests.Replication
                         FailoverBehavior = FailoverBehavior.ReadFromAllServers
                     },
                     DefaultDatabase = store1.DefaultDatabase
-			})
-			{
-				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
-					.Wait();
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
+            })
+            {
+                store.Initialize();
+                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+                replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
+                    .Wait();
+                Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
-				foreach (var ravenDbServer in servers)
-				{
-					ravenDbServer.Server.ResetNumberOfRequests();
-				}
+                foreach (var ravenDbServer in servers)
+                {
+                    ravenDbServer.Server.ResetNumberOfRequests();
+                }
 
-				for (int i = 0; i < 6; i++)
-				{
-					using(var session = store.OpenSession())
-					{
-						Assert.NotNull(session.Load<Company>("companies/1"));
-					}
-				}
-			}
-			foreach (var ravenDbServer in servers)
-			{
-				Assert.Equal(2, ravenDbServer.Server.NumberOfRequests);
-			}
-		}
+                for (int i = 0; i < 6; i++)
+                {
+                    using(var session = store.OpenSession())
+                    {
+                        Assert.NotNull(session.Load<Company>("companies/1"));
+                    }
+                }
+            }
+            foreach (var ravenDbServer in servers)
+            {
+                Assert.Equal(2, ravenDbServer.Server.NumberOfRequests);
+            }
+        }
 
-		[Fact]
-		public void Can_avoid_read_striping()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+        [Fact]
+        public void Can_avoid_read_striping()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new Company());
-				session.SaveChanges();
-			}
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new Company());
+                session.SaveChanges();
+            }
 
             SetupReplication(store1.DatabaseCommands, store2, store3);
 
@@ -97,33 +97,33 @@ namespace Raven.SlowTests.Replication
                     FailoverBehavior = FailoverBehavior.ReadFromAllServers
                 },
                 DefaultDatabase = store1.DefaultDatabase
-			})
-			{
-				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
-					.Wait();
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
+            })
+            {
+                store.Initialize();
+                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+                replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
+                    .Wait();
+                Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
-				foreach (var ravenDbServer in servers)
-				{
-					ravenDbServer.Server.ResetNumberOfRequests();
-				}
+                foreach (var ravenDbServer in servers)
+                {
+                    ravenDbServer.Server.ResetNumberOfRequests();
+                }
 
-				for (int i = 0; i < 6; i++)
-				{
-					using (var session = store.OpenSession(new OpenSessionOptions
-					{
-						ForceReadFromMaster = true
-					}))
-					{
-						Assert.NotNull(session.Load<Company>("companies/1"));
-					}
-				}
-			}
-			Assert.Equal(6, servers[0].Server.NumberOfRequests);
-			Assert.Equal(0, servers[1].Server.NumberOfRequests);
-			Assert.Equal(0, servers[2].Server.NumberOfRequests);
-		}
-	}
+                for (int i = 0; i < 6; i++)
+                {
+                    using (var session = store.OpenSession(new OpenSessionOptions
+                    {
+                        ForceReadFromMaster = true
+                    }))
+                    {
+                        Assert.NotNull(session.Load<Company>("companies/1"));
+                    }
+                }
+            }
+            Assert.Equal(6, servers[0].Server.NumberOfRequests);
+            Assert.Equal(0, servers[1].Server.NumberOfRequests);
+            Assert.Equal(0, servers[2].Server.NumberOfRequests);
+        }
+    }
 }

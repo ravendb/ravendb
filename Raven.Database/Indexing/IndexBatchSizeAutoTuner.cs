@@ -67,22 +67,22 @@ namespace Raven.Database.Indexing
             get { return "IndexBatchSizeAutoTuner"; }
         }
 
-		public IDisposable ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
-		{
-			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))
-				return null;
+        public IDisposable ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
+        {
+            if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))
+                return null;
 
             var oldValue = NumberOfItemsToProcessInSingleBatch;
 
-			int indexOutputsPerDocLog = (int) Math.Log(maxIndexOutputsPerDoc.Value);
-			indexOutputsPerDocLog = indexOutputsPerDocLog < 1 ? 1 : indexOutputsPerDocLog;
-			var newValue = Math.Max(NumberOfItemsToProcessInSingleBatch / indexOutputsPerDocLog, InitialNumberOfItems);
+            int indexOutputsPerDocLog = (int) Math.Log(maxIndexOutputsPerDoc.Value);
+            indexOutputsPerDocLog = indexOutputsPerDocLog < 1 ? 1 : indexOutputsPerDocLog;
+            var newValue = Math.Max(NumberOfItemsToProcessInSingleBatch / indexOutputsPerDocLog, InitialNumberOfItems);
 
             if (oldValue == newValue)
                 return null;
 
-			NumberOfItemsToProcessInSingleBatch = newValue;
-			return Disposable.Create(() => NumberOfItemsToProcessInSingleBatch = oldValue);
-		}
-	}
+            NumberOfItemsToProcessInSingleBatch = newValue;
+            return Disposable.Create(() => NumberOfItemsToProcessInSingleBatch = oldValue);
+        }
+    }
 }

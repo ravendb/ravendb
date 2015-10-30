@@ -119,43 +119,43 @@ namespace Raven.Tests.Issues
                     BackupLocation = BackupDir,
                     Defrag = true,
                     DatabaseLocation = DataDir
-				}, s => output.Append(s));
+                }, s => output.Append(s));
 
-				Assert.DoesNotContain("error", output.ToString().ToLower());
+                Assert.DoesNotContain("error", output.ToString().ToLower());
 
-				using (var db = new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir,
-					Settings =
-					{
-						{Constants.Esent.CircularLog, "false"}
-					}
-				}, null))
-				{
-					var indexStats = db.Statistics.Indexes;
+                using (var db = new DocumentDatabase(new RavenConfiguration
+                {
+                    DataDirectory = DataDir,
+                    Settings =
+                    {
+                        {Constants.Esent.CircularLog, "false"}
+                    }
+                }, null))
+                {
+                    var indexStats = db.Statistics.Indexes;
 
-					Assert.Equal(3, indexStats.Length); // Users/* and Raven/DocumentsByEntityName 
+                    Assert.Equal(3, indexStats.Length); // Users/* and Raven/DocumentsByEntityName 
 
-					QueryResult docs = db.Queries.Query("Users/ByName", new IndexQuery
-					{
-						Query = "Name:*",
-						Start = 0,
-						PageSize = 10
-					}, CancellationToken.None);
+                    QueryResult docs = db.Queries.Query("Users/ByName", new IndexQuery
+                    {
+                        Query = "Name:*",
+                        Start = 0,
+                        PageSize = 10
+                    }, CancellationToken.None);
 
-					Assert.Equal(2, docs.Results.Count);
+                    Assert.Equal(2, docs.Results.Count);
 
-					docs = db.Queries.Query("Users/ByNameAndCountry", new IndexQuery
-					{
-						Query = "Name:*",
-						Start = 0,
-						PageSize = 10
-					}, CancellationToken.None);
+                    docs = db.Queries.Query("Users/ByNameAndCountry", new IndexQuery
+                    {
+                        Query = "Name:*",
+                        Start = 0,
+                        PageSize = 10
+                    }, CancellationToken.None);
 
-					Assert.Equal(2, docs.Results.Count);
+                    Assert.Equal(2, docs.Results.Count);
 
-				}
-			}
-		}
-	}
+                }
+            }
+        }
+    }
 }

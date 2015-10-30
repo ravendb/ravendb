@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../models/dto.ts" />
+/// <reference path="../../../models/dto.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/database/index/transformer");

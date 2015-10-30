@@ -102,32 +102,32 @@ namespace Raven.Abstractions.Data
         TransformerRemoved = 2
     }
 
-	public class IndexChangeNotification : EventArgs
-	{
-		/// <summary>
-		/// Type of change that occurred on index.
-		/// </summary>
-		public IndexChangeTypes Type { get; set; }
+    public class IndexChangeNotification : EventArgs
+    {
+        /// <summary>
+        /// Type of change that occurred on index.
+        /// </summary>
+        public IndexChangeTypes Type { get; set; }
 
-		/// <summary>
-		/// Name of index for which notification was created
-		/// </summary>
-		public string Name { get; set; }
+        /// <summary>
+        /// Name of index for which notification was created
+        /// </summary>
+        public string Name { get; set; }
 
         /// <summary>
         /// The index version that changed
         /// </summary>
         public int? Version { get; set; }
-		/// <summary>
-		/// TODO [ppekrol]
-		/// </summary>
-		public Etag Etag { get; set; }
+        /// <summary>
+        /// TODO [ppekrol]
+        /// </summary>
+        public Etag Etag { get; set; }
 
-		public override string ToString()
-		{
-			return string.Format("{0} on {1}", Type, Name);
-		}
-	}
+        public override string ToString()
+        {
+            return string.Format("{0} on {1}", Type, Name);
+        }
+    }
 
     public class TransformerChangeNotification : EventArgs
     {
@@ -212,7 +212,7 @@ namespace Raven.Abstractions.Data
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
-	    public RavenJObject QueryTimings { get; set; }
+        public RavenJObject QueryTimings { get; set; }
     }
 
     public class DataSubscriptionChangeNotification : EventArgs

@@ -20,12 +20,12 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
-	[InheritedExport(typeof(AbstractDeleteTrigger))]
-	[ExportMetadata("Bundle", "Versioning")]
-	public class VersioningDeleteTrigger : AbstractDeleteTrigger
-	{
-	    readonly Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
-			= new Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    [ExportMetadata("Bundle", "Versioning")]
+    public class VersioningDeleteTrigger : AbstractDeleteTrigger
+    {
+        readonly Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
+            = new Raven.Abstractions.Threading.ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
 
         public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
         {

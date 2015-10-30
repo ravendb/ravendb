@@ -225,33 +225,33 @@ namespace Raven.Database.Queries
                                           string.Join(", ", nonHighlightableFields));
                                 return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
                             }
-					    }
+                        }
 
-					    if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
-						{
-							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { }, indexQuery);
+                        if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
+                        {
+                            var sortInfo = DynamicQueryMapping.GetSortInfo(s => { }, indexQuery);
 
-							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
-							{
-								var sortField = sortedField.Field;
-								if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
-									sortField.StartsWith(Constants.RandomFieldName) ||
-									sortField.StartsWith(Constants.CustomSortFieldName))
-								{
-									sortField = SortFieldHelper.CustomField(sortField).Name;
-								}
+                            foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
+                            {
+                                var sortField = sortedField.Field;
+                                if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
+                                    sortField.StartsWith(Constants.RandomFieldName) ||
+                                    sortField.StartsWith(Constants.CustomSortFieldName))
+                                {
+                                    sortField = SortFieldHelper.CustomField(sortField).Name;
+                                }
 
-								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
+                                var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
 
-							    if (normalizedFieldName.EndsWith("_Range"))
-							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
+                                if (normalizedFieldName.EndsWith("_Range"))
+                                    normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
 
-							    // if the field is not in the output, then we can't sort on it. 
-								if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)
-								{
-									explain(indexName,
-											() =>
-											"Rejected because index does not contains field '" + normalizedFieldName + "' which we need to sort on");
+                                // if the field is not in the output, then we can't sort on it. 
+                                if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)
+                                {
+                                    explain(indexName,
+                                            () =>
+                                            "Rejected because index does not contains field '" + normalizedFieldName + "' which we need to sort on");
                                     currentBestState = DynamicQueryMatchType.Partial;
                                     continue;
                                 }

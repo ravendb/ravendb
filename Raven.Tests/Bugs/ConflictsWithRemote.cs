@@ -26,11 +26,11 @@ namespace Raven.Tests.Bugs
         }
 
 
-		[Fact]
-		public void MultiThreadedInsert()
-		{
-			const int threadCount = 4;
-			var tasks = new List<Task>();
+        [Fact]
+        public void MultiThreadedInsert()
+        {
+            const int threadCount = 4;
+            var tasks = new List<Task>();
 
             using(var server = GetNewServer())
             using (var store = new DocumentStore{Url = server.SystemDatabase.Configuration.ServerUrl}.Initialize())

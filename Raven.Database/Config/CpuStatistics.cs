@@ -39,11 +39,11 @@ namespace Raven.Database.Config
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
         private static bool dynamicLoadBalancing;
 
-		public static double Average { get; private set; }
+        public static double Average { get; private set; }
 
-	    static CpuStatistics()
-		{
-	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) && 
+        static CpuStatistics()
+        {
+            if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) && 
                 dynamicLoadBalancing == false)
                 return; // disabled, so we avoid it
             dynamicLoadBalancing = true;
@@ -94,40 +94,40 @@ namespace Raven.Database.Config
 
             nextWriteIndex = 0;
 
-			var average = Average = LastUsages.Average();
-		    if (average < 0)
-		        return; // there was an error in getting the CPU stats, ignoring
+            var average = Average = LastUsages.Average();
+            if (average < 0)
+                return; // there was an error in getting the CPU stats, ignoring
 
-			if (average >= HighNotificationThreshold)
-				RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
-			else if(average < LowNotificationThreshold)
-				RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
+            if (average >= HighNotificationThreshold)
+                RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
+            else if(average < LowNotificationThreshold)
+                RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
 
-		}
+        }
 
-		public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
-		{
-		    if (dynamicLoadBalancing == false)
-		        return;
-			CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
-		}
+        public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
+        {
+            if (dynamicLoadBalancing == false)
+                return;
+            CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
+        }
 
-		private static void RunCpuUsageHandlers(Action<ICpuUsageHandler> action)
-		{
-			var inactiveHandlers = new List<WeakReference<ICpuUsageHandler>>();
+        private static void RunCpuUsageHandlers(Action<ICpuUsageHandler> action)
+        {
+            var inactiveHandlers = new List<WeakReference<ICpuUsageHandler>>();
 
-			foreach (var highCpuUsageHandler in CpuUsageHandlers)
-			{
-				ICpuUsageHandler handler;
-				if (highCpuUsageHandler.TryGetTarget(out handler))
-				{
-					try
-					{
-						action(handler);
-					}
-					catch (Exception e)
-					{
-						Log.Error("Failure to process CPU usage notification (cpu usage handler - " + handler + "), handler will be removed", e);
+            foreach (var highCpuUsageHandler in CpuUsageHandlers)
+            {
+                ICpuUsageHandler handler;
+                if (highCpuUsageHandler.TryGetTarget(out handler))
+                {
+                    try
+                    {
+                        action(handler);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error("Failure to process CPU usage notification (cpu usage handler - " + handler + "), handler will be removed", e);
                         inactiveHandlers.Add(highCpuUsageHandler);
                     }
                 }

@@ -97,37 +97,37 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public DateTime CreatedTimestamp { get; set; }
 
-		/// <summary>
-		/// Time of last indexing (map or reduce) for this index.
-		/// </summary>
-		public DateTime LastIndexingTime { get; set; }
+        /// <summary>
+        /// Time of last indexing (map or reduce) for this index.
+        /// </summary>
+        public DateTime LastIndexingTime { get; set; }
 
-		/// <summary>
-		/// Indicates if index is in-memory only.
-		/// </summary>
-		public string IsOnRam { get; set; }
+        /// <summary>
+        /// Indicates if index is in-memory only.
+        /// </summary>
+        public string IsOnRam { get; set; }
 
-		/// <summary>
-		/// Indicates current lock mode:
-		/// <para>- Unlock - all index definition changes acceptable</para>
-		/// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
-		/// <para>- LockedError - all index definition changes will raise exception</para>
-		/// </summary>
-		public IndexLockMode LockMode { get; set; }
+        /// <summary>
+        /// Indicates current lock mode:
+        /// <para>- Unlock - all index definition changes acceptable</para>
+        /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
+        /// <para>- LockedError - all index definition changes will raise exception</para>
+        /// </summary>
+        public IndexLockMode LockMode { get; set; }
 
-		/// <summary>
-		/// List of all entity names (collections) for which this index is working.
-		/// </summary>
-		public string[] ForEntityName { get; set; } 
+        /// <summary>
+        /// List of all entity names (collections) for which this index is working.
+        /// </summary>
+        public string[] ForEntityName { get; set; } 
 
-		/// <summary>
-		/// Total number of entries in this index.
-		/// </summary>
-		public int DocsCount { get; set; }
+        /// <summary>
+        /// Total number of entries in this index.
+        /// </summary>
+        public int DocsCount { get; set; }
 
-		/// <summary>
-		/// Indicates if this is a test index (works on a limited data set - for testing purposes only)
-		/// </summary>
+        /// <summary>
+        /// Indicates if this is a test index (works on a limited data set - for testing purposes only)
+        /// </summary>
         public bool IsTestIndex { get; set; }
 
         /// <summary>
@@ -178,8 +178,8 @@ namespace Raven.Abstractions.Data
         Forced = 512,
     }
 
-	public enum IndexingOperation
-	{
+    public enum IndexingOperation
+    {
 // ReSharper disable InconsistentNaming
         LoadDocument,
 

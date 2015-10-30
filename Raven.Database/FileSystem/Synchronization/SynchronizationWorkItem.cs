@@ -85,66 +85,66 @@ namespace Raven.Database.FileSystem.Synchronization
                 return conflict;
 
             return null;
-		}
+        }
 
-		private async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, ISynchronizationServerClient synchronizationServerClient, string localServerUrl, ILog log)
-		{
-			if (log.IsDebugEnabled)
-				log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, synchronizationServerClient.BaseUrl);
+        private async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenJObject remoteMetadata, ISynchronizationServerClient synchronizationServerClient, string localServerUrl, ILog log)
+        {
+            if (log.IsDebugEnabled)
+                log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, synchronizationServerClient.BaseUrl);
 
-			try
-			{
-				var version = conflict.RemoteHistory.Last().Version;
-				var serverId = conflict.RemoteHistory.Last().ServerId;
-				var history = new List<HistoryItem>(conflict.RemoteHistory);
-				history.RemoveAt(conflict.RemoteHistory.Count - 1);
+            try
+            {
+                var version = conflict.RemoteHistory.Last().Version;
+                var serverId = conflict.RemoteHistory.Last().ServerId;
+                var history = new List<HistoryItem>(conflict.RemoteHistory);
+                history.RemoveAt(conflict.RemoteHistory.Count - 1);
 
-				await synchronizationServerClient.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl).ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
-				log.WarnException(string.Format("Failed to apply conflict on {0} for file '{1}'", synchronizationServerClient, FileName), ex);
-			}
+                await synchronizationServerClient.ApplyConflictAsync(FileName, version, serverId, remoteMetadata, localServerUrl).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                log.WarnException(string.Format("Failed to apply conflict on {0} for file '{1}'", synchronizationServerClient, FileName), ex);
+            }
 
-			return new SynchronizationReport(FileName, FileETag, SynchronizationType)
-			{
-				Exception = new SynchronizationException(string.Format("File {0} is conflicted", FileName)),
-			};
-		}
+            return new SynchronizationReport(FileName, FileETag, SynchronizationType)
+            {
+                Exception = new SynchronizationException(string.Format("File {0} is conflicted", FileName)),
+            };
+        }
 
-		protected async Task<SynchronizationReport> HandleConflict(ISynchronizationServerClient synchronizationServerClient, ConflictItem conflict, ILog log)
-		{
-			var conflictResolutionStrategy = await synchronizationServerClient.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata).ConfigureAwait(false);
+        protected async Task<SynchronizationReport> HandleConflict(ISynchronizationServerClient synchronizationServerClient, ConflictItem conflict, ILog log)
+        {
+            var conflictResolutionStrategy = await synchronizationServerClient.GetResolutionStrategyFromDestinationResolvers(conflict, FileMetadata).ConfigureAwait(false);
 
-			switch (conflictResolutionStrategy)
-			{
-				case ConflictResolutionStrategy.NoResolution:
-					return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
-				case ConflictResolutionStrategy.CurrentVersion:
-					await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
-					await synchronizationServerClient.ResolveConflictAsync(FileName, conflictResolutionStrategy).ConfigureAwait(false);
-					return new SynchronizationReport(FileName, FileETag, SynchronizationType);
-				case ConflictResolutionStrategy.RemoteVersion:
-					// we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side
-					return null;
-				default:
-					return new SynchronizationReport(FileName, FileETag, SynchronizationType)
-					{
-						Exception = new SynchronizationException(string.Format("Unknown resolution strategy: {0}", conflictResolutionStrategy)),
-					};
-			}
-		}
+            switch (conflictResolutionStrategy)
+            {
+                case ConflictResolutionStrategy.NoResolution:
+                    return await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
+                case ConflictResolutionStrategy.CurrentVersion:
+                    await ApplyConflictOnDestinationAsync(conflict, FileMetadata, synchronizationServerClient, FileSystemInfo.Url, log).ConfigureAwait(false);
+                    await synchronizationServerClient.ResolveConflictAsync(FileName, conflictResolutionStrategy).ConfigureAwait(false);
+                    return new SynchronizationReport(FileName, FileETag, SynchronizationType);
+                case ConflictResolutionStrategy.RemoteVersion:
+                    // we can push the file even though it conflicted, the conflict will be automatically resolved on the destination side
+                    return null;
+                default:
+                    return new SynchronizationReport(FileName, FileETag, SynchronizationType)
+                    {
+                        Exception = new SynchronizationException(string.Format("Unknown resolution strategy: {0}", conflictResolutionStrategy)),
+                    };
+            }
+        }
 
-		public void RefreshMetadata()
-		{
-			if (Storage != null)
-			{
-				FileAndPagesInformation fileAndPages = null;
-				Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
-				FileMetadata = fileAndPages.Metadata;
-			}
-		}
+        public void RefreshMetadata()
+        {
+            if (Storage != null)
+            {
+                FileAndPagesInformation fileAndPages = null;
+                Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
+                FileMetadata = fileAndPages.Metadata;
+            }
+        }
 
-		public ProfilingInformation ProfilingInformation { get; private set; }
-	}
+        public ProfilingInformation ProfilingInformation { get; private set; }
+    }
 }

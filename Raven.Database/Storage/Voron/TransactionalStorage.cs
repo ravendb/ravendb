@@ -47,8 +47,8 @@ namespace Raven.Storage.Voron
 
         private readonly ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>> lowMemoryHandlers = new ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>>();
 
-		private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
         private volatile bool disposed;
         private readonly DisposableAction exitLockDisposable;
@@ -326,11 +326,11 @@ namespace Raven.Storage.Voron
             uuidGenerator = generator;
             _documentCodecs = documentCodecs;
 
-			Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
+            Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
 
-		    StorageEnvironmentOptions options = configuration.RunInMemory ?
-				CreateMemoryStorageOptionsFromConfiguration(configuration) :
-		        CreateStorageOptionsFromConfiguration(configuration);
+            StorageEnvironmentOptions options = configuration.RunInMemory ?
+                CreateMemoryStorageOptionsFromConfiguration(configuration) :
+                CreateStorageOptionsFromConfiguration(configuration);
 
             options.OnScratchBufferSizeChanged += size =>
             {
@@ -343,17 +343,17 @@ namespace Raven.Storage.Voron
                 RunTransactionalStorageNotificationHandlers();
             };
 
-		    tableStorage = new TableStorage(options, bufferPool);
-			var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
-			schemaCreator.CreateSchema();
-			schemaCreator.SetupDatabaseIdAndSchemaVersion();
+            tableStorage = new TableStorage(options, bufferPool);
+            var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
+            schemaCreator.CreateSchema();
+            schemaCreator.SetupDatabaseIdAndSchemaVersion();
             if (!configuration.Storage.PreventSchemaUpdate)
                 schemaCreator.UpdateSchemaIfNecessary();
 
-		    SetupDatabaseId();
+            SetupDatabaseId();
 
-			Log.Info("Voron storage initialized");
-		}
+            Log.Info("Voron storage initialized");
+        }
 
         private void SetupDatabaseId()
         {
@@ -372,16 +372,16 @@ namespace Raven.Storage.Voron
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-			var filePathFolder = new DirectoryInfo (directoryPath);
+            var filePathFolder = new DirectoryInfo (directoryPath);
 
-			if (filePathFolder.Exists == false) {
-				if (EnvironmentUtils.RunningOnPosix == true) {
-					uint permissions = 509;
-					Syscall.mkdir (filePathFolder.Name, permissions);
-				}
-				else
-					filePathFolder.Create ();
-			}
+            if (filePathFolder.Exists == false) {
+                if (EnvironmentUtils.RunningOnPosix == true) {
+                    uint permissions = 509;
+                    Syscall.mkdir (filePathFolder.Name, permissions);
+                }
+                else
+                    filePathFolder.Create ();
+            }
 
             var tempPath = configuration.Storage.Voron.TempPath;
             var journalPath = configuration.Storage.Voron.JournalsStoragePath;
@@ -546,6 +546,8 @@ namespace Raven.Storage.Voron
             if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
                 return;
             
+            Log.Info("Starting to recover from failed compact. Data dir: " + sourcePath);
+
             if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
                 File.Exists(Path.Combine(sourcePath, "headers.one")) &&
                 File.Exists(Path.Combine(sourcePath, "headers.two")) &&
@@ -577,248 +579,182 @@ namespace Raven.Storage.Voron
                 }
 
                 Directory.Delete(compactionBackup, true);
-		        output("Removing existing compaction backup directory");
-		    }
-			    
+            }
 
-		    Directory.CreateDirectory(compactionBackup);
+            Log.Info("Successfully recovered from failed compact");
+        }
 
-	        output("Backing up original data files");
-		    foreach (var file in sourceFiles)
-		    {
-			    File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
-		    }
+        public Guid ChangeId()
+        {
+            var newId = Guid.NewGuid();
+            using (var changeIdWriteBatch = new WriteBatch())
+            {
+                tableStorage.Details.Delete(changeIdWriteBatch, "id");
+                tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
 
-		    var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
+                tableStorage.Write(changeIdWriteBatch);
+            }
 
-	        output("Moving compacted files into target location");
-			foreach (var file in compactedFiles)
-			{
-				File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
-			}
+            Id = newId;
+            return newId;
+        }
 
-	        output("Deleting original data backup");
+        public void ClearCaches()
+        {
+            var oldDocumentCacher = documentCacher;
+            documentCacher = new DocumentCacher(configuration);
+            oldDocumentCacher.Dispose();
+        }
 
-			Directory.Delete(compactionBackup, true);
-			Directory.Delete(compactPath, true);
-	    }
-
-		private static void RecoverFromFailedCompact(string sourcePath)
-		{
-			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
-
-			if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
-				return;
-			
-			Log.Info("Starting to recover from failed compact. Data dir: " + sourcePath);
-
-			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
-				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
-				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
-				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
-			{
-				// we successfully moved new files and crashed before we could remove the old backup
-				// just complete the op and we are good (committed)
-				Directory.Delete(compactionBackup, true);
-			}
-			else
-			{
-				// just undo the op and we are good (rollback)
-
-				var sourceDir = new DirectoryInfo(sourcePath);
-
-				foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
-				{
-					foreach (var file in sourceDir.GetFiles(pattern))
-					{
-						File.Delete(file.FullName);
-					}
-				}
-
-				var backupFiles = new DirectoryInfo(compactionBackup).GetFiles();
-
-				foreach (var file in backupFiles)
-				{
-					File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
-				}
-
-				Directory.Delete(compactionBackup, true);
-			}
-
-			Log.Info("Successfully recovered from failed compact");
-		}
-
-		public Guid ChangeId()
-		{
-			var newId = Guid.NewGuid();
-			using (var changeIdWriteBatch = new WriteBatch())
-			{
-				tableStorage.Details.Delete(changeIdWriteBatch, "id");
-				tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
-
-				tableStorage.Write(changeIdWriteBatch);
-			}
-
-			Id = newId;
-			return newId;
-		}
-
-		public void ClearCaches()
-		{
-		    var oldDocumentCacher = documentCacher;
-		    documentCacher = new DocumentCacher(configuration);
-		    oldDocumentCacher.Dispose();
-		}
-
-		public void DumpAllStorageTables()
-		{
+        public void DumpAllStorageTables()
+        {
             throw new NotSupportedException("Not valid for Voron storage");
         }
 
-	    public StorageEnvironment Environment
-	    {
-	        get { return tableStorage.Environment; }
-	    }
+        public StorageEnvironment Environment
+        {
+            get { return tableStorage.Environment; }
+        }
 
-		[CLSCompliant(false)]
-		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
-		{            
-		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
-		}
+        [CLSCompliant(false)]
+        public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        {            
+            return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
+        }
 
-		public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
-		{
-			var seperator = new String('#', 80);
-			var padding = new String('\t', 1);
-			var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
-			var reportAsList = new List<string>();
-			reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
-			reportAsList.Add(string.Format("Total used db size: {0}", SizeHelper.Humane(report.DataFile.SpaceInUseInBytes)));
-			reportAsList.Add(string.Format("Total Trees Count: {0}", report.Trees.Count));
-			reportAsList.Add("Trees:");
-			foreach (var tree in report.Trees.OrderByDescending(x => x.PageCount))
-			{
-				var sb = new StringBuilder();
-				sb.Append(System.Environment.NewLine);
-				sb.Append(seperator);
-				sb.Append(System.Environment.NewLine);
-				sb.Append(padding);
-				sb.Append(tree.Name);
-				sb.Append(System.Environment.NewLine);
-				sb.Append(seperator);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("Owned Size: ");
-				var ownedSize = AbstractPager.PageSize * tree.PageCount;
-				sb.Append(SizeHelper.Humane(ownedSize));
-				sb.Append(System.Environment.NewLine);
-				if (computeExactSizes)
-				{
-					sb.Append("Used Size: ");
-					sb.Append(SizeHelper.Humane((long)(ownedSize * tree.Density)));
-					sb.Append(System.Environment.NewLine);
-				}
-				sb.Append("Records: ");
-				sb.Append(tree.EntriesCount);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("Depth: ");
-				sb.Append(tree.Depth);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("PageCount: ");
-				sb.Append(tree.PageCount);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("LeafPages: ");
-				sb.Append(tree.LeafPages);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("BranchPages: ");
-				sb.Append(tree.BranchPages);
-				sb.Append(System.Environment.NewLine);
-				sb.Append("OverflowPages: ");
-				sb.Append(tree.OverflowPages);
-				sb.Append(System.Environment.NewLine);
+        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
+        {
+            var seperator = new String('#', 80);
+            var padding = new String('\t', 1);
+            var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
+            var reportAsList = new List<string>();
+            reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
+            reportAsList.Add(string.Format("Total used db size: {0}", SizeHelper.Humane(report.DataFile.SpaceInUseInBytes)));
+            reportAsList.Add(string.Format("Total Trees Count: {0}", report.Trees.Count));
+            reportAsList.Add("Trees:");
+            foreach (var tree in report.Trees.OrderByDescending(x => x.PageCount))
+            {
+                var sb = new StringBuilder();
+                sb.Append(System.Environment.NewLine);
+                sb.Append(seperator);
+                sb.Append(System.Environment.NewLine);
+                sb.Append(padding);
+                sb.Append(tree.Name);
+                sb.Append(System.Environment.NewLine);
+                sb.Append(seperator);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("Owned Size: ");
+                var ownedSize = AbstractPager.PageSize * tree.PageCount;
+                sb.Append(SizeHelper.Humane(ownedSize));
+                sb.Append(System.Environment.NewLine);
+                if (computeExactSizes)
+                {
+                    sb.Append("Used Size: ");
+                    sb.Append(SizeHelper.Humane((long)(ownedSize * tree.Density)));
+                    sb.Append(System.Environment.NewLine);
+                }
+                sb.Append("Records: ");
+                sb.Append(tree.EntriesCount);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("Depth: ");
+                sb.Append(tree.Depth);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("PageCount: ");
+                sb.Append(tree.PageCount);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("LeafPages: ");
+                sb.Append(tree.LeafPages);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("BranchPages: ");
+                sb.Append(tree.BranchPages);
+                sb.Append(System.Environment.NewLine);
+                sb.Append("OverflowPages: ");
+                sb.Append(tree.OverflowPages);
+                sb.Append(System.Environment.NewLine);
 
-				if (tree.MultiValues != null)
-				{
-					sb.Append("Multi values: ");
-					sb.Append(System.Environment.NewLine);
+                if (tree.MultiValues != null)
+                {
+                    sb.Append("Multi values: ");
+                    sb.Append(System.Environment.NewLine);
 
-					sb.Append(padding);
-					sb.Append("Records: ");
-					sb.Append(tree.MultiValues.EntriesCount);
-					sb.Append(System.Environment.NewLine);
+                    sb.Append(padding);
+                    sb.Append("Records: ");
+                    sb.Append(tree.MultiValues.EntriesCount);
+                    sb.Append(System.Environment.NewLine);
 
-					sb.Append(padding);
-					sb.Append("PageCount: ");
-					sb.Append(tree.MultiValues.PageCount);
-					sb.Append(System.Environment.NewLine);
+                    sb.Append(padding);
+                    sb.Append("PageCount: ");
+                    sb.Append(tree.MultiValues.PageCount);
+                    sb.Append(System.Environment.NewLine);
 
-					sb.Append(padding);
-					sb.Append("LeafPages: ");
-					sb.Append(tree.MultiValues.LeafPages);
-					sb.Append(System.Environment.NewLine);
+                    sb.Append(padding);
+                    sb.Append("LeafPages: ");
+                    sb.Append(tree.MultiValues.LeafPages);
+                    sb.Append(System.Environment.NewLine);
 
-					sb.Append(padding);
-					sb.Append("BranchPages: ");
-					sb.Append(tree.MultiValues.BranchPages);
-					sb.Append(System.Environment.NewLine);
+                    sb.Append(padding);
+                    sb.Append("BranchPages: ");
+                    sb.Append(tree.MultiValues.BranchPages);
+                    sb.Append(System.Environment.NewLine);
 
-					sb.Append(padding);
-					sb.Append("OverflowPages: ");
-					sb.Append(tree.MultiValues.OverflowPages);
-					sb.Append(System.Environment.NewLine);
-				}
+                    sb.Append(padding);
+                    sb.Append("OverflowPages: ");
+                    sb.Append(tree.MultiValues.OverflowPages);
+                    sb.Append(System.Environment.NewLine);
+                }
 
-				reportAsList.Add(sb.ToString());
-			}
+                reportAsList.Add(sb.ToString());
+            }
 
-			if (report.Journals.Any())
-			{
-				reportAsList.Add("Journals:");
-				foreach (var journal in report.Journals.OrderByDescending(x => x.AllocatedSpaceInBytes))
-				{
-					var sb = new StringBuilder();
-					sb.Append(System.Environment.NewLine);
-					sb.Append(seperator);
-					sb.Append(System.Environment.NewLine);
-					sb.Append(padding);
-					sb.Append("Journal number: ");
-					sb.Append(journal.Number);
-					sb.Append(System.Environment.NewLine);
-					sb.Append(seperator);
-					sb.Append(System.Environment.NewLine);
-					sb.Append("Allocated space: ");
-					sb.Append(SizeHelper.Humane(journal.AllocatedSpaceInBytes));
-					sb.Append(System.Environment.NewLine);
+            if (report.Journals.Any())
+            {
+                reportAsList.Add("Journals:");
+                foreach (var journal in report.Journals.OrderByDescending(x => x.AllocatedSpaceInBytes))
+                {
+                    var sb = new StringBuilder();
+                    sb.Append(System.Environment.NewLine);
+                    sb.Append(seperator);
+                    sb.Append(System.Environment.NewLine);
+                    sb.Append(padding);
+                    sb.Append("Journal number: ");
+                    sb.Append(journal.Number);
+                    sb.Append(System.Environment.NewLine);
+                    sb.Append(seperator);
+                    sb.Append(System.Environment.NewLine);
+                    sb.Append("Allocated space: ");
+                    sb.Append(SizeHelper.Humane(journal.AllocatedSpaceInBytes));
+                    sb.Append(System.Environment.NewLine);
 
-					reportAsList.Add(sb.ToString());
-				}
-			}
+                    reportAsList.Add(sb.ToString());
+                }
+            }
 
-			return reportAsList;
-		}
+            return reportAsList;
+        }
 
-		public List<TransactionContextData> GetPreparedTransactions()
-		{
-			throw new NotSupportedException("Voron storage does not support DTC");
-		}
+        public List<TransactionContextData> GetPreparedTransactions()
+        {
+            throw new NotSupportedException("Voron storage does not support DTC");
+        }
 
-		public object GetInFlightTransactionsInternalStateForDebugOnly()
-		{
-			throw new NotSupportedException("Voron storage does not support DTC");
-		}
+        public object GetInFlightTransactionsInternalStateForDebugOnly()
+        {
+            throw new NotSupportedException("Voron storage does not support DTC");
+        }
 
-		internal IStorageActionsAccessor GetCurrentBatch()
-		{
-			var batch = current.Value;
-			if (batch == null)
-				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
-			return batch;
-		}
+        internal IStorageActionsAccessor GetCurrentBatch()
+        {
+            var batch = current.Value;
+            if (batch == null)
+                throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
+            return batch;
+        }
 
-		private void Output(string message)
-		{
-			Log.Info(message);
-			Console.Write(message);
-			Console.WriteLine();
-		}
-	}
+        private void Output(string message)
+        {
+            Log.Info(message);
+            Console.Write(message);
+            Console.WriteLine();
+        }
+    }
 }

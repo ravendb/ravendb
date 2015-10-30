@@ -34,38 +34,38 @@ namespace Raven.Database.Extensions
                         {
                             var newRootObj = new RavenJObject();
 
-							foreach (var prop in ravenJObject)
-							{
-								newRootObj[prop.Key] = prop.Value.Type == JTokenType.Array ?
-									MinimizeToken(prop.Value, depth + 1) :
-									prop.Value;
-							}
-							return newRootObj;
-						}
-						return obj;
-					}
-					var newObj = new RavenJObject();
-					newObj[Constants.Metadata] = ravenJObject[Constants.Metadata];
-					return newObj;
-				default:
-					return obj;
-			}
-		}
+                            foreach (var prop in ravenJObject)
+                            {
+                                newRootObj[prop.Key] = prop.Value.Type == JTokenType.Array ?
+                                    MinimizeToken(prop.Value, depth + 1) :
+                                    prop.Value;
+                            }
+                            return newRootObj;
+                        }
+                        return obj;
+                    }
+                    var newObj = new RavenJObject();
+                    newObj[Constants.Metadata] = ravenJObject[Constants.Metadata];
+                    return newObj;
+                default:
+                    return obj;
+            }
+        }
 
-		public static HttpResponseMessage WithNoCache(this HttpResponseMessage message)
-		{
-			// Ensure that files are not cached at the browser side.
-			// "Cache-Control": "no-cache, no-store, must-revalidate";
-			// "Expires": 0;
-			message.Headers.CacheControl = new CacheControlHeaderValue()
-			{
-				MustRevalidate = true,
-				NoCache = true,
-				NoStore = true,
-				MaxAge = new TimeSpan(0, 0, 0, 0)
-			};
+        public static HttpResponseMessage WithNoCache(this HttpResponseMessage message)
+        {
+            // Ensure that files are not cached at the browser side.
+            // "Cache-Control": "no-cache, no-store, must-revalidate";
+            // "Expires": 0;
+            message.Headers.CacheControl = new CacheControlHeaderValue()
+            {
+                MustRevalidate = true,
+                NoCache = true,
+                NoStore = true,
+                MaxAge = new TimeSpan(0, 0, 0, 0)
+            };
 
-			return message;
-		}
-	}
+            return message;
+        }
+    }
 }

@@ -75,36 +75,36 @@ namespace Raven.Setup.CustomActions
         {
             try
             {
-				if (session["WEBSITE_TYPE"] == "EXISTING")
-				{
-					string selectedWebSiteId = session[WebSiteProperty];
-					Log.Info(session, "Found web site id: " + selectedWebSiteId);
+                if (session["WEBSITE_TYPE"] == "EXISTING")
+                {
+                    string selectedWebSiteId = session[WebSiteProperty];
+                    Log.Info(session, "Found web site id: " + selectedWebSiteId);
 
-					using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
-					{
-						availableWebSitesView.Execute();
+                    using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
+                    {
+                        availableWebSitesView.Execute();
 
-						using (var record = availableWebSitesView.Fetch())
-						{
-							if ((record[1].ToString()) == selectedWebSiteId)
-							{
-								session["WEBSITE_ID"] = selectedWebSiteId;
-								session["WEBSITE_DESCRIPTION"] = (string)record[2];
-								session["WEBSITE_PATH"] = (string)record[3];
-								session["WEBSITE_DEFAULT_APPPOOL"] = (string)record[4];
-								session["WEBSITE_PORT"] = iisManager.GetWebSites().First(x => x.Id == selectedWebSiteId).Port ?? string.Empty;
-							}
-						}
-					}
-				}
-				else
-				{
-					session["WEBSITE_ID"] = AsteriskSiteId;
-					session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
-					session.DoAction("SetNewWebSiteDirectory");
-				}
+                        using (var record = availableWebSitesView.Fetch())
+                        {
+                            if ((record[1].ToString()) == selectedWebSiteId)
+                            {
+                                session["WEBSITE_ID"] = selectedWebSiteId;
+                                session["WEBSITE_DESCRIPTION"] = (string)record[2];
+                                session["WEBSITE_PATH"] = (string)record[3];
+                                session["WEBSITE_DEFAULT_APPPOOL"] = (string)record[4];
+                                session["WEBSITE_PORT"] = iisManager.GetWebSites().First(x => x.Id == selectedWebSiteId).Port ?? string.Empty;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    session["WEBSITE_ID"] = AsteriskSiteId;
+                    session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
+                    session.DoAction("SetNewWebSiteDirectory");
+                }
 
-				session.DoAction("SetIISInstallFolder");
+                session.DoAction("SetIISInstallFolder");
 
                 return ActionResult.Success;
             }

@@ -16,16 +16,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Triggers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractPutTrigger))]
-	public class AncestryPutTrigger : AbstractPutTrigger
-	{
-		public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
-				key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
-				return;
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    public class AncestryPutTrigger : AbstractPutTrigger
+    {
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+        {
+            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
+                key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
+                return;
 
             using (Database.DisableAllTriggersForCurrentThread())
             {

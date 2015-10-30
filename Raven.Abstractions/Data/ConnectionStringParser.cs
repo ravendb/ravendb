@@ -35,10 +35,10 @@ namespace Raven.Abstractions.Data
         }
     }
 
-	public class CounterConnectionStringOptions : ConnectionStringOptions
-	{
-		public string CounterStoreId { get; set; }
-	}
+    public class CounterConnectionStringOptions : ConnectionStringOptions
+    {
+        public string CounterStoreId { get; set; }
+    }
 
     public class RavenConnectionStringOptions : ConnectionStringOptions
     {

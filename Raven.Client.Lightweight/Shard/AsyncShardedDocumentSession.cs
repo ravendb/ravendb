@@ -333,90 +333,90 @@ namespace Raven.Client.Shard
                     } while (multiLoadOperation.SetResult(multiLoadResult));
                     return multiLoadOperation;
                 }).WithCancellation(token).ConfigureAwait(false);
-				foreach (var multiLoadOperation in multiLoadOperations)
-				{
-					token.ThrowIfCancellationRequested();
-					var loadResults = multiLoadOperation.Complete<T>();
-					for (int i = 0; i < loadResults.Length; i++)
-					{
-						if (ReferenceEquals(loadResults[i], null))
-							continue;
-						var id = currentShardIds[i];
-						var itemPosition = Array.IndexOf(ids, id);
-						if (ReferenceEquals(results[itemPosition], default(T)) == false)
-						{
-							throw new InvalidOperationException("Found document with id: " + id +
-																" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-						}
-						results[itemPosition] = loadResults[i];
-					}
-				}
-			}
-			return ids.Select(id => // so we get items that were skipped because they are already in the session cache
-			{
-				object val;
-				entitiesByKey.TryGetValue(id, out val);
-				return (T)val;
-			}).ToArray();
-		}
+                foreach (var multiLoadOperation in multiLoadOperations)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var loadResults = multiLoadOperation.Complete<T>();
+                    for (int i = 0; i < loadResults.Length; i++)
+                    {
+                        if (ReferenceEquals(loadResults[i], null))
+                            continue;
+                        var id = currentShardIds[i];
+                        var itemPosition = Array.IndexOf(ids, id);
+                        if (ReferenceEquals(results[itemPosition], default(T)) == false)
+                        {
+                            throw new InvalidOperationException("Found document with id: " + id +
+                                                                " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+                        }
+                        results[itemPosition] = loadResults[i];
+                    }
+                }
+            }
+            return ids.Select(id => // so we get items that were skipped because they are already in the session cache
+            {
+                object val;
+                entitiesByKey.TryGetValue(id, out val);
+                return (T)val;
+            }).ToArray();
+        }
 
-		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, 
-			Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
-		{
-			token.ThrowIfCancellationRequested(); //if cancel already requested prevent incrementing request count
-			var results = new T[ids.Length];
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
+        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, 
+            Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
+        {
+            token.ThrowIfCancellationRequested(); //if cancel already requested prevent incrementing request count
+            var results = new T[ids.Length];
+            var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
 
-			if (!idsToLoad.Any())
-				return results;
+            if (!idsToLoad.Any())
+                return results;
 
-			IncrementRequestCount();
+            IncrementRequestCount();
 
-			if (typeof(T).IsArray)
-			{
-				foreach (var shard in idsToLoad)
-				{
-					token.ThrowIfCancellationRequested();
-					var currentShardIds = shard.Select(x => x.Id).ToArray();
-					var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
-						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
-						async (dbCmd, i) =>
-						{
-							// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-							// With a single Id
-							var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
-								.Results
-								.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-								.Select(values =>
-								{
-									var array = values.Select(y =>
-									{
-										HandleInternalMetadata(y);
-										return ConvertToEntity(typeof(T),null, y, new RavenJObject());
-									}).ToArray();
-									var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
-									Array.Copy(array, newArray, array.Length);
-									return newArray;
-								})
-								.Cast<T>()
-								.ToArray();
+            if (typeof(T).IsArray)
+            {
+                foreach (var shard in idsToLoad)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var currentShardIds = shard.Select(x => x.Id).ToArray();
+                    var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+                        new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+                        async (dbCmd, i) =>
+                        {
+                            // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+                            // With a single Id
+                            var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
+                                .Results
+                                .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+                                .Select(values =>
+                                {
+                                    var array = values.Select(y =>
+                                    {
+                                        HandleInternalMetadata(y);
+                                        return ConvertToEntity(typeof(T),null, y, new RavenJObject());
+                                    }).ToArray();
+                                    var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
+                                    Array.Copy(array, newArray, array.Length);
+                                    return newArray;
+                                })
+                                .Cast<T>()
+                                .ToArray();
 
-							return arrayOfArrays;
-						}).WithCancellation(token).ConfigureAwait(false);
+                            return arrayOfArrays;
+                        }).WithCancellation(token).ConfigureAwait(false);
 
-					return shardResults.SelectMany(x => x).ToArray();
-				}
-			}
+                    return shardResults.SelectMany(x => x).ToArray();
+                }
+            }
 
-			foreach (var shard in idsToLoad)
-			{
-				token.ThrowIfCancellationRequested();
-				var currentShardIds = shard.Select(x => x.Id).ToArray();
-				var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
-						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
-						async (dbCmd, i) =>
-						{
+            foreach (var shard in idsToLoad)
+            {
+                token.ThrowIfCancellationRequested();
+                var currentShardIds = shard.Select(x => x.Id).ToArray();
+                var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+                        new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+                        async (dbCmd, i) =>
+                        {
                             var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false);
                             var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
@@ -593,122 +593,122 @@ namespace Raven.Client.Shard
             return AsyncDocumentQuery<T>(GetDynamicIndexName<T>());
         }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
-		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
+        {
+            return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
+        }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default (CancellationToken))
-		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default (CancellationToken))
+        {
+            return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
+        }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
+        {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+        }
 
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
+        {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+        }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken))
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken))
+        {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+        }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
+        {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+        }
 
-		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
-		{
-			DocumentMetadata value;
-			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-				throw new InvalidOperationException("Cannot refresh a transient instance");
-			IncrementRequestCount();
+        public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
+        {
+            DocumentMetadata value;
+            if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+                throw new InvalidOperationException("Cannot refresh a transient instance");
+            IncrementRequestCount();
 
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof(T),
-				Keys = { value.Key }
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+            var shardRequestData = new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { value.Key }
+            };
+            var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
-			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
-			{
-				var jsonDocument = await dbCmd.GetAsync(value.Key, token).ConfigureAwait(false);
-				if (jsonDocument == null)
-					return false;
+            var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
+            {
+                var jsonDocument = await dbCmd.GetAsync(value.Key, token).ConfigureAwait(false);
+                if (jsonDocument == null)
+                    return false;
 
-				RefreshInternal(entity, jsonDocument, value);
-				return true;
-			}).WithCancellation(token).ConfigureAwait(false);
+                RefreshInternal(entity, jsonDocument, value);
+                return true;
+            }).WithCancellation(token).ConfigureAwait(false);
 
-			if (results.All(x => x == false))
-			{
-				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
-			}
-		}
+            if (results.All(x => x == false))
+            {
+                throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+            }
+        }
 
-		#endregion
+        #endregion
 
-		/// <summary>
-		/// Saves all the changes to the Raven server.
-		/// </summary>
-		async Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
-		{
-			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().ConfigureAwait(false);
-			var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
-			try
-			{
-				var data = PrepareForSaveChanges();
-				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-				{
-					cachingScope.Dispose();
-					return ; // nothing to do here
-				}
-
-				IncrementRequestCount();
-				LogBatch(data);
-
-				// split by shards
-				var saveChangesPerShard = await GetChangesToSavePerShardAsync(data).ConfigureAwait(false);
-
-				var saveTasks = new Task<BatchResult[]>[saveChangesPerShard.Count];
-				var saveChanges = new List<SaveChangesData>();
-				// execute on all shards
-				foreach (var shardAndObjects in saveChangesPerShard)
-				{
-					token.ThrowIfCancellationRequested();
-					var shardId = shardAndObjects.Key;
-
-					IAsyncDatabaseCommands databaseCommands;
-					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
-						throw new InvalidOperationException(
-							string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
-
-					var localCopy = shardAndObjects.Value;
-					saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
-					saveChanges.Add(localCopy);
+        /// <summary>
+        /// Saves all the changes to the Raven server.
+        /// </summary>
+        async Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
+        {
+            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().ConfigureAwait(false);
+            var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
+            try
+            {
+                var data = PrepareForSaveChanges();
+                if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+                {
+                    cachingScope.Dispose();
+                    return ; // nothing to do here
                 }
-			    await Task.WhenAll(saveTasks).ConfigureAwait(false);
-			    for (int index = 0; index < saveTasks.Length; index++)
-			    {
-			        var results = await saveTasks[index].ConfigureAwait(false);
-			        UpdateBatchResults(results, saveChanges[index]);
-			    }
-			}
-			catch
-			{
-				cachingScope.Dispose();
-				throw;
-			}
-											 
-		}
+
+                IncrementRequestCount();
+                LogBatch(data);
+
+                // split by shards
+                var saveChangesPerShard = await GetChangesToSavePerShardAsync(data).ConfigureAwait(false);
+
+                var saveTasks = new Task<BatchResult[]>[saveChangesPerShard.Count];
+                var saveChanges = new List<SaveChangesData>();
+                // execute on all shards
+                foreach (var shardAndObjects in saveChangesPerShard)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var shardId = shardAndObjects.Key;
+
+                    IAsyncDatabaseCommands databaseCommands;
+                    if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+                        throw new InvalidOperationException(
+                            string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
+
+                    var localCopy = shardAndObjects.Value;
+                    saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
+                    saveChanges.Add(localCopy);
+                }
+                await Task.WhenAll(saveTasks).ConfigureAwait(false);
+                for (int index = 0; index < saveTasks.Length; index++)
+                {
+                    var results = await saveTasks[index].ConfigureAwait(false);
+                    UpdateBatchResults(results, saveChanges[index]);
+                }
+            }
+            catch
+            {
+                cachingScope.Dispose();
+                throw;
+            }
+                                             
+        }
 
 
         protected async Task<Dictionary<string, SaveChangesData>> GetChangesToSavePerShardAsync(SaveChangesData data)

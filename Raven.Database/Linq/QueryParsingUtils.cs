@@ -195,255 +195,255 @@ namespace Raven.Database.Linq
                 variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
                 variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
                 variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
-				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
+                variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
-				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.Body);
+                var expressionBody = GetAnonymousCreateExpression(lambdaExpression.Body);
 
-				var anonymousTypeCreateExpression = expressionBody as AnonymousTypeCreateExpression;
-				if (anonymousTypeCreateExpression == null && requiresSelectNewAnonymousType)
-					throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
+                var anonymousTypeCreateExpression = expressionBody as AnonymousTypeCreateExpression;
+                if (anonymousTypeCreateExpression == null && requiresSelectNewAnonymousType)
+                    throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
-				var objectCreateExpression = expressionBody as ObjectCreateExpression;
-				if (objectCreateExpression != null && requiresSelectNewAnonymousType)
-					throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.Type);
+                var objectCreateExpression = expressionBody as ObjectCreateExpression;
+                if (objectCreateExpression != null && requiresSelectNewAnonymousType)
+                    throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.Type);
 
-				return variable;
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Could not understand query: " + e.Message, e);
-			}
-		}
+                return variable;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not understand query: " + e.Message, e);
+            }
+        }
 
-		private static string ToQueryStatement(string query)
-		{
-			query = query.Replace("new() {", "new {").Replace("new () {", "new {"); ;
-			if (query.EndsWith(";"))
-				return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query;
-			return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query + ";";
-		}
+        private static string ToQueryStatement(string query)
+        {
+            query = query.Replace("new() {", "new {").Replace("new () {", "new {"); ;
+            if (query.EndsWith(";"))
+                return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query;
+            return "var qD1266A5B_A4BE_4108_BA29_79920DBC1308 = " + query + ";";
+        }
 
-		public static INode GetAnonymousCreateExpression(INode expression)
-		{
-			var invocationExpression = expression as InvocationExpression;
+        public static INode GetAnonymousCreateExpression(INode expression)
+        {
+            var invocationExpression = expression as InvocationExpression;
 
-			if (invocationExpression == null)
-				return expression;
-			var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
-			if (memberReferenceExpression == null)
-				return expression;
+            if (invocationExpression == null)
+                return expression;
+            var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
+            if (memberReferenceExpression == null)
+                return expression;
 
-			var typeReference = memberReferenceExpression.Target as TypeReferenceExpression;
-			if (typeReference == null)
-			{
-				var objectCreateExpression = memberReferenceExpression.Target as AnonymousTypeCreateExpression;
-				if (objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
-				{
-					return objectCreateExpression;
-				}
-				return expression;
-			}
+            var typeReference = memberReferenceExpression.Target as TypeReferenceExpression;
+            if (typeReference == null)
+            {
+                var objectCreateExpression = memberReferenceExpression.Target as AnonymousTypeCreateExpression;
+                if (objectCreateExpression != null && memberReferenceExpression.MemberName == "Boost")
+                {
+                    return objectCreateExpression;
+                }
+                return expression;
+            }
 
-			var simpleType = typeReference.Type as SimpleType;
-			if (simpleType != null && simpleType.Identifier != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
-				return expression;
+            var simpleType = typeReference.Type as SimpleType;
+            if (simpleType != null && simpleType.Identifier != "Raven.Database.Linq.PrivateExtensions.DynamicExtensionMethods")
+                return expression;
 
-			switch (memberReferenceExpression.MemberName)
-			{
-				case "Boost":
-					return invocationExpression.Arguments.First();
-			}
-			return expression;
-		}
+            switch (memberReferenceExpression.MemberName)
+            {
+                case "Boost":
+                    return invocationExpression.Arguments.First();
+            }
+            return expression;
+        }
 
-		[CLSCompliant(false)]
-		public static LambdaExpression AsLambdaExpression(this Expression expression)
-		{
-			var lambdaExpression = expression as LambdaExpression;
-			if (lambdaExpression != null)
-				return lambdaExpression;
+        [CLSCompliant(false)]
+        public static LambdaExpression AsLambdaExpression(this Expression expression)
+        {
+            var lambdaExpression = expression as LambdaExpression;
+            if (lambdaExpression != null)
+                return lambdaExpression;
 
-			var castExpression = expression as CastExpression;
-			if (castExpression != null)
-			{
-				return AsLambdaExpression(castExpression.Expression);
-			}
+            var castExpression = expression as CastExpression;
+            if (castExpression != null)
+            {
+                return AsLambdaExpression(castExpression.Expression);
+            }
 
-			var parenthesizedExpression = expression as ParenthesizedExpression;
-			if (parenthesizedExpression != null)
-			{
-				return AsLambdaExpression(parenthesizedExpression.Expression);
-			}
-			return null;
-		}
+            var parenthesizedExpression = expression as ParenthesizedExpression;
+            if (parenthesizedExpression != null)
+            {
+                return AsLambdaExpression(parenthesizedExpression.Expression);
+            }
+            return null;
+        }
 
-		private class CacheEntry
-		{
-			public int Usages;
-			public string Source;
-			public Type Type;
-		}
+        private class CacheEntry
+        {
+            public int Usages;
+            public string Source;
+            public Type Type;
+        }
 
-		private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
+        private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
 
-		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
-		{
-			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
-			var indexCacheDir = GetIndexCacheDir(configuration);
-			if (Directory.Exists(indexCacheDir) == false)
-			{
-				Directory.CreateDirectory(indexCacheDir);
-			}
+        public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
+        {
+            source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
+            var indexCacheDir = GetIndexCacheDir(configuration);
+            if (Directory.Exists(indexCacheDir) == false)
+            {
+                Directory.CreateDirectory(indexCacheDir);
+            }
 
-			int numberHash;
-			var indexFilePath = GetIndexFilePath(source, indexCacheDir, out numberHash);
+            int numberHash;
+            var indexFilePath = GetIndexFilePath(source, indexCacheDir, out numberHash);
 
-			var locker = Locks.GetOrAdd(numberHash, s => new object());
-			lock (locker)
-			{
-				var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
-				if (shouldCachedIndexBeRecompiled == false)
-				{
-					// Look up the index in the in-memory cache.
-					CacheEntry entry;
-					if (cacheEntries.TryGetValue(source, out entry))
-					{
-						Interlocked.Increment(ref entry.Usages);
-						return entry.Type;
-					}
+            var locker = Locks.GetOrAdd(numberHash, s => new object());
+            lock (locker)
+            {
+                var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
+                if (shouldCachedIndexBeRecompiled == false)
+                {
+                    // Look up the index in the in-memory cache.
+                    CacheEntry entry;
+                    if (cacheEntries.TryGetValue(source, out entry))
+                    {
+                        Interlocked.Increment(ref entry.Usages);
+                        return entry.Type;
+                    }
 
-					Type type;
+                    Type type;
 
-					if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
-						return type;
-				}
+                    if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+                        return type;
+                }
 
-				var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
+                var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
 
-				// ReSharper disable once RedundantArgumentName
-				AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
+                // ReSharper disable once RedundantArgumentName
+                AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
 
-				return result;
-			}
-		}
+                return result;
+            }
+        }
 
-		private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
-		{
-			var ravenDatabaseFileInfo = new FileInfo(typeof(IndexDefinitionStorage).Assembly.Location);
-			var indexFileInfo = new FileInfo(indexFilePath);
-			if (indexFileInfo.Exists == false)
-				return true;
+        private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
+        {
+            var ravenDatabaseFileInfo = new FileInfo(typeof(IndexDefinitionStorage).Assembly.Location);
+            var indexFileInfo = new FileInfo(indexFilePath);
+            if (indexFileInfo.Exists == false)
+                return true;
 
-			return DateTime.Compare(ravenDatabaseFileInfo.LastWriteTimeUtc, indexFileInfo.LastWriteTimeUtc) > 0;
-		}
+            return DateTime.Compare(ravenDatabaseFileInfo.LastWriteTimeUtc, indexFileInfo.LastWriteTimeUtc) > 0;
+        }
 
-		private static void AddResultToCache(string source, Type result, bool shouldUpdateIfExists = false)
-		{
-			var cacheEntry = new CacheEntry
-			{
-				Source = source,
-				Type = result,
-				Usages = 1
-			};
+        private static void AddResultToCache(string source, Type result, bool shouldUpdateIfExists = false)
+        {
+            var cacheEntry = new CacheEntry
+            {
+                Source = source,
+                Type = result,
+                Usages = 1
+            };
 
-			if (shouldUpdateIfExists)
-				cacheEntries.AddOrUpdate(source, cacheEntry, (key, existingValue) => cacheEntry);
-			else
-				cacheEntries.TryAdd(source, cacheEntry);
+            if (shouldUpdateIfExists)
+                cacheEntries.AddOrUpdate(source, cacheEntry, (key, existingValue) => cacheEntry);
+            else
+                cacheEntries.TryAdd(source, cacheEntry);
 
-			if (cacheEntries.Count > 256)
-			{
-				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
-				if (kvp.Key != null)
-				{
-					CacheEntry _;
-					cacheEntries.TryRemove(kvp.Key, out _);
-				}
-			}
-		}
+            if (cacheEntries.Count > 256)
+            {
+                var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
+                if (kvp.Key != null)
+                {
+                    CacheEntry _;
+                    cacheEntries.TryRemove(kvp.Key, out _);
+                }
+            }
+        }
 
-		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,
-												  out Type type)
-		{
-			// It's not in the in-memory cache. See if it's been cached on disk.
-			//
-			// Q. Why do we cache on disk?
-			// A. It decreases the duration of individual test runs. Instead of  
-			//    recompiling the index each test run, we can just load them from disk.
-			//    It also decreases creation time for indexes that were 
-			//    previously created and deleted, affecting both production and test environments.
-			//
-			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-			var indexCacheDir = GetIndexCacheDir(configuration);
+        private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,
+                                                  out Type type)
+        {
+            // It's not in the in-memory cache. See if it's been cached on disk.
+            //
+            // Q. Why do we cache on disk?
+            // A. It decreases the duration of individual test runs. Instead of  
+            //    recompiling the index each test run, we can just load them from disk.
+            //    It also decreases creation time for indexes that were 
+            //    previously created and deleted, affecting both production and test environments.
+            //
+            // For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
+            var indexCacheDir = GetIndexCacheDir(configuration);
 
-			try
-			{
-				if (Directory.Exists(indexCacheDir) == false)
-					Directory.CreateDirectory(indexCacheDir);
-				type = TryGetIndexFromDisk(indexFilePath, name);
-			}
-			catch (UnauthorizedAccessException)
-			{
-				// permission issues
-				type = null;
-				return false;
-			}
-			catch (IOException)
-			{
-				// permission issues, probably
-				type = null;
-				return false;
-			}
+            try
+            {
+                if (Directory.Exists(indexCacheDir) == false)
+                    Directory.CreateDirectory(indexCacheDir);
+                type = TryGetIndexFromDisk(indexFilePath, name);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // permission issues
+                type = null;
+                return false;
+            }
+            catch (IOException)
+            {
+                // permission issues, probably
+                type = null;
+                return false;
+            }
 
-			if (type != null)
-			{
-				cacheEntries.TryAdd(source, new CacheEntry
-				{
-					Source = source,
-					Type = type,
-					Usages = 1
-				});
-				{
-					return true;
-				}
-			}
-			return false;
-		}
+            if (type != null)
+            {
+                cacheEntries.TryAdd(source, new CacheEntry
+                {
+                    Source = source,
+                    Type = type,
+                    Usages = 1
+                });
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
-		private static string GetIndexFilePath(string source, string indexCacheDir, out int numberHash)
-		{
-			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
-			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
-			numberHash = IndexingUtil.StableInvariantIgnoreCaseStringHash(source);
-			var indexFilePath = Path.Combine(indexCacheDir,
-				numberHash + "." + sourceHashed + "." +
-				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
-			return indexFilePath;
-		}
+        private static string GetIndexFilePath(string source, string indexCacheDir, out int numberHash)
+        {
+            var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
+            var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+            numberHash = IndexingUtil.StableInvariantIgnoreCaseStringHash(source);
+            var indexFilePath = Path.Combine(indexCacheDir,
+                numberHash + "." + sourceHashed + "." +
+                (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
+            return indexFilePath;
+        }
 
-		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
-		{
-			var indexCacheDir = configuration.CompiledIndexCacheDirectory;
-			if (string.IsNullOrWhiteSpace(indexCacheDir))
-				indexCacheDir = Path.Combine(configuration.TempPath, "Raven", "CompiledIndexCache");
+        private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
+        {
+            var indexCacheDir = configuration.CompiledIndexCacheDirectory;
+            if (string.IsNullOrWhiteSpace(indexCacheDir))
+                indexCacheDir = Path.Combine(configuration.TempPath, "Raven", "CompiledIndexCache");
 
-			if (configuration.RunInMemory == false)
-			{
-				// if we aren't running in memory, we might be running in a mode where we can't write to our base directory
-				// which is where we _want_ to write. In that case, our cache is going to be the db directory, instead, since 
-				// we know we can write there
-				try
-				{
-					if (Directory.Exists(indexCacheDir) == false)
-						Directory.CreateDirectory(indexCacheDir);
-					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
-					File.WriteAllText(touchFile, "test that we can write to this path");
-					File.Delete(touchFile);
-					return indexCacheDir;
-				}
-				catch (Exception)
-				{
-				}
+            if (configuration.RunInMemory == false)
+            {
+                // if we aren't running in memory, we might be running in a mode where we can't write to our base directory
+                // which is where we _want_ to write. In that case, our cache is going to be the db directory, instead, since 
+                // we know we can write there
+                try
+                {
+                    if (Directory.Exists(indexCacheDir) == false)
+                        Directory.CreateDirectory(indexCacheDir);
+                    var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
+                    File.WriteAllText(touchFile, "test that we can write to this path");
+                    File.Delete(touchFile);
+                    return indexCacheDir;
+                }
+                catch (Exception)
+                {
+                }
 
                 indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
                 if (Directory.Exists(indexCacheDir) == false)

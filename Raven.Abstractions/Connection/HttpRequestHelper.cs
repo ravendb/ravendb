@@ -6,19 +6,19 @@ using System.Text;
 
 namespace Raven.Abstractions.Connection
 {
-	public class HttpRequestHelper
-	{
-		public static void WriteDataToRequest(HttpWebRequest req, string data, bool disableCompression)
-		{
-			req.SendChunked = !EnvironmentUtils.RunningOnPosix;
-			// we want to make sure that we use a buffer properly here so we won't send the data
-			// in many different TCP packets
-			using (var requestStream = new BufferedStream(req.GetRequestStream()))
-			using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
-			using (var writer = disableCompression == false ?
-					new StreamWriter(dataStream, Encoding.UTF8) :
-					new StreamWriter(requestStream, Encoding.UTF8))
-			{
+    public class HttpRequestHelper
+    {
+        public static void WriteDataToRequest(HttpWebRequest req, string data, bool disableCompression)
+        {
+            req.SendChunked = !EnvironmentUtils.RunningOnPosix;
+            // we want to make sure that we use a buffer properly here so we won't send the data
+            // in many different TCP packets
+            using (var requestStream = new BufferedStream(req.GetRequestStream()))
+            using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
+            using (var writer = disableCompression == false ?
+                    new StreamWriter(dataStream, Encoding.UTF8) :
+                    new StreamWriter(requestStream, Encoding.UTF8))
+            {
 
                 writer.Write(data);
 

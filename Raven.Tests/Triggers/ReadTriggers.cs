@@ -21,49 +21,49 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class ReadTriggers : RavenTest
-	{
-		private readonly DocumentDatabase db;
+    public class ReadTriggers : RavenTest
+    {
+        private readonly DocumentDatabase db;
 
-		public ReadTriggers()
-		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				RunInMemory = true,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(VetoReadsOnCapitalNamesTrigger),
-					typeof(HiddenDocumentsTrigger),
-					typeof(HideVirtuallyDeletedDocument),
-					typeof(UpperCaseNamesTrigger)))
-			}, null);
-			db.Indexes.PutIndex("ByName",
-						new IndexDefinition
-						{
-							Map = "from doc in docs select new{ doc.name}"
-						});
-		}
+        public ReadTriggers()
+        {
+            db = new DocumentDatabase(new RavenConfiguration
+            {
+                RunInMemory = true,
+                Container = new CompositionContainer(new TypeCatalog(
+                    typeof(VetoReadsOnCapitalNamesTrigger),
+                    typeof(HiddenDocumentsTrigger),
+                    typeof(HideVirtuallyDeletedDocument),
+                    typeof(UpperCaseNamesTrigger)))
+            }, null);
+            db.Indexes.PutIndex("ByName",
+                        new IndexDefinition
+                        {
+                            Map = "from doc in docs select new{ doc.name}"
+                        });
+        }
 
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            db.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanFilterAccessToDocumentUsingTrigger_Get()
-		{
-			db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
+        [Fact]
+        public void CanFilterAccessToDocumentUsingTrigger_Get()
+        {
+            db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
-			var jsonDocument = db.Documents.Get("abc", null);
+            var jsonDocument = db.Documents.Get("abc", null);
 
-			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
-				jsonDocument.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
-		}
+            Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
+                jsonDocument.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
+        }
 
-		[Fact]
-		public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
-		{
-			db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
+        [Fact]
+        public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
+        {
+            db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
             var jsonDocument = db.Documents.GetDocumentsAsJson(0, 25, null, CancellationToken.None).First();
 

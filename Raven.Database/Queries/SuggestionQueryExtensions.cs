@@ -23,20 +23,20 @@ namespace Raven.Database.Queries
             if (indexDefinition == null)
                 throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
 
-		    if (indexDefinition.SuggestionsOptions.Contains(suggestionQuery.Field) == false)
-		    {
-		        throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
-		    }
+            if (indexDefinition.SuggestionsOptions.Contains(suggestionQuery.Field) == false)
+            {
+                throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
+            }
 
-			if (suggestionQuery.Accuracy.HasValue == false)
-				suggestionQuery.Accuracy = SuggestionQuery.DefaultAccuracy;
+            if (suggestionQuery.Accuracy.HasValue == false)
+                suggestionQuery.Accuracy = SuggestionQuery.DefaultAccuracy;
 
-			if (suggestionQuery.Distance.HasValue == false)
-				suggestionQuery.Distance = SuggestionQuery.DefaultDistance;
+            if (suggestionQuery.Distance.HasValue == false)
+                suggestionQuery.Distance = SuggestionQuery.DefaultDistance;
 
 
             return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
         }
 
-	}
+    }
 }

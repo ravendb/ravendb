@@ -1,4 +1,4 @@
-﻿class counterChange {
+class counterChange {
     value = ko.observable(0);
     counterName = ko.observable("");
     counterNameCustomValidityError: KnockoutComputed<string>;
@@ -59,17 +59,17 @@
     }
 
     private isNumber(num: any): boolean {
-	    if (num < 0)
-		    return true;
+        if (num < 0)
+            return true;
 
         var n1 = Math.abs(num);
         var n2 = parseInt(num, 10);
         return !isNaN(n1) && n2 === n1 && n1.toString() === num;
     }
 
-	getValue() {
-		return this.value().toLocaleString();
-	}
+    getValue() {
+        return this.value().toLocaleString();
+    }
 } 
 
 export = counterChange; 

@@ -36,21 +36,21 @@ namespace Raven.Database.Server.Connections
             Connected = true;
             Id = controller.GetQueryStringValue("id");
             
-			if (string.IsNullOrEmpty(Id))
-				throw new ArgumentException("Id is mandatory");
-		}
+            if (string.IsNullOrEmpty(Id))
+                throw new ArgumentException("Id is mandatory");
+        }
 
-		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-			using (var writer = new StreamWriter(stream))
-			{
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            using (var writer = new StreamWriter(stream))
+            {
                 await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
-				await writer.FlushAsync().ConfigureAwait(false);
-							
-				while (Connected)
-				{
-					try
-					{
+                await writer.FlushAsync().ConfigureAwait(false);
+                            
+                while (Connected)
+                {
+                    try
+                    {
                         LogEventInfo message;
                         while (msgs.TryTake(out message, millisecondsTimeout: 5000))
                         {
@@ -62,50 +62,50 @@ namespace Raven.Database.Server.Connections
 
                         await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
                         await writer.FlushAsync().ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						Connected = false;
-						if (log.IsDebugEnabled)
-							log.DebugException("Error when using events transport", e);
-						Disconnected();
-						try
-						{
-							writer.WriteLine(e.ToString());
-						}
-						catch (Exception)
-						{
-							// try to send the information to the client, okay if they don't get it
-							// because they might have already disconnected
-						}
-					}
-				}
-			}
-		}
+                    }
+                    catch (Exception e)
+                    {
+                        Connected = false;
+                        if (log.IsDebugEnabled)
+                            log.DebugException("Error when using events transport", e);
+                        Disconnected();
+                        try
+                        {
+                            writer.WriteLine(e.ToString());
+                        }
+                        catch (Exception)
+                        {
+                            // try to send the information to the client, okay if they don't get it
+                            // because they might have already disconnected
+                        }
+                    }
+                }
+            }
+        }
 
-		private async Task SendMessage(LogEventInfo message, StreamWriter writer)
-		{
+        private async Task SendMessage(LogEventInfo message, StreamWriter writer)
+        {
             var o = JsonExtensions.ToJObject(new LogEventInfoFormatted(message));        
             await writer.WriteAsync("data: ").ConfigureAwait(false);
             await writer.WriteAsync(o.ToString(Formatting.None)).ConfigureAwait(false);
             await writer.WriteAsync("\r\n\r\n").ConfigureAwait(false);
-		}
+        }
 
-		protected override bool TryComputeLength(out long length)
-		{
-			length = 0;
-			return false;
-		}
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
 
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			Connected = false;
-		}
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            Connected = false;
+        }
 
-		public void SendAsync(object msg)
-		{
-		    var message = msg as LogEventInfo;
+        public void SendAsync(object msg)
+        {
+            var message = msg as LogEventInfo;
             if (msgs.TryAdd(message) == false)
             {
                 if (hitCapacity == false)

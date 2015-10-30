@@ -362,23 +362,23 @@ namespace Raven.Database.FileSystem.Search
             StartupLog.Warn("Fixed index of file system '{0}' in {1}", name, sp.Elapsed);
         }
 
-		public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
-		{
-			IndexSearcher searcher;
-			using (GetSearcher(out searcher))
-			{
-				Query fileQuery;
-				if (string.IsNullOrEmpty(query))
-				{
-					if (Log.IsDebugEnabled)
-						Log.Debug("Issuing query on index for all files");
-					fileQuery = new MatchAllDocsQuery();
-				}
-				else
-				{
-					if (Log.IsDebugEnabled)
-						Log.Debug("Issuing query on index for: {0}", query);
-					var queryParser = new SimpleFilesQueryParser(analyzer);
+        public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
+        {
+            IndexSearcher searcher;
+            using (GetSearcher(out searcher))
+            {
+                Query fileQuery;
+                if (string.IsNullOrEmpty(query))
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for all files");
+                    fileQuery = new MatchAllDocsQuery();
+                }
+                else
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for: {0}", query);
+                    var queryParser = new SimpleFilesQueryParser(analyzer);
                     fileQuery = queryParser.Parse(query);
                 }
 

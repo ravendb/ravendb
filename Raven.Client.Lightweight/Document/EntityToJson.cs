@@ -74,8 +74,8 @@ namespace Raven.Client.Document
                 var ravenJTokenWriter = (RavenJTokenWriter)writer;
                 ravenJTokenWriter.AssociateCurrentOBjectWith(o);
 
-	            Dictionary<string, JToken> value;
-	            if (MissingDictionary.TryGetValue(o, out value) == false)
+                Dictionary<string, JToken> value;
+                if (MissingDictionary.TryGetValue(o, out value) == false)
                     return;
 
                 foreach (var item in value)

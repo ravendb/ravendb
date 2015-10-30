@@ -34,24 +34,24 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
                         webSiteModel.PhysicalPath = webSiteEntry.PhysicalPath();
                         webSiteModel.DefaultAppPool = (string)webSiteEntry.Properties["AppPoolId"].Value;
 
-						try
-						{
-							int port;
-							if (int.TryParse(((string) webSiteEntry.Properties["ServerBindings"][0]).Split(':')[1], out port)) // format - IP:Port:Hostname
-							{
-								webSiteModel.Port = port.ToString(CultureInfo.InvariantCulture);
-							}
-						}
-						catch (Exception)
-						{
-							
-						}
+                        try
+                        {
+                            int port;
+                            if (int.TryParse(((string) webSiteEntry.Properties["ServerBindings"][0]).Split(':')[1], out port)) // format - IP:Port:Hostname
+                            {
+                                webSiteModel.Port = port.ToString(CultureInfo.InvariantCulture);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            
+                        }
 
-						yield return webSiteModel;
-					}
-				}
-			}
-		}
+                        yield return webSiteModel;
+                    }
+                }
+            }
+        }
 
         public IList<string> GetAppPools()
         {

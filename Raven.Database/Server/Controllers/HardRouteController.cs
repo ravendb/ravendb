@@ -10,14 +10,14 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
-	public class HardRouteController : BaseDatabaseApiController
-	{
-		[HttpGet][RavenRoute("favicon.ico")]
-		public HttpResponseMessage FaviconGet()
-		{
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, "favicon.ico");
-		}
+    [RoutePrefix("")]
+    public class HardRouteController : BaseDatabaseApiController
+    {
+        [HttpGet][RavenRoute("favicon.ico")]
+        public HttpResponseMessage FaviconGet()
+        {
+            return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, "favicon.ico");
+        }
 
         [HttpGet][RavenRoute("clientaccesspolicy.xml")]
         public HttpResponseMessage ClientaccessPolicyGet()

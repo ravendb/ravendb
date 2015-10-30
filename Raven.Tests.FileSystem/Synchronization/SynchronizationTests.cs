@@ -63,73 +63,20 @@ namespace Raven.Tests.FileSystem.Synchronization
             {
                 var metadata = await destinationClient.GetMetadataForAsync("test.txt");
                 
-				Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
-				resultMd5 = resultFileContent.GetMD5Hash();
-			}
-
-			sourceContent.Position = 0;
-			var sourceMd5 = sourceContent.GetMD5Hash();
-
-			Assert.True(resultMd5 == sourceMd5);
-		}
-
-        protected override void ModifyStore(FilesStore store)
-        {
-            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-            base.ModifyStore(store);
-        }
-
-        [Theory]
-		[InlineData(1)]
-		[InlineData(5000)]
-		public async Task Synchronize_file_with_appended_data(int size)
-		{
-			var differenceChunk = new MemoryStream();
-			var sw = new StreamWriter(differenceChunk);
-
-			sw.Write("Coconut is Stupid");
-			sw.Flush();
-
-			var sourceContent = new CombinedStream(SyncTestUtils.PrepareSourceStream(size), differenceChunk) {Position = 0};
-			var destinationContent = SyncTestUtils.PrepareSourceStream(size);
-			destinationContent.Position = 0;
-			var sourceClient = NewAsyncClient(0,fiddler:true);
-			var destinationClient = NewAsyncClient(1, fiddler: true);
-
-			await destinationClient.UploadAsync("test.txt", destinationContent);
-			sourceContent.Position = 0;
-			await sourceClient.UploadAsync("test.txt", sourceContent);
-
-			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
-
-			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
-
-			string resultMd5;
-			using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
-			{
-				resultMd5 = resultFileContent.GetMD5Hash();
-			}
-
-			sourceContent.Position = 0;
-			var sourceMd5 = sourceContent.GetMD5Hash();
-
-			Assert.True(resultMd5 == sourceMd5);
-		}
-
-		[Theory]
-		[InlineData(5000)]
-		public async Task Should_have_the_same_content(int size)
-		{
-			var sourceContent = SyncTestUtils.PrepareSourceStream(size);
-			sourceContent.Position = 0;
-			var destinationContent = new RandomlyModifiedStream(sourceContent, 0.01);
-			var destinationClient = NewAsyncClient(0);
-			var sourceClient = NewAsyncClient(1);
+                Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
+                resultMd5 = resultFileContent.GetMD5Hash();
+            }
 
             sourceContent.Position = 0;
             var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.True(resultMd5 == sourceMd5);
+        }
+
+        protected override void ModifyStore(FilesStore store)
+        {
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+            base.ModifyStore(store);
         }
 
         [Theory]
@@ -146,8 +93,8 @@ namespace Raven.Tests.FileSystem.Synchronization
             var sourceContent = new CombinedStream(SyncTestUtils.PrepareSourceStream(size), differenceChunk) {Position = 0};
             var destinationContent = SyncTestUtils.PrepareSourceStream(size);
             destinationContent.Position = 0;
-            var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1);
+            var sourceClient = NewAsyncClient(0,fiddler:true);
+            var destinationClient = NewAsyncClient(1, fiddler: true);
 
             await destinationClient.UploadAsync("test.txt", destinationContent);
             sourceContent.Position = 0;
@@ -844,51 +791,51 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var result = await destination.Synchronization.GetSynchronizationStatusForAsync("test.bin");
 
-			Assert.Equal(expected.BytesCopied, result.BytesCopied);
-			Assert.Equal(expected.BytesTransfered, result.BytesTransfered);
-			Assert.Equal(expected.Exception, result.Exception);
-			Assert.Equal(expected.FileETag, result.FileETag);
-			Assert.Equal(expected.FileName, result.FileName);
-			Assert.Equal(expected.NeedListLength, result.NeedListLength);
-			Assert.Equal(expected.Type, result.Type);
+            Assert.Equal(expected.BytesCopied, result.BytesCopied);
+            Assert.Equal(expected.BytesTransfered, result.BytesTransfered);
+            Assert.Equal(expected.Exception, result.Exception);
+            Assert.Equal(expected.FileETag, result.FileETag);
+            Assert.Equal(expected.FileName, result.FileName);
+            Assert.Equal(expected.NeedListLength, result.NeedListLength);
+            Assert.Equal(expected.Type, result.Type);
 }
-		[Fact]
-	    public async Task Should_synchronize_copied_file()
-		{
-			var source = NewAsyncClient(0);
-			var destination = NewAsyncClient(1);
-			await source.UploadAsync("test.bin", new RandomStream(1024));
-			await source.CopyAsync("test.bin", "test-copy.bin");
-			await source.Synchronization.SetDestinationsAsync(destination.ToSynchronizationDestination());
+        [Fact]
+        public async Task Should_synchronize_copied_file()
+        {
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1);
+            await source.UploadAsync("test.bin", new RandomStream(1024));
+            await source.CopyAsync("test.bin", "test-copy.bin");
+            await source.Synchronization.SetDestinationsAsync(destination.ToSynchronizationDestination());
 
-			var syncResult = await source.Synchronization.StartAsync();
-			Assert.Equal(1, syncResult.Length);
-			Assert.True(syncResult[0].Reports.All(r => r.Exception == null));
+            var syncResult = await source.Synchronization.StartAsync();
+            Assert.Equal(1, syncResult.Length);
+            Assert.True(syncResult[0].Reports.All(r => r.Exception == null));
 
-			var destinationStream  = await destination.DownloadAsync("test-copy.bin");
-			var sourceStream = await destination.DownloadAsync("test-copy.bin");
-			Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
-	}
+            var destinationStream  = await destination.DownloadAsync("test-copy.bin");
+            var sourceStream = await destination.DownloadAsync("test-copy.bin");
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+    }
 
-	    [Fact]
-	    public async Task Should_resolve_copied_files()
-	    {
-		    var source = NewAsyncClient(0);
-		    var destination = NewAsyncClient(1);
-		    await source.UploadAsync("test.bin", new RandomStream(1024));
-		    await source.CopyAsync("test.bin", "test-copy.bin");
+        [Fact]
+        public async Task Should_resolve_copied_files()
+        {
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1);
+            await source.UploadAsync("test.bin", new RandomStream(1024));
+            await source.CopyAsync("test.bin", "test-copy.bin");
 
-		    await destination.UploadAsync("test.bin", new RandomStream(1024));
-		    await destination.CopyAsync("test.bin", "test-copy.bin");
+            await destination.UploadAsync("test.bin", new RandomStream(1024));
+            await destination.CopyAsync("test.bin", "test-copy.bin");
 
-		    var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
+            var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
 
-		    Assert.Null(result.Exception);
+            Assert.Null(result.Exception);
 
-		    var destinationStream = await destination.DownloadAsync("test-copy.bin");
-		    var sourceStream = await destination.DownloadAsync("test-copy.bin");
-		    Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+            var destinationStream = await destination.DownloadAsync("test-copy.bin");
+            var sourceStream = await destination.DownloadAsync("test-copy.bin");
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
 
-	    }
-	}
+        }
+    }
 }

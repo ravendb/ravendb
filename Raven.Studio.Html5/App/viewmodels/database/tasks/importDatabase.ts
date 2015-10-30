@@ -1,4 +1,4 @@
-﻿import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
@@ -11,7 +11,7 @@ class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(true);
     stripReplicationInformation = ko.observable(false);
-	shouldDisableVersioningBundle = ko.observable(false);
+    shouldDisableVersioningBundle = ko.observable(false);
     transformScript = ko.observable<string>();
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);

@@ -15,54 +15,54 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class QueriesController : ClusterAwareRavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("queries")]
-		[RavenRoute("databases/{databaseName}/queries")]
-		public Task<HttpResponseMessage> QueriesGet()
-		{
-			return GetQueriesResponse(true);
-		}
+    public class QueriesController : ClusterAwareRavenDbApiController
+    {
+        [HttpGet]
+        [RavenRoute("queries")]
+        [RavenRoute("databases/{databaseName}/queries")]
+        public Task<HttpResponseMessage> QueriesGet()
+        {
+            return GetQueriesResponse(true);
+        }
 
-		[HttpPost]
-		[RavenRoute("queries")]
-		[RavenRoute("databases/{databaseName}/queries")]
-		public Task<HttpResponseMessage> QueriesPost()
-		{
-			return GetQueriesResponse(false);
-		}
+        [HttpPost]
+        [RavenRoute("queries")]
+        [RavenRoute("databases/{databaseName}/queries")]
+        public Task<HttpResponseMessage> QueriesPost()
+        {
+            return GetQueriesResponse(false);
+        }
 
-		private async Task<HttpResponseMessage> GetQueriesResponse(bool isGet)
-		{
-			RavenJArray itemsToLoad;
-		    if (isGet == false)
-		    {
-			    try
-			    {
-				    itemsToLoad = await ReadJsonArrayAsync().ConfigureAwait(false);
-			    }
-				catch (InvalidOperationException e)
-				{
-					if (Log.IsDebugEnabled)
-						Log.DebugException("Failed to deserialize query request." , e);
-					return GetMessageWithObject(new
-					{
-						Message = "Could not understand json, please check its validity."
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+        private async Task<HttpResponseMessage> GetQueriesResponse(bool isGet)
+        {
+            RavenJArray itemsToLoad;
+            if (isGet == false)
+            {
+                try
+                {
+                    itemsToLoad = await ReadJsonArrayAsync().ConfigureAwait(false);
+                }
+                catch (InvalidOperationException e)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize query request." , e);
+                    return GetMessageWithObject(new
+                    {
+                        Message = "Could not understand json, please check its validity."
+                    }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
 
-				}
-				catch (InvalidDataException e)
-				{
-					if (Log.IsDebugEnabled)
-						Log.DebugException("Failed to deserialize query request." , e);
-					return GetMessageWithObject(new
-					{
-						e.Message
-					}, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-				}
+                }
+                catch (InvalidDataException e)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize query request." , e);
+                    return GetMessageWithObject(new
+                    {
+                        e.Message
+                    }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+                }
 
-			    AddRequestTraceInfo(sb =>
+                AddRequestTraceInfo(sb =>
                 {
                     foreach (var item in itemsToLoad)
                     {
@@ -103,8 +103,8 @@ namespace Raven.Database.Server.Controllers
                     var documentByKey = string.IsNullOrEmpty(transformer)
                                         ? Database.Documents.Get(value, transactionInformation)
                                         : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
-				    if (documentByKey == null)
-				    {
+                    if (documentByKey == null)
+                    {
                         if(ClientIsV3OrHigher(Request))
                             result.Results.Add(null); 
                         continue;

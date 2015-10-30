@@ -46,9 +46,9 @@ namespace Raven.Database.Queries
             if (suggestionQuery.Distance.HasValue == false)
                 suggestionQuery.Distance = StringDistanceTypes.Default;
 
-		    var definition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field);
-			var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
+            var definition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+            var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field);
+            var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
             IndexSearcher currentSearcher;
             using (database.IndexStorage.GetCurrentIndexSearcher(definition.IndexId, out currentSearcher))
@@ -65,12 +65,12 @@ namespace Raven.Database.Queries
                 if(indexInstance == null)
                     throw new IndexDoesNotExistsException("Could not find index " + indexName);
 
-				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
-					indexInstance,
-					database.WorkContext,
-					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
-					indexReader.Directory() is RAMDirectory,
-					suggestionQuery.Field);
+                var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+                    indexInstance,
+                    database.WorkContext,
+                    Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
+                    indexReader.Directory() is RAMDirectory,
+                    suggestionQuery.Field);
 
                 database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 

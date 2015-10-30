@@ -1,26 +1,26 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Database.Bundles.Replication.Data;
 
 namespace Raven.Database.Counters.Replication
 {
-	public class CountersReplicationTopologyRootNode : CountersReplicationTopologyNodeBase
-	{
-		public Guid ServerId { get; set; }
+    public class CountersReplicationTopologyRootNode : CountersReplicationTopologyNodeBase
+    {
+        public Guid ServerId { get; set; }
 
-		public CountersReplicationTopologyRootNode(string serverUrl, Guid serverId)
-		{
-			ServerUrl = serverUrl;
-			ServerId = serverId;
-		}
+        public CountersReplicationTopologyRootNode(string serverUrl, Guid serverId)
+        {
+            ServerUrl = serverUrl;
+            ServerId = serverId;
+        }
 
         private static void HandleLink(CountersReplicationTopology topology, CountersReplicationTopologyNodeBase source, CountersReplicationTopologyNodeBase target)
         {
             topology.Servers.Add(source.ServerUrl);
             topology.Servers.Add(target.ServerUrl);
 
-			CountersReplicationTopologyConnection connection = null;
+            CountersReplicationTopologyConnection connection = null;
 
             if (target is CountersReplicationTopologyDestinationNode)
             {
@@ -48,10 +48,10 @@ namespace Raven.Database.Counters.Replication
             topology.Connections.Add(connection);
         }
 
-		public CountersReplicationTopology Flatten()
-		{
-		    var topology = new CountersReplicationTopology();
-		    topology.Servers.Add(ServerUrl);
+        public CountersReplicationTopology Flatten()
+        {
+            var topology = new CountersReplicationTopology();
+            topology.Servers.Add(ServerUrl);
 
             var queue = new Queue<CountersReplicationTopologyNodeBase>();
             queue.Enqueue(this);
@@ -73,94 +73,94 @@ namespace Raven.Database.Counters.Replication
                 }
             }
 
-		    return topology;
-		}
-	}
+            return topology;
+        }
+    }
 
-	public class CountersReplicationTopologyDestinationNode : CountersReplicationTopologyNode
-	{
-		public Guid SendServerId { get; set; }
+    public class CountersReplicationTopologyDestinationNode : CountersReplicationTopologyNode
+    {
+        public Guid SendServerId { get; set; }
 
-		public static CountersReplicationTopologyDestinationNode Online(string serverUrl, Guid serverId)
-		{
-			return new CountersReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				State = ReplicatonNodeState.Online,
-				SendServerId = serverId
-			};
-		}
+        public static CountersReplicationTopologyDestinationNode Online(string serverUrl, Guid serverId)
+        {
+            return new CountersReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                State = ReplicatonNodeState.Online,
+                SendServerId = serverId
+            };
+        }
 
-		public static CountersReplicationTopologyDestinationNode Offline(string serverUrl, Guid serverId)
-		{
-			return new CountersReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				State = ReplicatonNodeState.Offline,
-				SendServerId = serverId
-			};
-		}
+        public static CountersReplicationTopologyDestinationNode Offline(string serverUrl, Guid serverId)
+        {
+            return new CountersReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                State = ReplicatonNodeState.Offline,
+                SendServerId = serverId
+            };
+        }
 
-		public static CountersReplicationTopologyDestinationNode Disabled(string serverUrl, Guid serverId)
-		{
-			return new CountersReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				State = ReplicatonNodeState.Disabled,
-				SendServerId = serverId
-			};
-		}
-	}
+        public static CountersReplicationTopologyDestinationNode Disabled(string serverUrl, Guid serverId)
+        {
+            return new CountersReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                State = ReplicatonNodeState.Disabled,
+                SendServerId = serverId
+            };
+        }
+    }
 
-	public class CountersReplicationTopologySourceNode : CountersReplicationTopologyNode
-	{
-		public Guid StoredServerId { get; set; }
+    public class CountersReplicationTopologySourceNode : CountersReplicationTopologyNode
+    {
+        public Guid StoredServerId { get; set; }
 
-		public long LastEtag { get; set; }
+        public long LastEtag { get; set; }
 
-		public static CountersReplicationTopologySourceNode Online(string serverUrl, Guid serverId, long lastEtag)
-		{
-			return new CountersReplicationTopologySourceNode
-			{
-					   ServerUrl = serverUrl,
-					   State = ReplicatonNodeState.Online,
-					   LastEtag = lastEtag,
-					   StoredServerId = serverId
-				   };
-		}
+        public static CountersReplicationTopologySourceNode Online(string serverUrl, Guid serverId, long lastEtag)
+        {
+            return new CountersReplicationTopologySourceNode
+            {
+                       ServerUrl = serverUrl,
+                       State = ReplicatonNodeState.Online,
+                       LastEtag = lastEtag,
+                       StoredServerId = serverId
+                   };
+        }
 
-		public static CountersReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, long lastEtag)
-		{
-			return new CountersReplicationTopologySourceNode
-			{
-				ServerUrl = serverUrl,
-				State = ReplicatonNodeState.Offline,
-				LastEtag = lastEtag,
-				StoredServerId = serverId
-			};
-		}
-	}
+        public static CountersReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, long lastEtag)
+        {
+            return new CountersReplicationTopologySourceNode
+            {
+                ServerUrl = serverUrl,
+                State = ReplicatonNodeState.Offline,
+                LastEtag = lastEtag,
+                StoredServerId = serverId
+            };
+        }
+    }
 
-	public abstract class CountersReplicationTopologyNode : CountersReplicationTopologyNodeBase
-	{
-		public ReplicatonNodeState State { get; protected set; }
-	}
+    public abstract class CountersReplicationTopologyNode : CountersReplicationTopologyNodeBase
+    {
+        public ReplicatonNodeState State { get; protected set; }
+    }
 
-	public abstract class CountersReplicationTopologyNodeBase
-	{
-		protected CountersReplicationTopologyNodeBase()
-		{
-			Sources = new List<CountersReplicationTopologySourceNode>();
-			Destinations = new List<CountersReplicationTopologyDestinationNode>();
-			Errors = new List<string>();
-		}
+    public abstract class CountersReplicationTopologyNodeBase
+    {
+        protected CountersReplicationTopologyNodeBase()
+        {
+            Sources = new List<CountersReplicationTopologySourceNode>();
+            Destinations = new List<CountersReplicationTopologyDestinationNode>();
+            Errors = new List<string>();
+        }
 
-		public string ServerUrl { get; protected set; }
+        public string ServerUrl { get; protected set; }
 
-		public List<CountersReplicationTopologySourceNode> Sources { get; set; }
+        public List<CountersReplicationTopologySourceNode> Sources { get; set; }
 
-		public List<CountersReplicationTopologyDestinationNode> Destinations { get; set; }
+        public List<CountersReplicationTopologyDestinationNode> Destinations { get; set; }
 
-		public List<string> Errors { get; set; }
-	}
+        public List<string> Errors { get; set; }
+    }
 }

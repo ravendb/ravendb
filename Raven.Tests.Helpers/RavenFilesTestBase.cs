@@ -53,7 +53,7 @@ namespace Raven.Tests.Helpers
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-		protected static readonly int[] Ports = { 8079, 8078, 8077, 8076, 8075 };
+        protected static readonly int[] Ports = { 8079, 8078, 8077, 8076, 8075 };
 
         protected TimeSpan SynchronizationInterval { get; set; }
         
@@ -120,7 +120,7 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true,                
+                UseEmbeddedHttpServer = true,                
             };
 
             ravenDbServer.Initialize();
@@ -159,7 +159,7 @@ namespace Raven.Tests.Helpers
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
                 ApiKey = apiKey,                 
-				ConnectionStringName = connectionStringName
+                ConnectionStringName = connectionStringName
             };
 
             ModifyStore(store);
@@ -185,8 +185,8 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-	        var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
-				dataDirectory: dataDirectory, runInMemory: runInMemory);
+            var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
+                dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore
@@ -456,27 +456,27 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
-	    protected void WaitForFile(IAsyncFilesCommands filesCommands, string fileName)
-	    {
-			var done = SpinWait.SpinUntil(() =>
-			{
-				var file = filesCommands.GetMetadataForAsync(fileName).Result;
-				return file != null;
-			}, TimeSpan.FromSeconds(15));
+        protected void WaitForFile(IAsyncFilesCommands filesCommands, string fileName)
+        {
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var file = filesCommands.GetMetadataForAsync(fileName).Result;
+                return file != null;
+            }, TimeSpan.FromSeconds(15));
 
-			if (!done) throw new Exception("WaitForDocument failed");
-		}
+            if (!done) throw new Exception("WaitForDocument failed");
+        }
 
-		protected async Task WaitForRestoreAsync(string url, long operationId)
-		{
-			using (var sysDbStore = new DocumentStore
-			{
-				Url = url
-			}.Initialize())
-			{
-				await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
-			}
-		}
+        protected async Task WaitForRestoreAsync(string url, long operationId)
+        {
+            using (var sysDbStore = new DocumentStore
+            {
+                Url = url
+            }.Initialize())
+            {
+                await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
+            }
+        }
 
         protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
@@ -503,21 +503,21 @@ namespace Raven.Tests.Helpers
             Assert.True(done);
         }
 
-		public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
-		{
-			try
-			{
-				await testCode();
-				Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
-			}
-			catch (T exception)
-			{
-				return exception;
-			}
-			return null;
-		}
+        public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
+        {
+            try
+            {
+                await testCode();
+                Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
+            }
+            catch (T exception)
+            {
+                return exception;
+            }
+            return null;
+        }
 
-		protected virtual void ModifyStore(FilesStore store)
-		{
+        protected virtual void ModifyStore(FilesStore store)
+        {
     }
 }}

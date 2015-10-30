@@ -19,7 +19,7 @@ namespace Raven.Tests.Web.Models.Indexes
 
             Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
 
-			IndexSuggestions.Add(x => x.Name);
+            IndexSuggestions.Add(x => x.Name);
 
             Stores.Add(x => x.Name, FieldStorage.Yes);
         }

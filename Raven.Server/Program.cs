@@ -494,236 +494,236 @@ namespace Raven.Server
             });
         }
 
-		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
-		{
-			using (var store = new DocumentStore
-							   {
-								   Url = uri.AbsoluteUri
-							   }.Initialize())
-			{
-				var operation = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
-																{
-																	BackupLocation = backupLocation,
-																	DatabaseLocation = restoreLocation,
-																	DatabaseName = restoreDatabaseName,
-																	Defrag = defrag,
-																	RestoreStartTimeout = timeout,
-																	DisableReplicationDestinations = disableReplicationDestionations
-																});
-				Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+        private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
+        {
+            using (var store = new DocumentStore
+                               {
+                                   Url = uri.AbsoluteUri
+                               }.Initialize())
+            {
+                var operation = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
+                                                                {
+                                                                    BackupLocation = backupLocation,
+                                                                    DatabaseLocation = restoreLocation,
+                                                                    DatabaseName = restoreDatabaseName,
+                                                                    Defrag = defrag,
+                                                                    RestoreStartTimeout = timeout,
+                                                                    DisableReplicationDestinations = disableReplicationDestionations
+                                                                });
+                Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 
-				if (waitForRestore)
-				{
-					operation.WaitForCompletion();
-					Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
-				}
+                if (waitForRestore)
+                {
+                    operation.WaitForCompletion();
+                    Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+                }
 
-			}
-		}
+            }
+        }
 
-		private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
-		{
-			long operationId;
-			using (var filesStore = new FilesStore
-									{
-										Url = uri.AbsoluteUri
-									}.Initialize())
-			{
-				operationId = AsyncHelpers.RunSync(() => filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
-																			   {
-																				   BackupLocation = backupLocation,
-																				   FilesystemLocation = restoreLocation,
-																				   FilesystemName = restoreFilesystemName,
-																				   Defrag = defrag,
-																				   RestoreStartTimeout = timeout
-																			   }));
-				Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
-			}
+        private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
+        {
+            long operationId;
+            using (var filesStore = new FilesStore
+                                    {
+                                        Url = uri.AbsoluteUri
+                                    }.Initialize())
+            {
+                operationId = AsyncHelpers.RunSync(() => filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+                                                                               {
+                                                                                   BackupLocation = backupLocation,
+                                                                                   FilesystemLocation = restoreLocation,
+                                                                                   FilesystemName = restoreFilesystemName,
+                                                                                   Defrag = defrag,
+                                                                                   RestoreStartTimeout = timeout
+                                                                               }));
+                Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+            }
 
-			if (waitForRestore)
-			{
-				using (var sysDbStore = new DocumentStore
-										{
-											Url = uri.AbsoluteUri
-										}.Initialize())
-				{
-					new Operation((AsyncServerClient)sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletion();
-					Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
-				}
-			}
-		}
+            if (waitForRestore)
+            {
+                using (var sysDbStore = new DocumentStore
+                                        {
+                                            Url = uri.AbsoluteUri
+                                        }.Initialize())
+                {
+                    new Operation((AsyncServerClient)sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletion();
+                    Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+                }
+            }
+        }
 
-		private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
-		{
-			e.SetObserved();
-		}
+        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+        {
+            e.SetObserved();
+        }
 
-		public static void IoTest(GenericPerformanceTestRequest request)
-		{
-			DiskPerformanceResult result;
+        public static void IoTest(GenericPerformanceTestRequest request)
+        {
+            DiskPerformanceResult result;
 
-			using (var tester = AbstractDiskPerformanceTester.ForRequest(request, Console.WriteLine))
-			{
-				tester.DescribeTestParameters();
-				tester.TestDiskIO();
-				result = tester.Result;
-			}
+            using (var tester = AbstractDiskPerformanceTester.ForRequest(request, Console.WriteLine))
+            {
+                tester.DescribeTestParameters();
+                tester.TestDiskIO();
+                result = tester.Result;
+            }
 
-			var hasReads = request.OperationType == OperationType.Read || request.OperationType == OperationType.Mix;
-			var hasWrites = request.OperationType == OperationType.Write || request.OperationType == OperationType.Mix;
+            var hasReads = request.OperationType == OperationType.Read || request.OperationType == OperationType.Mix;
+            var hasWrites = request.OperationType == OperationType.Write || request.OperationType == OperationType.Mix;
 
-			if (hasReads)
-			{
-				var sb = new StringBuilder();
-				sb.AppendLine(string.Format("Total read: {0}", SizeHelper.Humane(result.TotalRead)));
-				sb.AppendLine(string.Format("Average read: {0}/s", SizeHelper.Humane(result.TotalRead / request.TimeToRunInSeconds)));
-				sb.AppendLine("Read latency");
-				sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.ReadLatency.Min));
-				sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.ReadLatency.Mean));
-				sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.ReadLatency.Max));
-				sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.ReadLatency.Stdev));
+            if (hasReads)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format("Total read: {0}", SizeHelper.Humane(result.TotalRead)));
+                sb.AppendLine(string.Format("Average read: {0}/s", SizeHelper.Humane(result.TotalRead / request.TimeToRunInSeconds)));
+                sb.AppendLine("Read latency");
+                sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.ReadLatency.Min));
+                sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.ReadLatency.Mean));
+                sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.ReadLatency.Max));
+                sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.ReadLatency.Stdev));
 
-				sb.AppendLine("Read latency percentiles");
-				foreach (var percentile in result.ReadLatency.Percentiles)
-				{
-					sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
-				}
+                sb.AppendLine("Read latency percentiles");
+                foreach (var percentile in result.ReadLatency.Percentiles)
+                {
+                    sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
+                }
 
-				sb.AppendLine();
-				Console.WriteLine(sb.ToString());
-			}
-			if (hasWrites)
-			{
-				var sb = new StringBuilder();
-				sb.AppendLine(string.Format("Total write: {0}", SizeHelper.Humane(result.TotalWrite)));
-				sb.AppendLine(string.Format("Average write: {0}/s", SizeHelper.Humane(result.TotalWrite / request.TimeToRunInSeconds)));
-				sb.AppendLine("Write latency");
-				sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.WriteLatency.Min));
-				sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.WriteLatency.Mean));
-				sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.WriteLatency.Max));
-				sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.WriteLatency.Stdev));
+                sb.AppendLine();
+                Console.WriteLine(sb.ToString());
+            }
+            if (hasWrites)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format("Total write: {0}", SizeHelper.Humane(result.TotalWrite)));
+                sb.AppendLine(string.Format("Average write: {0}/s", SizeHelper.Humane(result.TotalWrite / request.TimeToRunInSeconds)));
+                sb.AppendLine("Write latency");
+                sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.WriteLatency.Min));
+                sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.WriteLatency.Mean));
+                sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.WriteLatency.Max));
+                sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.WriteLatency.Stdev));
 
-				sb.AppendLine("Write latency percentiles");
-				foreach (var percentile in result.WriteLatency.Percentiles)
-				{
-					sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
-				}
+                sb.AppendLine("Write latency percentiles");
+                foreach (var percentile in result.WriteLatency.Percentiles)
+                {
+                    sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
+                }
 
-				sb.AppendLine();
-				Console.WriteLine(sb.ToString());
-			}
+                sb.AppendLine();
+                Console.WriteLine(sb.ToString());
+            }
 
-		}
+        }
 
-		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
-		{
-			using (var db = new DocumentDatabase(ravenConfiguration, null))
-			{
-				db.TransactionalStorage.DumpAllStorageTables();
-			}
-		}
+        public static void DumpToCsv(RavenConfiguration ravenConfiguration)
+        {
+            using (var db = new DocumentDatabase(ravenConfiguration, null))
+            {
+                db.TransactionalStorage.DumpAllStorageTables();
+            }
+        }
 
-		private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
-		{
-			if (string.IsNullOrEmpty(sslCertificateFile))
-				throw new InvalidOperationException("X509 certificate path cannot be empty.");
+        private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(sslCertificateFile))
+                throw new InvalidOperationException("X509 certificate path cannot be empty.");
 
-			var certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+            var certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port, true);
-			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
-			NonAdminHttp.BindCertificate(configuration.Port, certificate);
-		}
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port, true);
+            NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+            NonAdminHttp.BindCertificate(configuration.Port, certificate);
+        }
 
-		private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
-		{
-			X509Certificate2 certificate = null;
+        private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+        {
+            X509Certificate2 certificate = null;
 
-			if (!string.IsNullOrEmpty(sslCertificateFile))
-			{
-				certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
-			}
+            if (!string.IsNullOrEmpty(sslCertificateFile))
+            {
+                certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+            }
 
-			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
-		}
+            NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+        }
 
-		private static void UpdateVersion(string dbToUpdate)
-		{
-			var ravenConfiguration = new RavenConfiguration();
-			ConfigureDebugLogging();
+        private static void UpdateVersion(string dbToUpdate)
+        {
+            var ravenConfiguration = new RavenConfiguration();
+            ConfigureDebugLogging();
 
-			RunServerInDebugMode(ravenConfiguration, false, server =>
-			{
-				server.Server.GetDatabaseInternal(dbToUpdate).Wait();
-				return true;
-			}, false);
-		}
+            RunServerInDebugMode(ravenConfiguration, false, server =>
+            {
+                server.Server.GetDatabaseInternal(dbToUpdate).Wait();
+                return true;
+            }, false);
+        }
 
-		private static void SetLimitBlankPasswordUseRegValue(int value)
-		{
-			// value == 0 - disable a limit
-			// value == 1 - enable a limit
+        private static void SetLimitBlankPasswordUseRegValue(int value)
+        {
+            // value == 0 - disable a limit
+            // value == 1 - enable a limit
 
-			if (value != 0 && value != 1)
-				throw new ArgumentException("Allowed arguments for 'LimitBlankPasswordUse' registry value are only 0 or 1", "value");
+            if (value != 0 && value != 1)
+                throw new ArgumentException("Allowed arguments for 'LimitBlankPasswordUse' registry value are only 0 or 1", "value");
 
-			const string registryKey = @"SYSTEM\CurrentControlSet\Control\Lsa";
-			const string policyName = "Limit local account use of blank passwords to console logon only";
+            const string registryKey = @"SYSTEM\CurrentControlSet\Control\Lsa";
+            const string policyName = "Limit local account use of blank passwords to console logon only";
 
-			var lsaKey = Registry.LocalMachine.OpenSubKey(registryKey, true);
-			if (lsaKey != null)
-			{
-				lsaKey.SetValue("LimitBlankPasswordUse", value, RegistryValueKind.DWord);
+            var lsaKey = Registry.LocalMachine.OpenSubKey(registryKey, true);
+            if (lsaKey != null)
+            {
+                lsaKey.SetValue("LimitBlankPasswordUse", value, RegistryValueKind.DWord);
 
-				if (value == 0)
-					Console.WriteLine("You have just disabled the following security policy: '{0}' on the local machine.", policyName);
-				else
-					Console.WriteLine("You have just enabled the following security policy: '{0}' on the local machine.", policyName);
-			}
-			else
-			{
-				Console.WriteLine("Error: Could not find the registry key '{0}' in order to disable '{1}' policy.", registryKey,
-								  policyName);
-			}
-		}
+                if (value == 0)
+                    Console.WriteLine("You have just disabled the following security policy: '{0}' on the local machine.", policyName);
+                else
+                    Console.WriteLine("You have just enabled the following security policy: '{0}' on the local machine.", policyName);
+            }
+            else
+            {
+                Console.WriteLine("Error: Could not find the registry key '{0}' in order to disable '{1}' policy.", registryKey,
+                                  policyName);
+            }
+        }
 
-		private static void ProtectConfiguration(string file)
-		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
-				file = Path.GetFileNameWithoutExtension(file);
+        private static void ProtectConfiguration(string file)
+        {
+            if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
+                file = Path.GetFileNameWithoutExtension(file);
 
-			var configuration = ConfigurationManager.OpenExeConfiguration(file);
-			var names = new[] { "appSettings", "connectionStrings" };
+            var configuration = ConfigurationManager.OpenExeConfiguration(file);
+            var names = new[] { "appSettings", "connectionStrings" };
 
-			foreach (var section in names.Select(configuration.GetSection))
-			{
-				section.SectionInformation.ProtectSection("RsaProtectedConfigurationProvider");
-				section.SectionInformation.ForceSave = true;
-			}
+            foreach (var section in names.Select(configuration.GetSection))
+            {
+                section.SectionInformation.ProtectSection("RsaProtectedConfigurationProvider");
+                section.SectionInformation.ForceSave = true;
+            }
 
-			configuration.Save(ConfigurationSaveMode.Full);
-		}
+            configuration.Save(ConfigurationSaveMode.Full);
+        }
 
-		private static void UnprotectConfiguration(string file)
-		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
-				file = Path.GetFileNameWithoutExtension(file);
+        private static void UnprotectConfiguration(string file)
+        {
+            if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
+                file = Path.GetFileNameWithoutExtension(file);
 
-			var configuration = ConfigurationManager.OpenExeConfiguration(file);
-			var names = new[] { "appSettings", "connectionStrings" };
+            var configuration = ConfigurationManager.OpenExeConfiguration(file);
+            var names = new[] { "appSettings", "connectionStrings" };
 
-			foreach (var section in names.Select(configuration.GetSection))
-			{
-				section.SectionInformation.UnprotectSection();
-				section.SectionInformation.ForceSave = true;
-			}
-			configuration.Save(ConfigurationSaveMode.Full);
-		}
+            foreach (var section in names.Select(configuration.GetSection))
+            {
+                section.SectionInformation.UnprotectSection();
+                section.SectionInformation.ForceSave = true;
+            }
+            configuration.Save(ConfigurationSaveMode.Full);
+        }
 
-		private static void PrintConfig(IEnumerable<string> configOptions)
-		{
-			Console.WriteLine(
-				@"
+        private static void PrintConfig(IEnumerable<string> configOptions)
+        {
+            Console.WriteLine(
+                @"
 Raven DB
 Document Database for the .Net Platform
 ----------------------------------------------

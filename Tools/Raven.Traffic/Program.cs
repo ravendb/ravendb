@@ -43,24 +43,24 @@ namespace TrafficRecorder
                         return;
                     }
 
-					using (store)
-					{
-						try
-						{
-							store.DatabaseCommands.GetStatistics();
-						}
-						catch (Exception)
-						{
-							Console.WriteLine("Database does not exist");
-							return;
-						}
-						new TrafficRec(store, config).ExecuteTrafficCommand();
-					}
-					break;
-			}
-			
-			
-		}
+                    using (store)
+                    {
+                        try
+                        {
+                            store.DatabaseCommands.GetStatistics();
+                        }
+                        catch (Exception)
+                        {
+                            Console.WriteLine("Database does not exist");
+                            return;
+                        }
+                        new TrafficRec(store, config).ExecuteTrafficCommand();
+                    }
+                    break;
+            }
+            
+            
+        }
 
         private static void PrintUsage()
         {

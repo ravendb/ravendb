@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import appUrl = require("common/appUrl");
@@ -178,7 +178,7 @@ class ioTest extends viewModelBase {
 
         var diskTestParams = this.ioTestRequest.toDto();
 
-			this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams, s => { if (s) this.currentStatus(s.currentStatus); });
+            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams, s => { if (s) this.currentStatus(s.currentStatus); });
         this.lastCommand
             .execute()
             .done(() => {

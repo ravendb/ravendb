@@ -20,15 +20,15 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
                 {
                     var webSiteModel = new WebSite();
 
-					webSiteModel.Id = webSite.Id.ToString(CultureInfo.InvariantCulture);
-					webSiteModel.Name = webSite.Name;
-					webSiteModel.PhysicalPath = webSite.PhysicalPath();
-					webSiteModel.DefaultAppPool = webSite.ApplicationDefaults.ApplicationPoolName;
-					
-					var firstBinding = webSite.Bindings.FirstOrDefault();
+                    webSiteModel.Id = webSite.Id.ToString(CultureInfo.InvariantCulture);
+                    webSiteModel.Name = webSite.Name;
+                    webSiteModel.PhysicalPath = webSite.PhysicalPath();
+                    webSiteModel.DefaultAppPool = webSite.ApplicationDefaults.ApplicationPoolName;
+                    
+                    var firstBinding = webSite.Bindings.FirstOrDefault();
 
-					if (firstBinding != null)
-						webSiteModel.Port = firstBinding.EndPoint.Port.ToString(CultureInfo.InvariantCulture);
+                    if (firstBinding != null)
+                        webSiteModel.Port = firstBinding.EndPoint.Port.ToString(CultureInfo.InvariantCulture);
 
                     yield return webSiteModel;
                 }

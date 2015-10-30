@@ -51,33 +51,33 @@ class replicationDestination {
         }
     });
 
-	clearApiKeyCredentials() {
-		this.apiKey(null);
-	}
+    clearApiKeyCredentials() {
+        this.apiKey(null);
+    }
 
-	clearUserCredentials() {
-		this.username(null);
-		this.password(null);
-		this.domain(null);
-	}
+    clearUserCredentials() {
+        this.username(null);
+        this.password(null);
+        this.domain(null);
+    }
 
     useUserCredentials() {
         this.isUserCredentials(true);
-		this.isApiKeyCredentials(false);
-	    this.clearApiKeyCredentials();
+        this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
-		this.isUserCredentials(false);
-	    this.clearUserCredentials();
+        this.isUserCredentials(false);
+        this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
-		this.isApiKeyCredentials(false);
-		this.clearUserCredentials();
-	    this.clearApiKeyCredentials();
+        this.isApiKeyCredentials(false);
+        this.clearUserCredentials();
+        this.clearApiKeyCredentials();
     }
 
     toggleIsAdvancedShows(item, event) {

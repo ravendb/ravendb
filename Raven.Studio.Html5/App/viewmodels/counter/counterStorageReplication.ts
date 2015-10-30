@@ -1,4 +1,4 @@
-﻿import appUrl = require("common/appUrl");
+import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import counterStorageReplicationSetup = require("models/counter/counterStorageReplicationSetup");
 import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");

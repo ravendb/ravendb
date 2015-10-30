@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Util.Streams;
+using Raven.Abstractions.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.Impl
 {

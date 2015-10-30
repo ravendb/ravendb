@@ -171,8 +171,8 @@ namespace Raven.Database.Server.Security
             object result;
             HttpStatusCode statusCode;
             IPrincipal user;
-	        var resourceName = controller.ResourceName == null ? null : controller.ResourcePrefix + controller.ResourceName;
-			var success = TryAuthorizeSingleUseAuthToken(token, resourceName, out result, out statusCode, out user);
+            var resourceName = controller.ResourceName == null ? null : controller.ResourcePrefix + controller.ResourceName;
+            var success = TryAuthorizeSingleUseAuthToken(token, resourceName, out result, out statusCode, out user);
             controller.User = user;
             msg = success == false ? controller.GetMessageWithObject(result, statusCode) : controller.GetEmptyMessage();
 
@@ -180,39 +180,39 @@ namespace Raven.Database.Server.Security
             return success;
         }
 
-	    public IPrincipal GetUser(RavenBaseApiController controller)
-		{
+        public IPrincipal GetUser(RavenBaseApiController controller)
+        {
             if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
             {
                 return controller.User;
             }
 
-			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
-			var authHeader = controller.GetHeader("Authorization");
-			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
-			if (hasApiKey || hasOAuthTokenInCookie ||
-				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
-			}
-			return windowsRequestAuthorizer.GetUser(controller);
-		}
+            var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
+            var authHeader = controller.GetHeader("Authorization");
+            var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
+            if (hasApiKey || hasOAuthTokenInCookie ||
+                string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+            {
+                return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
+            }
+            return windowsRequestAuthorizer.GetUser(controller);
+        }
 
-		public List<string> GetApprovedResources(IPrincipal user, BaseDatabaseApiController controller, string[] databases)
-		{
-			var authHeader = controller.GetHeader("Authorization");
+        public List<string> GetApprovedResources(IPrincipal user, BaseDatabaseApiController controller, string[] databases)
+        {
+            var authHeader = controller.GetHeader("Authorization");
 
-			List<string> approved;
-			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-				approved = oAuthRequestAuthorizer.GetApprovedResources(user);
-			else
-				approved = windowsRequestAuthorizer.GetApprovedResources(user);
+            List<string> approved;
+            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+                approved = oAuthRequestAuthorizer.GetApprovedResources(user);
+            else
+                approved = windowsRequestAuthorizer.GetApprovedResources(user);
 
-			if (approved.Contains("*"))
-				return databases.ToList();
+            if (approved.Contains("*"))
+                return databases.ToList();
 
-			return approved;
-		}
+            return approved;
+        }
 
         public List<string> GetApprovedResources(IPrincipal user, string authHeader, string[] databases)
         {
@@ -228,33 +228,33 @@ namespace Raven.Database.Server.Security
             return approved;
         }
 
-		public override void Dispose()
-		{
-			windowsRequestAuthorizer.Dispose();
-			oAuthRequestAuthorizer.Dispose();
-		}
+        public override void Dispose()
+        {
+            windowsRequestAuthorizer.Dispose();
+            oAuthRequestAuthorizer.Dispose();
+        }
 
-		public string GenerateSingleUseAuthToken(string resourceName, IPrincipal user)
-		{
-			var token = new OneTimeToken
-			{
-				ResourceName = string.IsNullOrEmpty(resourceName)?"<system>" : resourceName,
-				User = user
-			};
-			var tokenString = Guid.NewGuid().ToString();
+        public string GenerateSingleUseAuthToken(string resourceName, IPrincipal user)
+        {
+            var token = new OneTimeToken
+            {
+                ResourceName = string.IsNullOrEmpty(resourceName)?"<system>" : resourceName,
+                User = user
+            };
+            var tokenString = Guid.NewGuid().ToString();
 
-			singleUseAuthTokens.TryAdd(tokenString, token);
+            singleUseAuthTokens.TryAdd(tokenString, token);
 
-			if (singleUseAuthTokens.Count > 25)
-			{
-				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => x.Value.Age.TotalMinutes > 3))
-				{
-					OneTimeToken value;
-					singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);
-				}
-			}
+            if (singleUseAuthTokens.Count > 25)
+            {
+                foreach (var oneTimeToken in singleUseAuthTokens.Where(x => x.Value.Age.TotalMinutes > 3))
+                {
+                    OneTimeToken value;
+                    singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);
+                }
+            }
 
-			return tokenString;
-		}
-	}
+            return tokenString;
+        }
+    }
 }

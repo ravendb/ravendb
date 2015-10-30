@@ -21,178 +21,178 @@ using TrafficRecorder;
 
 namespace Raven.Traffic
 {
-	public class TrafficRec
-	{
-		private readonly IDocumentStore store;
-		private readonly TrafficToolConfiguration config;
+    public class TrafficRec
+    {
+        private readonly IDocumentStore store;
+        private readonly TrafficToolConfiguration config;
 
-		public TrafficRec(IDocumentStore store, TrafficToolConfiguration config)
-		{
-			this.store = store;
-			this.config = config;
-		}
+        public TrafficRec(IDocumentStore store, TrafficToolConfiguration config)
+        {
+            this.store = store;
+            this.config = config;
+        }
 
-		public void ExecuteTrafficCommand()
-		{
-			switch (config.Mode)
-			{
-				case TrafficToolConfiguration.TrafficToolMode.Record:
-					RecordRequests(config, store);
-					break;
-				case TrafficToolConfiguration.TrafficToolMode.Replay:
-					ReplayRequests(config, store);
-					break;
-			}
-		}
+        public void ExecuteTrafficCommand()
+        {
+            switch (config.Mode)
+            {
+                case TrafficToolConfiguration.TrafficToolMode.Record:
+                    RecordRequests(config, store);
+                    break;
+                case TrafficToolConfiguration.TrafficToolMode.Replay:
+                    ReplayRequests(config, store);
+                    break;
+            }
+        }
 
-		private void ReplayRequests(TrafficToolConfiguration config, IDocumentStore store)
-		{
-			Stream finalStream;
-			var requestsCounter = 0;
-			var skippedRequestsCounter = 0;
-			var totalCountOfLogicRequests = 0;
-			var totalSp = Stopwatch.StartNew();
-			using (var stream = File.Open(config.RecordFilePath, FileMode.Open))
-			{
-				if (config.IsCompressed)
-				{
-					finalStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
-				}
-				else
-				{
-					finalStream = stream;
-				}
-				var trafficLogs =
-					JsonSerializer.Create().Deserialize<LogHttpRequestStatsParams[]>(new JsonTextReader(new StreamReader(finalStream)));
+        private void ReplayRequests(TrafficToolConfiguration config, IDocumentStore store)
+        {
+            Stream finalStream;
+            var requestsCounter = 0;
+            var skippedRequestsCounter = 0;
+            var totalCountOfLogicRequests = 0;
+            var totalSp = Stopwatch.StartNew();
+            using (var stream = File.Open(config.RecordFilePath, FileMode.Open))
+            {
+                if (config.IsCompressed)
+                {
+                    finalStream = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
+                }
+                else
+                {
+                    finalStream = stream;
+                }
+                var trafficLogs =
+                    JsonSerializer.Create().Deserialize<LogHttpRequestStatsParams[]>(new JsonTextReader(new StreamReader(finalStream)));
 
-				ConcurrentQueue<string> queue = null;
-				var cts = new CancellationTokenSource();
-				var ct = cts.Token;
-				Task outputTask = null;
-				if (config.PrintOutput)
-				{
+                ConcurrentQueue<string> queue = null;
+                var cts = new CancellationTokenSource();
+                var ct = cts.Token;
+                Task outputTask = null;
+                if (config.PrintOutput)
+                {
 
-					queue = new ConcurrentQueue<string>();
-					outputTask = Task.Run(() =>
-					{
-						while (!ct.IsCancellationRequested || queue.Count != 0)
-						{
-							string message;
-							if (queue.TryDequeue(out message))
-							{
-								Console.WriteLine(message);
-							}
-							else
-							{
-								Thread.Sleep(10);
-							}
-						}
-					});
-				}
+                    queue = new ConcurrentQueue<string>();
+                    outputTask = Task.Run(() =>
+                    {
+                        while (!ct.IsCancellationRequested || queue.Count != 0)
+                        {
+                            string message;
+                            if (queue.TryDequeue(out message))
+                            {
+                                Console.WriteLine(message);
+                            }
+                            else
+                            {
+                                Thread.Sleep(10);
+                            }
+                        }
+                    });
+                }
 
-				
+                
 
-				const string postLineSeparatorRegex = "\\t\\d: databases\\/[\\w\\.]+";
-				const string endOfPostLineString = "\t\t\tQuery:";
-				const string uriCleanRegex = "http://[\\w\\.]+(:\\d*)?(\\/databases\\/[\\w\\.]+)?";
+                const string postLineSeparatorRegex = "\\t\\d: databases\\/[\\w\\.]+";
+                const string endOfPostLineString = "\t\t\tQuery:";
+                const string uriCleanRegex = "http://[\\w\\.]+(:\\d*)?(\\/databases\\/[\\w\\.]+)?";
 
-				Parallel.ForEach(trafficLogs, new ParallelOptions
-				{
-					MaxDegreeOfParallelism = Environment.ProcessorCount
-				}, trafficLog =>
-				{
-					var sp = Stopwatch.StartNew();
-					GetRequest[] requestsArray = null;
+                Parallel.ForEach(trafficLogs, new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, trafficLog =>
+                {
+                    var sp = Stopwatch.StartNew();
+                    GetRequest[] requestsArray = null;
 
-					var uriString = Regex.Replace(trafficLog.RequestUri, uriCleanRegex, string.Empty);
-					string trafficUrlPart;
-					string trafficQueryPart;
-					trafficUrlPart = ExtractUrlAndQuery(uriString, out trafficQueryPart);
+                    var uriString = Regex.Replace(trafficLog.RequestUri, uriCleanRegex, string.Empty);
+                    string trafficUrlPart;
+                    string trafficQueryPart;
+                    trafficUrlPart = ExtractUrlAndQuery(uriString, out trafficQueryPart);
 
-					var curCount = Interlocked.Increment(ref requestsCounter);
-					if (ValidateUrlString(trafficUrlPart))
-					{
-						Interlocked.Increment(ref skippedRequestsCounter);
-						if (queue != null)
-						{
-							queue.Enqueue(string.Format("{0} out of {1}, skipped whole message",
-								curCount, trafficLogs.Length));
-						}
-						return;
-					}
-					Interlocked.Increment(ref totalCountOfLogicRequests);
-					if (trafficLog.HttpMethod.Equals("get", StringComparison.CurrentCultureIgnoreCase))
-					{
-						requestsArray = new[]
-						{
-							new GetRequest
-							{
-								Url = trafficUrlPart,
-								Query = trafficQueryPart
-							}
-						};
-					}
-					else if (trafficLog.CustomInfo != null)
-					{
-						var subArray = Regex.Split(trafficLog.CustomInfo.Replace("\r", string.Empty), postLineSeparatorRegex).Where(x => !String.IsNullOrEmpty(x)).Select(x =>
-						{
-							var endOfPostLastIndex = x.IndexOf(endOfPostLineString);
-							if (endOfPostLastIndex < 0)
-								return x;
-							return x.Remove(endOfPostLastIndex);
-						}).ToArray();
-						requestsArray =
-							subArray.Select(customInfoLine =>
-							{
+                    var curCount = Interlocked.Increment(ref requestsCounter);
+                    if (ValidateUrlString(trafficUrlPart))
+                    {
+                        Interlocked.Increment(ref skippedRequestsCounter);
+                        if (queue != null)
+                        {
+                            queue.Enqueue(string.Format("{0} out of {1}, skipped whole message",
+                                curCount, trafficLogs.Length));
+                        }
+                        return;
+                    }
+                    Interlocked.Increment(ref totalCountOfLogicRequests);
+                    if (trafficLog.HttpMethod.Equals("get", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        requestsArray = new[]
+                        {
+                            new GetRequest
+                            {
+                                Url = trafficUrlPart,
+                                Query = trafficQueryPart
+                            }
+                        };
+                    }
+                    else if (trafficLog.CustomInfo != null)
+                    {
+                        var subArray = Regex.Split(trafficLog.CustomInfo.Replace("\r", string.Empty), postLineSeparatorRegex).Where(x => !String.IsNullOrEmpty(x)).Select(x =>
+                        {
+                            var endOfPostLastIndex = x.IndexOf(endOfPostLineString);
+                            if (endOfPostLastIndex < 0)
+                                return x;
+                            return x.Remove(endOfPostLastIndex);
+                        }).ToArray();
+                        requestsArray =
+                            subArray.Select(customInfoLine =>
+                            {
 
-								trafficUrlPart = ExtractUrlAndQuery(customInfoLine, out trafficQueryPart);
+                                trafficUrlPart = ExtractUrlAndQuery(customInfoLine, out trafficQueryPart);
 
-								if (ValidateUrlString(trafficUrlPart))
-								{
-									if (queue != null)
-									{
-										queue.Enqueue(string.Format("{0} out of {1}, skipped inner message",
-											curCount, trafficLogs.Length));
-									}
-									return null;
-								}
+                                if (ValidateUrlString(trafficUrlPart))
+                                {
+                                    if (queue != null)
+                                    {
+                                        queue.Enqueue(string.Format("{0} out of {1}, skipped inner message",
+                                            curCount, trafficLogs.Length));
+                                    }
+                                    return null;
+                                }
 
-								return new GetRequest
-								{
-									Url = trafficUrlPart,
-									Query = trafficQueryPart,
-								};
-							}).Where(x => x != null).ToArray();
-					}
-					Interlocked.Add(ref totalCountOfLogicRequests, requestsArray.Length);
-					try
-					{
-						store.DatabaseCommands.MultiGet(requestsArray);
-						if (queue != null)
-						{
-							queue.Enqueue(string.Format("{0} out of {1}, took {2} ms. Total Time: {3} ms",
-								curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
-						}
-					}
-					catch (Exception)
-					{
-						Interlocked.Increment(ref skippedRequestsCounter);
-						if (queue != null)
-						{
-							queue.Enqueue(string.Format("{0} out of {1}, failed",
-								curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
-						}
-					}
-				});
+                                return new GetRequest
+                                {
+                                    Url = trafficUrlPart,
+                                    Query = trafficQueryPart,
+                                };
+                            }).Where(x => x != null).ToArray();
+                    }
+                    Interlocked.Add(ref totalCountOfLogicRequests, requestsArray.Length);
+                    try
+                    {
+                        store.DatabaseCommands.MultiGet(requestsArray);
+                        if (queue != null)
+                        {
+                            queue.Enqueue(string.Format("{0} out of {1}, took {2} ms. Total Time: {3} ms",
+                                curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Interlocked.Increment(ref skippedRequestsCounter);
+                        if (queue != null)
+                        {
+                            queue.Enqueue(string.Format("{0} out of {1}, failed",
+                                curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
+                        }
+                    }
+                });
 
-				if (outputTask != null)
-				{
-					cts.Cancel();
-					outputTask.Wait();
-				}
-			}
+                if (outputTask != null)
+                {
+                    cts.Cancel();
+                    outputTask.Wait();
+                }
+            }
 
-			Console.WriteLine(@"Summary: 
+            Console.WriteLine(@"Summary: 
 Requests sent: {0}
 Requests skipped: {1}
 Nested and non nested request: {2}

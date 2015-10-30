@@ -42,16 +42,16 @@ namespace Raven.SlowTests.Replication
                         FailoverBehavior = FailoverBehavior.ReadFromAllServers
                     },
                     DefaultDatabase = store1.DefaultDatabase
-			})
-			{
-				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
+            })
+            {
+                store.Initialize();
+                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+                await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
+                Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
-				foreach (var ravenDbServer in servers)
-				{
-					ravenDbServer.Server.ResetNumberOfRequests();
+                foreach (var ravenDbServer in servers)
+                {
+                    ravenDbServer.Server.ResetNumberOfRequests();
                     Assert.Equal(0, ravenDbServer.Server.NumberOfRequests);
                 }
 
@@ -99,32 +99,32 @@ namespace Raven.SlowTests.Replication
                     FailoverBehavior = FailoverBehavior.ReadFromAllServers
                 },
                 DefaultDatabase = store1.DefaultDatabase
-			})
-			{
-				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
-				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
+            })
+            {
+                store.Initialize();
+                var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
+                await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands);
+                Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
 
-				foreach (var ravenDbServer in servers)
-				{
-					ravenDbServer.Server.ResetNumberOfRequests();
-				}
+                foreach (var ravenDbServer in servers)
+                {
+                    ravenDbServer.Server.ResetNumberOfRequests();
+                }
 
-				for (int i = 0; i < 6; i++)
-				{
-					using (var session = store.OpenAsyncSession(new OpenSessionOptions
-					{
-						ForceReadFromMaster = true
-					}))
-					{
-						Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
-					}
-				}
-			}
-			Assert.Equal(6, servers[0].Server.NumberOfRequests);
-			Assert.Equal(0, servers[1].Server.NumberOfRequests);
-			Assert.Equal(0, servers[2].Server.NumberOfRequests);
-		}
-	}
+                for (int i = 0; i < 6; i++)
+                {
+                    using (var session = store.OpenAsyncSession(new OpenSessionOptions
+                    {
+                        ForceReadFromMaster = true
+                    }))
+                    {
+                        Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
+                    }
+                }
+            }
+            Assert.Equal(6, servers[0].Server.NumberOfRequests);
+            Assert.Equal(0, servers[1].Server.NumberOfRequests);
+            Assert.Equal(0, servers[2].Server.NumberOfRequests);
+        }
+    }
 }

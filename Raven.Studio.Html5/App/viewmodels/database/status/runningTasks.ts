@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import moment = require("moment");

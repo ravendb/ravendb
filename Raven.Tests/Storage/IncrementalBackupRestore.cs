@@ -34,23 +34,23 @@ namespace Raven.Tests.Storage
                 DefaultStorageTypeName = storageName,
                 DataDirectory = DataDir,
                 RunInMemory = false,
-	            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-	            Settings =
-	            {
-	                {"Raven/Esent/CircularLog", "false"},
-					{"Raven/Voron/AllowIncrementalBackups", "true"}
-	            }
-	        }.Initialize(), null);
-	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-	    }
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Settings =
+                {
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                }
+            }.Initialize(), null);
+            db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+        }
 
-	    public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            db.Dispose();
+            base.Dispose();
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
         public void AfterIncrementalBackupRestoreCanReadDocument(string storageName)
         {
@@ -88,7 +88,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
             var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
@@ -183,16 +183,16 @@ namespace Raven.Tests.Storage
             db = new DocumentDatabase(new RavenConfiguration
             {
                 RunInMemory = false,
-				DefaultStorageTypeName = storageName,
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-			}, null);
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+            }, null);
 
-			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+            db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+        
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-			Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
-		}
-	}
+            Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+        }
+    }
 }

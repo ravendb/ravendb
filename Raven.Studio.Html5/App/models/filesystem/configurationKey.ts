@@ -1,4 +1,4 @@
-﻿import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 import filesystem = require("models/filesystem/filesystem");
 
 class configurationKey {

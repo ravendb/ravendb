@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/database/index/transformer");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import saveTransformerLockModeCommand = require("commands/saveTransformerLockModeCommand");

@@ -5,7 +5,7 @@ class luceneField {
     termVector = ko.observable<string>();
     indexing = ko.observable<string>();
     analyzer = ko.observable<string>();
-	suggestionEnabled = ko.observable<boolean>();
+    suggestionEnabled = ko.observable<boolean>();
     
     fieldNameAutocompletes = ko.observableArray<string>();
 
@@ -15,7 +15,7 @@ class luceneField {
         this.indexing(indexing);
         this.sort(sort);
         this.analyzer(analyzer);
-	    this.suggestionEnabled(suggestionEnabled);
+        this.suggestionEnabled(suggestionEnabled);
         this.termVector(termVector);
         this.name.subscribe(() => this.calculateFieldNamesAutocomplete());
     }

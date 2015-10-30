@@ -648,84 +648,84 @@ namespace Raven.Database.Prefetching
             largestDocSize = 4096;
             largestDocKey = null;
             foreach (var diskFetchPerformanceStats in loadTimes)
-			{
-				docCount += diskFetchPerformanceStats.NumberOfDocuments;
-				totalTime += diskFetchPerformanceStats.LoadingTimeInMillseconds;
-				if (diskFetchPerformanceStats.LargestDocSize <= largestDocSize)
-					continue;
+            {
+                docCount += diskFetchPerformanceStats.NumberOfDocuments;
+                totalTime += diskFetchPerformanceStats.LoadingTimeInMillseconds;
+                if (diskFetchPerformanceStats.LargestDocSize <= largestDocSize)
+                    continue;
 
-				largestDocSize = diskFetchPerformanceStats.LargestDocSize;
-				largestDocKey = diskFetchPerformanceStats.LargestDocKey;
-			}
+                largestDocSize = diskFetchPerformanceStats.LargestDocSize;
+                largestDocKey = diskFetchPerformanceStats.LargestDocKey;
+            }
 
-			if (docCount == 0)
-			{
-				// default, since we have no info yet
-				loadTimePerDocMs = 30;
-			}
-			else
-			{
-				loadTimePerDocMs = (double)totalTime / docCount;
-			}
-		}
+            if (docCount == 0)
+            {
+                // default, since we have no info yet
+                loadTimePerDocMs = 30;
+            }
+            else
+            {
+                loadTimePerDocMs = (double)totalTime / docCount;
+            }
+        }
 
-		private void AddFutureBatch(Etag nextEtag, Etag untilEtag)
-		{
-			var futureBatchStat = new FutureBatchStats
-			{
-				Timestamp = SystemTime.UtcNow,
-				PrefetchingUser = PrefetchingUser
-			};
-			Stopwatch sp = Stopwatch.StartNew();
-			context.AddFutureBatch(futureBatchStat);
-			futureIndexBatches.TryAdd(nextEtag, new FutureIndexBatch
-			{
-				StartingEtag = nextEtag,
-				Age = Interlocked.Increment(ref currentIndexingAge),
-				Task = Task.Factory.StartNew(() =>
-				{
-					List<JsonDocument> jsonDocuments = null;
-					int localWork = 0;
-					var earlyExit = new Reference<bool>();
-					while (context.RunIndexing)
-					{
-						jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), untilEtag, earlyExit);
-						if (jsonDocuments.Count > 0)
-							break;
+        private void AddFutureBatch(Etag nextEtag, Etag untilEtag)
+        {
+            var futureBatchStat = new FutureBatchStats
+            {
+                Timestamp = SystemTime.UtcNow,
+                PrefetchingUser = PrefetchingUser
+            };
+            Stopwatch sp = Stopwatch.StartNew();
+            context.AddFutureBatch(futureBatchStat);
+            futureIndexBatches.TryAdd(nextEtag, new FutureIndexBatch
+            {
+                StartingEtag = nextEtag,
+                Age = Interlocked.Increment(ref currentIndexingAge),
+                Task = Task.Factory.StartNew(() =>
+                {
+                    List<JsonDocument> jsonDocuments = null;
+                    int localWork = 0;
+                    var earlyExit = new Reference<bool>();
+                    while (context.RunIndexing)
+                    {
+                        jsonDocuments = GetJsonDocsFromDisk(Abstractions.Util.EtagUtil.Increment(nextEtag, -1), untilEtag, earlyExit);
+                        if (jsonDocuments.Count > 0)
+                            break;
 
-						futureBatchStat.Retries++;
+                        futureBatchStat.Retries++;
 
-						context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
-					}
+                        context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
+                    }
 
-					if (log.IsDebugEnabled && jsonDocuments != null)
-					{
-						var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
-						log.Debug("Got {0} documents ({3:#,#;;0} kb) in a future batch, starting from etag {1}, took {2:#,#;;0}ms", jsonDocuments.Count, nextEtag, sp.ElapsedMilliseconds,
-							size);
-						if (size > jsonDocuments.Count * 8 ||
-							sp.ElapsedMilliseconds > 3000)
-						{
-							if (log.IsDebugEnabled)
-							{
-								var topSizes = jsonDocuments
-									.OrderByDescending(x => x.SerializedSizeOnDisk)
-									.Take(10)
-									.Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
+                    if (log.IsDebugEnabled && jsonDocuments != null)
+                    {
+                        var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
+                        log.Debug("Got {0} documents ({3:#,#;;0} kb) in a future batch, starting from etag {1}, took {2:#,#;;0}ms", jsonDocuments.Count, nextEtag, sp.ElapsedMilliseconds,
+                            size);
+                        if (size > jsonDocuments.Count * 8 ||
+                            sp.ElapsedMilliseconds > 3000)
+                        {
+                            if (log.IsDebugEnabled)
+                            {
+                                var topSizes = jsonDocuments
+                                    .OrderByDescending(x => x.SerializedSizeOnDisk)
+                                    .Take(10)
+                                    .Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
 
-								log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
-							}
-						}
-					}
+                                log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
+                            }
+                        }
+                    }
 
-					futureBatchStat.Duration = sp.Elapsed;
-					futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Count;
+                    futureBatchStat.Duration = sp.Elapsed;
+                    futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Count;
 
-					if (jsonDocuments == null)
-						return null;
+                    if (jsonDocuments == null)
+                        return null;
 
-					if (untilEtag != null && earlyExit.Value)
-					{
+                    if (untilEtag != null && earlyExit.Value)
+                    {
                         var lastEtag = GetHighestEtag(jsonDocuments);
                         context.TransactionalStorage.Batch(accessor =>
                         {

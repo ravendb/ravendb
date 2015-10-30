@@ -76,12 +76,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task CommitAsync(string txId, CancellationToken token = default (CancellationToken));
 
-		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
-		/// <summary>
-		///     Create a http request to the specified relative url on the current database
-		/// </summary>
-		HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        /// <summary>
+        ///     Create a http request to the specified relative url on the current database
+        /// </summary>
+        HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
         /// <summary>
         ///     Deletes the document with the specified key
@@ -128,11 +128,11 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         IDisposable DisableAllCaching();
 
-		/// <summary>
-		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
-		///     with the specified database
-		/// </summary>
-		IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
+        /// <summary>
+        ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
+        ///     with the specified database
+        /// </summary>
+        IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
@@ -260,11 +260,11 @@ namespace Raven.Client.Connection.Async
         Task<IndexDefinition> GetIndexAsync(string name, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-		///     Retrieves indexing performance statistics for all indexes
-		/// </summary>
-		Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync();
+        ///     Retrieves indexing performance statistics for all indexes
+        /// </summary>
+        Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync();
 
-		/// <summary>
+        /// <summary>
         ///     Retrieves all suggestions for an index merging
         /// </summary>
         /// <param name="token">The cancellation token.</param>
@@ -335,13 +335,13 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		/// Sets the transformer's lock mode
-		/// </summary>
-		/// <param name="name">The name of the transformer</param>
-		/// <param name="lockMode">The lock mode to be set</param>
-		/// <param name="token">The cancellation token.</param>
-		Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        /// Sets the transformer's lock mode
+        /// </summary>
+        /// <param name="name">The name of the transformer</param>
+        /// <param name="lockMode">The lock mode to be set</param>
+        /// <param name="token">The cancellation token.</param>
+        Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieves the document metadata for the specified document key.

@@ -127,10 +127,10 @@ namespace Raven.Tests.Common
             }
         }
 
-		protected IDocumentStoreReplicationInformer GetReplicationInformer(ServerClient client)
-		{
-			var replicationExecutor = client.RequestExecuter as ReplicationAwareRequestExecuter;
-			return replicationExecutor == null ? null : replicationExecutor.ReplicationInformer;
-		}
+        protected IDocumentStoreReplicationInformer GetReplicationInformer(ServerClient client)
+        {
+            var replicationExecutor = client.RequestExecuter as ReplicationAwareRequestExecuter;
+            return replicationExecutor == null ? null : replicationExecutor.ReplicationInformer;
+        }
     }
 }

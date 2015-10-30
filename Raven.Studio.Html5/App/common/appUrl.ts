@@ -28,8 +28,8 @@ class appUrl {
     
     // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
-		adminSettings: ko.computed(() => appUrl.forAdminSettings()),
-		adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
+        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+        adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 
@@ -47,7 +47,7 @@ class appUrl {
         editTransformer: (transformerName?: string) => ko.computed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
-		exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
+        exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
@@ -72,7 +72,7 @@ class appUrl {
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
-		hotSpare: ko.computed(() => appUrl.forHotSpare()),
+        hotSpare: ko.computed(() => appUrl.forHotSpare()),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
@@ -237,11 +237,11 @@ class appUrl {
 
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
-	}
+    }
 
-	static forServerSmugging(): string {
-		return "#admin/settings/serverSmuggling";
-	}
+    static forServerSmugging(): string {
+        return "#admin/settings/serverSmuggling";
+    }
 
     static forGlobalConfigPeriodicExport(): string {
         return '#admin/settings/globalConfig';
@@ -271,7 +271,7 @@ class appUrl {
         return "#admin/settings/backup";
     }
 
-	static forHotSpare(): string {
+    static forHotSpare(): string {
         return "#admin/settings/hotSpare";
     }
 
@@ -311,9 +311,9 @@ class appUrl {
         return "#admin/settings/diskIoViewer";
     }
 
-	static forAdminJsConsole(): string {
-		return "#admin/settings/console";
-	}
+    static forAdminJsConsole(): string {
+        return "#admin/settings/console";
+    }
 
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
@@ -358,11 +358,11 @@ class appUrl {
         return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-	static forEditCounter(rs: resource, groupName: string, counterName: string) {
-		var urlPart = appUrl.getEncodedResourcePart(rs);
+    static forEditCounter(rs: resource, groupName: string, counterName: string) {
+        var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
         return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
-	}
+    }
 
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);
@@ -652,7 +652,7 @@ class appUrl {
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
-	static forExploration(db: database): string {
+    static forExploration(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/query/exploration?" + databasePart;
     }
@@ -1053,12 +1053,12 @@ class appUrl {
         if (res instanceof filesystem) {
             return appUrl.getEncodedFsPart(res);
         }
-		if (res instanceof counterStorage) {
-			return appUrl.getEncodedCounterStoragePart(res);
-		}
-		if (res instanceof timeSeries) {
-			return appUrl.getEncodedTimeSeriesPart(res);
-		}
+        if (res instanceof counterStorage) {
+            return appUrl.getEncodedCounterStoragePart(res);
+        }
+        if (res instanceof timeSeries) {
+            return appUrl.getEncodedTimeSeriesPart(res);
+        }
         else {
             return appUrl.getEncodedDbPart(<database>res);
         }

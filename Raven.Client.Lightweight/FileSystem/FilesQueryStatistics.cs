@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.FileSystem
+namespace Raven.Client.FileSystem
 {
     /// <summary>
     /// Statistics about a the files query.

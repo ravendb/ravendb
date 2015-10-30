@@ -23,10 +23,10 @@ namespace Raven.Abstractions.Data
             return "Raven/FileSystem/Compact/Status/" + fileSystemName;
         }
 
-		public static string RavenCounterStoageCompactStatusDocumentKey(string counterStorageName)
-		{
-			return "Raven/Counter/Compact/Status/" + counterStorageName;
-		}
+        public static string RavenCounterStoageCompactStatusDocumentKey(string counterStorageName)
+        {
+            return "Raven/Counter/Compact/Status/" + counterStorageName;
+        }
     }
 
     public enum CompactStatusState

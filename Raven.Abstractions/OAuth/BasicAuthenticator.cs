@@ -34,14 +34,14 @@ namespace Raven.Abstractions.OAuth
                 if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
                     throw new InvalidOperationException(BasicOAuthOverHttpError);
 
-				var requestUri = oauthSource;
-				var response = await httpClient.GetAsync(requestUri)
-											   .ConvertSecurityExceptionToServerNotFound()
-											   .AddUrlIfFaulting(new Uri(requestUri)).ConfigureAwait(false);
+                var requestUri = oauthSource;
+                var response = await httpClient.GetAsync(requestUri)
+                                               .ConvertSecurityExceptionToServerNotFound()
+                                               .AddUrlIfFaulting(new Uri(requestUri)).ConfigureAwait(false);
 
-				var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
-				using (var reader = new StreamReader(stream))
-				{
+                var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
+                using (var reader = new StreamReader(stream))
+                {
                     var currentOauthToken = reader.ReadToEnd();
                     CurrentOauthToken = currentOauthToken;
                     CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;

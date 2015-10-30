@@ -47,100 +47,68 @@ namespace Raven.Database.Bundles.Replication.Impl
             if (ttl <= 0)
                 return root;
 
-			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument = null;
-			try
-			{
-				configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
-			}
-			catch (Exception)
-			{
-				root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
-			}
+            ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument = null;
+            try
+            {
+                configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+            }
+            catch (Exception)
+            {
+                root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
+            }
 
-			var sources = database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, database.WorkContext.CancellationToken, ref nextStart);
+            var sources = database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, database.WorkContext.CancellationToken, ref nextStart);
 
             if (@from.Contains(database.ServerUrl) == false)
             {
                 @from.Add(database.ServerUrl);
             }
 
-			if (configurationDocument != null)
-				root.Destinations = HandleDestinations(configurationDocument.MergedDocument);
+            if (configurationDocument != null)
+                root.Destinations = HandleDestinations(configurationDocument.MergedDocument);
 
-			root.Sources = HandleSources(sources, root);
+            root.Sources = HandleSources(sources, root);
 
-			return root;
-		}
+            return root;
+        }
 
-		private List<ReplicationTopologySourceNode> HandleSources(IEnumerable<RavenJToken> sources, ReplicationTopologyRootNode root)
-		{
-			var nodes = new List<ReplicationTopologySourceNode>();
-			foreach (var sourceAsJson in sources.Cast<RavenJObject>())
-			{
-				SourceReplicationInformation source = null;
-				try
-				{
-					source = sourceAsJson.JsonDeserialization<SourceReplicationInformation>();
-				}
-				catch (Exception)
-				{
-					root.Errors.Add(string.Format("Could not deserialize source node."));
-				}
+        private List<ReplicationTopologySourceNode> HandleSources(IEnumerable<RavenJToken> sources, ReplicationTopologyRootNode root)
+        {
+            var nodes = new List<ReplicationTopologySourceNode>();
+            foreach (var sourceAsJson in sources.Cast<RavenJObject>())
+            {
+                SourceReplicationInformation source = null;
+                try
+                {
+                    source = sourceAsJson.JsonDeserialization<SourceReplicationInformation>();
+                }
+                catch (Exception)
+                {
+                    root.Errors.Add(string.Format("Could not deserialize source node."));
+                }
 
-				var node = HandleSource(source);
-				nodes.Add(node);
-			}
+                var node = HandleSource(source);
+                nodes.Add(node);
+            }
 
-			return nodes;
-		}
+            return nodes;
+        }
 
-		private ReplicationTopologySourceNode HandleSource(SourceReplicationInformation source)
-		{
-			if (from.Contains(source.Source))
-			{
-				var state = CheckSourceConnectionState(source.Source);
-				switch (state)
-				{
-					case ReplicatonNodeState.Online:
-						return ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
-					case ReplicatonNodeState.Offline:
-						return ReplicationTopologySourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
-					default:
-						throw new NotSupportedException(state.ToString());
-				}
-			}
-
-			string error;
-			ReplicationTopologyRootNode rootNode;
-			if (TryGetSchema(source.Source, new RavenConnectionStringOptions(), out rootNode, out error))
-			{
-				var node = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
-				node.Destinations = rootNode.Destinations;
-				node.Sources = rootNode.Sources;
-				node.Errors = rootNode.Errors;
-
-				return node;
-			}
-
-			var offline = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
-
-			if (string.IsNullOrEmpty(error) == false)
-				offline.Errors.Add(error);
-
-			return offline;
-		}
-
-		private List<ReplicationTopologyDestinationNode> HandleDestinations(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> destinations)
-		{
-			return destinations
-				.Destinations
-				.Select(HandleDestination)
-				.ToList();
-		}
-
-		private ReplicationTopologyDestinationNode HandleDestination(ReplicationDestination replicationDestination)
-		{
-			var destination = ReplicationTask.GetConnectionOptions(replicationDestination, database);
+        private ReplicationTopologySourceNode HandleSource(SourceReplicationInformation source)
+        {
+            if (from.Contains(source.Source))
+            {
+                var state = CheckSourceConnectionState(source.Source);
+                switch (state)
+                {
+                    case ReplicatonNodeState.Online:
+                        return ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+                    case ReplicatonNodeState.Offline:
+                        return ReplicationTopologySourceNode.Offline(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+                    default:
+                        throw new NotSupportedException(state.ToString());
+                }
+            }
 
             string error;
             ReplicationTopologyRootNode rootNode;
@@ -162,28 +130,12 @@ namespace Raven.Database.Bundles.Replication.Impl
             return offline;
         }
 
-        private List<ReplicationTopologyDestinationNode> HandleDestinations(JsonDocument destinationsAsJson, ReplicationTopologyRootNode root)
+        private List<ReplicationTopologyDestinationNode> HandleDestinations(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> destinations)
         {
-            var nodes = new List<ReplicationTopologyDestinationNode>();
-
-            if (destinationsAsJson == null)
-                return nodes;
-
-            ReplicationDocument destinations;
-            try
-            {
-                destinations = destinationsAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
-            }
-            catch (Exception)
-            {
-                root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
-
-                return nodes;
-            }
-
-            nodes.AddRange(destinations.Destinations.Select(HandleDestination));
-
-            return nodes;
+            return destinations
+                .Destinations
+                .Select(HandleDestination)
+                .ToList();
         }
 
         private ReplicationTopologyDestinationNode HandleDestination(ReplicationDestination replicationDestination)
@@ -254,8 +206,8 @@ namespace Raven.Database.Bundles.Replication.Impl
                 var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
 
                 // replace host name with target hostname
-	            targetServerUrl = new UriBuilder(serverUrl) {Host = new Uri(serverUrlFromTargetConfig).Host}.Uri.ToString();
-				
+                targetServerUrl = new UriBuilder(serverUrl) {Host = new Uri(serverUrlFromTargetConfig).Host}.Uri.ToString();
+                
                 return true;
             }
             catch (Exception e)
@@ -270,9 +222,9 @@ namespace Raven.Database.Bundles.Replication.Impl
         {
             var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
 
-			try
-			{
-				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
+            try
+            {
+                var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                 request.Write(from);
 
                 error = null;
@@ -308,34 +260,34 @@ namespace Raven.Database.Bundles.Replication.Impl
             {
                 FindVisitedNodes(destinationNode, visitedNodes);
             }
-	    }
+        }
 
-	    private ReplicatonNodeState CheckSourceConnectionState(string sourceUrl)
-		{
-			return CheckConnectionState(sourceUrl, new RavenConnectionStringOptions());
-		}
+        private ReplicatonNodeState CheckSourceConnectionState(string sourceUrl)
+        {
+            return CheckConnectionState(sourceUrl, new RavenConnectionStringOptions());
+        }
 
-		private ReplicatonNodeState CheckDestinationConnectionState(ReplicationStrategy destination)
-		{
-			return CheckConnectionState(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions);
-		}
+        private ReplicatonNodeState CheckDestinationConnectionState(ReplicationStrategy destination)
+        {
+            return CheckConnectionState(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions);
+        }
 
-		private ReplicatonNodeState CheckConnectionState(string serverUrl, RavenConnectionStringOptions connectionStringOptions)
-		{
-			try
-			{
-				var url = string.Format("{0}/replication/heartbeat?&from={1}", serverUrl, Uri.EscapeDataString(database.ServerUrl));
-				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
-				request.ExecuteRequest();
-			}
-			catch (Exception e)
-			{
-				log.ErrorException(string.Format("Could not connect to '{0}'.", serverUrl), e);
+        private ReplicatonNodeState CheckConnectionState(string serverUrl, RavenConnectionStringOptions connectionStringOptions)
+        {
+            try
+            {
+                var url = string.Format("{0}/replication/heartbeat?&from={1}", serverUrl, Uri.EscapeDataString(database.ServerUrl));
+                var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
+                request.ExecuteRequest();
+            }
+            catch (Exception e)
+            {
+                log.ErrorException(string.Format("Could not connect to '{0}'.", serverUrl), e);
 
-				return ReplicatonNodeState.Offline;
-			}
+                return ReplicatonNodeState.Offline;
+            }
 
-			return ReplicatonNodeState.Online;
-		}
-	}
+            return ReplicatonNodeState.Online;
+        }
+    }
 }

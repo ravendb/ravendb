@@ -78,16 +78,16 @@ namespace Raven.Client.Indexes
             return linqQuery;
         }
 
-	    private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
-	    {
-		    var firstMethodCallExpression = ((MethodCallExpression)expression);
-			if(firstMethodCallExpression.Arguments.Count > 0)
-				if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
-					return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
-		    return firstMethodCallExpression;
-	    }
+        private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
+        {
+            var firstMethodCallExpression = ((MethodCallExpression)expression);
+            if(firstMethodCallExpression.Arguments.Count > 0)
+                if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
+                    return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
+            return firstMethodCallExpression;
+        }
 
-	    private static string TryCaptureQueryRoot(Expression expression)
+        private static string TryCaptureQueryRoot(Expression expression)
         {
             if (expression.NodeType != ExpressionType.Lambda)
                 return null;

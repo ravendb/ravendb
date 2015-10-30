@@ -7,8 +7,8 @@ namespace Raven.Database.TimeSeries
     {
         public string SendingServerName { get; set; }
 
-		public Guid ServerId { get; set; }
+        public Guid ServerId { get; set; }
 
-		public List<ReplicationLogItem> Logs { get; set; }
-	}
+        public List<ReplicationLogItem> Logs { get; set; }
+    }
 }

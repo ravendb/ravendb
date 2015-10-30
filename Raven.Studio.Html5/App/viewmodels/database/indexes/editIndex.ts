@@ -333,7 +333,7 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-		app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
     createCSharpCode() {

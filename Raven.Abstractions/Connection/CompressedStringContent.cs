@@ -28,11 +28,11 @@ namespace Raven.Abstractions.Connection
             if (disableRequestCompression == false)
                 stream = new GZipStream(stream, CompressionMode.Compress, true);
 
-			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
-			{
-				await streamWriter.WriteAsync(data).ConfigureAwait(false);
-				await streamWriter.FlushAsync().ConfigureAwait(false);
-			}
+            using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
+            {
+                await streamWriter.WriteAsync(data).ConfigureAwait(false);
+                await streamWriter.FlushAsync().ConfigureAwait(false);
+            }
 
             if (disableRequestCompression == false)
                 stream.Dispose();

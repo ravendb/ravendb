@@ -14,28 +14,28 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
 {
-	public class ReplicationTopologyController : BaseDatabaseApiController
-	{
-		[HttpPost]
-		[RavenRoute("admin/replication/topology/discover")]
-		[RavenRoute("databases/{databaseName}/admin/replication/topology/discover")]
-		public async Task<HttpResponseMessage> ReplicationTopologyDiscover()
-		{
-			var ttlAsString = GetQueryStringValue("ttl");
+    public class ReplicationTopologyController : BaseDatabaseApiController
+    {
+        [HttpPost]
+        [RavenRoute("admin/replication/topology/discover")]
+        [RavenRoute("databases/{databaseName}/admin/replication/topology/discover")]
+        public async Task<HttpResponseMessage> ReplicationTopologyDiscover()
+        {
+            var ttlAsString = GetQueryStringValue("ttl");
 
             int ttl;
             RavenJArray from;
 
-			if (string.IsNullOrEmpty(ttlAsString))
-			{
-				ttl = 10;
-				from = new RavenJArray();
-			}
-			else
-			{
-				ttl = int.Parse(ttlAsString);
-				from = await ReadJsonArrayAsync().ConfigureAwait(false);
-			}
+            if (string.IsNullOrEmpty(ttlAsString))
+            {
+                ttl = 10;
+                from = new RavenJArray();
+            }
+            else
+            {
+                ttl = int.Parse(ttlAsString);
+                from = await ReadJsonArrayAsync().ConfigureAwait(false);
+            }
 
             var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from, ttl, Log);
             var node = replicationSchemaDiscoverer.Discover();

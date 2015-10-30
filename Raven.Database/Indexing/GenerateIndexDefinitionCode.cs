@@ -20,7 +20,7 @@ using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
 {
-	//TODO: test me!
+    //TODO: test me!
     public class IndexDefinitionCodeGenerator
     {
         private readonly IndexDefinition _indexDefinition;
@@ -186,7 +186,7 @@ namespace Raven.Database.Indexing
 
             indexDefinition.SuggestionsOptions.ForEach(suggestion =>
             {
-				suggestions.Elements.Add(new StringLiteralExpression(suggestion));
+                suggestions.Elements.Add(new StringLiteralExpression(suggestion));
             });
 
             return suggestions;

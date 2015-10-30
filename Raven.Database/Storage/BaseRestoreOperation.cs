@@ -168,8 +168,8 @@ namespace Raven.Database.Storage
                     }
                     catch (Exception ex)
                     {
-						output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
-						ForceIndexReset(indexPath, indexName, ex);
+                        output(string.Format("Failed to restore index, forcing index reset for {0}. Reason : {1}", indexName, ex));
+                        ForceIndexReset(indexPath, indexName, ex);
                     }
                 }
 

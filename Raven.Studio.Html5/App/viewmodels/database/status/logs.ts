@@ -1,4 +1,4 @@
-﻿import getLogsCommand = require("commands/database/debug/getLogsCommand");
+import getLogsCommand = require("commands/database/debug/getLogsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import document = require("models/database/documents/document");

@@ -24,12 +24,12 @@ namespace Raven.Tests.Bundles.Replication.Bugs
             var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers);
             var store2 = CreateStore();
 
-			((DocumentStore) store1).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store1.AsyncDatabaseCommands)
-			                        .Wait();
-			((DocumentStore) store2).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store2.AsyncDatabaseCommands)
-			                        .Wait();
+            ((DocumentStore) store1).GetReplicationInformerForDatabase()
+                                    .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store1.AsyncDatabaseCommands)
+                                    .Wait();
+            ((DocumentStore) store2).GetReplicationInformerForDatabase()
+                                    .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store2.AsyncDatabaseCommands)
+                                    .Wait();
 
             TellFirstInstanceToReplicateToSecondInstance();
             TellSecondInstanceToReplicateToFirstInstance();

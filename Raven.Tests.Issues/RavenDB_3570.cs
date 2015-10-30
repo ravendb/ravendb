@@ -49,23 +49,23 @@ namespace Raven.Tests.Issues
             {
                 AddWindowsUser(username, password);
 
-			    var e = Assert.Throws< ErrorResponseException>(() =>
-			    {
-			        using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
-			        {
-			        }
-			    });
-			    Assert.Equal(e.StatusCode ,HttpStatusCode.Forbidden);
+                var e = Assert.Throws< ErrorResponseException>(() =>
+                {
+                    using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
+                    {
+                    }
+                });
+                Assert.Equal(e.StatusCode ,HttpStatusCode.Forbidden);
 
                 using (NewStore(enableAuthentication: true))
                 {
                 }
             }
-			finally
-			{
-				DeleteUser(username);
-			}
-		}
+            finally
+            {
+                DeleteUser(username);
+            }
+        }
 
         private void DeleteUser(string username)
         {

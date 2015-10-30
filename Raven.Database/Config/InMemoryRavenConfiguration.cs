@@ -48,19 +48,19 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
-		public CounterConfiguration Counter { get; private set; }
-		
-		public TimeSeriesConfiguration TimeSeries { get; private set; }
+        public CounterConfiguration Counter { get; private set; }
+        
+        public TimeSeriesConfiguration TimeSeries { get; private set; }
 
-		public EncryptionConfiguration Encryption { get; private set; }
+        public EncryptionConfiguration Encryption { get; private set; }
 
         public IndexingConfiguration Indexing { get; set; }
 
         public ClusterConfiguration Cluster { get; private set; }
 
-		public MonitoringConfiguration Monitoring { get; private set; }
+        public MonitoringConfiguration Monitoring { get; private set; }
 
-		public WebSocketsConfiguration WebSockets { get; set; }
+        public WebSocketsConfiguration WebSockets { get; set; }
 
         public InMemoryRavenConfiguration()
         {
@@ -68,13 +68,13 @@ namespace Raven.Database.Config
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
-			Counter = new CounterConfiguration();
-			TimeSeries = new TimeSeriesConfiguration();
-			Encryption = new EncryptionConfiguration();
-			Indexing = new IndexingConfiguration();
-			WebSockets = new WebSocketsConfiguration();
+            Counter = new CounterConfiguration();
+            TimeSeries = new TimeSeriesConfiguration();
+            Encryption = new EncryptionConfiguration();
+            Indexing = new IndexingConfiguration();
+            WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
-			Monitoring = new MonitoringConfiguration();
+            Monitoring = new MonitoringConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -98,11 +98,11 @@ namespace Raven.Database.Config
 
         public string TimeSeriesName { get; set; }
 
-		public void PostInit()
-		{
-			CheckDirectoryPermissions();
+        public void PostInit()
+        {
+            CheckDirectoryPermissions();
 
-			FilterActiveBundles();
+            FilterActiveBundles();
 
             SetupOAuth();
 
@@ -117,11 +117,11 @@ namespace Raven.Database.Config
             var ravenSettings = new StronglyTypedRavenSettings(Settings);
             ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
-			WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
-			DataDirectory = ravenSettings.DataDir.Value;
-			FileSystem.InitializeFrom(this);
-			Counter.InitializeFrom(this);
-			TimeSeries.InitializeFrom(this);
+            WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
+            DataDirectory = ravenSettings.DataDir.Value;
+            FileSystem.InitializeFrom(this);
+            Counter.InitializeFrom(this);
+            TimeSeries.InitializeFrom(this);
 
             MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
@@ -145,8 +145,8 @@ namespace Raven.Database.Config
 
             MemoryLimitForProcessingInMb = ravenSettings.MemoryLimitForProcessing.Value;
 
-			LowMemoryForLinuxDetectionInMB = ravenSettings.LowMemoryLimitForLinuxDetectionInMB.Value;
-			PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
+            LowMemoryForLinuxDetectionInMB = ravenSettings.LowMemoryLimitForLinuxDetectionInMB.Value;
+            PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
             // Core settings
             MaxPageSize = ravenSettings.MaxPageSize.Value;
@@ -243,11 +243,11 @@ namespace Raven.Database.Config
 
             SetupTransactionMode();
 
-			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
-			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
-			{
-				IndexStoragePath = indexStoragePathSettingValue;
-			}
+            var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
+            if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
+            {
+                IndexStoragePath = indexStoragePathSettingValue;
+            }
 
             MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
 
@@ -320,36 +320,34 @@ namespace Raven.Database.Config
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
-			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
-			FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
-			if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
-				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+            FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
+            FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
+            if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
+                FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
-			Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
-			Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
-			Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
-			Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
+            Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
+            Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+            Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
+            Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
 
-			TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
-			TimeSeries.TombstoneRetentionTime = ravenSettings.TimeSeries.TombstoneRetentionTime.Value;
-			TimeSeries.DeletedTombstonesInBatch = ravenSettings.TimeSeries.DeletedTombstonesInBatch.Value;
-			TimeSeries.ReplicationLatencyInMs = ravenSettings.TimeSeries.ReplicationLatencyInMs.Value;
+            TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
+            TimeSeries.TombstoneRetentionTime = ravenSettings.TimeSeries.TombstoneRetentionTime.Value;
+            TimeSeries.DeletedTombstonesInBatch = ravenSettings.TimeSeries.DeletedTombstonesInBatch.Value;
+            TimeSeries.ReplicationLatencyInMs = ravenSettings.TimeSeries.ReplicationLatencyInMs.Value;
 
-			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
+            Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
-			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
-			Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
-			Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
-			Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
-			Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
+            Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
+            Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
+            Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
+            Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
+            Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
 
-		    Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
-		    Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
-		    Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
-		    Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
-		    Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
-
-			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
+            Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
+            Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
+            Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
+            Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
+            Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
 
             TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -357,33 +355,23 @@ namespace Raven.Database.Config
 
             IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
 
-			TempPath = ravenSettings.TempPath.Value;
+            WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
-			FillMonitoringSettings(ravenSettings);
+            TempPath = ravenSettings.TempPath.Value;
 
-			PostInit();
+            FillMonitoringSettings(ravenSettings);
 
             PostInit();
 
-		private void FillMonitoringSettings(StronglyTypedRavenSettings settings)
-		{
-			Monitoring.Snmp.Enabled = settings.Monitoring.Snmp.Enabled.Value;
-			Monitoring.Snmp.Community = settings.Monitoring.Snmp.Community.Value;
-			Monitoring.Snmp.Port = settings.Monitoring.Snmp.Port.Value;
-		}
+            return this;
+        }
 
-		private static string CalculateWorkingDirectory(string workingDirectory)
-		{
-			if (string.IsNullOrEmpty(workingDirectory)) 
-				workingDirectory = @"~\";
-
-			if (workingDirectory.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
-			{
-				var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-				var rootPath = Path.GetPathRoot(baseDirectory);
-				if (string.IsNullOrEmpty(rootPath) == false)
-					workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
-			}
+        private void FillMonitoringSettings(StronglyTypedRavenSettings settings)
+        {
+            Monitoring.Snmp.Enabled = settings.Monitoring.Snmp.Enabled.Value;
+            Monitoring.Snmp.Community = settings.Monitoring.Snmp.Community.Value;
+            Monitoring.Snmp.Port = settings.Monitoring.Snmp.Port.Value;
+        }
 
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
@@ -430,381 +418,381 @@ namespace Raven.Database.Config
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
         /// </summary>
-		[JsonIgnore]
-		public SemaphoreSlim ConcurrentMultiGetRequests;
+        [JsonIgnore]
+        public SemaphoreSlim ConcurrentMultiGetRequests;
 
-		/// <summary>
-		/// The time to wait before canceling a database operation such as load (many) or query
-		/// </summary>
-		public TimeSpan DatabaseOperationTimeout { get; private set; }
+        /// <summary>
+        /// The time to wait before canceling a database operation such as load (many) or query
+        /// </summary>
+        public TimeSpan DatabaseOperationTimeout { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
+        public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
-		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+        public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+        public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+        public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
-		private void CheckDirectoryPermissions()
-		{
-			var tempPath = TempPath;
-			var tempFileName = Guid.NewGuid().ToString("N");
-			var tempFilePath = Path.Combine(tempPath, tempFileName);
+        private void CheckDirectoryPermissions()
+        {
+            var tempPath = TempPath;
+            var tempFileName = Guid.NewGuid().ToString("N");
+            var tempFilePath = Path.Combine(tempPath, tempFileName);
 
-			try
-			{
-				IOExtensions.CreateDirectoryIfNotExists(tempPath);
-				File.WriteAllText(tempFilePath, string.Empty);
-				File.Delete(tempFilePath);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(string.Format("Could not access temp path '{0}'. Please check if you have sufficient privileges to access this path or change 'Raven/TempPath' value.", tempPath), e);
-			}
-		}
+            try
+            {
+                IOExtensions.CreateDirectoryIfNotExists(tempPath);
+                File.WriteAllText(tempFilePath, string.Empty);
+                File.Delete(tempFilePath);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(string.Format("Could not access temp path '{0}'. Please check if you have sufficient privileges to access this path or change 'Raven/TempPath' value.", tempPath), e);
+            }
+        }
 
-		private void FilterActiveBundles()
-		{
-			if (container != null)
-				container.Dispose();
-			container = null;
+        private void FilterActiveBundles()
+        {
+            if (container != null)
+                container.Dispose();
+            container = null;
 
-			var catalog = GetUnfilteredCatalogs(Catalog.Catalogs);
-			Catalog = new AggregateCatalog(new List<ComposablePartCatalog> { new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()) });
-		}
+            var catalog = GetUnfilteredCatalogs(Catalog.Catalogs);
+            Catalog = new AggregateCatalog(new List<ComposablePartCatalog> { new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()) });
+        }
 
-		public IEnumerable<string> ActiveBundles
-		{
-			get
-			{
-				var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
+        public IEnumerable<string> ActiveBundles
+        {
+            get
+            {
+                var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
 
-				return BundlesHelper.ProcessActiveBundles(activeBundles)
-					.GetSemicolonSeparatedValues()
-					.Distinct();
-			}
-		}
+                return BundlesHelper.ProcessActiveBundles(activeBundles)
+                    .GetSemicolonSeparatedValues()
+                    .Distinct();
+            }
+        }
 
-		private HashSet<string> headersToIgnore;
-		public HashSet<string> HeadersToIgnore
-		{
-			get
-			{
-				if (headersToIgnore != null)
-					return headersToIgnore;
+        private HashSet<string> headersToIgnore;
+        public HashSet<string> HeadersToIgnore
+        {
+            get
+            {
+                if (headersToIgnore != null)
+                    return headersToIgnore;
 
-				var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
-				return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
-			}
-		} 
+                var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
+                return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+            }
+        } 
 
-		internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
-		{
-			if (catalogs.Count != 1)
-				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
-			return GetUnfilteredCatalog(catalogs.First());
-		}
+        internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
+        {
+            if (catalogs.Count != 1)
+                return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
+            return GetUnfilteredCatalog(catalogs.First());
+        }
 
-		private static ComposablePartCatalog GetUnfilteredCatalog(ComposablePartCatalog x)
-		{
-			var filteredCatalog = x as BundlesFilteredCatalog;
-			if (filteredCatalog != null)
-				return GetUnfilteredCatalog(filteredCatalog.CatalogToFilter);
-			return x;
-		}
+        private static ComposablePartCatalog GetUnfilteredCatalog(ComposablePartCatalog x)
+        {
+            var filteredCatalog = x as BundlesFilteredCatalog;
+            if (filteredCatalog != null)
+                return GetUnfilteredCatalog(filteredCatalog.CatalogToFilter);
+            return x;
+        }
 
-		public TaskScheduler CustomTaskScheduler { get; set; }
+        public TaskScheduler CustomTaskScheduler { get; set; }
 
-		public string RedirectStudioUrl { get; set; }
+        public string RedirectStudioUrl { get; set; }
 
-		private void SetupTransactionMode()
-		{
-			var transactionMode = Settings["Raven/TransactionMode"];
-			TransactionMode result;
-			if (Enum.TryParse(transactionMode, true, out result) == false)
-				result = TransactionMode.Safe;
-			TransactionMode = result;
-		}
+        private void SetupTransactionMode()
+        {
+            var transactionMode = Settings["Raven/TransactionMode"];
+            TransactionMode result;
+            if (Enum.TryParse(transactionMode, true, out result) == false)
+                result = TransactionMode.Safe;
+            TransactionMode = result;
+        }
 
-		private void SetVirtualDirectory()
-		{
-			var defaultVirtualDirectory = "/";
-			try
-			{
-				if (HttpContext.Current != null)
-					defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
-			}
-			catch (HttpException)
-			{
-				// explicitly ignoring this because we might be running in embedded mode
-				// inside IIS during init stages, in which case we can't access the HttpContext
-				// nor do we actually care
-			}
+        private void SetVirtualDirectory()
+        {
+            var defaultVirtualDirectory = "/";
+            try
+            {
+                if (HttpContext.Current != null)
+                    defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+            }
+            catch (HttpException)
+            {
+                // explicitly ignoring this because we might be running in embedded mode
+                // inside IIS during init stages, in which case we can't access the HttpContext
+                // nor do we actually care
+            }
 
-			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
+            VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
-		}
+        }
 
-		public bool UseDefaultOAuthTokenServer
-		{
-			get { return Settings["Raven/OAuthTokenServer"] == null;  }
-		}
+        public bool UseDefaultOAuthTokenServer
+        {
+            get { return Settings["Raven/OAuthTokenServer"] == null;  }
+        }
 
-		private void SetupOAuth()
-		{
-			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
-			OAuthTokenKey = GetOAuthKey();
-		}
+        private void SetupOAuth()
+        {
+            OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
+                               (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
+            OAuthTokenKey = GetOAuthKey();
+        }
 
-		private void SetupGC()
-		{
-			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
-		}
+        private void SetupGC()
+        {
+            //GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+        }
 
-		private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
-			{
-			using (var rsa = Encryptor.Current.CreateAsymmetrical())
-			{
-				return rsa.ExportCspBlob(true);
-			}
-		});
+        private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
+            {
+            using (var rsa = Encryptor.Current.CreateAsymmetrical())
+            {
+                return rsa.ExportCspBlob(true);
+            }
+        });
 
-		private byte[] GetOAuthKey()
-		{
-			var key = Settings["Raven/OAuthTokenCertificate"];
-			if (string.IsNullOrEmpty(key) == false)
-			{
-				return Convert.FromBase64String(key);
-			}
-			return DefaultOauthKey.Value; // ensure we only create this once per process
-		}
+        private byte[] GetOAuthKey()
+        {
+            var key = Settings["Raven/OAuthTokenCertificate"];
+            if (string.IsNullOrEmpty(key) == false)
+            {
+                return Convert.FromBase64String(key);
+            }
+            return DefaultOauthKey.Value; // ensure we only create this once per process
+        }
 
-		public NameValueCollection Settings { get; set; }
+        public NameValueCollection Settings { get; set; }
 
-		public string ServerUrl
-		{
-			get
-			{
-				HttpRequest httpRequest = null;
-				try
-				{
-					if (HttpContext.Current != null)
-						httpRequest = HttpContext.Current.Request;
-				}
-				catch (Exception)
-				{
-					// the issue is probably Request is not available in this context
-					// we can safely ignore this, at any rate
-				}
-				if (httpRequest != null)// running in IIS, let us figure out how
-				{
-					var url = httpRequest.Url;
-					return new UriBuilder(url)
-					{
-						Path = httpRequest.ApplicationPath,
-						Query = ""
-					}.Uri.ToString();
-				}
-				return new UriBuilder(Encryption.UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
-			}
-		}
+        public string ServerUrl
+        {
+            get
+            {
+                HttpRequest httpRequest = null;
+                try
+                {
+                    if (HttpContext.Current != null)
+                        httpRequest = HttpContext.Current.Request;
+                }
+                catch (Exception)
+                {
+                    // the issue is probably Request is not available in this context
+                    // we can safely ignore this, at any rate
+                }
+                if (httpRequest != null)// running in IIS, let us figure out how
+                {
+                    var url = httpRequest.Url;
+                    return new UriBuilder(url)
+                    {
+                        Path = httpRequest.ApplicationPath,
+                        Query = ""
+                    }.Uri.ToString();
+                }
+                return new UriBuilder(Encryption.UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+            }
+        }
 
-		#region Core settings
+        #region Core settings
 
-		/// <summary>
-		/// When the database is shut down rudely, determine whatever to reset the index or to check it.
-		/// Checking the index may take some time on large databases
-		/// </summary>
-		public bool ResetIndexOnUncleanShutdown { get; set; }
+        /// <summary>
+        /// When the database is shut down rudely, determine whatever to reset the index or to check it.
+        /// Checking the index may take some time on large databases
+        /// </summary>
+        public bool ResetIndexOnUncleanShutdown { get; set; }
 
-		/// <summary>
-		/// The maximum allowed page size for queries. 
-		/// Default: 1024
-		/// Minimum: 10
-		/// </summary>
-		public int MaxPageSize { get; set; }
+        /// <summary>
+        /// The maximum allowed page size for queries. 
+        /// Default: 1024
+        /// Minimum: 10
+        /// </summary>
+        public int MaxPageSize { get; set; }
 
-		/// <summary>
-		/// Percentage of physical memory used for caching
-		/// Allowed values: 0-99 (0 = autosize)
-		/// </summary>
-		public int MemoryCacheLimitPercentage { get; set; }
+        /// <summary>
+        /// Percentage of physical memory used for caching
+        /// Allowed values: 0-99 (0 = autosize)
+        /// </summary>
+        public int MemoryCacheLimitPercentage { get; set; }
 
-		/// <summary>
-		/// An integer value that specifies the maximum allowable size, in megabytes, that caching 
-		/// document instances will use
-		/// </summary>
-		public int MemoryCacheLimitMegabytes { get; set; }
+        /// <summary>
+        /// An integer value that specifies the maximum allowable size, in megabytes, that caching 
+        /// document instances will use
+        /// </summary>
+        public int MemoryCacheLimitMegabytes { get; set; }
 
-		/// <summary>
-		/// Interval for checking the memory cache limits
-		/// Allowed values: max precision is 1 second
-		/// Default: 00:02:00 (or value provided by system.runtime.caching app config)
-		/// </summary>
-		public TimeSpan MemoryCacheLimitCheckInterval { get; set; }
-		#endregion
+        /// <summary>
+        /// Interval for checking the memory cache limits
+        /// Allowed values: max precision is 1 second
+        /// Default: 00:02:00 (or value provided by system.runtime.caching app config)
+        /// </summary>
+        public TimeSpan MemoryCacheLimitCheckInterval { get; set; }
+        #endregion
 
-		#region Index settings
+        #region Index settings
 
-		/// <summary>
-		/// The indexing scheduler to use
-		/// </summary>
-		public IIndexingClassifier IndexingClassifier { get; set; }
+        /// <summary>
+        /// The indexing scheduler to use
+        /// </summary>
+        public IIndexingClassifier IndexingClassifier { get; set; }
 
-		/// <summary>
-		/// Max number of items to take for indexing in a batch
-		/// Minimum: 128
-		/// </summary>
-		public int MaxNumberOfItemsToProcessInSingleBatch { get; set; }
+        /// <summary>
+        /// Max number of items to take for indexing in a batch
+        /// Minimum: 128
+        /// </summary>
+        public int MaxNumberOfItemsToProcessInSingleBatch { get; set; }
 
-		/// <summary>
-		/// The initial number of items to take when processing a batch
-		/// Default: 512 or 256 depending on CPU architecture
-		/// </summary>
-		public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
+        /// <summary>
+        /// The initial number of items to take when processing a batch
+        /// Default: 512 or 256 depending on CPU architecture
+        /// </summary>
+        public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
-		/// <summary>
-		/// Max number of items to take for reducing in a batch
-		/// Minimum: 128
-		/// </summary>
-		public int MaxNumberOfItemsToReduceInSingleBatch { get; set; }
+        /// <summary>
+        /// Max number of items to take for reducing in a batch
+        /// Minimum: 128
+        /// </summary>
+        public int MaxNumberOfItemsToReduceInSingleBatch { get; set; }
 
-		/// <summary>
-		/// The initial number of items to take when reducing a batch
-		/// Default: 256 or 128 depending on CPU architecture
-		/// </summary>
-		public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
+        /// <summary>
+        /// The initial number of items to take when reducing a batch
+        /// Default: 256 or 128 depending on CPU architecture
+        /// </summary>
+        public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
-		/// <summary>
-		/// The number that controls the if single step reduce optimization is performed.
-		/// If the count of mapped results if less than this value then the reduce is executed in single step.
-		/// Default: 1024
-		/// </summary>
-		public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
+        /// <summary>
+        /// The number that controls the if single step reduce optimization is performed.
+        /// If the count of mapped results if less than this value then the reduce is executed in single step.
+        /// Default: 1024
+        /// </summary>
+        public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
 
-		/// <summary>
-		/// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
-		/// Default: The number of processors in the current machine
-		/// </summary>
-		public int MaxNumberOfParallelProcessingTasks
-		{
-			get
-			{
-				if (MemoryStatistics.MaxParallelismSet)
-					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
-				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
-			}
-			set
-			{
-				if (value == 0)
-					throw new ArgumentException("You cannot set the number of parallel tasks to zero");
-				maxNumberOfParallelIndexTasks = value;
-			}
-		}
+        /// <summary>
+        /// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
+        /// Default: The number of processors in the current machine
+        /// </summary>
+        public int MaxNumberOfParallelProcessingTasks
+        {
+            get
+            {
+                if (MemoryStatistics.MaxParallelismSet)
+                    return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
+                return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
+            }
+            set
+            {
+                if (value == 0)
+                    throw new ArgumentException("You cannot set the number of parallel tasks to zero");
+                maxNumberOfParallelIndexTasks = value;
+            }
+        }
 
-		/// <summary>
-		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
-		/// Default: 64 MB
-		/// Minimum: 1 MB
-		/// </summary>
-		public int NewIndexInMemoryMaxBytes { get; set; }
+        /// <summary>
+        /// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
+        /// Default: 64 MB
+        /// Minimum: 1 MB
+        /// </summary>
+        public int NewIndexInMemoryMaxBytes { get; set; }
 
-		#endregion
+        #endregion
 
-		#region HTTP settings
+        #region HTTP settings
 
-		/// <summary>
-		/// The hostname to use when creating the http listener (null to accept any hostname or address)
-		/// Default: none, binds to all host names
-		/// </summary>
-		public string HostName { get; set; }
+        /// <summary>
+        /// The hostname to use when creating the http listener (null to accept any hostname or address)
+        /// Default: none, binds to all host names
+        /// </summary>
+        public string HostName { get; set; }
 
-		/// <summary>
-		/// The port to use when creating the http listener. 
-		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
-		/// </summary>
-		public int Port { get; set; }
+        /// <summary>
+        /// The port to use when creating the http listener. 
+        /// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
+        /// </summary>
+        public int Port { get; set; }
 
-		/// <summary>
-		/// Allow to get config information over the wire.
-		/// Applies to endpoints: /debug/config, /debug...
-		/// Default: Open. You can set it to AdminOnly.
-		/// </summary>
-		public string ExposeConfigOverTheWire { get; set; }
+        /// <summary>
+        /// Allow to get config information over the wire.
+        /// Applies to endpoints: /debug/config, /debug...
+        /// Default: Open. You can set it to AdminOnly.
+        /// </summary>
+        public string ExposeConfigOverTheWire { get; set; }
 
-		/// <summary>
-		/// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
-		/// Indicates the URL of a site trusted to make cross-domain requests to this server.
-		/// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
-		/// </summary>
-		public HashSet<string> AccessControlAllowOrigin { get; set; }
+        /// <summary>
+        /// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
+        /// Indicates the URL of a site trusted to make cross-domain requests to this server.
+        /// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
+        /// </summary>
+        public HashSet<string> AccessControlAllowOrigin { get; set; }
 
-		/// <summary>
-		/// Determine the value of the Access-Control-Max-Age header sent by the server.
-		/// Indicates how long (seconds) the browser should cache the Access Control settings.
-		/// Ignored if AccessControlAllowOrigin is not specified.
-		/// Default: 1728000 (20 days)
-		/// </summary>
-		public string AccessControlMaxAge { get; set; }
+        /// <summary>
+        /// Determine the value of the Access-Control-Max-Age header sent by the server.
+        /// Indicates how long (seconds) the browser should cache the Access Control settings.
+        /// Ignored if AccessControlAllowOrigin is not specified.
+        /// Default: 1728000 (20 days)
+        /// </summary>
+        public string AccessControlMaxAge { get; set; }
 
-		/// <summary>
-		/// Determine the value of the Access-Control-Allow-Methods header sent by the server.
-		/// Indicates which HTTP methods (verbs) are permitted for requests from allowed cross-domain origins.
-		/// Ignored if AccessControlAllowOrigin is not specified.
-		/// Default: PUT,PATCH,GET,DELETE,POST
-		/// </summary>
-		public string AccessControlAllowMethods { get; set; }
+        /// <summary>
+        /// Determine the value of the Access-Control-Allow-Methods header sent by the server.
+        /// Indicates which HTTP methods (verbs) are permitted for requests from allowed cross-domain origins.
+        /// Ignored if AccessControlAllowOrigin is not specified.
+        /// Default: PUT,PATCH,GET,DELETE,POST
+        /// </summary>
+        public string AccessControlAllowMethods { get; set; }
 
-		/// <summary>
-		/// Determine the value of the Access-Control-Request-Headers header sent by the server.
-		/// Indicates which HTTP headers are permitted for requests from allowed cross-domain origins.
-		/// Ignored if AccessControlAllowOrigin is not specified.
-		/// Allowed values: null (allow whatever headers are being requested), HTTP header field name
-		/// </summary>
-		public string AccessControlRequestHeaders { get; set; }
+        /// <summary>
+        /// Determine the value of the Access-Control-Request-Headers header sent by the server.
+        /// Indicates which HTTP headers are permitted for requests from allowed cross-domain origins.
+        /// Ignored if AccessControlAllowOrigin is not specified.
+        /// Allowed values: null (allow whatever headers are being requested), HTTP header field name
+        /// </summary>
+        public string AccessControlRequestHeaders { get; set; }
 
-		private string virtualDirectory;
+        private string virtualDirectory;
 
-		/// <summary>
-		/// The virtual directory to use when creating the http listener. 
-		/// Default: / 
-		/// </summary>
-		public string VirtualDirectory
-		{
-			get { return virtualDirectory; }
-			set
-			{
-				virtualDirectory = value;
+        /// <summary>
+        /// The virtual directory to use when creating the http listener. 
+        /// Default: / 
+        /// </summary>
+        public string VirtualDirectory
+        {
+            get { return virtualDirectory; }
+            set
+            {
+                virtualDirectory = value;
 
-				if (virtualDirectory.EndsWith("/"))
-					virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
-				if (virtualDirectory.StartsWith("/") == false)
-					virtualDirectory = "/" + virtualDirectory;
-			}
-		}
+                if (virtualDirectory.EndsWith("/"))
+                    virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
+                if (virtualDirectory.StartsWith("/") == false)
+                    virtualDirectory = "/" + virtualDirectory;
+            }
+        }
 
-		/// <summary>
-		/// Whether to use http compression or not. 
-		/// Allowed values: true/false; 
-		/// Default: true
-		/// </summary>
-		public bool HttpCompression { get; set; }
+        /// <summary>
+        /// Whether to use http compression or not. 
+        /// Allowed values: true/false; 
+        /// Default: true
+        /// </summary>
+        public bool HttpCompression { get; set; }
 
-		/// <summary>
-		/// Defines which operations are allowed for anonymous users.
-		/// Allowed values: All, Get, None
-		/// Default: Get
-		/// </summary>
-		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+        /// <summary>
+        /// Defines which operations are allowed for anonymous users.
+        /// Allowed values: All, Get, None
+        /// Default: Get
+        /// </summary>
+        public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-		/// <summary>
-		/// If set local request don't require authentication
-		/// Allowed values: true/false
-		/// Default: false
-		/// </summary>
-		public bool AllowLocalAccessWithoutAuthorization { get; set; }
+        /// <summary>
+        /// If set local request don't require authentication
+        /// Allowed values: true/false
+        /// Default: false
+        /// </summary>
+        public bool AllowLocalAccessWithoutAuthorization { get; set; }
 
         /// <summary>
         /// If set all client request to the server will be rejected with 
@@ -813,56 +801,56 @@ namespace Raven.Database.Config
         /// </summary>
         public bool RejectClientsMode { get; set; }
 
-		/// <summary>
-		/// The certificate to use when verifying access token signatures for OAuth
-		/// </summary>
-		public byte[] OAuthTokenKey { get; set; }
+        /// <summary>
+        /// The certificate to use when verifying access token signatures for OAuth
+        /// </summary>
+        public byte[] OAuthTokenKey { get; set; }
 
-		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
+        public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
 
-		#endregion
+        #endregion
 
-		#region Data settings
+        #region Data settings
 
-		public string WorkingDirectory { get; private set; }
+        public string WorkingDirectory { get; private set; }
 
-		/// <summary>
-		/// The directory for the RavenDB database. 
-		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// Default: ~\Databases\System
-		/// </summary>
-		public string DataDirectory
-		{
-			get { return dataDirectory; }
-			set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
-		}
+        /// <summary>
+        /// The directory for the RavenDB database. 
+        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
+        /// Default: ~\Databases\System
+        /// </summary>
+        public string DataDirectory
+        {
+            get { return dataDirectory; }
+            set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
+        }
 
-		/// <summary>
-		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, voron
-		/// Default: esent
-		/// </summary>
-		public string DefaultStorageTypeName
-		{
-			get { return defaultStorageTypeName; }
-			set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
-		}
-		private string defaultStorageTypeName;
+        /// <summary>
+        /// What storage type to use (see: RavenDB Storage engines)
+        /// Allowed values: esent, voron
+        /// Default: esent
+        /// </summary>
+        public string DefaultStorageTypeName
+        {
+            get { return defaultStorageTypeName; }
+            set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
+        }
+        private string defaultStorageTypeName;
 
-		private bool runInMemory;
+        private bool runInMemory;
 
-		/// <summary>
-		/// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
-		/// storage engine, regardless of what was specified for StorageTypeName
-		/// Allowed values: true/false
-		/// Default: false
-		/// </summary>
-		public bool RunInMemory
-		{
-			get { return runInMemory; }
-			set
-			{
-				runInMemory = value;
+        /// <summary>
+        /// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
+        /// storage engine, regardless of what was specified for StorageTypeName
+        /// Allowed values: true/false
+        /// Default: false
+        /// </summary>
+        public bool RunInMemory
+        {
+            get { return runInMemory; }
+            set
+            {
+                runInMemory = value;
                 Settings[Constants.RunInMemory] = value.ToString();
             }
         }
@@ -953,129 +941,129 @@ namespace Raven.Database.Config
         /// </summary>
         public string EmbeddedFilesDirectory { get; set; }
 
-		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
-		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
+        public bool CreatePluginsDirectoryIfNotExisting { get; set; }
+        public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
-		private string compiledIndexCacheDirectory;
+        private string compiledIndexCacheDirectory;
 
-		/// <summary>
-		/// Where to cache the compiled indexes. Absolute path or relative to TEMP directory.
-		/// Default: ~\CompiledIndexCache
-		/// </summary>
-		public string CompiledIndexCacheDirectory
-		{
-			get
-			{
-				return compiledIndexCacheDirectory;
-			}
-			set
-			{
-				compiledIndexCacheDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
-			}
-		}
+        /// <summary>
+        /// Where to cache the compiled indexes. Absolute path or relative to TEMP directory.
+        /// Default: ~\CompiledIndexCache
+        /// </summary>
+        public string CompiledIndexCacheDirectory
+        {
+            get
+            {
+                return compiledIndexCacheDirectory;
+            }
+            set
+            {
+                compiledIndexCacheDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
+            }
+        }
 
-		public string OAuthTokenServer { get; set; }
+        public string OAuthTokenServer { get; set; }
 
-		#endregion
+        #endregion
 
-		[JsonIgnore]
-		public CompositionContainer Container
-		{
-			get { return container ?? (container = new CompositionContainer(Catalog)); }
-			set
-			{
-				containerExternallySet = true;
-				container = value;
-			}
-		}
+        [JsonIgnore]
+        public CompositionContainer Container
+        {
+            get { return container ?? (container = new CompositionContainer(Catalog)); }
+            set
+            {
+                containerExternallySet = true;
+                container = value;
+            }
+        }
 
-		public bool DisableDocumentPreFetching { get; set; }
+        public bool DisableDocumentPreFetching { get; set; }
 
-		public int MaxNumberOfItemsToPreFetch { get; set; }
+        public int MaxNumberOfItemsToPreFetch { get; set; }
 
-		[JsonIgnore]
-		public AggregateCatalog Catalog { get; set; }
+        [JsonIgnore]
+        public AggregateCatalog Catalog { get; set; }
 
-		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
+        public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath;
-		
-		private int? maxNumberOfParallelIndexTasks;
+        private string indexStoragePath;
+        
+        private int? maxNumberOfParallelIndexTasks;
 
-		//this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
-		private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
+        //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
+        private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
 
-		/// <summary>
-		/// The expiration value for documents in the internal managed cache
-		/// </summary>
-		public TimeSpan MemoryCacheExpiration { get; set; }
+        /// <summary>
+        /// The expiration value for documents in the internal managed cache
+        /// </summary>
+        public TimeSpan MemoryCacheExpiration { get; set; }
 
-		/// <summary>
-		/// Controls whatever RavenDB will create temporary indexes 
-		/// for queries that cannot be directed to standard indexes
-		/// </summary>
-		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
+        /// <summary>
+        /// Controls whatever RavenDB will create temporary indexes 
+        /// for queries that cannot be directed to standard indexes
+        /// </summary>
+        public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
 
-		/// <summary>
-		/// Maximum time interval for storing commit points for map indexes when new items were added.
-		/// The commit points are used to restore index if unclean shutdown was detected.
-		/// Default: 00:05:00 
-		/// </summary>
-		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+        /// <summary>
+        /// Maximum time interval for storing commit points for map indexes when new items were added.
+        /// The commit points are used to restore index if unclean shutdown was detected.
+        /// Default: 00:05:00 
+        /// </summary>
+        public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
 
-		/// <summary>
-		/// Minumum interval between between successive indexing that will allow to store a  commit point
-		/// Default: 00:01:00
-		/// </summary>
-		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+        /// <summary>
+        /// Minumum interval between between successive indexing that will allow to store a  commit point
+        /// Default: 00:01:00
+        /// </summary>
+        public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
 
-		/// <summary>
-		/// Maximum number of kept commit points to restore map index after unclean shutdown
-		/// Default: 5
-		/// </summary>
-		public int MaxNumberOfStoredCommitPoints { get; set; }
+        /// <summary>
+        /// Maximum number of kept commit points to restore map index after unclean shutdown
+        /// Default: 5
+        /// </summary>
+        public int MaxNumberOfStoredCommitPoints { get; set; }
 
-		/// <summary>
-		/// Limit of how much memory a batch processing can take (in MBytes)
-		/// </summary>
-		public int MemoryLimitForProcessingInMb { get; set; }
+        /// <summary>
+        /// Limit of how much memory a batch processing can take (in MBytes)
+        /// </summary>
+        public int MemoryLimitForProcessingInMb { get; set; }
 
-		public long DynamicMemoryLimitForProcessing
-		{
-			get
-			{
-				var availableMemory = MemoryStatistics.AvailableMemoryInMb;
-				var minFreeMemory = (MemoryLimitForProcessingInMb * 2L);
-				// we have more memory than the twice the limit, we can use the default limit
-				if (availableMemory > minFreeMemory)
-					return MemoryLimitForProcessingInMb * 1024L * 1024L;
+        public long DynamicMemoryLimitForProcessing
+        {
+            get
+            {
+                var availableMemory = MemoryStatistics.AvailableMemoryInMb;
+                var minFreeMemory = (MemoryLimitForProcessingInMb * 2L);
+                // we have more memory than the twice the limit, we can use the default limit
+                if (availableMemory > minFreeMemory)
+                    return MemoryLimitForProcessingInMb * 1024L * 1024L;
 
-				// we don't have enough room to play with, if two databases will request the max memory limit
-				// at the same time, we'll start paging because we'll run out of free memory. 
-				// Because of that, we'll dynamically adjust the amount
-				// of memory available for processing based on the amount of memory we actually have available,
-				// assuming that we have multiple concurrent users of memory at the same time.
-				// we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
+                // we don't have enough room to play with, if two databases will request the max memory limit
+                // at the same time, we'll start paging because we'll run out of free memory. 
+                // Because of that, we'll dynamically adjust the amount
+                // of memory available for processing based on the amount of memory we actually have available,
+                // assuming that we have multiple concurrent users of memory at the same time.
+                // we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
                 return Math.Min(availableMemory * 1024L * 1024L / 4, 16 * 1024 * 1024);
 
             }
         }
 
-		// <summary>
-		/// Limit for low mem detection in linux
-		/// </summary>
-		public int LowMemoryForLinuxDetectionInMB { get; set; }
+        // <summary>
+        /// Limit for low mem detection in linux
+        /// </summary>
+        public int LowMemoryForLinuxDetectionInMB { get; set; }
 
-		public string IndexStoragePath
-		{
-			get
-			{
-				if (string.IsNullOrEmpty(indexStoragePath))
-					indexStoragePath = Path.Combine(DataDirectory, "Indexes");
-				return indexStoragePath;
-			}
-			set { indexStoragePath = value.ToFullPath(); }
-		}
+        public string IndexStoragePath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(indexStoragePath))
+                    indexStoragePath = Path.Combine(DataDirectory, "Indexes");
+                return indexStoragePath;
+            }
+            set { indexStoragePath = value.ToFullPath(); }
+        }
 
         public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
@@ -1170,101 +1158,101 @@ namespace Raven.Database.Config
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
-		/// <summary>
-		/// Path to temporary directory used by server.
-		/// Default: Current user's temporary directory
-		/// </summary>
-		public string TempPath { get; set; }
+        /// <summary>
+        /// Path to temporary directory used by server.
+        /// Default: Current user's temporary directory
+        /// </summary>
+        public string TempPath { get; set; }
 
-	    [Browsable(false)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public void SetSystemDatabase()
-		{
-			IsTenantDatabase = false;
-		}
+        [Browsable(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public void SetSystemDatabase()
+        {
+            IsTenantDatabase = false;
+        }
 
-		[Browsable(false)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public bool IsSystemDatabase()
-		{
-			return IsTenantDatabase == false;
-		}
+        [Browsable(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool IsSystemDatabase()
+        {
+            return IsTenantDatabase == false;
+        }
 
-		protected void ResetContainer()
-		{
-			if (Container != null && containerExternallySet == false)
-			{
-				Container.Dispose();
-				Container = null;
-				containerExternallySet = false;
-			}
-		}
+        protected void ResetContainer()
+        {
+            if (Container != null && containerExternallySet == false)
+            {
+                Container.Dispose();
+                Container = null;
+                containerExternallySet = false;
+            }
+        }
 
-		protected AnonymousUserAccessMode GetAnonymousUserAccessMode()
-		{
-			if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
-			{
-				var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
-				return (AnonymousUserAccessMode)val;
-			}
-			return AnonymousUserAccessMode.Admin;
-		}
+        protected AnonymousUserAccessMode GetAnonymousUserAccessMode()
+        {
+            if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
+            {
+                var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
+                return (AnonymousUserAccessMode)val;
+            }
+            return AnonymousUserAccessMode.Admin;
+        }
 
-		protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
-		{
-			if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
-			{
-				var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
-				return (IgnoreSslCertificateErrorsMode)val;
-			}
-			return IgnoreSslCertificateErrorsMode.None;
-		}
+        protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
+        {
+            if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
+            {
+                var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
+                return (IgnoreSslCertificateErrorsMode)val;
+            }
+            return IgnoreSslCertificateErrorsMode.None;
+        }
 
-		public Uri GetFullUrl(string baseUrl)
-		{
-			baseUrl = Uri.EscapeUriString(baseUrl);
+        public Uri GetFullUrl(string baseUrl)
+        {
+            baseUrl = Uri.EscapeUriString(baseUrl);
 
-			if (baseUrl.StartsWith("/"))
-				baseUrl = baseUrl.Substring(1);
+            if (baseUrl.StartsWith("/"))
+                baseUrl = baseUrl.Substring(1);
 
-			var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
-			return new Uri(url, UriKind.RelativeOrAbsolute);
-		}
+            var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+            return new Uri(url, UriKind.RelativeOrAbsolute);
+        }
 
-		public T? GetConfigurationValue<T>(string configName) where T : struct
-		{
-			// explicitly fail if we can't convert it
-			if (string.IsNullOrEmpty(Settings[configName]) == false)
-				return (T)Convert.ChangeType(Settings[configName], typeof(T));
-			return null;
-		}
+        public T? GetConfigurationValue<T>(string configName) where T : struct
+        {
+            // explicitly fail if we can't convert it
+            if (string.IsNullOrEmpty(Settings[configName]) == false)
+                return (T)Convert.ChangeType(Settings[configName], typeof(T));
+            return null;
+        }
 
-		[CLSCompliant(false)]
-		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
-		{
-			if (EnvironmentUtils.RunningOnPosix)
-				storageEngine = "voron";
-			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
-			var type = Type.GetType(storageEngine);
+        [CLSCompliant(false)]
+        public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
+        {
+            if (EnvironmentUtils.RunningOnPosix)
+                storageEngine = "voron";
+            storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
+            var type = Type.GetType(storageEngine);
 
-			if (type == null)
-				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
-			Action dummyAction = () => { };
+            if (type == null)
+                throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
+            Action dummyAction = () => { };
 
-			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
-		}
+            return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
+        }
 
 
-	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
-		{
-	        switch (typeName.ToLowerInvariant())
-	        {
-	            case EsentTypeName:
-					typeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-	                break;
-	            case VoronTypeName:
-					typeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-	                break;
+        public static string StorageEngineAssemblyNameByTypeName(string typeName)
+        {
+            switch (typeName.ToLowerInvariant())
+            {
+                case EsentTypeName:
+                    typeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+                    break;
+                case VoronTypeName:
+                    typeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                    break;
                 default:
                     throw new ArgumentException("Invalid storage engine type name: " + typeName);
             }
@@ -1351,23 +1339,23 @@ namespace Raven.Database.Config
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
         }
 
-		public void CustomizeValuesForCounterStorageTenant(string tenantId)
-		{
-			if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
-				Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
-		}
+        public void CustomizeValuesForCounterStorageTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
+                Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
+        }
 
-		public void CustomizeValuesForTimeSeriesTenant(string tenantId)
-		{
-			if (string.IsNullOrEmpty(Settings[Constants.TimeSeries.DataDirectory]) == false)
-				Settings[Constants.TimeSeries.DataDirectory] = Path.Combine(Settings[Constants.TimeSeries.DataDirectory], "TimeSeries", tenantId);
-		}
+        public void CustomizeValuesForTimeSeriesTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings[Constants.TimeSeries.DataDirectory]) == false)
+                Settings[Constants.TimeSeries.DataDirectory] = Path.Combine(Settings[Constants.TimeSeries.DataDirectory], "TimeSeries", tenantId);
+        }
 
-		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
-		{
-			Port = defaultConfiguration.Port;
-			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
-			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+        public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
+        {
+            Port = defaultConfiguration.Port;
+            OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
+            OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 
@@ -1536,6 +1524,70 @@ namespace Raven.Database.Config
             }
         }
 
+        public class CounterConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                workingDirectory = configuration.WorkingDirectory;
+            }
+
+            private string workingDirectory;
+
+            private string countersDataDirectory;
+
+            /// <summary>
+            /// The directory for the RavenDB counters. 
+            /// You can use the ~\ prefix to refer to RavenDB's base directory. 
+            /// </summary>
+            public string DataDirectory
+            {
+                get { return countersDataDirectory; }
+                set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+            }
+
+            /// <summary>
+            /// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
+            /// Purged on next counter storage startup. Default: 14 days.
+            /// </summary>
+            public TimeSpan TombstoneRetentionTime { get; set; }
+
+            public int DeletedTombstonesInBatch { get; set; }
+
+            public int ReplicationLatencyInMs { get; set; }
+        }
+
+        public class TimeSeriesConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                workingDirectory = configuration.WorkingDirectory;
+            }
+
+            private string workingDirectory;
+
+            private string timeSeriesDataDirectory;
+
+            /// <summary>
+            /// The directory for the RavenDB time series. 
+            /// You can use the ~\ prefix to refer to RavenDB's base directory. 
+            /// </summary>
+            public string DataDirectory
+            {
+                get { return timeSeriesDataDirectory; }
+                set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+            }
+
+            /// <summary>
+            /// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
+            /// Purged on next time series startup. Default: 14 days.
+            /// </summary>
+            public TimeSpan TombstoneRetentionTime { get; set; }
+
+            public int DeletedTombstonesInBatch { get; set; }
+
+            public int ReplicationLatencyInMs { get; set; }
+        }
+
         public class EncryptionConfiguration
         {
             /// <summary>
@@ -1558,157 +1610,69 @@ namespace Raven.Database.Config
             public int DisableIndexingFreeSpaceThreshold { get; set; }
 
             public bool DisableMapReduceInMemoryTracking { get; set; }
+            public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+            public bool UseLuceneASTParser
+            {
+                get { return useLuceneASTParser; }
+                set
+                {
+                    if (value == useLuceneASTParser)
+                        return;
+                    QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
+        }
+            }
+            private bool useLuceneASTParser = true;
         }
 
-		public class CounterConfiguration
-		{
-			public void InitializeFrom(InMemoryRavenConfiguration configuration)
-			{
-				workingDirectory = configuration.WorkingDirectory;
-			}
-
-			private string workingDirectory;
-
-			private string countersDataDirectory;
-
-			/// <summary>
-			/// The directory for the RavenDB counters. 
-			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-			/// </summary>
-			public string DataDirectory
-			{
-				get { return countersDataDirectory; }
-				set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
-			}
-
-			/// <summary>
-			/// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
-			/// Purged on next counter storage startup. Default: 14 days.
-			/// </summary>
-			public TimeSpan TombstoneRetentionTime { get; set; }
-
-			public int DeletedTombstonesInBatch { get; set; }
-
-			public int ReplicationLatencyInMs { get; set; }
-		}
-
-		public class TimeSeriesConfiguration
-		{
-			public void InitializeFrom(InMemoryRavenConfiguration configuration)
-			{
-				workingDirectory = configuration.WorkingDirectory;
-			}
-
-			private string workingDirectory;
-
-			private string timeSeriesDataDirectory;
-
-			/// <summary>
-			/// The directory for the RavenDB time series. 
-			/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-			/// </summary>
-			public string DataDirectory
-			{
-				get { return timeSeriesDataDirectory; }
-				set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
-			}
-
-			/// <summary>
-			/// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
-			/// Purged on next time series startup. Default: 14 days.
-			/// </summary>
-			public TimeSpan TombstoneRetentionTime { get; set; }
-
-			public int DeletedTombstonesInBatch { get; set; }
-
-			public int ReplicationLatencyInMs { get; set; }
-		}
-
-		public class EncryptionConfiguration
-		{
-			/// <summary>
-			/// Whatever we should use FIPS compliant encryption algorithms
-			/// </summary>
-			public bool UseFips { get; set; }
-
-			public int EncryptionKeyBitsPreference { get; set; }
-
-			/// <summary>
-			/// Whatever we should use SSL for this connection
-			/// </summary>
-			public bool UseSsl { get; set; }
-		}
-
-		public class IndexingConfiguration
-		{
-			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
-
-			public int DisableIndexingFreeSpaceThreshold { get; set; }
-
-			public bool DisableMapReduceInMemoryTracking { get; set; }
-			public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
-			public bool UseLuceneASTParser
-			{
-				get { return useLuceneASTParser; }
-				set
-				{
-					if (value == useLuceneASTParser)
-						return;
-					QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
-		}
-			}
-			private bool useLuceneASTParser = true;
-		}
-
-	    public class ClusterConfiguration
-	    {
+        public class ClusterConfiguration
+        {
             public int ElectionTimeout { get; set; }
             public int HeartbeatTimeout { get; set; }
             public int MaxLogLengthBeforeCompaction { get; set; }
             public TimeSpan MaxStepDownDrainTime { get; set; }
             public int MaxEntriesPerRequest { get; set; }
-	    }
+        }
 
-		public class MonitoringConfiguration
-		{
-			public MonitoringConfiguration()
-			{
-				Snmp = new SnmpConfiguration();
-			}
+        public class MonitoringConfiguration
+        {
+            public MonitoringConfiguration()
+            {
+                Snmp = new SnmpConfiguration();
+            }
 
-			public SnmpConfiguration Snmp { get; private set; }
+            public SnmpConfiguration Snmp { get; private set; }
 
-			public class SnmpConfiguration
-			{
-				public bool Enabled { get; set; }
+            public class SnmpConfiguration
+            {
+                public bool Enabled { get; set; }
 
-				public int Port { get; set; }
+                public int Port { get; set; }
 
-				public string Community { get; set; }
-			}
-		}
+                public string Community { get; set; }
+            }
+        }
 
-		public class WebSocketsConfiguration
-		{
-			public int InitialBufferPoolSize { get; set; }
-		}
+        public class WebSocketsConfiguration
+        {
+            public int InitialBufferPoolSize { get; set; }
+        }
 
-		public void UpdateDataDirForLegacySystemDb()
-		{
-			if (RunInMemory)
-				return;
-			var legacyPath = Settings["Raven/DataDir/Legacy"];
-			if (string.IsNullOrEmpty(legacyPath))
-				return;
-			var fullLegacyPath = FilePathTools.MakeSureEndsWithSlash(legacyPath.ToFullPath());
+        public void UpdateDataDirForLegacySystemDb()
+        {
+            if (RunInMemory)
+                return;
+            var legacyPath = Settings["Raven/DataDir/Legacy"];
+            if (string.IsNullOrEmpty(legacyPath))
+                return;
+            var fullLegacyPath = FilePathTools.MakeSureEndsWithSlash(legacyPath.ToFullPath());
 
-			// if we already have a system database in the legacy path, we want to keep it.
-			// The idea is that we don't want to have the user experience "missing databases" because
-			// we change the path to make it nicer.
-			if (Directory.Exists(fullLegacyPath))
-			{
-				DataDirectory = legacyPath;
-			}
-		}
-	}
+            // if we already have a system database in the legacy path, we want to keep it.
+            // The idea is that we don't want to have the user experience "missing databases" because
+            // we change the path to make it nicer.
+            if (Directory.Exists(fullLegacyPath))
+            {
+                DataDirectory = legacyPath;
+            }
+        }
+    }
 }

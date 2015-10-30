@@ -40,17 +40,17 @@ class serverConnectionInfo {
     useNoCredentials() {
         this.isUserCredentials(false);
         this.isApiKeyCredentials(false);
-	}
+    }
 
-	toDto(): serverConnectionInfoDto {
-		return {
-			Url: this.url(),
-			Username: this.username(),
-			Password: this.password(),
-			Domain: this.domain(),
-			ApiKey: this.apiKey()
-		};
-	}
+    toDto(): serverConnectionInfoDto {
+        return {
+            Url: this.url(),
+            Username: this.username(),
+            Password: this.password(),
+            Domain: this.domain(),
+            ApiKey: this.apiKey()
+        };
+    }
 }
 
 export = serverConnectionInfo;

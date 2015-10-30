@@ -267,31 +267,31 @@ namespace Raven.Tests.FileSystem.Storage
             }
         }
 
-	    [Theory]
-	    [PropertyData("Storages")]
-	    public void GetConfigNamesStartingWithPrefix2(string requestedStorage)
-	    {
-		    using (var storage = NewTransactionalStorage(requestedStorage))
-		    {
-			    int total;
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfigNamesStartingWithPrefix2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                int total;
 
-			    storage.Batch(accessor => accessor.SetConfig("a-config1", new RavenJObject()));
-			    storage.Batch(accessor => accessor.SetConfig("b-config2", new RavenJObject()));
-			    storage.Batch(accessor => accessor.SetConfig("c-config3", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("a-config1", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("b-config2", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("c-config3", new RavenJObject()));
 
-			    storage.Batch(accessor =>
-			    {
-				    var names = accessor
-					    .GetConfigNamesStartingWithPrefix("a-config", 0, 10, out total)
-					    .ToList();
+                storage.Batch(accessor =>
+                {
+                    var names = accessor
+                        .GetConfigNamesStartingWithPrefix("a-config", 0, 10, out total)
+                        .ToList();
 
-				    Assert.Equal(1, names.Count);
+                    Assert.Equal(1, names.Count);
 
-			    });
-		    }
-	    }
+                });
+            }
+        }
 
-	    [Theory]
+        [Theory]
         [PropertyData("Storages")]
         public void GetConfigsStartWithPrefix(string requestedStorage)
         {

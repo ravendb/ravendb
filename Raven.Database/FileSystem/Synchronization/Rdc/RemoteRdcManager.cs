@@ -33,7 +33,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
         /// <returns></returns>
         public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
         {
-			var remoteSignatureManifest = await synchronizationServerClient.GetRdcManifestAsync(dataInfo.Name).ConfigureAwait(false);
+            var remoteSignatureManifest = await synchronizationServerClient.GetRdcManifestAsync(dataInfo.Name).ConfigureAwait(false);
             if (remoteSignatureManifest.Signatures.Any())
             {
                 var sigPairs = PrepareSigPairs(remoteSignatureManifest);
@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 
                 using (var highestSigContent = remoteCacheSignatureRepository.CreateContent(highestSigName))
                 {
-					await synchronizationServerClient.DownloadSignatureAsync(highestSigName, highestSigContent).ConfigureAwait(false);
+                    await synchronizationServerClient.DownloadSignatureAsync(highestSigName, highestSigContent).ConfigureAwait(false);
                     await SynchronizePairAsync(sigPairs, token).ConfigureAwait(false);
                 }
             }
@@ -59,9 +59,9 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
                 var curr = sigPairs[i];
                 var prev = sigPairs[i - 1];
 
-				await SynchronizeAsync(curr.Local, prev.Local, curr.Remote, prev.Remote, token).ConfigureAwait(false);
-			}
-		}
+                await SynchronizeAsync(curr.Local, prev.Local, curr.Remote, prev.Remote, token).ConfigureAwait(false);
+            }
+        }
 
         private IList<LocalRemotePair> PrepareSigPairs(SignatureManifest signatureManifest)
         {
@@ -85,12 +85,12 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
                 var needList = needListGenerator.CreateNeedsList(SignatureInfo.Parse(localSigSigName),
                                                                  SignatureInfo.Parse(remoteSigSigName), token);
 
-				using (var output = remoteCacheSignatureRepository.CreateContent(remoteSigName))
-				{
-					await NeedListParser.ParseAsync(source, seed, output, needList, token).ConfigureAwait(false);
-				}
-			}
-		}
+                using (var output = remoteCacheSignatureRepository.CreateContent(remoteSigName))
+                {
+                    await NeedListParser.ParseAsync(source, seed, output, needList, token).ConfigureAwait(false);
+                }
+            }
+        }
 
         private class LocalRemotePair
         {

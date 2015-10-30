@@ -26,32 +26,32 @@ namespace Raven.Database.Server.WebApi.Handlers
             concurrentRequestSemaphore = new SemaphoreSlim(maxConcurrentServerRequests);
         }
 
-		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-		{
-			bool waiting = false;
-			try
-			{
-				waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-				if (waiting == false)
-				{
-					try
-					{
-						Logger.Info("Too many concurrent requests, throttling!");
-						return await HandleTooBusyError(request).ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						Logger.WarnException("Could not send a too busy error to the client", e);
-					}
-				}
-				return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-			}
-			finally
-			{
-				if (waiting)
-					concurrentRequestSemaphore.Release();
-			}
-		}
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            bool waiting = false;
+            try
+            {
+                waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+                if (waiting == false)
+                {
+                    try
+                    {
+                        Logger.Info("Too many concurrent requests, throttling!");
+                        return await HandleTooBusyError(request).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.WarnException("Could not send a too busy error to the client", e);
+                    }
+                }
+                return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (waiting)
+                    concurrentRequestSemaphore.Release();
+            }
+        }
 
         private static Task<HttpResponseMessage> HandleTooBusyError(HttpRequestMessage request)
         {

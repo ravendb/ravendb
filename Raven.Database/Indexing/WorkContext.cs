@@ -26,37 +26,37 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {
-	public class WorkContext : IDisposable
-	{
-		private readonly SizeLimitedConcurrentSet<FilteredOutIndexStat> recentlyFilteredOutIndexes = new SizeLimitedConcurrentSet<FilteredOutIndexStat>(200);
+    public class WorkContext : IDisposable
+    {
+        private readonly SizeLimitedConcurrentSet<FilteredOutIndexStat> recentlyFilteredOutIndexes = new SizeLimitedConcurrentSet<FilteredOutIndexStat>(200);
 
-		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
+        private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
-		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
+        private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
-	    private long nextIndexingBatchInfoId = 0;
-	    private long nextReducingBatchInfoId = 0;
+        private long nextIndexingBatchInfoId = 0;
+        private long nextReducingBatchInfoId = 0;
 
-		private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
-		private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
-		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
-		private readonly object waitForWork = new object();
-		private volatile bool doWork = true;
-		private volatile bool doIndexing = true;
+        private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
+        private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
+        private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
+        private readonly object waitForWork = new object();
+        private volatile bool doWork = true;
+        private volatile bool doIndexing = true;
         private volatile bool doReducing = true;
         private int workCounter;
-		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private readonly Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>>(() =>
-		{
-			var stack = new Stack<List<Func<string>>>();
-			stack.Push(new List<Func<string>>());
-			return stack;
-		});
-		private long errorsCounter = 0;
+        private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private readonly Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>> shouldNotifyOnWork = new Abstractions.Threading.ThreadLocal<Stack<List<Func<string>>>>(() =>
+        {
+            var stack = new Stack<List<Func<string>>>();
+            stack.Push(new List<Func<string>>());
+            return stack;
+        });
+        private long errorsCounter = 0;
 
-	    public WorkContext()
-	    {
+        public WorkContext()
+        {
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
             MetricsCounters = new MetricsCountersManager();
             InstallGauges();
@@ -206,162 +206,162 @@ namespace Raven.Database.Indexing
                     return true;
                 }
                 CancellationToken.ThrowIfCancellationRequested();
-				if (log.IsDebugEnabled)
-					log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
-				var forWork = Monitor.Wait(waitForWork, timeout);
-				if (forWork)
-					UpdateFoundWork();
-				return forWork;
-			}
-		}
+                if (log.IsDebugEnabled)
+                    log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
+                var forWork = Monitor.Wait(waitForWork, timeout);
+                if (forWork)
+                    UpdateFoundWork();
+                return forWork;
+            }
+        }
 
-		public void ShouldNotifyAboutWork(Func<string> why)
-		{
-			shouldNotifyOnWork.Value.Peek().Add(why);
-			UpdateFoundWork();
-		}
+        public void ShouldNotifyAboutWork(Func<string> why)
+        {
+            shouldNotifyOnWork.Value.Peek().Add(why);
+            UpdateFoundWork();
+        }
 
-		public void HandleWorkNotifications()
-		{
-			if (disposed)
-				return;
-			if (shouldNotifyOnWork.Value.Peek().Count == 0)
-				return;
-			NotifyAboutWork();
-		}
+        public void HandleWorkNotifications()
+        {
+            if (disposed)
+                return;
+            if (shouldNotifyOnWork.Value.Peek().Count == 0)
+                return;
+            NotifyAboutWork();
+        }
 
-		public void NestedTransactionEnter()
-		{
-			shouldNotifyOnWork.Value.Push(new List<Func<string>>());
-		}
+        public void NestedTransactionEnter()
+        {
+            shouldNotifyOnWork.Value.Push(new List<Func<string>>());
+        }
 
-		public void NestedTransactionExit()
-		{
-			if (shouldNotifyOnWork.Value.Count == 1)
-				throw new InvalidOperationException("BUG: Cannot empty the should notify work stack");
-			shouldNotifyOnWork.Value.Pop();
-		}
+        public void NestedTransactionExit()
+        {
+            if (shouldNotifyOnWork.Value.Count == 1)
+                throw new InvalidOperationException("BUG: Cannot empty the should notify work stack");
+            shouldNotifyOnWork.Value.Pop();
+        }
 
-		public int GetWorkCount()
-		{
-			return workCounter;
-		}
+        public int GetWorkCount()
+        {
+            return workCounter;
+        }
 
-		public void NotifyAboutWork()
-		{
-			lock (waitForWork)
-			{
-				var notifications = shouldNotifyOnWork.Value.Peek();
-				if (doWork == false)
-				{
-					// need to clear this anyway
-					if(disposed == false)
-						notifications.Clear();
-					return;
-				}
-				var increment = Interlocked.Increment(ref workCounter);
-				if (log.IsDebugEnabled)
-				{
-					var reason = string.Join(", ", notifications.Select(action => action()).Where(x => x != null));
-					log.Debug("Incremented work counter to {0} because: {1}", increment, reason);
-				}
-				notifications.Clear();
-				Monitor.PulseAll(waitForWork);
-			}
-		}
+        public void NotifyAboutWork()
+        {
+            lock (waitForWork)
+            {
+                var notifications = shouldNotifyOnWork.Value.Peek();
+                if (doWork == false)
+                {
+                    // need to clear this anyway
+                    if(disposed == false)
+                        notifications.Clear();
+                    return;
+                }
+                var increment = Interlocked.Increment(ref workCounter);
+                if (log.IsDebugEnabled)
+                {
+                    var reason = string.Join(", ", notifications.Select(action => action()).Where(x => x != null));
+                    log.Debug("Incremented work counter to {0} because: {1}", increment, reason);
+                }
+                notifications.Clear();
+                Monitor.PulseAll(waitForWork);
+            }
+        }
 
-		public void StartWork()
-		{
-			doWork = true;
-			doIndexing = true;
-		    doReducing = true;
-		}
+        public void StartWork()
+        {
+            doWork = true;
+            doIndexing = true;
+            doReducing = true;
+        }
 
-		public void StopWork()
-		{
-			if (log.IsDebugEnabled)
-				log.Debug("Stopping background workers");
-			doWork = false;
-			doIndexing = false;
-		    doReducing = false;
-			lock (waitForWork)
-			{
-				Monitor.PulseAll(waitForWork);
-			}
-		}
+        public void StopWork()
+        {
+            if (log.IsDebugEnabled)
+                log.Debug("Stopping background workers");
+            doWork = false;
+            doIndexing = false;
+            doReducing = false;
+            lock (waitForWork)
+            {
+                Monitor.PulseAll(waitForWork);
+            }
+        }
 
-		public void AddError(int index, string indexName, string key, Exception exception)
-		{
-			AddError(index, indexName, key, exception, "Unknown");
-		}
+        public void AddError(int index, string indexName, string key, Exception exception)
+        {
+            AddError(index, indexName, key, exception, "Unknown");
+        }
 
-		public void AddError(int index, string indexName, string key, Exception exception, string component)
-		{
-			var aggregateException = exception as AggregateException;
-			if (aggregateException != null)
-				exception = aggregateException.ExtractSingleInnerException();
+        public void AddError(int index, string indexName, string key, Exception exception, string component)
+        {
+            var aggregateException = exception as AggregateException;
+            if (aggregateException != null)
+                exception = aggregateException.ExtractSingleInnerException();
 
-			AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
-		}
+            AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
+        }
 
-		public void AddError(int index, string indexName, string key, string error)
-		{
-			AddError(index, indexName, key, error, "Unknown");
-		}
+        public void AddError(int index, string indexName, string key, string error)
+        {
+            AddError(index, indexName, key, error, "Unknown");
+        }
 
-		public void AddError(int index, string indexName, string key, string error, string component)
-		{
-			errorsCounter = Interlocked.Increment(ref errorsCounter);
+        public void AddError(int index, string indexName, string key, string error, string component)
+        {
+            errorsCounter = Interlocked.Increment(ref errorsCounter);
 
-			var indexingError = new IndexingError
-			{
-				Id = errorsCounter,
-				Document = key,
-				Error = error,
-				Index = index,
-				IndexName = indexName,
-				Action = component,
-				Timestamp = SystemTime.UtcNow
-			};
+            var indexingError = new IndexingError
+            {
+                Id = errorsCounter,
+                Document = key,
+                Error = error,
+                Index = index,
+                IndexName = indexName,
+                Action = component,
+                Timestamp = SystemTime.UtcNow
+            };
 
-			indexingErrors.Enqueue(indexingError);
+            indexingErrors.Enqueue(indexingError);
 
-			if (indexingErrors.Count <= 50)
-			{
-				TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
-				return;
-			}
+            if (indexingErrors.Count <= 50)
+            {
+                TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
+                return;
+            }
 
-			IndexingError ignored;
-			indexingErrors.TryDequeue(out ignored);
+            IndexingError ignored;
+            indexingErrors.TryDequeue(out ignored);
 
-			if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds > 10)
-			{
-				TransactionalStorage.Batch(accessor =>
-				{
-					accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
-					accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
-				});
-				
-			}
-		}
+            if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds > 10)
+            {
+                TransactionalStorage.Batch(accessor =>
+                {
+                    accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
+                    accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
+                });
+                
+            }
+        }
 
-		public void StopWorkRude()
-		{
-			StopWork();
-			cancellationTokenSource.Cancel();
-		}
+        public void StopWorkRude()
+        {
+            StopWork();
+            cancellationTokenSource.Cancel();
+        }
 
-		public CancellationToken CancellationToken
-		{
-			get { return cancellationTokenSource.Token; }
-		}
+        public CancellationToken CancellationToken
+        {
+            get { return cancellationTokenSource.Token; }
+        }
 
-		public void Dispose()
-		{
-			disposed = true;
+        public void Dispose()
+        {
+            disposed = true;
 
-			shouldNotifyOnWork.Dispose();
+            shouldNotifyOnWork.Dispose();
 
             MetricsCounters.Dispose();
             cancellationTokenSource.Dispose();
@@ -403,107 +403,107 @@ namespace Raven.Database.Indexing
         [CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
-		{
-			return new IndexingBatchInfo
-			{
-				IndexesToWorkOn = indexesToWorkOn,
-				TotalDocumentCount = documentsCount,
-				TotalDocumentSize = documentsSize,
-				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>(),
-			};
-		}
+        public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
+        {
+            return new IndexingBatchInfo
+            {
+                IndexesToWorkOn = indexesToWorkOn,
+                TotalDocumentCount = documentsCount,
+                TotalDocumentSize = documentsSize,
+                StartedAt = SystemTime.UtcNow,
+                PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>(),
+            };
+        }
 
-		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
-		{
-			batchInfo.BatchCompleted();
-		    batchInfo.Id = Interlocked.Increment(ref nextIndexingBatchInfoId);
+        public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
+        {
+            batchInfo.BatchCompleted();
+            batchInfo.Id = Interlocked.Increment(ref nextIndexingBatchInfoId);
             LastActualIndexingBatchInfo.Add(batchInfo);
-		}
+        }
 
-		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
-		{
-			return new ReducingBatchInfo
-			{
-				IndexesToWorkOn = indexesToWorkOn,
-				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats[]>()
-			};
-		}
+        public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
+        {
+            return new ReducingBatchInfo
+            {
+                IndexesToWorkOn = indexesToWorkOn,
+                StartedAt = SystemTime.UtcNow,
+                PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats[]>()
+            };
+        }
 
-		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
-		{
-			batchInfo.BatchCompleted();
+        public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
+        {
+            batchInfo.BatchCompleted();
             batchInfo.Id = Interlocked.Increment(ref nextReducingBatchInfoId);
             LastActualReducingBatchInfo.Add(batchInfo);
-		}
+        }
 
-		public ConcurrentSet<FutureBatchStats> FutureBatchStats
-		{
-			get { return futureBatchStats; }
-		}
+        public ConcurrentSet<FutureBatchStats> FutureBatchStats
+        {
+            get { return futureBatchStats; }
+        }
 
-		public SizeLimitedConcurrentSet<FilteredOutIndexStat> RecentlyFilteredOutIndexes
-		{
-			get { return recentlyFilteredOutIndexes; }
-		}
+        public SizeLimitedConcurrentSet<FilteredOutIndexStat> RecentlyFilteredOutIndexes
+        {
+            get { return recentlyFilteredOutIndexes; }
+        }
 
-		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
-		{
-			get
-			{
-				if (lastActualIndexingBatchInfo == null)
-				{
-					lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
-		}
-				return lastActualIndexingBatchInfo;
-			}
-		}
+        public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
+        {
+            get
+            {
+                if (lastActualIndexingBatchInfo == null)
+                {
+                    lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+        }
+                return lastActualIndexingBatchInfo;
+            }
+        }
 
-		public SizeLimitedConcurrentSet<ReducingBatchInfo> LastActualReducingBatchInfo
-		{
-			get
-			{
-				if (lastActualReducingBatchInfo == null)
-				{
-					lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
-		}
-				return lastActualReducingBatchInfo;
-			}
-		}
+        public SizeLimitedConcurrentSet<ReducingBatchInfo> LastActualReducingBatchInfo
+        {
+            get
+            {
+                if (lastActualReducingBatchInfo == null)
+                {
+                    lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+        }
+                return lastActualReducingBatchInfo;
+            }
+        }
 
-		public DocumentDatabase Database { get; set; }
-		public DateTime? ShowTimingByDefaultUntil { get; set; }
+        public DocumentDatabase Database { get; set; }
+        public DateTime? ShowTimingByDefaultUntil { get; set; }
 
-		public void AddFutureBatch(FutureBatchStats futureBatchStat)
-		{
-			futureBatchStats.Add(futureBatchStat);
-			if (futureBatchStats.Count <= 30)
-				return;
+        public void AddFutureBatch(FutureBatchStats futureBatchStat)
+        {
+            futureBatchStats.Add(futureBatchStat);
+            if (futureBatchStats.Count <= 30)
+                return;
 
-			foreach (var source in futureBatchStats.OrderBy(x => x.Timestamp).Take(5))
-			{
-				futureBatchStats.TryRemove(source);
-			}
-		}
+            foreach (var source in futureBatchStats.OrderBy(x => x.Timestamp).Take(5))
+            {
+                futureBatchStats.TryRemove(source);
+            }
+        }
 
-		public void StopIndexing()
-		{
-			if (log.IsDebugEnabled)
-				log.Debug("Stopping indexing workers");
-			doIndexing = false;
-		    doReducing = false;
-			lock (waitForWork)
-			{
-				Monitor.PulseAll(waitForWork);
-			}
-		}
+        public void StopIndexing()
+        {
+            if (log.IsDebugEnabled)
+                log.Debug("Stopping indexing workers");
+            doIndexing = false;
+            doReducing = false;
+            lock (waitForWork)
+            {
+                Monitor.PulseAll(waitForWork);
+            }
+        }
 
         public void StopReducing()
         {
-			if (log.IsDebugEnabled)
-				log.Debug("Stopping reducing workers");
+            if (log.IsDebugEnabled)
+                log.Debug("Stopping reducing workers");
             doReducing = false;
             lock (waitForWork)
             {
@@ -541,13 +541,13 @@ namespace Raven.Database.Indexing
             return Interlocked.Increment(ref nextQueryId);
         }
 
-		public void MarkIndexFilteredOut(string indexName)
-		{
-			recentlyFilteredOutIndexes.Add(new FilteredOutIndexStat()
-			{
-				IndexName = indexName,
-				Timestamp = SystemTime.UtcNow
-			});
+        public void MarkIndexFilteredOut(string indexName)
+        {
+            recentlyFilteredOutIndexes.Add(new FilteredOutIndexStat()
+            {
+                IndexName = indexName,
+                Timestamp = SystemTime.UtcNow
+            });
         }
-	}
+    }
 }

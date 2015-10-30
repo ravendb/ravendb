@@ -1,4 +1,4 @@
-﻿import filesystem = require("models/filesystem/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import uploadItem = require("models/filesystem/uploadItem");
 
 class uploadQueueHelper {

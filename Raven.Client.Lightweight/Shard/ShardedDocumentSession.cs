@@ -25,214 +25,214 @@ using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Shard
 {
-	/// <summary>
-	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
-	/// </summary>
-	public class ShardedDocumentSession : BaseShardedDocumentSession<IDatabaseCommands>, IDocumentQueryGenerator,
-										  IDocumentSessionImpl, ISyncAdvancedSessionOperation
-	{
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
-		/// </summary>
-		/// <param name="shardStrategy">The shard strategy.</param>
-		/// <param name="shardDbCommands">The shard IDatabaseCommands.</param>
-		/// <param name="id"></param>
-		/// <param name="dbName">The db name.</param>
-		/// <param name="documentStore"></param>
-		/// <param name="listeners"></param>
-		public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-									  ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-			: base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands) { }
+    /// <summary>
+    /// Implements Unit of Work for accessing a set of sharded RavenDB servers
+    /// </summary>
+    public class ShardedDocumentSession : BaseShardedDocumentSession<IDatabaseCommands>, IDocumentQueryGenerator,
+                                          IDocumentSessionImpl, ISyncAdvancedSessionOperation
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
+        /// </summary>
+        /// <param name="shardStrategy">The shard strategy.</param>
+        /// <param name="shardDbCommands">The shard IDatabaseCommands.</param>
+        /// <param name="id"></param>
+        /// <param name="dbName">The db name.</param>
+        /// <param name="documentStore"></param>
+        /// <param name="listeners"></param>
+        public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+                                      ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
+            : base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands) { }
 
-		protected override JsonDocument GetJsonDocument(string documentKey)
-		{
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof(object),
-				Keys = { documentKey }
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
-
-			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands,
-																	shardRequestData,
-																	(commands, i) => commands.Get(documentKey));
-
-			var document = documents.FirstOrDefault(x => x != null);
-			if (document != null)
-				return document;
-
-			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
-		}
-
-		protected override string GenerateKey(object entity)
-		{
-			var shardId = shardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
-			IDatabaseCommands value;
-			if (shardDbCommands.TryGetValue(shardId, out value) == false)
-				throw new InvalidOperationException("Could not find shard: " + shardId);
-			return Conventions.GenerateDocumentKey(dbName, value, entity);
-		}
-
-		protected override Task<string> GenerateKeyAsync(object entity)
-		{
-			throw new NotSupportedException("Cannot generate key asynchronously using synchronous session");
-		}
-
-		#region Properties to access different interfacess
-
-		ISyncAdvancedSessionOperation IDocumentSession.Advanced
-		{
-			get { return this; }
-		}
-
-		/// <summary>
-		/// Access the lazy operations
-		/// </summary>
-		public ILazySessionOperations Lazily
-		{
-			get { return this; }
-		}
-
-		/// <summary>
-		/// Access the eager operations
-		/// </summary>
-		IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
-		{
-			get { return this; }
-		}
-
-		#endregion
-
-		#region Load and Include
-
-		#region Synchronous
-
-		public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
-		{
-			var transformer = new TTransformer().TransformerName;
-			return LoadInternal<TResult>(new[] { id }, null, transformer).FirstOrDefault();
-		}
-
-		public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-		{
-			var transformer = new TTransformer().TransformerName;
-			var configuration = new RavenLoadConfiguration();
-		    if (configure != null)
-			configure(configuration);
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
-		}
-
-		public T Load<T>(string id)
-		{
-			object existingEntity;
-			if (entitiesByKey.TryGetValue(id, out existingEntity))
-			{
-				return (T)existingEntity;
-			}
-
-			IncrementRequestCount();
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof(T),
-				Keys = { id }
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
-			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
-			{
-				var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
-				bool retry;
-				do
-				{
-					loadOperation.LogOperation();
-					using (loadOperation.EnterLoadContext())
-					{
-						retry = loadOperation.SetResult(commands.Get(id));
-					}
-				} while (retry);
-				return loadOperation.Complete<T>();
-			});
-
-			var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
-			if (shardsContainThisDocument.Count() > 1)
-			{
-				throw new InvalidOperationException("Found document with id: " + id +
-													" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-			}
-
-			return shardsContainThisDocument.FirstOrDefault();
-		}
-
-		public T[] Load<T>(IEnumerable<string> ids)
-		{
-			return LoadInternal<T>(ids.ToArray());
-		}
-
-		public T Load<T>(ValueType id)
-		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Load<T>(documentKey);
-		}
-
-		public T[] Load<T>(params ValueType[] ids)
-		{
-			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return Load<T>(documentKeys);
-		}
-
-		public T[] Load<T>(IEnumerable<ValueType> ids)
-		{
-			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return Load<T>(documentKeys);
-		}
-
-		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
-		{
-			var configuration = new RavenLoadConfiguration();
-			if (configure != null)
-				configure(configuration);
-
-			return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters);
-		}
-
-		public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
-		{
-			var configuration = new RavenLoadConfiguration();
-			if (configure != null)
-				configure(configuration);
-
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
-		}
-
-		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+        protected override JsonDocument GetJsonDocument(string documentKey)
         {
-			var configuration = new RavenLoadConfiguration();
-			if (configure != null)
-				configure(configuration);
+            var shardRequestData = new ShardRequestData
+            {
+                EntityType = typeof(object),
+                Keys = { documentKey }
+            };
+            var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
-			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
-		}
+            var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands,
+                                                                    shardRequestData,
+                                                                    (commands, i) => commands.Get(documentKey));
 
-		public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
-		{
-			var configuration = new RavenLoadConfiguration();
-			if (configure != null)
-				configure(configuration);
+            var document = documents.FirstOrDefault(x => x != null);
+            if (document != null)
+                return document;
 
-			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+            throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+        }
 
-			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
-		}
+        protected override string GenerateKey(object entity)
+        {
+            var shardId = shardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
+            IDatabaseCommands value;
+            if (shardDbCommands.TryGetValue(shardId, out value) == false)
+                throw new InvalidOperationException("Could not find shard: " + shardId);
+            return Conventions.GenerateDocumentKey(dbName, value, entity);
+        }
 
-		public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
-		{
-			var configuration = new RavenLoadConfiguration();
-			if (configure != null)
-				configure(configuration);
+        protected override Task<string> GenerateKeyAsync(object entity)
+        {
+            throw new NotSupportedException("Cannot generate key asynchronously using synchronous session");
+        }
 
-			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+        #region Properties to access different interfacess
 
-			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
-		}
+        ISyncAdvancedSessionOperation IDocumentSession.Advanced
+        {
+            get { return this; }
+        }
+
+        /// <summary>
+        /// Access the lazy operations
+        /// </summary>
+        public ILazySessionOperations Lazily
+        {
+            get { return this; }
+        }
+
+        /// <summary>
+        /// Access the eager operations
+        /// </summary>
+        IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
+        {
+            get { return this; }
+        }
+
+        #endregion
+
+        #region Load and Include
+
+        #region Synchronous
+
+        public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            return LoadInternal<TResult>(new[] { id }, null, transformer).FirstOrDefault();
+        }
+
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+            configure(configuration);
+            return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
+        }
+
+        public T Load<T>(string id)
+        {
+            object existingEntity;
+            if (entitiesByKey.TryGetValue(id, out existingEntity))
+            {
+                return (T)existingEntity;
+            }
+
+            IncrementRequestCount();
+            var shardRequestData = new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { id }
+            };
+            var dbCommands = GetCommandsToOperateOn(shardRequestData);
+            var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
+            {
+                var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
+                bool retry;
+                do
+                {
+                    loadOperation.LogOperation();
+                    using (loadOperation.EnterLoadContext())
+                    {
+                        retry = loadOperation.SetResult(commands.Get(id));
+                    }
+                } while (retry);
+                return loadOperation.Complete<T>();
+            });
+
+            var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
+            if (shardsContainThisDocument.Count() > 1)
+            {
+                throw new InvalidOperationException("Found document with id: " + id +
+                                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+            }
+
+            return shardsContainThisDocument.FirstOrDefault();
+        }
+
+        public T[] Load<T>(IEnumerable<string> ids)
+        {
+            return LoadInternal<T>(ids.ToArray());
+        }
+
+        public T Load<T>(ValueType id)
+        {
+            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            return Load<T>(documentKey);
+        }
+
+        public T[] Load<T>(params ValueType[] ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Load<T>(documentKeys);
+        }
+
+        public T[] Load<T>(IEnumerable<ValueType> ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Load<T>(documentKeys);
+        }
+
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters);
+        }
+
+        public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+        {
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
+        }
+
+        public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+        {
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
+        }
+
+        public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+        {
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+            return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).FirstOrDefault();
+        }
+
+        public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+        {
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+            return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters);
+        }
 
         public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {

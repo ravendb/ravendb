@@ -34,16 +34,16 @@ namespace Raven.Database.FileSystem.Synchronization
 
             var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, FileSystemInfo.Url);
 
-	        if (conflict != null)
-	        {
-				var report = await HandleConflict(synchronizationServerClient, conflict, log).ConfigureAwait(false);
+            if (conflict != null)
+            {
+                var report = await HandleConflict(synchronizationServerClient, conflict, log).ConfigureAwait(false);
 
                 if (report != null)
                     return report;
             }
 
-			return await synchronizationServerClient.UpdateMetadataAsync(FileName, FileMetadata, FileSystemInfo).ConfigureAwait(false);
-		}
+            return await synchronizationServerClient.UpdateMetadataAsync(FileName, FileMetadata, FileSystemInfo).ConfigureAwait(false);
+        }
 
         public override bool Equals(object obj)
         {

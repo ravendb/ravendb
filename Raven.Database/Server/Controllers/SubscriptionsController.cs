@@ -26,159 +26,159 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SubscriptionsController : BaseDatabaseApiController
-	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class SubscriptionsController : BaseDatabaseApiController
+    {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		[HttpPost]
-		[RavenRoute("subscriptions/create")]
-		[RavenRoute("databases/{databaseName}/subscriptions/create")]
-		public async Task<HttpResponseMessage> Create()
-		{
-			var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>().ConfigureAwait(false);
+        [HttpPost]
+        [RavenRoute("subscriptions/create")]
+        [RavenRoute("databases/{databaseName}/subscriptions/create")]
+        public async Task<HttpResponseMessage> Create()
+        {
+            var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>().ConfigureAwait(false);
 
-			if(subscriptionCriteria == null)
-				throw new InvalidOperationException("Criteria cannot be null");
+            if(subscriptionCriteria == null)
+                throw new InvalidOperationException("Criteria cannot be null");
 
-			var id = Database.Subscriptions.CreateSubscription(subscriptionCriteria);
+            var id = Database.Subscriptions.CreateSubscription(subscriptionCriteria);
 
-			return GetMessageWithObject(new
-			{
-				Id = id
-			}, HttpStatusCode.Created);
-		}
+            return GetMessageWithObject(new
+            {
+                Id = id
+            }, HttpStatusCode.Created);
+        }
 
-		[HttpDelete]
-		[RavenRoute("subscriptions")]
-		[RavenRoute("databases/{databaseName}/subscriptions")]
-		public HttpResponseMessage Delete(long id)
-		{
-			Database.Subscriptions.DeleteSubscription(id);
+        [HttpDelete]
+        [RavenRoute("subscriptions")]
+        [RavenRoute("databases/{databaseName}/subscriptions")]
+        public HttpResponseMessage Delete(long id)
+        {
+            Database.Subscriptions.DeleteSubscription(id);
 
-			return GetEmptyMessage(HttpStatusCode.NoContent);
-		}
+            return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
 
-		[HttpPost]
-		[RavenRoute("subscriptions/open")]
-		[RavenRoute("databases/{databaseName}/subscriptions/open")]
-		public async Task<HttpResponseMessage> Open(long id)
-		{
-			Database.Subscriptions.GetSubscriptionConfig(id);
+        [HttpPost]
+        [RavenRoute("subscriptions/open")]
+        [RavenRoute("databases/{databaseName}/subscriptions/open")]
+        public async Task<HttpResponseMessage> Open(long id)
+        {
+            Database.Subscriptions.GetSubscriptionConfig(id);
 
-			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>().ConfigureAwait(false);
+            var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>().ConfigureAwait(false);
 
-			if (options == null)
-				throw new InvalidOperationException("Options cannot be null");
+            if (options == null)
+                throw new InvalidOperationException("Options cannot be null");
 
-			Database.Subscriptions.OpenSubscription(id, options);
+            Database.Subscriptions.OpenSubscription(id, options);
 
-			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
-			{
-				Id = id,
-				Type = DataSubscriptionChangeTypes.SubscriptionOpened
-			});
+            Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+            {
+                Id = id,
+                Type = DataSubscriptionChangeTypes.SubscriptionOpened
+            });
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpGet]
-		[RavenRoute("subscriptions/pull")]
-		[RavenRoute("databases/{databaseName}/subscriptions/pull")]
-		public HttpResponseMessage Pull(long id, string connection)
-		{
-			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+        [HttpGet]
+        [RavenRoute("subscriptions/pull")]
+        [RavenRoute("databases/{databaseName}/subscriptions/pull")]
+        public HttpResponseMessage Pull(long id, string connection)
+        {
+            Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 
-			var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(id, Database.Subscriptions, stream))
-			{
-				Headers =
-				{
-					ContentType = new MediaTypeHeaderValue("application/json")
-					{
-						CharSet = "utf-8"
-					}
-				}
-			};
+            var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(id, Database.Subscriptions, stream))
+            {
+                Headers =
+                {
+                    ContentType = new MediaTypeHeaderValue("application/json")
+                    {
+                        CharSet = "utf-8"
+                    }
+                }
+            };
 
-			return new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = pushStreamContent
-			};
-		}
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = pushStreamContent
+            };
+        }
 
-		[HttpPost]
-		[RavenRoute("subscriptions/acknowledgeBatch")]
-		[RavenRoute("databases/{databaseName}/subscriptions/acknowledgeBatch")]
-		public HttpResponseMessage AcknowledgeBatch(long id, string lastEtag, string connection)
-		{
-			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+        [HttpPost]
+        [RavenRoute("subscriptions/acknowledgeBatch")]
+        [RavenRoute("databases/{databaseName}/subscriptions/acknowledgeBatch")]
+        public HttpResponseMessage AcknowledgeBatch(long id, string lastEtag, string connection)
+        {
+            Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 
-			try
-			{
-				Database.Subscriptions.AcknowledgeBatchProcessed(id, Etag.Parse(lastEtag));
-			}
-			catch (TimeoutException)
-			{
-				return GetMessageWithString("The subscription cannot be acknowledged because the timeout has been reached.", HttpStatusCode.RequestTimeout);
-			}
+            try
+            {
+                Database.Subscriptions.AcknowledgeBatchProcessed(id, Etag.Parse(lastEtag));
+            }
+            catch (TimeoutException)
+            {
+                return GetMessageWithString("The subscription cannot be acknowledged because the timeout has been reached.", HttpStatusCode.RequestTimeout);
+            }
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpPost]
-		[RavenRoute("subscriptions/close")]
-		[RavenRoute("databases/{databaseName}/subscriptions/close")]
-		public HttpResponseMessage Close(long id, string connection, bool force = false)
-		{
-			if (force == false)
-			{
-				try
-				{
-					Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
-				}
-				catch (SubscriptionException)
-				{
-					// ignore if assertion exception happened on close
-					return GetEmptyMessage();
-				}
-			}
+        [HttpPost]
+        [RavenRoute("subscriptions/close")]
+        [RavenRoute("databases/{databaseName}/subscriptions/close")]
+        public HttpResponseMessage Close(long id, string connection, bool force = false)
+        {
+            if (force == false)
+            {
+                try
+                {
+                    Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+                }
+                catch (SubscriptionException)
+                {
+                    // ignore if assertion exception happened on close
+                    return GetEmptyMessage();
+                }
+            }
 
-			Database.Subscriptions.ReleaseSubscription(id, force);
+            Database.Subscriptions.ReleaseSubscription(id, force);
 
-			Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
-			{
-				Id = id,
-				Type = DataSubscriptionChangeTypes.SubscriptionReleased
-			});
+            Database.Notifications.RaiseNotifications(new DataSubscriptionChangeNotification
+            {
+                Id = id,
+                Type = DataSubscriptionChangeTypes.SubscriptionReleased
+            });
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpPatch]
-		[RavenRoute("subscriptions/client-alive")]
-		[RavenRoute("databases/{databaseName}/subscriptions/client-alive")]
-		public HttpResponseMessage ClientAlive(long id, string connection)
-		{
-			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+        [HttpPatch]
+        [RavenRoute("subscriptions/client-alive")]
+        [RavenRoute("databases/{databaseName}/subscriptions/client-alive")]
+        public HttpResponseMessage ClientAlive(long id, string connection)
+        {
+            Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 
-			Database.Subscriptions.UpdateClientActivityDate(id);
+            Database.Subscriptions.UpdateClientActivityDate(id);
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpGet]
-		[RavenRoute("subscriptions")]
-		[RavenRoute("databases/{databaseName}/subscriptions")]
-		public HttpResponseMessage Get()
-		{
-			var start = GetStart();
-			var take = GetPageSize(Database.Configuration.MaxPageSize);
+        [HttpGet]
+        [RavenRoute("subscriptions")]
+        [RavenRoute("databases/{databaseName}/subscriptions")]
+        public HttpResponseMessage Get()
+        {
+            var start = GetStart();
+            var take = GetPageSize(Database.Configuration.MaxPageSize);
 
-			return GetMessageWithObject(Database.Subscriptions.GetSubscriptions(start, take));
-		}
+            return GetMessageWithObject(Database.Subscriptions.GetSubscriptions(start, take));
+        }
 
-		private void StreamToClient(long id, SubscriptionActions subscriptions, Stream stream)
-		{
-			var sentDocuments = false;
+        private void StreamToClient(long id, SubscriptionActions subscriptions, Stream stream)
+        {
+            var sentDocuments = false;
 
             var bufferStream = new BufferedStream(stream, 1024 * 64);
             using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
@@ -215,7 +215,7 @@ namespace Raven.Database.Server.Controllers
                             writer.Flush();
                             return true;
                         }
-	                    processedDocuments++;
+                        processedDocuments++;
                         
 
                         // We cant continue because we have already maxed out the batch bytes size.

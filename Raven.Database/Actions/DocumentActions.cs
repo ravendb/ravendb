@@ -189,7 +189,7 @@ namespace Raven.Database.Actions
                                         Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
                                         NonAuthoritativeInformation = document.NonAuthoritativeInformation,
                                         LastModified = document.LastModified,
-										DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
+                                        DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
                                     };
 
                                     addDoc(transformedJsonDocument);
@@ -667,7 +667,7 @@ namespace Raven.Database.Actions
                         Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(docRetriever.Etag),
                         NonAuthoritativeInformation = document.NonAuthoritativeInformation,
                         LastModified = document.LastModified,
-						DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
+                        DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
                     };
                 }
             });
@@ -761,8 +761,8 @@ namespace Raven.Database.Actions
                                                                                       UuidGenerator);
                     }
                 });
-				if (Log.IsDebugEnabled)
-					Log.Debug("Put document {0} with etag {1}", key, newEtag);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Put document {0} with etag {1}", key, newEtag);
                 return new PutResult
                 {
                     Key = key,
@@ -784,8 +784,8 @@ namespace Raven.Database.Actions
             key = key.Trim();
 
             var deleted = false;
-			if (Log.IsDebugEnabled)
-				Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
             RavenJObject metadataVar = null;
             using (Database.DocumentLock.Lock())
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -10,7 +10,7 @@ namespace Raven.Client.FileSystem
     /// The set of conventions used by the <see cref="FilesConvention"/> which allow the users to customize
     /// the way the Raven client API behaves
     /// </summary>
-	public class FilesConvention : QueryConvention
+    public class FilesConvention : QueryConvention
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FilesConvention"/> class.

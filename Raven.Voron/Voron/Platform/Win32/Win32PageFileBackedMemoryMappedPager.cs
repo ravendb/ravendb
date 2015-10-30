@@ -96,65 +96,65 @@ namespace Voron.Platform.Win32
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-		}
+        }
 
-	
+    
 
-		public override string ToString()
-		{
-			return string.Format("{0}, Length: {1:#,#.##;;0} MB", GetSourceName(), _totalAllocationSize / 1024d / 1024d);
-		}
+        public override string ToString()
+        {
+            return string.Format("{0}, Length: {1:#,#.##;;0} MB", GetSourceName(), _totalAllocationSize / 1024d / 1024d);
+        }
 
-		private PagerState AllocateMorePagesAndRemapContinuously(long allocationSize)
-		{
-			var retryCount = 0;
+        private PagerState AllocateMorePagesAndRemapContinuously(long allocationSize)
+        {
+            var retryCount = 0;
 
-			while (retryCount++ < MaxAllocationRetries)
-			{
-				byte* newBaseAddress;
-				if (TryFindContinuousMemory((ulong)(_totalAllocationSize + allocationSize), out newBaseAddress) == false)
-				{
-					var message =
-						string.Format(
-							"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of size = {0} bytes\r\n" +
-							"It is likely that we are suffering from virtual memory exhaustion or memory fragmentation.\r\n" +
-							"64 bits process: {1}\r\n" +
-							"If you are running in 32 bits, this is expected, and you need to run in 64 bits to resume normal operations.\r\n" +
-							"If you are running in 64 bits, this is likely an error and should be reported."
-							, (_totalAllocationSize + allocationSize), Environment.Is64BitProcess);
-					throw new OutOfMemoryException(message);
-				}
+            while (retryCount++ < MaxAllocationRetries)
+            {
+                byte* newBaseAddress;
+                if (TryFindContinuousMemory((ulong)(_totalAllocationSize + allocationSize), out newBaseAddress) == false)
+                {
+                    var message =
+                        string.Format(
+                            "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of size = {0} bytes\r\n" +
+                            "It is likely that we are suffering from virtual memory exhaustion or memory fragmentation.\r\n" +
+                            "64 bits process: {1}\r\n" +
+                            "If you are running in 32 bits, this is expected, and you need to run in 64 bits to resume normal operations.\r\n" +
+                            "If you are running in 64 bits, this is likely an error and should be reported."
+                            , (_totalAllocationSize + allocationSize), Environment.Is64BitProcess);
+                    throw new OutOfMemoryException(message);
+                }
 
-				bool failedToAllocate = false;
-				long offset = 0;
-				var allocationInfoAfterReallocation = new List<PagerState.AllocationInfo>();
-				foreach (var allocationInfo in PagerState.AllocationInfos)
-				{
-					var newAlloctedBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
-					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
-					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
-						0, 0,
-						UIntPtr.Zero, 
-						newBaseAddress + offset);
+                bool failedToAllocate = false;
+                long offset = 0;
+                var allocationInfoAfterReallocation = new List<PagerState.AllocationInfo>();
+                foreach (var allocationInfo in PagerState.AllocationInfos)
+                {
+                    var newAlloctedBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+                                                                                             Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+                                                                                             Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+                        0, 0,
+                        UIntPtr.Zero, 
+                        newBaseAddress + offset);
 
-					if (newAlloctedBaseAddress == null || newAlloctedBaseAddress == (byte*)0)
-					{
-						Debug.WriteLine("Failed to remap file continuously. Unmapping already mapped files and re-trying");
-						UndoMappings(allocationInfoAfterReallocation);
-						failedToAllocate = true;
-						break;
-					}
+                    if (newAlloctedBaseAddress == null || newAlloctedBaseAddress == (byte*)0)
+                    {
+                        Debug.WriteLine("Failed to remap file continuously. Unmapping already mapped files and re-trying");
+                        UndoMappings(allocationInfoAfterReallocation);
+                        failedToAllocate = true;
+                        break;
+                    }
 
-					offset += allocationInfo.Size;
-					allocationInfoAfterReallocation.Add(new PagerState.AllocationInfo
-					{
-						BaseAddress = newAlloctedBaseAddress,
-						MappedFile = allocationInfo.MappedFile,
-						Size = allocationInfo.Size
-					});
-				}
+                    offset += allocationInfo.Size;
+                    allocationInfoAfterReallocation.Add(new PagerState.AllocationInfo
+                    {
+                        BaseAddress = newAlloctedBaseAddress,
+                        MappedFile = allocationInfo.MappedFile,
+                        Size = allocationInfo.Size
+                    });
+                }
 
-			    if (failedToAllocate) 
+                if (failedToAllocate) 
                     continue;
 
                 var newAllocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, newBaseAddress + _totalAllocationSize);

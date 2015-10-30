@@ -28,31 +28,31 @@ namespace Raven.Client.Exceptions
         /// </summary>
         public Etag Etag { get; set; }
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ConflictException"/> class.
-		/// </summary>
-		public ConflictException()
-		{
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConflictException"/> class.
+        /// </summary>
+        public ConflictException()
+        {
+        }
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ConflictException"/> class.
-		/// </summary>
-		/// <param name="message">The message.</param>
-		public ConflictException(string message)
-			: base(message)
-		{
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConflictException"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public ConflictException(string message)
+            : base(message)
+        {
+        }
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ConflictException"/> class.
-		/// </summary>
-		/// <param name="message">The message.</param>
-		/// <param name="inner">The inner.</param>
-		public ConflictException(string message, Exception inner)
-			: base(message, inner)
-		{
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConflictException"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="inner">The inner.</param>
+        public ConflictException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConflictException"/> class.

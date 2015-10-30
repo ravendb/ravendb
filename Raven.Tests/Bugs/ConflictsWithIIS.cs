@@ -22,11 +22,11 @@ namespace Raven.Tests.Bugs
             public int StatusId { get; set; }
         }
 
-		[IISExpressInstalledFact]
-		public void MultiThreadedInsert()
-		{
-			const int threadCount = 4;
-			var tasks = new List<Task>();
+        [IISExpressInstalledFact]
+        public void MultiThreadedInsert()
+        {
+            const int threadCount = 4;
+            var tasks = new List<Task>();
 
             using (var store = NewDocumentStore())
             {

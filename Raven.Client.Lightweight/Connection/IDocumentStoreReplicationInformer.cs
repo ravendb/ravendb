@@ -12,9 +12,9 @@ namespace Raven.Client.Connection
         /// </summary>
         ReplicationDestination[] FailoverServers { get; set; }
 
-		/// <summary>
-		/// Updates replication information if needed
-		/// </summary>
-		Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient);
-	}
+        /// <summary>
+        /// Updates replication information if needed
+        /// </summary>
+        Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient);
+    }
 }

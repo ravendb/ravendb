@@ -102,16 +102,16 @@ namespace Raven.Tests.MailingList
             Assert.Throws<IndexCompilationException>(() => Compile("from doc in docs select new { System.DateTime.Now }"));
         }
 
-		private void Compile(string code)
-		{
-			var configuration = new InMemoryRavenConfiguration();
-			configuration.Initialize();
-			var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition
-			{
-				Map = code
-			}, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), ".", configuration);
-			dynamicViewCompiler.GenerateInstance();
-		}
+        private void Compile(string code)
+        {
+            var configuration = new InMemoryRavenConfiguration();
+            configuration.Initialize();
+            var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition
+            {
+                Map = code
+            }, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), ".", configuration);
+            dynamicViewCompiler.GenerateInstance();
+        }
 
         public void Dispose()
         {

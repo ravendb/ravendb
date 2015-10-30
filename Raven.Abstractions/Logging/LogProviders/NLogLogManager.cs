@@ -53,85 +53,85 @@ namespace Raven.Abstractions.Logging.LogProviders
             try
             {
                 return Assembly.Load("NLog");
-		    }
-		    catch (Exception)
-		    {
-		        return null;
-		    }
-		}
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
 
-		protected override Type GetMdcType()
-		{
-			Assembly log4NetAssembly = GetNLogAssembly();
-			return log4NetAssembly != null ? log4NetAssembly.GetType("NLog.MappedDiagnosticsContext") : Type.GetType("NLog.MappedDiagnosticsContext, nlog");
-		}
+        protected override Type GetMdcType()
+        {
+            Assembly log4NetAssembly = GetNLogAssembly();
+            return log4NetAssembly != null ? log4NetAssembly.GetType("NLog.MappedDiagnosticsContext") : Type.GetType("NLog.MappedDiagnosticsContext, nlog");
+        }
 
-		public class NLogLogger : ILog
-		{
-			private readonly dynamic logger;
+        public class NLogLogger : ILog
+        {
+            private readonly dynamic logger;
 
-			internal NLogLogger(object logger)
-			{
-				this.logger = logger;
-			}
+            internal NLogLogger(object logger)
+            {
+                this.logger = logger;
+            }
 
-			public bool IsInfoEnabled
-			{
-				get { return logger.IsInfoEnabled; }
-			}
+            public bool IsInfoEnabled
+            {
+                get { return logger.IsInfoEnabled; }
+            }
 
-			public bool IsDebugEnabled
-			{
-				get { return logger.IsDebugEnabled; }
-			}
+            public bool IsDebugEnabled
+            {
+                get { return logger.IsDebugEnabled; }
+            }
 
-			public bool IsWarnEnabled
-			{
-				get { return logger.IsWarnEnabled; }
-			}
+            public bool IsWarnEnabled
+            {
+                get { return logger.IsWarnEnabled; }
+            }
 
-			public void Log(LogLevel logLevel, Func<string> messageFunc)
-			{
-				switch (logLevel)
-				{
-					case LogLevel.Debug:
-						if (logger.IsDebugEnabled)
-						{
-							logger.Debug(messageFunc());
-						}
-						break;
-					case LogLevel.Info:
-						if (logger.IsInfoEnabled)
-						{
-							logger.Info(messageFunc());
-						}
-						break;
-					case LogLevel.Warn:
-						if (logger.IsWarnEnabled)
-						{
-							logger.Warn(messageFunc());
-						}
-						break;
-					case LogLevel.Error:
-						if (logger.IsErrorEnabled)
-						{
-							logger.Error(messageFunc());
-						}
-						break;
-					case LogLevel.Fatal:
-						if (logger.IsFatalEnabled)
-						{
-							logger.Fatal(messageFunc());
-						}
-						break;
-					default:
-						if (logger.IsTraceEnabled)
-						{
-							logger.Trace(messageFunc());
-						}
-						break;
-				}
-			}
+            public void Log(LogLevel logLevel, Func<string> messageFunc)
+            {
+                switch (logLevel)
+                {
+                    case LogLevel.Debug:
+                        if (logger.IsDebugEnabled)
+                        {
+                            logger.Debug(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Info:
+                        if (logger.IsInfoEnabled)
+                        {
+                            logger.Info(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Warn:
+                        if (logger.IsWarnEnabled)
+                        {
+                            logger.Warn(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Error:
+                        if (logger.IsErrorEnabled)
+                        {
+                            logger.Error(messageFunc());
+                        }
+                        break;
+                    case LogLevel.Fatal:
+                        if (logger.IsFatalEnabled)
+                        {
+                            logger.Fatal(messageFunc());
+                        }
+                        break;
+                    default:
+                        if (logger.IsTraceEnabled)
+                        {
+                            logger.Trace(messageFunc());
+                        }
+                        break;
+                }
+            }
 
             public bool ShouldLog(LogLevel logLevel)
             {

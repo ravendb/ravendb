@@ -2,11 +2,11 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Trees
 {
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct PageHeader
-	{
-		[FieldOffset(0)]
-		public long PageNumber;
+    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    public struct PageHeader
+    {
+        [FieldOffset(0)]
+        public long PageNumber;
 
         [FieldOffset(8)]
         public PageFlags Flags;
@@ -14,21 +14,21 @@ namespace Voron.Trees
         [FieldOffset(9)]
         public ushort Lower;
 
-		[FieldOffset(9)]
-		public ushort FixedSize_ValueSize;
+        [FieldOffset(9)]
+        public ushort FixedSize_ValueSize;
 
-		[FieldOffset(11)]
-		public ushort Upper;
+        [FieldOffset(11)]
+        public ushort Upper;
 
-		[FieldOffset(11)]
-		public ushort FixedSize_NumberOfEntries;
+        [FieldOffset(11)]
+        public ushort FixedSize_NumberOfEntries;
 
 
-		[FieldOffset(13)]
-		public int OverflowSize;
+        [FieldOffset(13)]
+        public int OverflowSize;
 
-		[FieldOffset(13)]
-		public ushort FixedSize_StartPosition;
-	}
+        [FieldOffset(13)]
+        public ushort FixedSize_StartPosition;
+    }
 
 }

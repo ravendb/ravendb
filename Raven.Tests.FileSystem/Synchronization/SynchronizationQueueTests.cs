@@ -18,14 +18,14 @@ namespace Raven.Tests.FileSystem.Synchronization
 
         private readonly SynchronizationQueue queue;
 
-		private InMemoryRavenConfiguration configuration;
+        private InMemoryRavenConfiguration configuration;
 
-		public SynchronizationQueueTests()
-		{
-			configuration = new InMemoryRavenConfiguration();
-			configuration.Initialize();
-			queue = new SynchronizationQueue();
-		}
+        public SynchronizationQueueTests()
+        {
+            configuration = new InMemoryRavenConfiguration();
+            configuration.Initialize();
+            queue = new SynchronizationQueue();
+        }
 
         [Fact]
         public void Should_not_enqueue_synchronization_if_the_same_work_is_active()
@@ -77,7 +77,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             {
                 transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
-				queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator, configuration));
+                queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator, configuration));
 
                 Assert.Equal(1, queue.Pending.Count());
 
@@ -85,7 +85,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
                 transactionalStorage.Batch(accessor => newerEtag = accessor.UpdateFileMetadata(FileName, new RavenJObject(), null).Etag);
 
-				queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, new SigGenerator(), configuration));
+                queue.EnqueueSynchronization(Destination, new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, new SigGenerator(), configuration));
 
                 Assert.Equal(1, queue.Pending.Count());
                 Assert.True(newerEtag.CompareTo(queue.Pending.ToArray()[0].FileETag) == 0);
@@ -99,7 +99,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             {
                 transactionalStorage.Batch(accessor => accessor.PutFile(FileName, 0, new RavenJObject()));
 
-				var contentUpdateWorkItem = new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator, configuration);
+                var contentUpdateWorkItem = new ContentUpdateWorkItem(FileName, "http://localhost:12345", transactionalStorage, sigGenerator, configuration);
 
                 queue.EnqueueSynchronization(Destination, contentUpdateWorkItem);
                 queue.SynchronizationStarted(contentUpdateWorkItem, Destination);

@@ -47,8 +47,8 @@ namespace Voron.Trees
                 {
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                 }
-				
-				_tree.FreePage(page);
+                
+                _tree.FreePage(page);
                 _cursor.Pop();
 
                 return parentPage;
@@ -243,21 +243,21 @@ namespace Voron.Trees
             AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
         }
 
-		private void AddSeparatorToParentPage(Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
-		{
-			var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
+        private void AddSeparatorToParentPage(Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
+        {
+            var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
 
-			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-			{
-				var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-					0, _cursor);
-				pageSplitter.Execute();
-			}
-			else
-			{
-				parentPage.AddPageRefNode(separatorKeyPosition, separatorKeyToInsert, pageNumber);
-			}
-		}
+            if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
+            {
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+                    0, _cursor);
+                pageSplitter.Execute();
+            }
+            else
+            {
+                parentPage.AddPageRefNode(separatorKeyPosition, separatorKeyToInsert, pageNumber);
+            }
+        }
 
         private void MoveBranchNode(Page parentPage, Page from, Page to)
         {

@@ -21,109 +21,109 @@ using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
-	internal class SynchronizationMultipartRequest : IHoldProfilingInformation
-	{
-		private readonly ISynchronizationServerClient synchronizationServerClient;
-		private readonly string fileName;
-		private readonly IList<RdcNeed> needList;
-		private readonly FileSystemInfo fileSystemInfo;
-		private readonly RavenJObject sourceMetadata;
-		private readonly Stream sourceStream;
-		private readonly string syncingBoundary;
+    internal class SynchronizationMultipartRequest : IHoldProfilingInformation
+    {
+        private readonly ISynchronizationServerClient synchronizationServerClient;
+        private readonly string fileName;
+        private readonly IList<RdcNeed> needList;
+        private readonly FileSystemInfo fileSystemInfo;
+        private readonly RavenJObject sourceMetadata;
+        private readonly Stream sourceStream;
+        private readonly string syncingBoundary;
 
-		public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
-											   RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
-		{
-			this.synchronizationServerClient = synchronizationServerClient;
-			this.fileSystemInfo = fileSystemInfo;
-			this.fileName = fileName;
-			this.sourceMetadata = sourceMetadata;
-			this.sourceStream = sourceStream;
-			this.needList = needList;
-			syncingBoundary = "syncing";
-		}
+        public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
+                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
+        {
+            this.synchronizationServerClient = synchronizationServerClient;
+            this.fileSystemInfo = fileSystemInfo;
+            this.fileName = fileName;
+            this.sourceMetadata = sourceMetadata;
+            this.sourceStream = sourceStream;
+            this.needList = needList;
+            syncingBoundary = "syncing";
+        }
 
-		public async Task<SynchronizationReport> PushChangesAsync(CancellationToken token)
-		{
-			token.Register(() => { });//request.Abort() TODO: check this
+        public async Task<SynchronizationReport> PushChangesAsync(CancellationToken token)
+        {
+            token.Register(() => { });//request.Abort() TODO: check this
 
-			token.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
 
-			if (sourceStream.CanRead == false)
-				throw new Exception("Stream does not support reading");
+            if (sourceStream.CanRead == false)
+                throw new Exception("Stream does not support reading");
 
-			var baseUrl = synchronizationServerClient.BaseUrl;
-			var credentials = synchronizationServerClient.Credentials;
-			var conventions = synchronizationServerClient.Conventions;
+            var baseUrl = synchronizationServerClient.BaseUrl;
+            var credentials = synchronizationServerClient.Credentials;
+            var conventions = synchronizationServerClient.Conventions;
 
-			var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
-			{
-				DisableRequestCompression = true
-			};
+            var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
+            {
+                DisableRequestCompression = true
+            };
 
-			using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(requestParams))
-			{
-				request.AddHeaders(sourceMetadata);
-				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
-				request.AddHeader("If-None-Match", "\"" + sourceMetadata.Value<string>(Constants.MetadataEtagField) + "\"");
+            using (var request = synchronizationServerClient.RequestFactory.CreateHttpJsonRequest(requestParams))
+            {
+                request.AddHeaders(sourceMetadata);
+                request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
+                request.AddHeader("If-None-Match", "\"" + sourceMetadata.Value<string>(Constants.MetadataEtagField) + "\"");
 
-				request.AddHeader(SyncingMultipartConstants.FileName, fileName);
-				request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, fileSystemInfo.AsJson());
+                request.AddHeader(SyncingMultipartConstants.FileName, fileName);
+                request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, fileSystemInfo.AsJson());
 
-				try
-				{
-					await request.WriteAsync(PrepareMultipartContent(token)).ConfigureAwait(false);
+                try
+                {
+                    await request.WriteAsync(PrepareMultipartContent(token)).ConfigureAwait(false);
 
-					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
-				}
-				catch (Exception exception)
-				{
-					if (token.IsCancellationRequested)
-					{
-						throw new OperationCanceledException(token);
-					}
+                    var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    return JsonExtensions.CreateDefaultJsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
+                }
+                catch (Exception exception)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        throw new OperationCanceledException(token);
+                    }
 
-					var webException = exception as ErrorResponseException;
+                    var webException = exception as ErrorResponseException;
 
-					if (webException != null)
-					{
-						webException.SimplifyException();
-					}
+                    if (webException != null)
+                    {
+                        webException.SimplifyException();
+                    }
 
-					throw;
-				}
-			}
-		}
+                    throw;
+                }
+            }
+        }
 
-		internal MultipartContent PrepareMultipartContent(CancellationToken token)
-		{
-			var content = new MultipartContent("form-data", syncingBoundary);
+        internal MultipartContent PrepareMultipartContent(CancellationToken token)
+        {
+            var content = new MultipartContent("form-data", syncingBoundary);
 
-			foreach (var item in needList)
-			{
-				token.ThrowIfCancellationRequested();
+            foreach (var item in needList)
+            {
+                token.ThrowIfCancellationRequested();
 
-				var @from = Convert.ToInt64(item.FileOffset);
-				var length = Convert.ToInt64(item.BlockLength);
-				var to = from + length - 1;
+                var @from = Convert.ToInt64(item.FileOffset);
+                var length = Convert.ToInt64(item.BlockLength);
+                var to = from + length - 1;
 
-				switch (item.BlockType)
-				{
-					case RdcNeedType.Source:
-						content.Add(new SourceFilePart(new NarrowedStream(sourceStream, from, to)));
-						break;
-					case RdcNeedType.Seed:
-						content.Add(new SeedFilePart(@from, to));
-						break;
-					default:
-						throw new NotSupportedException();
-				}
-			}
+                switch (item.BlockType)
+                {
+                    case RdcNeedType.Source:
+                        content.Add(new SourceFilePart(new NarrowedStream(sourceStream, from, to)));
+                        break;
+                    case RdcNeedType.Seed:
+                        content.Add(new SeedFilePart(@from, to));
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+            }
 
-			return content;
-		}
+            return content;
+        }
 
-		public ProfilingInformation ProfilingInformation { get; private set; }
-	}
+        public ProfilingInformation ProfilingInformation { get; private set; }
+    }
 }

@@ -60,88 +60,88 @@ namespace Raven.Database.Server.Security.Windows
         }
 
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
-		{
-			Func<HttpResponseMessage> onRejectingRequest;
-			var tenantId = controller.ResourceName ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
-			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
-			{
-				msg = onRejectingRequest();
-				return false;
-			}
+        {
+            Func<HttpResponseMessage> onRejectingRequest;
+            var tenantId = controller.ResourceName ?? Constants.SystemDatabase;
+            var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
+            if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
+            {
+                msg = onRejectingRequest();
+                return false;
+            }
 
-			PrincipalWithDatabaseAccess user = null;
-			if (userCreated)
-			{
-				user = (PrincipalWithDatabaseAccess)controller.User;
-				CurrentOperationContext.User.Value = controller.User;
+            PrincipalWithDatabaseAccess user = null;
+            if (userCreated)
+            {
+                user = (PrincipalWithDatabaseAccess)controller.User;
+                CurrentOperationContext.User.Value = controller.User;
 
-				// admins always go through
-				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
-				{
-					msg = controller.GetEmptyMessage();
-					return true;
-				}
+                // admins always go through
+                if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
+                {
+                    msg = controller.GetEmptyMessage();
+                    return true;
+                }
 
-				// backup operators can go through
-				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
-				{
-					msg = controller.GetEmptyMessage();
-					return true;
-				}
-			}
+                // backup operators can go through
+                if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+                {
+                    msg = controller.GetEmptyMessage();
+                    return true;
+                }
+            }
 
             bool isGetRequest = IsGetRequest(controller);
-			switch (server.SystemConfiguration.AnonymousUserAccessMode)
-			{
-				case AnonymousUserAccessMode.Admin:
-				case AnonymousUserAccessMode.All:
-					msg = controller.GetEmptyMessage();
-					return true; // if we have, doesn't matter if we have / don't have the user
-				case AnonymousUserAccessMode.Get:
-					if (isGetRequest)
-					{
-						msg = controller.GetEmptyMessage();
-						return true;
-					}
-					goto case AnonymousUserAccessMode.None;
-				case AnonymousUserAccessMode.None:
-					if (userCreated)
-					{
-						if (string.IsNullOrEmpty(tenantId) == false &&
-						    (tenantId.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
-						     tenantId.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
-						     tenantId.StartsWith("ts/", StringComparison.OrdinalIgnoreCase)))
-						{
-							tenantId = tenantId.Substring(3);
-						}
+            switch (server.SystemConfiguration.AnonymousUserAccessMode)
+            {
+                case AnonymousUserAccessMode.Admin:
+                case AnonymousUserAccessMode.All:
+                    msg = controller.GetEmptyMessage();
+                    return true; // if we have, doesn't matter if we have / don't have the user
+                case AnonymousUserAccessMode.Get:
+                    if (isGetRequest)
+                    {
+                        msg = controller.GetEmptyMessage();
+                        return true;
+                    }
+                    goto case AnonymousUserAccessMode.None;
+                case AnonymousUserAccessMode.None:
+                    if (userCreated)
+                    {
+                        if (string.IsNullOrEmpty(tenantId) == false &&
+                            (tenantId.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+                             tenantId.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+                             tenantId.StartsWith("ts/", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            tenantId = tenantId.Substring(3);
+                        }
 
-					    if (user.AdminDatabases.Contains(tenantId) ||
-					        user.AdminDatabases.Contains("*") || ignoreDb)
-					    {
-					        msg = controller.GetEmptyMessage();
-					        return true;
-					    }
-					    if (user.ReadWriteDatabases.Contains(tenantId) ||
-					        user.ReadWriteDatabases.Contains("*"))
-					    {
-					        msg = controller.GetEmptyMessage();
-					        return true;
-					    }
-					    if (isGetRequest && (user.ReadOnlyDatabases.Contains(tenantId) ||
-					                            user.ReadOnlyDatabases.Contains("*")))
-					    {
-					        msg = controller.GetEmptyMessage();
-					        return true;
-					    }
-					}
+                        if (user.AdminDatabases.Contains(tenantId) ||
+                            user.AdminDatabases.Contains("*") || ignoreDb)
+                        {
+                            msg = controller.GetEmptyMessage();
+                            return true;
+                        }
+                        if (user.ReadWriteDatabases.Contains(tenantId) ||
+                            user.ReadWriteDatabases.Contains("*"))
+                        {
+                            msg = controller.GetEmptyMessage();
+                            return true;
+                        }
+                        if (isGetRequest && (user.ReadOnlyDatabases.Contains(tenantId) ||
+                                                user.ReadOnlyDatabases.Contains("*")))
+                        {
+                            msg = controller.GetEmptyMessage();
+                            return true;
+                        }
+                    }
 
-					msg = onRejectingRequest();
-					return false;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
+                    msg = onRejectingRequest();
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
 
         private bool TryCreateUser(RavenBaseApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest)
         {
@@ -231,33 +231,33 @@ namespace Raven.Database.Server.Security.Windows
             return user;
         }
 
-		public List<string> GetApprovedResources(IPrincipal user)
-		{
-			var winUser = user as PrincipalWithDatabaseAccess;
-			if (winUser == null)
-				return new List<string>();
+        public List<string> GetApprovedResources(IPrincipal user)
+        {
+            var winUser = user as PrincipalWithDatabaseAccess;
+            if (winUser == null)
+                return new List<string>();
 
-			var list = new List<string>();
-			list.AddRange(winUser.AdminDatabases);
-			list.AddRange(winUser.ReadOnlyDatabases);
-			list.AddRange(winUser.ReadWriteDatabases);
+            var list = new List<string>();
+            list.AddRange(winUser.AdminDatabases);
+            list.AddRange(winUser.ReadOnlyDatabases);
+            list.AddRange(winUser.ReadWriteDatabases);
 
-			return list;
-		}
+            return list;
+        }
 
-		public override void Dispose()
-		{
-			WindowsSettingsChanged -= UpdateSettings;
-		}
+        public override void Dispose()
+        {
+            WindowsSettingsChanged -= UpdateSettings;
+        }
 
-		public IPrincipal GetUser(RavenBaseApiController controller)
-		{
-			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.ResourceName ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
-			if (userCreated == false)
-				onRejectingRequest();
-			return userCreated ? controller.User : null;
-		}
-	}
+        public IPrincipal GetUser(RavenBaseApiController controller)
+        {
+            Func<HttpResponseMessage> onRejectingRequest;
+            var databaseName = controller.ResourceName ?? Constants.SystemDatabase;
+            var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+            if (userCreated == false)
+                onRejectingRequest();
+            return userCreated ? controller.User : null;
+        }
+    }
 }

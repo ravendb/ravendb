@@ -12,16 +12,16 @@ namespace Raven.Tests
         private const string DatabaseName = "TestDB";
         private readonly DatabaseMemoryTarget sut;
 
-		public DatabaseMemoryTargetTests()
-		{
-			LogContext.DatabaseName = DatabaseName;
-			sut = new DatabaseMemoryTarget();
-		}
+        public DatabaseMemoryTargetTests()
+        {
+            LogContext.DatabaseName = DatabaseName;
+            sut = new DatabaseMemoryTarget();
+        }
 
-		public void Dispose()
-		{
-			LogContext.DatabaseName = null;
-		}
+        public void Dispose()
+        {
+            LogContext.DatabaseName = null;
+        }
 
         [Fact]
         public void When_logger_name_starts_with_Raven_then_should_log_message()
@@ -63,13 +63,13 @@ namespace Raven.Tests
             Assert.Equal(0, sut.DatabaseTargetCount);
         }
 
-		[Fact]
-		public void When_context_database_name_is_null_The_should_be_recorded_for_sys_log()
-		{
-			LogContext.DatabaseName = null;
-			sut.Write(new LogEventInfo { LoggerName = "Raven.x", Level = LogLevel.Info });
-			Assert.Equal(1, sut[Constants.SystemDatabase].GeneralLog.Count());
-		}
+        [Fact]
+        public void When_context_database_name_is_null_The_should_be_recorded_for_sys_log()
+        {
+            LogContext.DatabaseName = null;
+            sut.Write(new LogEventInfo { LoggerName = "Raven.x", Level = LogLevel.Info });
+            Assert.Equal(1, sut[Constants.SystemDatabase].GeneralLog.Count());
+        }
 
         [Fact]
         public void When_number_of_log_events_written_exceed_limit_Then_log_count_should_equal_limit()

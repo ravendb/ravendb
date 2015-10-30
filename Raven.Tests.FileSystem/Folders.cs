@@ -139,32 +139,32 @@ namespace Raven.Tests.FileSystem
             Assert.Contains("/test2", await client.GetDirectoriesAsync());
         }
 
-		[Fact]
-		public async Task AfterCopy_WeHaveNewFolder()
-		{
-			var client = NewAsyncClient();
-			var ms = new MemoryStream();
-			await client.UploadAsync("test/abc.txt", ms);
+        [Fact]
+        public async Task AfterCopy_WeHaveNewFolder()
+        {
+            var client = NewAsyncClient();
+            var ms = new MemoryStream();
+            await client.UploadAsync("test/abc.txt", ms);
 
-			Assert.Contains("/test", await client.GetDirectoriesAsync());
+            Assert.Contains("/test", await client.GetDirectoriesAsync());
 
-			await client.CopyAsync("test/abc.txt", "test2/abc.txt");
+            await client.CopyAsync("test/abc.txt", "test2/abc.txt");
 
-			await client.DownloadAsync("test2/abc.txt");// would throw if missing
+            await client.DownloadAsync("test2/abc.txt");// would throw if missing
 
-			Assert.Contains("/test", await client.GetDirectoriesAsync());
+            Assert.Contains("/test", await client.GetDirectoriesAsync());
 
-			Assert.Contains("/test2", await client.GetDirectoriesAsync());
-		}
+            Assert.Contains("/test2", await client.GetDirectoriesAsync());
+        }
 
-		[Fact]
-		public async Task CanGetListOfFilesInFolder()
-		{
-			var client = NewAsyncClient();
-			var ms = new MemoryStream();
-			await client.UploadAsync("test/abc.txt", ms);
-			await client.UploadAsync("test/ced.txt", ms);
-			await client.UploadAsync("why/abc.txt", ms);
+        [Fact]
+        public async Task CanGetListOfFilesInFolder()
+        {
+            var client = NewAsyncClient();
+            var ms = new MemoryStream();
+            await client.UploadAsync("test/abc.txt", ms);
+            await client.UploadAsync("test/ced.txt", ms);
+            await client.UploadAsync("why/abc.txt", ms);
 
             var results = await client.SearchOnDirectoryAsync("/test").ConfigureAwait(false);
             var strings = results.Files.Select(x => x.FullPath).ToArray();

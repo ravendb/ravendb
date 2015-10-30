@@ -45,14 +45,14 @@ namespace Raven.Tests
                 DefaultStorageTypeName = storageName,
                 DataDirectory = DataDir,
                 RunInMemory = false,
-	            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-	            Settings =
-	            {
-	                {"Raven/Esent/CircularLog", "false"}
-	            }
-	        }, null);
-	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-	    }
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Settings =
+                {
+                    {"Raven/Esent/CircularLog", "false"}
+                }
+            }, null);
+            db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+        }
 
         [Theory]
         [PropertyData("Storages")]

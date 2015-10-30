@@ -708,49 +708,49 @@ namespace Raven.Client.Document.Async
         /// <param name="token">The canecllation token.</param>
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
-		{
-			if (id == null)
-				throw new ArgumentNullException("id", "The document id cannot be null");
-			object entity;
-			if (entitiesByKey.TryGetValue(id, out entity))
-			{
-			    return (T) entity;
-			}
-		    JsonDocument value;
-		    if (includedDocumentsByKey.TryGetValue(id, out value))
-		    {
-		        includedDocumentsByKey.Remove(id);
-		        return TrackEntity<T>(value);
-			}
-		    if (IsDeleted(id))
-		        return default(T);
+        {
+            if (id == null)
+                throw new ArgumentNullException("id", "The document id cannot be null");
+            object entity;
+            if (entitiesByKey.TryGetValue(id, out entity))
+            {
+                return (T) entity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
+            }
+            if (IsDeleted(id))
+                return default(T);
 
-			IncrementRequestCount();
-			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
-		}
+            IncrementRequestCount();
+            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
+            return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
+        }
 
-		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default (CancellationToken))
-		{
-			loadOperation.LogOperation();
-			using (loadOperation.EnterLoadContext())
-			{
-				var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
+        private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default (CancellationToken))
+        {
+            loadOperation.LogOperation();
+            using (loadOperation.EnterLoadContext())
+            {
+                var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
 
-				if (loadOperation.SetResult(result) == false)
-					return loadOperation.Complete<T>();
+                if (loadOperation.SetResult(result) == false)
+                    return loadOperation.Complete<T>();
 
-				return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
-			}
-		}
+                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
+            }
+        }
 
-		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
-		{
-			return LoadAsyncInternal<T>(ids.ToArray(), token);
-		}
+        public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
+        {
+            return LoadAsyncInternal<T>(ids.ToArray(), token);
+        }
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
-		{
+        public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
+        {
             var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure, token).ConfigureAwait(false);
             return result.FirstOrDefault();
         }
@@ -817,8 +817,8 @@ namespace Raven.Client.Document.Async
 
             IncrementRequestCount();
 
-		    var includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
-		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token).ConfigureAwait(false);
+            var includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
+            var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token).ConfigureAwait(false);
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
       
         }
@@ -858,107 +858,107 @@ namespace Raven.Client.Document.Async
                 using (multiLoadOperation.EnterMultiLoadContext())
                 {
                     result = await AsyncDatabaseCommands.GetAsync(ids, includePaths, token: token).ConfigureAwait(false);
-				}
-			} while (multiLoadOperation.SetResult(result));
-			return multiLoadOperation.Complete<T>();
-		}
+                }
+            } while (multiLoadOperation.SetResult(result));
+            return multiLoadOperation.Complete<T>();
+        }
 
-		/// <summary>
-		/// Begins the async multi load operation
-		/// </summary>
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
-		{
-			if (ids.Length == 0)
-				return new T[0];
+        /// <summary>
+        /// Begins the async multi load operation
+        /// </summary>
+        public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
+        {
+            if (ids.Length == 0)
+                return new T[0];
 
-			// only load documents that aren't already cached
-			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.ToArray();
+            // only load documents that aren't already cached
+            var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
-			if (idsOfNotExistingObjects.Length > 0)
-			{
-				IncrementRequestCount();
-				var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
-				MultiLoadResult multiLoadResult;
-				do
-				{
-					multiLoadOperation.LogOperation();
-					using (multiLoadOperation.EnterMultiLoadContext())
-					{
-						multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null).ConfigureAwait(false);
-					}
-				} while (multiLoadOperation.SetResult(multiLoadResult));
+            if (idsOfNotExistingObjects.Length > 0)
+            {
+                IncrementRequestCount();
+                var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+                MultiLoadResult multiLoadResult;
+                do
+                {
+                    multiLoadOperation.LogOperation();
+                    using (multiLoadOperation.EnterMultiLoadContext())
+                    {
+                        multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null).ConfigureAwait(false);
+                    }
+                } while (multiLoadOperation.SetResult(multiLoadResult));
 
-				multiLoadOperation.Complete<T>();
-			}
+                multiLoadOperation.Complete<T>();
+            }
 
-			var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token).ConfigureAwait(false)).ToArray();
-			var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token).ConfigureAwait(false);
-			return loadedData;
-		}
+            var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token).ConfigureAwait(false)).ToArray();
+            var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token).ConfigureAwait(false);
+            return loadedData;
+        }
 
-		/// <summary>
-		/// Begins the async save changes operation
-		/// </summary>
-		/// <returns></returns>
-		public async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
-		{
-			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+        /// <summary>
+        /// Begins the async save changes operation
+        /// </summary>
+        /// <returns></returns>
+        public async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
+        {
+            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
 
-			using (EntityToJson.EntitiesToJsonCachingScope())
-			{
-				var data = PrepareForSaveChanges();
-				if (data.Commands.Count == 0)
-					return;
+            using (EntityToJson.EntitiesToJsonCachingScope())
+            {
+                var data = PrepareForSaveChanges();
+                if (data.Commands.Count == 0)
+                    return;
 
-				IncrementRequestCount();
+                IncrementRequestCount();
 
-				var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token).ConfigureAwait(false);
-				UpdateBatchResults(result, data);
-			}
-		}
+                var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token).ConfigureAwait(false);
+                UpdateBatchResults(result, data);
+            }
+        }
 
-		/// <summary>
-		/// Get the json document by key from the store
-		/// </summary>
-		protected override JsonDocument GetJsonDocument(string documentKey)
-		{
-			throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
-		}
+        /// <summary>
+        /// Get the json document by key from the store
+        /// </summary>
+        protected override JsonDocument GetJsonDocument(string documentKey)
+        {
+            throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
+        }
 
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override async Task Commit(string txId)
-		{
-			await AsyncDatabaseCommands.CommitAsync(txId).ConfigureAwait(false);
-			ClearEnlistment();
-		}
+        /// <summary>
+        /// Commits the specified tx id.
+        /// </summary>
+        /// <param name="txId">The tx id.</param>
+        public override async Task Commit(string txId)
+        {
+            await AsyncDatabaseCommands.CommitAsync(txId).ConfigureAwait(false);
+            ClearEnlistment();
+        }
 
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override async Task Rollback(string txId)
-		{
-			await AsyncDatabaseCommands.RollbackAsync(txId).ConfigureAwait(false);
-			ClearEnlistment();
-		}
+        /// <summary>
+        /// Rollbacks the specified tx id.
+        /// </summary>
+        /// <param name="txId">The tx id.</param>
+        public override async Task Rollback(string txId)
+        {
+            await AsyncDatabaseCommands.RollbackAsync(txId).ConfigureAwait(false);
+            ClearEnlistment();
+        }
 
-		public async Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
-		{
-			await AsyncDatabaseCommands.PrepareTransactionAsync(txId, resourceManagerId, recoveryInformation).ConfigureAwait(false);
-			ClearEnlistment();
-		}
+        public async Task PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null)
+        {
+            await AsyncDatabaseCommands.PrepareTransactionAsync(txId, resourceManagerId, recoveryInformation).ConfigureAwait(false);
+            ClearEnlistment();
+        }
 
-		/// <summary>
-		/// Dynamically queries RavenDB using LINQ
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		public IRavenQueryable<T> Query<T>()
-		{
+        /// <summary>
+        /// Dynamically queries RavenDB using LINQ
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        public IRavenQueryable<T> Query<T>()
+        {
             string indexName = CreateDynamicIndexName<T>();
             
 
@@ -984,93 +984,93 @@ namespace Raven.Client.Document.Async
                 null,
                 this, null, AsyncDatabaseCommands, isMapReduce);
             return ravenQueryInspector;
-		}
+        }
 
-		/// <summary>
-		/// Create a new query for <typeparam name="T"/>
-		/// </summary>
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
-		{
-			throw new NotSupportedException("You can't get a sync query from async session");
-		}
+        /// <summary>
+        /// Create a new query for <typeparam name="T"/>
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
+        {
+            throw new NotSupportedException("You can't get a sync query from async session");
+        }
 
-		/// <summary>
-		/// Create a new query for <typeparam name="T"/>
-		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
-		{
-			return AsyncDocumentQuery<T>(indexName, isMapReduce);
-		}
+        /// <summary>
+        /// Create a new query for <typeparam name="T"/>
+        /// </summary>
+        public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
+        {
+            return AsyncDocumentQuery<T>(indexName, isMapReduce);
+        }
 
-	    public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
-	    {
-	        return new RavenQueryInspector<S>();
-	    }
+        public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
+        {
+            return new RavenQueryInspector<S>();
+        }
 
-	    protected override string GenerateKey(object entity)
-		{
-			throw new NotSupportedException("Async session cannot generate keys synchronously");
-		}
+        protected override string GenerateKey(object entity)
+        {
+            throw new NotSupportedException("Async session cannot generate keys synchronously");
+        }
 
-		protected override void RememberEntityForDocumentKeyGeneration(object entity)
-		{
-			asyncDocumentKeyGeneration.Add(entity);
-		}
+        protected override void RememberEntityForDocumentKeyGeneration(object entity)
+        {
+            asyncDocumentKeyGeneration.Add(entity);
+        }
 
-		protected override Task<string> GenerateKeyAsync(object entity)
-		{
-			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
-		}
+        protected override Task<string> GenerateKeyAsync(object entity)
+        {
+            return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
+        }
 
-		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
-		{
-			DocumentMetadata value;
-			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-				throw new InvalidOperationException("Cannot refresh a transient instance");
-			IncrementRequestCount();
-			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token).ConfigureAwait(false);
-			RefreshInternal(entity, jsonDocument, value);
-		}
+        public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
+        {
+            DocumentMetadata value;
+            if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+                throw new InvalidOperationException("Cannot refresh a transient instance");
+            IncrementRequestCount();
+            var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token).ConfigureAwait(false);
+            RefreshInternal(entity, jsonDocument, value);
+        }
 
-		public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
-		{
-			var metadata = await GetDocumentMetadataAsync(instance).ConfigureAwait(false);
-			return metadata.Metadata;
-		}
+        public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
+        {
+            var metadata = await GetDocumentMetadataAsync(instance).ConfigureAwait(false);
+            return metadata.Metadata;
+        }
 
-		private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
-		{
-			DocumentMetadata value;
-			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
-			{
-				string id;
-				if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
-					|| (instance is IDynamicMetaObjectProvider &&
-					   GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
-				{
-					AssertNoNonUniqueInstance(instance, id);
+        private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+        {
+            DocumentMetadata value;
+            if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
+            {
+                string id;
+                if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
+                    || (instance is IDynamicMetaObjectProvider &&
+                       GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+                {
+                    AssertNoNonUniqueInstance(instance, id);
 
-					var jsonDocument = await GetJsonDocumentAsync(id).ConfigureAwait(false);
+                    var jsonDocument = await GetJsonDocumentAsync(id).ConfigureAwait(false);
 
-					value =  GetDocumentMetadataValue(instance, id, jsonDocument);
-				}
-				else
-				{
-					throw new InvalidOperationException("Could not find the document key for " + instance);
-				}
-			}
-			return value;
-		}
+                    value =  GetDocumentMetadataValue(instance, id, jsonDocument);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Could not find the document key for " + instance);
+                }
+            }
+            return value;
+        }
 
-		/// <summary>
-		/// Get the json document by key from the store
-		/// </summary>
-		private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
-		{
-			var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey).ConfigureAwait(false);
-			if (jsonDocument == null)
-				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
-			return jsonDocument;
-		}
-	}
+        /// <summary>
+        /// Get the json document by key from the store
+        /// </summary>
+        private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+        {
+            var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey).ConfigureAwait(false);
+            if (jsonDocument == null)
+                throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+            return jsonDocument;
+        }
+    }
 }

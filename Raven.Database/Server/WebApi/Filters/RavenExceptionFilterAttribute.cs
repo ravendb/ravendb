@@ -32,195 +32,238 @@ namespace Raven.Database.Server.WebApi.Filters
                 {typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
                 {typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
                 {typeof (ImplicitFetchFieldsFromDocumentNotAllowedException), (ctx, e) => HandleImplicitFetchFieldsFromDocumentNotAllowedException(ctx, e as ImplicitFetchFieldsFromDocumentNotAllowedException)},
-				{typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
-				{typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
-				{typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)},
-				{typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)},
+                {typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
+                {typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
+                {typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)},
+                {typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)},
                 {typeof (OperationCanceledException), (ctx, e) => HandleOperationCanceledException(ctx, e as OperationCanceledException)}
-			};
+            };
 
-		public override void OnException(HttpActionExecutedContext ctx)
-		{
-			var e = ctx.Exception;
-			var exceptionType = e.GetType();
+        public override void OnException(HttpActionExecutedContext ctx)
+        {
+            var e = ctx.Exception;
+            var exceptionType = e.GetType();
 
-			try
-			{
-				if (handlers.ContainsKey(exceptionType))
-				{
-					handlers[exceptionType](ctx, e);
-					return;
-				}
+            try
+            {
+                if (handlers.ContainsKey(exceptionType))
+                {
+                    handlers[exceptionType](ctx, e);
+                    return;
+                }
 
-				var baseType = handlers.Keys.FirstOrDefault(t => t.IsInstanceOfType(e));
-				if (baseType != null)
-				{
-					handlers[baseType](ctx, e);
-					return;
-				}
+                var baseType = handlers.Keys.FirstOrDefault(t => t.IsInstanceOfType(e));
+                if (baseType != null)
+                {
+                    handlers[baseType](ctx, e);
+                    return;
+                }
 
-				DefaultHandler(ctx, e);
-			}
-			catch (Exception)
-			{
-				//TODO: log
-				//logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
-			}
-		}
+                DefaultHandler(ctx, e);
+            }
+            catch (Exception)
+            {
+                //TODO: log
+                //logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
+            }
+        }
 
-		public static void SerializeError(HttpActionExecutedContext ctx, object error)
-		{
-			if (ctx.Request.Method == HttpMethods.Head) // head request must not return a message body in the response
-				return;
+        public static void SerializeError(HttpActionExecutedContext ctx, object error)
+        {
+            if (ctx.Request.Method == HttpMethods.Head) // head request must not return a message body in the response
+                return;
 
-			ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))
-				.WithRequest(ctx.Request);
-		}
+            ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))
+                .WithRequest(ctx.Request);
+        }
 
-		private static void DefaultHandler(HttpActionExecutedContext ctx, Exception e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.InternalServerError,
-			};
+        private static void DefaultHandler(HttpActionExecutedContext ctx, Exception e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError,
+            };
 
-			SerializeError(ctx, new
-			{
-				//ExceptionType = e.GetType().AssemblyQualifiedName,					
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.ToString(),
-			});
-		}
+            SerializeError(ctx, new
+            {
+                //ExceptionType = e.GetType().AssemblyQualifiedName,					
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.ToString(),
+            });
+        }
 
         private static void HandleOperationCanceledException(HttpActionExecutedContext ctx, OperationCanceledException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.RequestTimeout
-			};
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.RequestTimeout
+            };
 
             Stopwatch sp = ctx.Request.Properties["timer"] as Stopwatch;
 
             var elapsedMilliseconds = sp == null ? -1 : sp.ElapsedMilliseconds;
             SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
                 Error = string.Format("Request was canceled by the server due to timeout after {0}ms", elapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
-				e.Message
-			});
-		}
+                e.Message
+            });
+        }
 
 
-		private static void HandleTooManyClausesException(HttpActionExecutedContext ctx, BooleanQuery.TooManyClauses e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.InternalServerError,
-			};
+        private static void HandleTooManyClausesException(HttpActionExecutedContext ctx, BooleanQuery.TooManyClauses e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError,
+            };
 
-			SerializeError(ctx, new
-			{
-				ExceptionType = e.GetType().AssemblyQualifiedName,					
-				Error = "Exceeded maximum clause count in the query.",
-				e.Message
-			});
-		}
+            SerializeError(ctx, new
+            {
+                ExceptionType = e.GetType().AssemblyQualifiedName,					
+                Error = "Exceeded maximum clause count in the query.",
+                e.Message
+            });
+        }
 
 
-		private static void HandleBadRequest(HttpActionExecutedContext ctx, BadRequestException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.BadRequest,
-			};
+        private static void HandleBadRequest(HttpActionExecutedContext ctx, BadRequestException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.BadRequest,
+            };
 
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				e.Message,
-				Error = e.Message
-			});
-		}
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                e.Message,
+                Error = e.Message
+            });
+        }
 
-		private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
-		{
-			if (ctx.ActionContext.ControllerContext.Controller is BaseFileSystemApiController)
-			{
-				ctx.Response = new HttpResponseMessage
-				{
-					StatusCode = HttpStatusCode.MethodNotAllowed,
-				};
-			}
-			else 
-			{
-				ctx.Response = new HttpResponseMessage
-				{
-					StatusCode = HttpStatusCode.Conflict,
-				};
-			}
+        private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
+        {
+            if (ctx.ActionContext.ControllerContext.Controller is BaseFileSystemApiController)
+            {
+                ctx.Response = new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.MethodNotAllowed,
+                };
+            }
+            else 
+            {
+                ctx.Response = new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.Conflict,
+                };
+            }
 
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				ActualETag = e.ActualETag ?? Etag.Empty,
-				ExpectedETag = e.ExpectedETag ?? Etag.Empty,
-				Error = e.Message
-			});
-		}
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                ActualETag = e.ActualETag ?? Etag.Empty,
+                ExpectedETag = e.ExpectedETag ?? Etag.Empty,
+                Error = e.Message
+            });
+        }
 
-		private static void HandleJintException(HttpActionExecutedContext ctx, JavaScriptException e)
-		{
-			//while (e.InnerException is JintException)
-			//{
-			//	e = (JintException)e.InnerException;
-			//}
+        private static void HandleJintException(HttpActionExecutedContext ctx, JavaScriptException e)
+        {
+            //while (e.InnerException is JintException)
+            //{
+            //	e = (JintException)e.InnerException;
+            //}
 
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.BadRequest,
-			};
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.BadRequest,
+            };
 
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Message
-			});
-		}
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+        }
 
-		private static void HandleIndexDoesNotExistsException(HttpActionExecutedContext ctx, IndexDoesNotExistsException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.NotFound,
-			};
+        private static void HandleIndexDoesNotExistsException(HttpActionExecutedContext ctx, IndexDoesNotExistsException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.NotFound,
+            };
 
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Message
-			});
-		}
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+        }
 
-		private static void HandleIndexDisabledException(HttpActionExecutedContext ctx, IndexDisabledException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.InternalServerError,
-			};
+        private static void HandleIndexDisabledException(HttpActionExecutedContext ctx, IndexDisabledException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError,
+            };
 
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
-			});
-		}
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
+            });
+        }
 
-	    private static void HandleImplicitFetchFieldsFromDocumentNotAllowedException(HttpActionExecutedContext ctx, ImplicitFetchFieldsFromDocumentNotAllowedException e)
-	    {
-	        ctx.Response = new HttpResponseMessage
-	        {
-	            StatusCode = HttpStatusCode.InternalServerError
-	        };
+        private static void HandleImplicitFetchFieldsFromDocumentNotAllowedException(HttpActionExecutedContext ctx, ImplicitFetchFieldsFromDocumentNotAllowedException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError
+            };
+
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+        }
+
+
+        private static void HandleSynchronizationException(HttpActionExecutedContext ctx, SynchronizationException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = (HttpStatusCode) 420
+            };
+
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+        }
+
+        private static void HandleFileNotFoundException(HttpActionExecutedContext ctx, FileNotFoundException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.NotFound
+            };
+
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = e.Message
+            });
+        }
+
+        private static void HandleSubscriptionException(HttpActionExecutedContext ctx, SubscriptionException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = e.ResponseStatusCode
+            };
 
             SerializeError(ctx, new
             {

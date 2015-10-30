@@ -27,147 +27,147 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class FsStudioTasksController : BaseFileSystemApiController
-	{
-		[HttpPost]
-		[RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportFilesystem(int batchSize)
-		{
-			if (!Request.Content.IsMimeMultipartContent())
-			{
-				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
-			}
+    public class FsStudioTasksController : BaseFileSystemApiController
+    {
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
+        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize)
+        {
+            if (!Request.Content.IsMimeMultipartContent())
+            {
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
+            }
 
-			string tempPath = FileSystem.Configuration.TempPath;
-			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
-			if (File.Exists(fullTempPath))
-				File.Delete(fullTempPath);
-			if (Directory.Exists(fullTempPath) == false)
-				Directory.CreateDirectory(fullTempPath);
+            string tempPath = FileSystem.Configuration.TempPath;
+            var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+            if (File.Exists(fullTempPath))
+                File.Delete(fullTempPath);
+            if (Directory.Exists(fullTempPath) == false)
+                Directory.CreateDirectory(fullTempPath);
 
-			var streamProvider = new MultipartFileStreamProvider(fullTempPath);
-			await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
-			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
+            var streamProvider = new MultipartFileStreamProvider(fullTempPath);
+            await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
+            var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
 
-			string fileName = null;
-			var fileContent = streamProvider.Contents.SingleOrDefault();
-			if (fileContent != null)
-			{
-				fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
-			}
+            string fileName = null;
+            var fileContent = streamProvider.Contents.SingleOrDefault();
+            if (fileContent != null)
+            {
+                fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
+            }
 
-			var status = new ImportOperationStatus();
-			var cts = new CancellationTokenSource();
+            var status = new ImportOperationStatus();
+            var cts = new CancellationTokenSource();
 
-			var task = Task.Run(async () =>
-			{
-				try
-				{
-					var dataDumper = new FilesystemDataDumper(FileSystem);
-					dataDumper.Progress += s => status.LastProgress = s;
-					var smugglerOptions = dataDumper.Options;
-					smugglerOptions.BatchSize = batchSize;
-					smugglerOptions.CancelToken = cts;
+            var task = Task.Run(async () =>
+            {
+                try
+                {
+                    var dataDumper = new FilesystemDataDumper(FileSystem);
+                    dataDumper.Progress += s => status.LastProgress = s;
+                    var smugglerOptions = dataDumper.Options;
+                    smugglerOptions.BatchSize = batchSize;
+                    smugglerOptions.CancelToken = cts;
 
-					await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
-				}
-				catch (Exception e)
-				{
-					status.Faulted = true;
-					status.State = RavenJObject.FromObject(new
-					{
-						Error = e.ToString()
-					});
-					if (cts.Token.IsCancellationRequested)
-					{
-						status.State = RavenJObject.FromObject(new { Error = "Task was cancelled" });
-						cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
-					}
+                    await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    status.Faulted = true;
+                    status.State = RavenJObject.FromObject(new
+                    {
+                        Error = e.ToString()
+                    });
+                    if (cts.Token.IsCancellationRequested)
+                    {
+                        status.State = RavenJObject.FromObject(new { Error = "Task was cancelled" });
+                        cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
+                    }
 
-					if (e is InvalidDataException)
-					{
-						status.ExceptionDetails = e.Message;
-					}
-					else
-					{
-						status.ExceptionDetails = e.ToString();
-					}
-					throw;
-				}
-				finally
-				{
-					status.Completed = true;
-					File.Delete(uploadedFilePath);
-				}
-			}, cts.Token);
+                    if (e is InvalidDataException)
+                    {
+                        status.ExceptionDetails = e.Message;
+                    }
+                    else
+                    {
+                        status.ExceptionDetails = e.ToString();
+                    }
+                    throw;
+                }
+                finally
+                {
+                    status.Completed = true;
+                    File.Delete(uploadedFilePath);
+                }
+            }, cts.Token);
 
-			long id;
-			FileSystem.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
-			{
-				StartTime = SystemTime.UtcNow,
-				TaskType = TaskActions.PendingTaskType.ImportFileSystem,
-				Payload = fileName,
+            long id;
+            FileSystem.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.ImportFileSystem,
+                Payload = fileName,
 
-			}, out id, cts);
+            }, out id, cts);
 
-			return GetMessageWithObject(new
-			{
-				OperationId = id
-			}, HttpStatusCode.Accepted);
-		}
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
+        }
 
-		[HttpPost]
-		[RavenRoute("fs/{fileSystemName}/studio-tasks/exportFilesystem")]
-		public Task<HttpResponseMessage> ExportFilesystem(StudioTasksController.ExportData smugglerOptionsJson)
-		{
-			var requestString = smugglerOptionsJson.SmugglerOptions;
-			SmugglerFilesOptions smugglerOptions;
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/studio-tasks/exportFilesystem")]
+        public Task<HttpResponseMessage> ExportFilesystem(StudioTasksController.ExportData smugglerOptionsJson)
+        {
+            var requestString = smugglerOptionsJson.SmugglerOptions;
+            SmugglerFilesOptions smugglerOptions;
 
-			using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-			{
-				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-				smugglerOptions = (SmugglerFilesOptions)serializer.Deserialize(jsonReader, typeof(SmugglerFilesOptions));
-			}
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            {
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerFilesOptions)serializer.Deserialize(jsonReader, typeof(SmugglerFilesOptions));
+            }
 
 
-			var result = GetEmptyMessage();
+            var result = GetEmptyMessage();
 
-			// create PushStreamContent object that will be called when the output stream will be ready.
-			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
-			{
-				try
-				{
-					var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
-					await dataDumper.ExportData(
-						new SmugglerExportOptions<FilesConnectionStringOptions>
-						{
-							ToStream = outputStream
-						}).ConfigureAwait(false);
-				}
-				finally
-				{
-					outputStream.Close();
-				}
-			});
+            // create PushStreamContent object that will be called when the output stream will be ready.
+            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            {
+                try
+                {
+                    var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
+                    await dataDumper.ExportData(
+                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToStream = outputStream
+                        }).ConfigureAwait(false);
+                }
+                finally
+                {
+                    outputStream.Close();
+                }
+            });
 
-			var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-				string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-				smugglerOptions.NoneDefualtFileName;
-			result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
-			{
-				FileName = fileName + ".ravendump"
-			};
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+                smugglerOptions.NoneDefualtFileName;
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = fileName + ".ravendump"
+            };
 
-			return new CompletedTask<HttpResponseMessage>(result);
-		}
+            return new CompletedTask<HttpResponseMessage>(result);
+        }
 
-		private class ImportOperationStatus : IOperationState
-		{
-			public bool Completed { get; set; }
-			public string LastProgress { get; set; }
-			public string ExceptionDetails { get; set; }
-			public bool Faulted { get; set; }
-			public RavenJToken State { get; set; }
-		}
-	}
+        private class ImportOperationStatus : IOperationState
+        {
+            public bool Completed { get; set; }
+            public string LastProgress { get; set; }
+            public string ExceptionDetails { get; set; }
+            public bool Faulted { get; set; }
+            public RavenJToken State { get; set; }
+        }
+    }
 }

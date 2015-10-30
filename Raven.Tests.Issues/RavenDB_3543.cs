@@ -54,12 +54,12 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-				using (var session = store.OpenSession())
-				{
-					var result = session.Query<Lead, Leads_Index>()
-						.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-						.Where(x => x.Status.Value != 0)
-						.ToList();
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Lead, Leads_Index>()
+                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                        .Where(x => x.Status.Value != 0)
+                        .ToList();
 
                     foreach (var item in result)
                     {

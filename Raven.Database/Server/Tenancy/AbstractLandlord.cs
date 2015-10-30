@@ -24,7 +24,7 @@ using Sparrow.Collections;
 namespace Raven.Database.Server.Tenancy
 {
     public abstract class AbstractLandlord<TResource> : IResourceLandlord<TResource>
-	    where TResource : IResourceStore
+        where TResource : IResourceStore
     {
         protected static string DisposingLock = Guid.NewGuid().ToString();
 
@@ -268,20 +268,20 @@ namespace Raven.Database.Server.Tenancy
             ResourcesStoresCache.Clear();
         }
 
-	    public abstract Task<TResource> GetResourceInternal(string resourceName);
+        public abstract Task<TResource> GetResourceInternal(string resourceName);
 
-	    public abstract bool TryGetOrCreateResourceStore(string resourceName, out Task<TResource> resourceTask);
+        public abstract bool TryGetOrCreateResourceStore(string resourceName, out Task<TResource> resourceTask);
 
-	    private ConcurrentDictionary<string, DateTime> _lastRecentlyUsed;
+        private ConcurrentDictionary<string, DateTime> _lastRecentlyUsed;
         public ConcurrentDictionary<string, DateTime> LastRecentlyUsed
-	    {
-		    get
-		    {
-				if (_lastRecentlyUsed == null)
-					_lastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        {
+            get
+            {
+                if (_lastRecentlyUsed == null)
+                    _lastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
-			    return _lastRecentlyUsed;
-		    }
-	    }
+                return _lastRecentlyUsed;
+            }
+        }
     }
 }

@@ -35,14 +35,14 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> Put(string id, bool update = false)
         {
-			MessageWithStatusCode nameFormatErrorMessage;
-			if (IsValidName(id, SystemConfiguration.FileSystem.DataDirectory, out nameFormatErrorMessage) == false)
-			{
-				return GetMessageWithObject(new
-				{
+            MessageWithStatusCode nameFormatErrorMessage;
+            if (IsValidName(id, SystemConfiguration.FileSystem.DataDirectory, out nameFormatErrorMessage) == false)
+            {
+                return GetMessageWithObject(new
+                {
                     Error = nameFormatErrorMessage.Message
-				}, nameFormatErrorMessage.ErrorCode);
-			}
+                }, nameFormatErrorMessage.ErrorCode);
+            }
 
             if (Authentication.IsLicensedForRavenFs == false)
             {
@@ -91,131 +91,131 @@ namespace Raven.Database.FileSystem.Controllers
                 fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/FileSystems/" + id;
         }
 
-		[HttpDelete]
-		[RavenRoute("admin/fs/{*id}")]
-		public HttpResponseMessage Delete(string id)
-		{
-			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
-			var message = DeleteFileSystem(id, isHardDeleteNeeded);
-			if (message.ErrorCode != HttpStatusCode.OK)
-			{
-				return GetMessageWithString(message.Message, message.ErrorCode);
-			}
+        [HttpDelete]
+        [RavenRoute("admin/fs/{*id}")]
+        public HttpResponseMessage Delete(string id)
+        {
+            var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
+            var message = DeleteFileSystem(id, isHardDeleteNeeded);
+            if (message.ErrorCode != HttpStatusCode.OK)
+            {
+                return GetMessageWithString(message.Message, message.ErrorCode);
+            }
 
-			return GetEmptyMessage(HttpStatusCode.NoContent);
-		}
+            return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
 
-		[HttpDelete]
-		[RavenRoute("admin/fs/batch-delete")]
-		public HttpResponseMessage BatchDelete()
-		{
-			string[] fileSystemsToDelete = GetQueryStringValues("ids");
-			if (fileSystemsToDelete == null)
-			{
-				return GetMessageWithString("No file systems to delete!", HttpStatusCode.BadRequest);
-			}
+        [HttpDelete]
+        [RavenRoute("admin/fs/batch-delete")]
+        public HttpResponseMessage BatchDelete()
+        {
+            string[] fileSystemsToDelete = GetQueryStringValues("ids");
+            if (fileSystemsToDelete == null)
+            {
+                return GetMessageWithString("No file systems to delete!", HttpStatusCode.BadRequest);
+            }
 
-			var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
-			var successfullyDeletedDatabase = new List<string>();
+            var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
+            var successfullyDeletedDatabase = new List<string>();
 
-			fileSystemsToDelete.ForEach(id =>
-			{
-				var message = DeleteFileSystem(id, isHardDeleteNeeded);
-				if (message.ErrorCode == HttpStatusCode.OK)
-				{
-					successfullyDeletedDatabase.Add(id);
-				}
-			});
+            fileSystemsToDelete.ForEach(id =>
+            {
+                var message = DeleteFileSystem(id, isHardDeleteNeeded);
+                if (message.ErrorCode == HttpStatusCode.OK)
+                {
+                    successfullyDeletedDatabase.Add(id);
+                }
+            });
 
-			return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
-		}
+            return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
+        }
 
-		[HttpPost]
-		[RavenRoute("admin/fs/{*id}")]
-		public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
-		{
-			var message = ToggleFileSystemDisabled(id, isSettingDisabled);
-			if (message.ErrorCode != HttpStatusCode.OK)
-			{
-				return GetMessageWithString(message.Message, message.ErrorCode);
-			}
+        [HttpPost]
+        [RavenRoute("admin/fs/{*id}")]
+        public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
+        {
+            var message = ToggleFileSystemDisabled(id, isSettingDisabled);
+            if (message.ErrorCode != HttpStatusCode.OK)
+            {
+                return GetMessageWithString(message.Message, message.ErrorCode);
+            }
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpPost]
-		[RavenRoute("admin/fs/batch-toggle-disable")]
-		public HttpResponseMessage BatchToggleDisable(bool isSettingDisabled)
-		{
-			string[] fileSystemsToToggle = GetQueryStringValues("ids");
-			if (fileSystemsToToggle == null)
-			{
-				return GetMessageWithString("No file systems to toggle!", HttpStatusCode.BadRequest);
-			}
+        [HttpPost]
+        [RavenRoute("admin/fs/batch-toggle-disable")]
+        public HttpResponseMessage BatchToggleDisable(bool isSettingDisabled)
+        {
+            string[] fileSystemsToToggle = GetQueryStringValues("ids");
+            if (fileSystemsToToggle == null)
+            {
+                return GetMessageWithString("No file systems to toggle!", HttpStatusCode.BadRequest);
+            }
 
-			var successfullyToggledFileSystems = new List<string>();
+            var successfullyToggledFileSystems = new List<string>();
 
-			fileSystemsToToggle.ForEach(id =>
-			{
-				var message = ToggleFileSystemDisabled(id, isSettingDisabled);
-				if (message.ErrorCode == HttpStatusCode.OK)
-				{
-					successfullyToggledFileSystems.Add(id);
-				}
-			});
+            fileSystemsToToggle.ForEach(id =>
+            {
+                var message = ToggleFileSystemDisabled(id, isSettingDisabled);
+                if (message.ErrorCode == HttpStatusCode.OK)
+                {
+                    successfullyToggledFileSystems.Add(id);
+                }
+            });
 
-			return GetMessageWithObject(successfullyToggledFileSystems.ToArray());
-		}
+            return GetMessageWithObject(successfullyToggledFileSystems.ToArray());
+        }
 
-		private MessageWithStatusCode DeleteFileSystem(string id, bool isHardDeleteNeeded)
-		{
-			//get configuration even if the file system is disabled
-			var configuration = FileSystemsLandlord.CreateTenantConfiguration(id, true);
+        private MessageWithStatusCode DeleteFileSystem(string id, bool isHardDeleteNeeded)
+        {
+            //get configuration even if the file system is disabled
+            var configuration = FileSystemsLandlord.CreateTenantConfiguration(id, true);
 
-			if (configuration == null)
-				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system wasn't found" };
+            if (configuration == null)
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system wasn't found" };
 
             var docKey = Constants.FileSystem.Prefix + id;
-			SystemDatabase.Documents.Delete(docKey, null, null);
+            SystemDatabase.Documents.Delete(docKey, null, null);
 
-			if (isHardDeleteNeeded && configuration.RunInMemory == false)
-			{
-				IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
+            if (isHardDeleteNeeded && configuration.RunInMemory == false)
+            {
+                IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
 
-				if (configuration.FileSystem.IndexStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.FileSystem.IndexStoragePath);
-			}
+                if (configuration.FileSystem.IndexStoragePath != null)
+                    IOExtensions.DeleteDirectory(configuration.FileSystem.IndexStoragePath);
+            }
 
-			return new MessageWithStatusCode();
-		}
+            return new MessageWithStatusCode();
+        }
 
-		private MessageWithStatusCode ToggleFileSystemDisabled(string id, bool isSettingDisabled)
-		{
-			var docKey = Constants.FileSystem.Prefix + id;
-			var document = SystemDatabase.Documents.Get(docKey, null);
-			if (document == null)
-				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system " + id + " wasn't found" };
+        private MessageWithStatusCode ToggleFileSystemDisabled(string id, bool isSettingDisabled)
+        {
+            var docKey = Constants.FileSystem.Prefix + id;
+            var document = SystemDatabase.Documents.Get(docKey, null);
+            if (document == null)
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system " + id + " wasn't found" };
 
-			var doc = document.DataAsJson.JsonDeserialization<FileSystemDocument>();
-			if (doc.Disabled == isSettingDisabled)
-			{
-				var state = isSettingDisabled ? "disabled" : "enabled";
-				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "File system " + id + " is already " + state };
-			}
+            var doc = document.DataAsJson.JsonDeserialization<FileSystemDocument>();
+            if (doc.Disabled == isSettingDisabled)
+            {
+                var state = isSettingDisabled ? "disabled" : "enabled";
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "File system " + id + " is already " + state };
+            }
 
-			doc.Disabled = !doc.Disabled;
-			var json = RavenJObject.FromObject(doc);
-			json.Remove("Id");
-			SystemDatabase.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+            doc.Disabled = !doc.Disabled;
+            var json = RavenJObject.FromObject(doc);
+            json.Remove("Id");
+            SystemDatabase.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
 
-			return new MessageWithStatusCode();
-		}
+            return new MessageWithStatusCode();
+        }
 
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/admin/reset-index")]
         public HttpResponseMessage ResetIndex ()
         {
-			FileSystem.Search.ForceIndexReset();
+            FileSystem.Search.ForceIndexReset();
             return GetEmptyMessage();
         }
 
@@ -248,7 +248,7 @@ namespace Raven.Database.FileSystem.Controllers
             RavenJObject document = null;
             try
             {
-				FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
+                FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
             catch (FileNotFoundException)
             {
@@ -275,12 +275,12 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (incrementalBackup &&
                 transactionalStorage is Storage.Voron.TransactionalStorage &&
-				FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
 
-			FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
+            FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
             {
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
@@ -313,7 +313,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-					var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetResourceInternal(fs));
+                    var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetResourceInternal(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
                     {
                         bool skipProgressReport = false;
@@ -471,7 +471,7 @@ namespace Raven.Database.FileSystem.Controllers
                     return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);
                 }
             }
-			SystemDatabase.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+            SystemDatabase.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
             {
                 Resource = filesystemName
             }), new RavenJObject(), null);
@@ -527,12 +527,12 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 finally
                 {
-					SystemDatabase.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+                    SystemDatabase.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
                 }
             }, TaskCreationOptions.LongRunning);
 
             long id;
-			SystemDatabase.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+            SystemDatabase.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.RestoreFilesystem,
@@ -588,15 +588,15 @@ namespace Raven.Database.FileSystem.Controllers
             return IOExtensions.ToFullPath(documentDataDir, baseDataPath);
         }
 
-		[HttpPost]
-		[RavenRoute("fs/{fileSystemName}/admin/synchronization/topology/view")]
-		public Task<HttpResponseMessage> SynchronizationTopology()
-		{
-			var synchronizationTopologyDiscoverer = new SynchronizationTopologyDiscoverer(FileSystem, new RavenJArray(), 10, Log);
-			var node = synchronizationTopologyDiscoverer.Discover();
-			var topology = node.Flatten();
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/admin/synchronization/topology/view")]
+        public Task<HttpResponseMessage> SynchronizationTopology()
+        {
+            var synchronizationTopologyDiscoverer = new SynchronizationTopologyDiscoverer(FileSystem, new RavenJArray(), 10, Log);
+            var node = synchronizationTopologyDiscoverer.Discover();
+            var topology = node.Flatten();
 
-			return GetMessageWithObjectAsTask(topology);
-		}
-	}
+            return GetMessageWithObjectAsTask(topology);
+        }
+    }
 }

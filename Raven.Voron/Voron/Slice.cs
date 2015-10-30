@@ -91,59 +91,59 @@ namespace Voron
                     return (int)Hashing.XXHash32.CalculateInline(Pointer, Size);
                 }
             }
-		}
+        }
 
-		public byte this[int index]
-		{
-			get
-			{
-				if (Array != null)
-					return Array[index];
+        public byte this[int index]
+        {
+            get
+            {
+                if (Array != null)
+                    return Array[index];
 
-				if(Pointer == null) //precaution
-					throw new InvalidOperationException("Uninitialized slice!");
+                if(Pointer == null) //precaution
+                    throw new InvalidOperationException("Uninitialized slice!");
 
-				if(index < 0 || index > Size)
-					throw new ArgumentOutOfRangeException("index");
+                if(index < 0 || index > Size)
+                    throw new ArgumentOutOfRangeException("index");
 
-				return *(Pointer + (sizeof (byte)*index));
-			}			
-		}
+                return *(Pointer + (sizeof (byte)*index));
+            }			
+        }
 
-		public override string ToString()
-		{
-			// this is used for debug purposes only
-			if (Options != SliceOptions.Key)
-				return Options.ToString();
+        public override string ToString()
+        {
+            // this is used for debug purposes only
+            if (Options != SliceOptions.Key)
+                return Options.ToString();
 
-			if (Size == sizeof(long) && Debugger.IsAttached)
-			{
-				if (Array != null)
-				{
-					if(Array[0] == 0)
-						return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
-				}
-				else if (*Pointer == 0)
-				{
-					var bytes = new byte[sizeof(long)];
-					CopyTo(bytes);
-					return "I64 = " + EndianBitConverter.Big.ToInt64(bytes, 0);
-				}
-			}
+            if (Size == sizeof(long) && Debugger.IsAttached)
+            {
+                if (Array != null)
+                {
+                    if(Array[0] == 0)
+                        return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
+                }
+                else if (*Pointer == 0)
+                {
+                    var bytes = new byte[sizeof(long)];
+                    CopyTo(bytes);
+                    return "I64 = " + EndianBitConverter.Big.ToInt64(bytes, 0);
+                }
+            }
 
-			if (Array != null)
-		    {
+            if (Array != null)
+            {
                 if (Array.Length > 0 && Array[0] == 0)
-		        {
-		            return ByteArrayToHexViaLookup32(Array);
-		        }
-				return Encoding.UTF8.GetString(Array,0, Size);
-		    }
-		    if (Size > 0 && Pointer[0] == 0)
-		    {
+                {
+                    return ByteArrayToHexViaLookup32(Array);
+                }
+                return Encoding.UTF8.GetString(Array,0, Size);
+            }
+            if (Size > 0 && Pointer[0] == 0)
+            {
                 return BytePointerToHexViaLookup32(Pointer, Size);
 
-		    }
+            }
 
             return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
         }

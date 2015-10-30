@@ -15,20 +15,20 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
-	public class SynchronizationStrategy
-	{
-		private readonly SigGenerator sigGenerator;
+    public class SynchronizationStrategy
+    {
+        private readonly SigGenerator sigGenerator;
 
-		private readonly InMemoryRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 
-		private readonly ITransactionalStorage storage;
+        private readonly ITransactionalStorage storage;
 
-		public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
-		{
-			this.storage = storage;
-			this.sigGenerator = sigGenerator;
-			this.configuration = configuration;
-		}
+        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
+        {
+            this.storage = storage;
+            this.sigGenerator = sigGenerator;
+            this.configuration = configuration;
+        }
 
         public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
         {
@@ -122,6 +122,6 @@ namespace Raven.Database.FileSystem.Synchronization
             }
 
             return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator, configuration);
-		}
-	}
+        }
+    }
 }

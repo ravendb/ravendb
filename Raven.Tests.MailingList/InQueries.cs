@@ -6,12 +6,12 @@ using Raven.Client.Linq;
 
 namespace Raven.Tests.MailingList
 {
-	public class InQueries : RavenTest
-	{
-		public class User
-		{
-			public string Country { get; set; }
-		}	
+    public class InQueries : RavenTest
+    {
+        public class User
+        {
+            public string Country { get; set; }
+        }	
 
 
         [Fact]
@@ -77,32 +77,32 @@ namespace Raven.Tests.MailingList
                 {
                     var collection = session.Query<User>().Where(x => x.Country.In("Asia,Japan")).ToList();
 
-					Assert.NotEmpty(collection);
-				}
-			}
-		}
+                    Assert.NotEmpty(collection);
+                }
+            }
+        }
 
-		[Fact]
-		public void WhenElementcontainsCommasInMiddleOfList()
-		{
-			using (var store = NewRemoteDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User
-					{
-						Country = "Asia,Japan"
-					});
-					session.SaveChanges();
-				}
+        [Fact]
+        public void WhenElementcontainsCommasInMiddleOfList()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Country = "Asia,Japan"
+                    });
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					var collection = session.Query<User>().Where(x => x.Country.In(new[]{"Korea","Asia,Japan","China"})).ToList();
+                using (var session = store.OpenSession())
+                {
+                    var collection = session.Query<User>().Where(x => x.Country.In(new[]{"Korea","Asia,Japan","China"})).ToList();
 
-					Assert.NotEmpty(collection);
-				}
-			}
-		}
-	}
+                    Assert.NotEmpty(collection);
+                }
+            }
+        }
+    }
 }

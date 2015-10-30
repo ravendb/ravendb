@@ -1,4 +1,4 @@
-﻿import resource = require("models/resources/resource");
+import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import fileSystemStatistics = require("models/filesystem/fileSystemStatistics");
 

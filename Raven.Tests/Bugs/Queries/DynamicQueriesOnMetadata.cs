@@ -27,31 +27,31 @@ namespace Raven.Tests.Bugs.Queries
                 using (var s = store.OpenSession())
                 {
                     var glasses = s.Advanced.DocumentQuery<Glass>()
-						.WhereEquals("@metadata.Is-Nice", true)
-						.ToArray();
-					Assert.NotEmpty(glasses);
-				}
-			}
-		}
+                        .WhereEquals("@metadata.Is-Nice", true)
+                        .ToArray();
+                    Assert.NotEmpty(glasses);
+                }
+            }
+        }
 
-		public class Glass
-		{
-			public string Id { get; set; }
-		}
+        public class Glass
+        {
+            public string Id { get; set; }
+        }
 
-		[Fact]
-		public void WillGenerateProperQueryForMetadata()
-		{
-			using (var documentDatabase = new DocumentDatabase(new RavenConfiguration { RunInMemory = true }, null))
-			{
-				var mapping = DynamicQueryMapping.Create(documentDatabase, "@metadata.Raven-Graph-Type:Edge", null);
+        [Fact]
+        public void WillGenerateProperQueryForMetadata()
+        {
+            using (var documentDatabase = new DocumentDatabase(new RavenConfiguration { RunInMemory = true }, null))
+            {
+                var mapping = DynamicQueryMapping.Create(documentDatabase, "@metadata.Raven-Graph-Type:Edge", null);
 
-				var indexDefinition = mapping.CreateIndexDefinition();
+                var indexDefinition = mapping.CreateIndexDefinition();
 
-				Assert.Equal(
-					"from doc in docs\nselect new {\n\t_metadata_Raven_Graph_Type = doc[\"@metadata\"][\"Raven-Graph-Type\"]\n}",
-					indexDefinition.Map);
-			}
-		}
-	}
+                Assert.Equal(
+                    "from doc in docs\nselect new {\n\t_metadata_Raven_Graph_Type = doc[\"@metadata\"][\"Raven-Graph-Type\"]\n}",
+                    indexDefinition.Map);
+            }
+        }
+    }
 }

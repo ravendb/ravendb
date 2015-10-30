@@ -11,7 +11,7 @@ namespace Voron.Trees
 {
     using Sparrow;
     using Sparrow.Platform;
-	using System.Runtime.CompilerServices;
+    using System.Runtime.CompilerServices;
     using Voron.Util;
 
     public unsafe class Page
@@ -33,8 +33,8 @@ namespace Voron.Trees
         {
             _base = b;
             _header = (PageHeader*)b;
-	        Source = source;
-	        _pageSize = pageSize;
+            Source = source;
+            _pageSize = pageSize;
             _prefixSection = (PrefixInfoSection*)(_base + _pageSize - Constants.PrefixInfoSectionSize);
         }
 
@@ -307,17 +307,17 @@ namespace Voron.Trees
             get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
         }
 
-		public bool IsFixedSize
-		{
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return (_header->Flags & PageFlags.FixedSize) == PageFlags.FixedSize; }
-		}
+        public bool IsFixedSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (_header->Flags & PageFlags.FixedSize) == PageFlags.FixedSize; }
+        }
 
-		public bool HasPrefixes
-		{
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return _prefixSection->NextPrefixId > 0; }
-		}
+        public bool HasPrefixes
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _prefixSection->NextPrefixId > 0; }
+        }
 
         public ushort FixedSize_NumberOfEntries
         {
@@ -327,13 +327,13 @@ namespace Voron.Trees
             set { _header->FixedSize_NumberOfEntries = value; }
         }
 
-		public ushort FixedSize_StartPosition
-		{
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return _header->FixedSize_StartPosition; }
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			set { _header->FixedSize_StartPosition = value; }
-		}
+        public ushort FixedSize_StartPosition
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->FixedSize_StartPosition; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->FixedSize_StartPosition = value; }
+        }
 
         public ushort FixedSize_ValueSize
         {
@@ -468,7 +468,7 @@ namespace Voron.Trees
             newNode->Flags = other->Flags;
 
             if (key.Options == SliceOptions.Key && key.Size > 0)
-				key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+                key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
             if (IsBranch || other->Flags == (NodeFlags.PageRef))
             {
@@ -780,10 +780,10 @@ namespace Voron.Trees
                 LastSearchPosition = i;
         }
 
-	    public void ClearPrefixInfo()
-	    {
+        public void ClearPrefixInfo()
+        {
             if (KeysPrefixed == false)
-				return;
+                return;
 
             UnmanagedMemory.Set((byte*)_prefixSection->PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
             _prefixSection->NextPrefixId = 0;
@@ -846,8 +846,8 @@ namespace Voron.Trees
                     size += size & 1;
                     Memory.Copy(Base + Upper - size, (byte*)node, size);
                     Upper -= (ushort)size;
-				    KeysOffsets[i] = Upper;
-			    }
+                    KeysOffsets[i] = Upper;
+                }
 
                 if (KeysPrefixed == false)
                     return;
@@ -865,10 +865,10 @@ namespace Voron.Trees
 
                     Memory.Copy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
                     Upper -= (ushort)prefixNodeSize;
-					_prefixSection->PrefixOffsets[i] = Upper;
-			    }
-		    }
-	    }
+                    _prefixSection->PrefixOffsets[i] = Upper;
+                }
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasSpaceFor(int len)
@@ -1013,23 +1013,23 @@ namespace Voron.Trees
 
             prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader { PrefixLength = prefixLength }, prefixData, PageNumber);
 
-			return prefixedSlice;
-		}
+            return prefixedSlice;
+        }
 
-	    public string DebugView()
-	    {
-		    var sb = new StringBuilder();
-		    for (int i = 0; i < NumberOfEntries; i++)
-		    {
-				sb.Append(i)
-					.Append(": ")
-					.Append(GetNodeKey(i))
-					.Append(" - ")
-					.Append(KeysOffsets[i])
-					.AppendLine();
-		    }
-		    return sb.ToString();
-	    }
+        public string DebugView()
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < NumberOfEntries; i++)
+            {
+                sb.Append(i)
+                    .Append(": ")
+                    .Append(GetNodeKey(i))
+                    .Append(" - ")
+                    .Append(KeysOffsets[i])
+                    .AppendLine();
+            }
+            return sb.ToString();
+        }
 
         [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, long root)
@@ -1124,14 +1124,14 @@ namespace Voron.Trees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-		private static int MinPrefixLength(MemorySlice key)
-		{
+        private static int MinPrefixLength(MemorySlice key)
+        {
             return Math.Max(key.KeyLength / 5, 2);
-		}
+        }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public MemorySlice CreateNewEmptyKey()
-		{
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public MemorySlice CreateNewEmptyKey()
+        {
             if (KeysPrefixed)
                 return new PrefixedSlice(SliceOptions.Key);
 

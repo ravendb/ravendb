@@ -1,11 +1,11 @@
-﻿import timeSeries = require("models/timeSeries/timeSeries");
+import timeSeries = require("models/timeSeries/timeSeries");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 import getKeysCommand = require("commands/timeSeries/getKeysCommand");
 
 class timeSeriesType implements ICollectionBase {
-	colorClass = "";
+    colorClass = "";
     private timeSeriesList: pagedList;
     private static typeColorMaps: resourceStyleMap[] = [];
     keysCount = ko.observable<number>(0);
@@ -20,7 +20,7 @@ class timeSeriesType implements ICollectionBase {
     }
 
     activate() {
-		ko.postbox.publish("ActivateType", this);
+        ko.postbox.publish("ActivateType", this);
     }
 
     getKeys() {

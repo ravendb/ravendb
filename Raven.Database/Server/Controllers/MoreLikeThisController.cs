@@ -10,18 +10,18 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class MoreLikeThisController : ClusterAwareRavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("morelikethis/{*id}")]
-		[RavenRoute("databases/{databaseName}/morelikethis/{*id}")]
-		public HttpResponseMessage MoreLikeThisGet()
-		{
-			var nameValueCollection = new NameValueCollection();
-			foreach (var queryNameValuePair in InnerRequest.GetQueryNameValuePairs())
-			{
-				nameValueCollection.Add(queryNameValuePair.Key, queryNameValuePair.Value);
-			}
+    public class MoreLikeThisController : ClusterAwareRavenDbApiController
+    {
+        [HttpGet]
+        [RavenRoute("morelikethis/{*id}")]
+        [RavenRoute("databases/{databaseName}/morelikethis/{*id}")]
+        public HttpResponseMessage MoreLikeThisGet()
+        {
+            var nameValueCollection = new NameValueCollection();
+            foreach (var queryNameValuePair in InnerRequest.GetQueryNameValuePairs())
+            {
+                nameValueCollection.Add(queryNameValuePair.Key, queryNameValuePair.Value);
+            }
 
             var parameters = GetParametersFromPath(GetRequestUrl(), nameValueCollection);
             parameters.TransformerParameters = ExtractTransformerParameters();

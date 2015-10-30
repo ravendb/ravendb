@@ -223,135 +223,135 @@ interface RequireMap {
 
 interface Require {
 
-	/**
-	* Configure require.js
-	**/
-	config(config: RequireConfig): Require;
+    /**
+    * Configure require.js
+    **/
+    config(config: RequireConfig): Require;
 
-	/**
-	* CommonJS require call
-	* @param module Module to load
-	* @return The loaded module
-	*/
-	(module: string): any;
+    /**
+    * CommonJS require call
+    * @param module Module to load
+    * @return The loaded module
+    */
+    (module: string): any;
 
-	/**
-	* Start the main app logic.
-	* Callback is optional.
-	* Can alternatively use deps and callback.
-	* @param modules Required modules to load.
-	**/
-	(modules: string[]): void;
+    /**
+    * Start the main app logic.
+    * Callback is optional.
+    * Can alternatively use deps and callback.
+    * @param modules Required modules to load.
+    **/
+    (modules: string[]): void;
 
-	/**
-	* @see Require()
-	* @param ready Called when required modules are ready.
-	**/
-	(modules: string[], ready: Function): void;
+    /**
+    * @see Require()
+    * @param ready Called when required modules are ready.
+    **/
+    (modules: string[], ready: Function): void;
 
-	/**
-	* @see http://requirejs.org/docs/api.html#errbacks
-	* @param ready Called when required modules are ready.
-	**/
-	(modules: string[], ready: Function, errback: Function): void;
+    /**
+    * @see http://requirejs.org/docs/api.html#errbacks
+    * @param ready Called when required modules are ready.
+    **/
+    (modules: string[], ready: Function, errback: Function): void;
 
-	/**
-	* Generate URLs from require module
-	* @param module Module to URL
-	* @return URL string
-	**/
-	toUrl(module: string): string;
+    /**
+    * Generate URLs from require module
+    * @param module Module to URL
+    * @return URL string
+    **/
+    toUrl(module: string): string;
 
-	/**
-	* Returns true if the module has already been loaded and defined.
-	* @param module Module to check
-	**/
-	defined(module: string): boolean;
+    /**
+    * Returns true if the module has already been loaded and defined.
+    * @param module Module to check
+    **/
+    defined(module: string): boolean;
 
-	/**
-	* Returns true if the module has already been requested or is in the process of loading and should be available at some point.
-	* @param module Module to check
-	**/
-	specified(module: string): boolean;
+    /**
+    * Returns true if the module has already been requested or is in the process of loading and should be available at some point.
+    * @param module Module to check
+    **/
+    specified(module: string): boolean;
 
-	/**
-	* On Error override
-	* @param err
-	**/
-	onError(err: RequireError, errback?: (err: RequireError) => void): void;
+    /**
+    * On Error override
+    * @param err
+    **/
+    onError(err: RequireError, errback?: (err: RequireError) => void): void;
 
-	/**
-	* Undefine a module
-	* @param module Module to undefine.
-	**/
-	undef(module: string): void;
+    /**
+    * Undefine a module
+    * @param module Module to undefine.
+    **/
+    undef(module: string): void;
 
-	/**
-	* Semi-private function, overload in special instance of undef()
-	**/
-	onResourceLoad(context: Object, map: RequireMap, depArray: RequireMap[]): void;
+    /**
+    * Semi-private function, overload in special instance of undef()
+    **/
+    onResourceLoad(context: Object, map: RequireMap, depArray: RequireMap[]): void;
 }
 
 interface RequireDefine {
 
-	/**
-	* Define Simple Name/Value Pairs
-	* @param config Dictionary of Named/Value pairs for the config.
-	**/
-	(config: { [key: string]: any; }): void;
+    /**
+    * Define Simple Name/Value Pairs
+    * @param config Dictionary of Named/Value pairs for the config.
+    **/
+    (config: { [key: string]: any; }): void;
 
-	/**
-	* Define function.
-	* @param func: The function module.
-	**/
-	(func: () => any): void;
+    /**
+    * Define function.
+    * @param func: The function module.
+    **/
+    (func: () => any): void;
 
-	/**
-	* Define function with dependencies.
-	* @param deps List of dependencies module IDs.
-	* @param ready Callback function when the dependencies are loaded.
-	*	callback param deps module dependencies
-	*	callback return module definition
-	**/
-    	(deps: string[], ready: Function): void;
+    /**
+    * Define function with dependencies.
+    * @param deps List of dependencies module IDs.
+    * @param ready Callback function when the dependencies are loaded.
+    *	callback param deps module dependencies
+    *	callback return module definition
+    **/
+        (deps: string[], ready: Function): void;
 
-	/**
-	*  Define module with simplified CommonJS wrapper.
-	* @param ready
-	*	callback require requirejs instance
-	*	callback exports exports object
-	*	callback module module
-	*	callback return module definition
-	**/
-	(ready: (require: Require, exports: { [key: string]: any; }, module: RequireModule) => any): void;
+    /**
+    *  Define module with simplified CommonJS wrapper.
+    * @param ready
+    *	callback require requirejs instance
+    *	callback exports exports object
+    *	callback module module
+    *	callback return module definition
+    **/
+    (ready: (require: Require, exports: { [key: string]: any; }, module: RequireModule) => any): void;
 
-	/**
-	* Define a module with a name and dependencies.
-	* @param name The name of the module.
-	* @param deps List of dependencies module IDs.
-	* @param ready Callback function when the dependencies are loaded.
-	*	callback deps module dependencies
-	*	callback return module definition
-	**/
-	(name: string, deps: string[], ready: Function): void;
+    /**
+    * Define a module with a name and dependencies.
+    * @param name The name of the module.
+    * @param deps List of dependencies module IDs.
+    * @param ready Callback function when the dependencies are loaded.
+    *	callback deps module dependencies
+    *	callback return module definition
+    **/
+    (name: string, deps: string[], ready: Function): void;
 
-	/**
-	* Define a module with a name.
-	* @param name The name of the module.
-	* @param ready Callback function when the dependencies are loaded.
-	*	callback return module definition
-	**/
-	(name: string, ready: Function): void;
-	
-	/**
-	* Used to allow a clear indicator that a global define function (as needed for script src browser loading) conforms
-	* to the AMD API, any global define function SHOULD have a property called "amd" whose value is an object.
-	* This helps avoid conflict with any other existing JavaScript code that could have defined a define() function
-	* that does not conform to the AMD API.
-	* define.amd.jQuery is specific to jQuery and indicates that the loader is able to account for multiple version
-	* of jQuery being loaded simultaneously.
-	*/
-	amd: Object;
+    /**
+    * Define a module with a name.
+    * @param name The name of the module.
+    * @param ready Callback function when the dependencies are loaded.
+    *	callback return module definition
+    **/
+    (name: string, ready: Function): void;
+    
+    /**
+    * Used to allow a clear indicator that a global define function (as needed for script src browser loading) conforms
+    * to the AMD API, any global define function SHOULD have a property called "amd" whose value is an object.
+    * This helps avoid conflict with any other existing JavaScript code that could have defined a define() function
+    * that does not conform to the AMD API.
+    * define.amd.jQuery is specific to jQuery and indicates that the loader is able to account for multiple version
+    * of jQuery being loaded simultaneously.
+    */
+    amd: Object;
 }
 
 // Ambient declarations for 'require' and 'define'

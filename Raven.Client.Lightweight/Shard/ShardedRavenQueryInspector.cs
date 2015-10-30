@@ -10,69 +10,69 @@ using System.Linq;
 
 namespace Raven.Client.Shard
 {
-	public class ShardedRavenQueryInspector<T> : RavenQueryInspector<T>
-	{
-		private readonly ShardStrategy shardStrategy;
-		private readonly List<IDatabaseCommands> shardDbCommands;
-		private readonly List<IAsyncDatabaseCommands> asyncShardDbCommands;
+    public class ShardedRavenQueryInspector<T> : RavenQueryInspector<T>
+    {
+        private readonly ShardStrategy shardStrategy;
+        private readonly List<IDatabaseCommands> shardDbCommands;
+        private readonly List<IAsyncDatabaseCommands> asyncShardDbCommands;
 
-		public ShardedRavenQueryInspector(
-			ShardStrategy shardStrategy, 
-			List<IDatabaseCommands> shardDbCommands,
-			 List<IAsyncDatabaseCommands> asyncShardDbCommands)
-		{
-			this.shardStrategy = shardStrategy;
-			this.shardDbCommands = shardDbCommands;
-			this.asyncShardDbCommands = asyncShardDbCommands;
-		}
+        public ShardedRavenQueryInspector(
+            ShardStrategy shardStrategy, 
+            List<IDatabaseCommands> shardDbCommands,
+             List<IAsyncDatabaseCommands> asyncShardDbCommands)
+        {
+            this.shardStrategy = shardStrategy;
+            this.shardDbCommands = shardDbCommands;
+            this.asyncShardDbCommands = asyncShardDbCommands;
+        }
 
-		public override FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
-		{
-			var indexQuery = GetIndexQuery(false);
-			var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
-			{
-				IndexName = IndexQueried,
-				EntityType = typeof (T),
-				Query = indexQuery
-			}, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facetSetupDoc, start, pageSize));
+        public override FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
+        {
+            var indexQuery = GetIndexQuery(false);
+            var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
+            {
+                IndexName = IndexQueried,
+                EntityType = typeof (T),
+                Query = indexQuery
+            }, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facetSetupDoc, start, pageSize));
 
-			return MergeFacets(results);
-		}
+            return MergeFacets(results);
+        }
 
-		public override FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
-		{
-			var indexQuery = GetIndexQuery(false);
-			var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
-			{
-				IndexName = IndexQueried,
-				EntityType = typeof(T),
-				Query = indexQuery
-			}, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facets, start, pageSize));
+        public override FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
+        {
+            var indexQuery = GetIndexQuery(false);
+            var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
+            {
+                IndexName = IndexQueried,
+                EntityType = typeof(T),
+                Query = indexQuery
+            }, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facets, start, pageSize));
 
-			return MergeFacets(results);
-		}
+            return MergeFacets(results);
+        }
 
-		public override async Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
-		{
-			var indexQuery = GetIndexQuery(true);
-			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
-			{
-				IndexName = AsyncIndexQueried,
-				EntityType = typeof(T),
-				Query = indexQuery
+        public override async Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        {
+            var indexQuery = GetIndexQuery(true);
+            var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
+            {
+                IndexName = AsyncIndexQueried,
+                EntityType = typeof(T),
+                Query = indexQuery
             }, (commands, i) => commands.GetFacetsAsync(AsyncIndexQueried, indexQuery, facets, start, pageSize, token)).ConfigureAwait(false);
-		
-			return MergeFacets(results);
-		}
+        
+            return MergeFacets(results);
+        }
 
-		public override async Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
-		{
-			var indexQuery = GetIndexQuery(true);
-			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
-			{
-				IndexName = AsyncIndexQueried,
-				EntityType = typeof(T),
-				Query = indexQuery
+        public override async Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        {
+            var indexQuery = GetIndexQuery(true);
+            var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
+            {
+                IndexName = AsyncIndexQueried,
+                EntityType = typeof(T),
+                Query = indexQuery
             }, (commands, i) => commands.GetFacetsAsync(AsyncIndexQueried, indexQuery, facetSetupDoc, start, pageSize, token)).ConfigureAwait(false);
 
             return MergeFacets(results);

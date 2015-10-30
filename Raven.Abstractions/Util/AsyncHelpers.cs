@@ -15,43 +15,43 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Util
 {
-	public static class AsyncHelpers
-	{
-		public static void RunSync(Func<Task> task)
-		{
-			var oldContext = SynchronizationContext.Current;
-			try
-			{
-				var synch = new ExclusiveSynchronizationContext();
-				SynchronizationContext.SetSynchronizationContext(synch);
-				synch.Post(async _ =>
-				{
-					try
-					{
-						await task().ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						synch.InnerException = e;
-						throw;
-					}
-					finally
-					{
-						synch.EndMessageLoop();
-					}
-				}, null);
-				synch.BeginMessageLoop();
-			}
-			catch (AggregateException ex)
-			{
-				var exception = ex.ExtractSingleInnerException();
-				ExceptionDispatchInfo.Capture(exception).Throw();
-			}
-			finally
-			{
-				SynchronizationContext.SetSynchronizationContext(oldContext);
-			}
-		}
+    public static class AsyncHelpers
+    {
+        public static void RunSync(Func<Task> task)
+        {
+            var oldContext = SynchronizationContext.Current;
+            try
+            {
+                var synch = new ExclusiveSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(synch);
+                synch.Post(async _ =>
+                {
+                    try
+                    {
+                        await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
+            }
+            catch (AggregateException ex)
+            {
+                var exception = ex.ExtractSingleInnerException();
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
+        }
 
         public static T RunSync<T>(Func<Task<T>> task)
         {
@@ -63,19 +63,19 @@ namespace Raven.Abstractions.Util
                 var synch = new ExclusiveSynchronizationContext();
                 SynchronizationContext.SetSynchronizationContext(synch);
 
-				synch.Post(async _ =>
-				{
-					try
-					{
-						result = await task().ConfigureAwait(false);
-					}
-					catch (Exception e)
-					{
-						synch.InnerException = e;
-						throw;
-					}
-					finally
-					{
+                synch.Post(async _ =>
+                {
+                    try
+                    {
+                        result = await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
                         sp.Stop();
                         synch.EndMessageLoop();
                     }

@@ -58,7 +58,7 @@ class viewModelBase {
      */
     canActivate(args: any): any {
         var self = this;
-	    setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
+        setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
 
         var resource = appUrl.getResource();
         if (resource instanceof filesystem) {
@@ -111,18 +111,18 @@ class viewModelBase {
         }
 
         oauthContext.enterApiKeyTask.done(() => {
-			// we have to wait for changes api to connect as well
-			// as obtaining changes api connection might take a while, we have to spin until connection is read
-			var createNotifySpinFunction = () => {
-				if (isShell || this.appUrls.isAreaActive("admin")())
-					return;
-				if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-					this.notifications = this.createNotifications();
-				} else {
-					setTimeout(createNotifySpinFunction, 50);
-				}
-			}
-			createNotifySpinFunction();
+            // we have to wait for changes api to connect as well
+            // as obtaining changes api connection might take a while, we have to spin until connection is read
+            var createNotifySpinFunction = () => {
+                if (isShell || this.appUrls.isAreaActive("admin")())
+                    return;
+                if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+                    this.notifications = this.createNotifications();
+                } else {
+                    setTimeout(createNotifySpinFunction, 50);
+                }
+            }
+            createNotifySpinFunction();
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();

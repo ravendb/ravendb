@@ -104,69 +104,69 @@ namespace Raven.Client.Linq
             if((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
                   throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
 
-	        last.AggregationField = path.ToPropertyPath();
-	        last.AggregationType = path.ExtractTypeFromPath().FullName;
-	    }
+            last.AggregationField = path.ToPropertyPath();
+            last.AggregationType = path.ExtractTypeFromPath().FullName;
+        }
 
-	    public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
-		{
-			SetFacet(path, FacetAggregation.Max);
+        public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
+        {
+            SetFacet(path, FacetAggregation.Max);
 
-			return this;
-		}
+            return this;
+        }
 
-		public DynamicAggregationQuery<T> MinOn(Expression<Func<T, object>> path)
-		{
-			SetFacet(path, FacetAggregation.Min);
+        public DynamicAggregationQuery<T> MinOn(Expression<Func<T, object>> path)
+        {
+            SetFacet(path, FacetAggregation.Min);
 
-			return this;
-		}
+            return this;
+        }
 
-		public DynamicAggregationQuery<T> SumOn(Expression<Func<T, object>> path)
-		{
-			SetFacet(path, FacetAggregation.Sum);
+        public DynamicAggregationQuery<T> SumOn(Expression<Func<T, object>> path)
+        {
+            SetFacet(path, FacetAggregation.Sum);
 
-			return this;
-		}
+            return this;
+        }
 
-		public DynamicAggregationQuery<T> AverageOn(Expression<Func<T, object>> path)
-		{
-			SetFacet(path, FacetAggregation.Average);
+        public DynamicAggregationQuery<T> AverageOn(Expression<Func<T, object>> path)
+        {
+            SetFacet(path, FacetAggregation.Average);
 
-			return this;
-		}
+            return this;
+        }
 
-		public DynamicAggregationQuery<T> CountOn(Expression<Func<T, object>> path)
-		{
-			SetFacet(path, FacetAggregation.Count);
+        public DynamicAggregationQuery<T> CountOn(Expression<Func<T, object>> path)
+        {
+            SetFacet(path, FacetAggregation.Count);
 
-			return this;
-		}
+            return this;
+        }
 
-		public FacetResults ToList()
-		{
-			return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
-		}
+        public FacetResults ToList()
+        {
+            return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
+        }
 
-		public Lazy<FacetResults> ToListLazy()
-		{
-			var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
-			return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
-		}
+        public Lazy<FacetResults> ToListLazy()
+        {
+            var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
+            return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
+        }
 
-		public async Task<FacetResults> ToListAsync()
-		{
-			return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
-		}
+        public async Task<FacetResults> ToListAsync()
+        {
+            return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
+        }
 
-	    private FacetResults HandlRenames(FacetResults facetResults)
-	    {
-	        foreach (var rename in renames)
-	        {
-	            FacetResult value;
-	            if (facetResults.Results.TryGetValue(rename.Value, out value) &&
-	                facetResults.Results.ContainsKey(rename.Key) == false)
-	            {
+        private FacetResults HandlRenames(FacetResults facetResults)
+        {
+            foreach (var rename in renames)
+            {
+                FacetResult value;
+                if (facetResults.Results.TryGetValue(rename.Value, out value) &&
+                    facetResults.Results.ContainsKey(rename.Key) == false)
+                {
                         facetResults.Results[rename.Key] = value;
                     facetResults.Results.Remove(rename.Value);
                 }

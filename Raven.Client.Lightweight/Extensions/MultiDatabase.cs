@@ -32,43 +32,43 @@ namespace Raven.Client.Extensions
         {
             AssertValidName(name);
 
-			return new FileSystemDocument
+            return new FileSystemDocument
             {
-				Id = Constants.FileSystem.Prefix + name,
+                Id = Constants.FileSystem.Prefix + name,
                 Settings =
-				{
-					{Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
-				}
+                {
+                    {Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
+                }
             };
         }
 
-		public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
-		{
-			AssertValidName(name);
+        public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
+        {
+            AssertValidName(name);
 
-			return new TimeSeriesDocument
-			{
-				Id = Constants.TimeSeries.Prefix + name,
-				Settings =
-				{
-					{Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
-				}
-			};
-		}
+            return new TimeSeriesDocument
+            {
+                Id = Constants.TimeSeries.Prefix + name,
+                Settings =
+                {
+                    {Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
+                }
+            };
+        }
 
-		public static CounterStorageDocument CreateCounterStorageDocument(string name)
-		{
-			AssertValidName(name);
+        public static CounterStorageDocument CreateCounterStorageDocument(string name)
+        {
+            AssertValidName(name);
 
-			return new CounterStorageDocument
-			{
-				Id = Constants.Counter.Prefix + name,
-				Settings =
-				{
-					{Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
-				}
-			};
-		}
+            return new CounterStorageDocument
+            {
+                Id = Constants.Counter.Prefix + name,
+                Settings =
+                {
+                    {Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
+                }
+            };
+        }
 
         private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 

@@ -25,13 +25,13 @@ namespace Raven.Abstractions.Logging
 
         #region ILog Members
 
-		public bool IsInfoEnabled
-		{
-			get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
-		}
+        public bool IsInfoEnabled
+        {
+            get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
+        }
 
-		public bool IsDebugEnabled
-		{
+        public bool IsDebugEnabled
+        {
             get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
         }
 
@@ -40,23 +40,23 @@ namespace Raven.Abstractions.Logging
             get { return LogManager.EnableDebugLogForTargets || logger.IsWarnEnabled; }
         }
 
-		public void Log(LogLevel logLevel, Func<string> messageFunc)
-		{
-		    if (logger.ShouldLog(logLevel))
-		    {
-			Func<string> wrappedMessageFunc = () =>
-			{
-				try
-				{
-					return messageFunc();
-				}
-				catch (Exception ex)
-				{
-					Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
-				}
-				return null;
-			};
-			logger.Log(logLevel, wrappedMessageFunc);
+        public void Log(LogLevel logLevel, Func<string> messageFunc)
+        {
+            if (logger.ShouldLog(logLevel))
+            {
+            Func<string> wrappedMessageFunc = () =>
+            {
+                try
+                {
+                    return messageFunc();
+                }
+                catch (Exception ex)
+                {
+                    Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
+                }
+                return null;
+            };
+            logger.Log(logLevel, wrappedMessageFunc);
             }
 
             if (targets.Count == 0)
@@ -66,19 +66,19 @@ namespace Raven.Abstractions.Logging
             foreach (var target in targets)
             {
                 shouldLog |= target.ShouldLog(logger, logLevel);
-		    }
-		    if (shouldLog == false)
-		        return;
-			string formattedMessage;
-		    try
-		    {
-		        formattedMessage = messageFunc();
-		    }
-		    catch (Exception)
-		    {
-		        // nothing to be done here
-				return;
-		    }
+            }
+            if (shouldLog == false)
+                return;
+            string formattedMessage;
+            try
+            {
+                formattedMessage = messageFunc();
+            }
+            catch (Exception)
+            {
+                // nothing to be done here
+                return;
+            }
             string databaseName = LogContext.DatabaseName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
@@ -131,6 +131,6 @@ namespace Raven.Abstractions.Logging
             return logger.ShouldLog(logLevel);
         }
 
-		#endregion
-	}
+        #endregion
+    }
 }

@@ -28,7 +28,7 @@ namespace Raven.Database.Smuggler
 
         private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		private readonly SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
+        private readonly SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
 
         public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
         {
@@ -37,23 +37,23 @@ namespace Raven.Database.Smuggler
 
         public Action<string> Progress { get; set; }
 
-		public Task<RavenJArray> GetIndexes(int totalCount)
-		{
-			return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
-		}
+        public Task<RavenJArray> GetIndexes(int totalCount)
+        {
+            return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
+        }
 
         public JsonDocument GetDocument(string key)
         {
             return database.Documents.Get(key, null);
         }
 
-		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
-		{
-			const int dummy = 0;
-			var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
-				.ToList()
-				.Cast<RavenJObject>()
-				.GetEnumerator();
+        public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
+        {
+            const int dummy = 0;
+            var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
+                .ToList()
+                .Cast<RavenJObject>()
+                .GetEnumerator();
 
             return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
         }
@@ -70,26 +70,26 @@ namespace Raven.Database.Smuggler
                     {
                         {"Key", listItem.Key}
                     };
-					o.WriteTo(jsonWriter);
-					lastEtag = listItem.Etag;
-				}
-			});
-			return new CompletedTask<Etag>(lastEtag);
-		}
+                    o.WriteTo(jsonWriter);
+                    lastEtag = listItem.Etag;
+                }
+            });
+            return new CompletedTask<Etag>(lastEtag);
+        }
 
-		public Task<RavenJArray> GetTransformers(int start)
-		{
-			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
-		}
+        public Task<RavenJArray> GetTransformers(int start)
+        {
+            return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
+        }
 
-		public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
-		{
-			var lastEtag = startDocsEtag;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
-				{
-					var o = new RavenJObject
+        public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        {
+            var lastEtag = startDocsEtag;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
+                {
+                    var o = new RavenJObject
                     {
                         {"Key", listItem.Key}
                     };
@@ -138,69 +138,69 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
-		{
-			if (attachmentExportInfo != null)
-			{
-				// we filter out content length, because getting it wrong will cause errors 
-				// in the server side when serving the wrong value for this header.
-				// worse, if we are using http compression, this value is known to be wrong
-				// instead, we rely on the actual size of the data provided for us
-				attachmentExportInfo.Metadata.Remove("Content-Length");
-				database.Attachments.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
-									attachmentExportInfo.Metadata);
-			}
+        public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
+        {
+            if (attachmentExportInfo != null)
+            {
+                // we filter out content length, because getting it wrong will cause errors 
+                // in the server side when serving the wrong value for this header.
+                // worse, if we are using http compression, this value is known to be wrong
+                // instead, we rely on the actual size of the data provided for us
+                attachmentExportInfo.Metadata.Remove("Content-Length");
+                database.Attachments.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
+                                    attachmentExportInfo.Metadata);
+            }
 
-			return new CompletedTask();
-		}
+            return new CompletedTask();
+        }
 
-		public Task PutDocument(RavenJObject document, int size)
-		{
-			if (document != null)
-			{
-				var metadata = document.Value<RavenJObject>("@metadata");
-				var key = metadata.Value<string>("@id");
-				document.Remove("@metadata");
+        public Task PutDocument(RavenJObject document, int size)
+        {
+            if (document != null)
+            {
+                var metadata = document.Value<RavenJObject>("@metadata");
+                var key = metadata.Value<string>("@id");
+                document.Remove("@metadata");
 
-				bulkInsertBatch.Add(new JsonDocument
-				{
-					Key = key,
-					Metadata = metadata,
-					DataAsJson = document,
-				});
+                bulkInsertBatch.Add(new JsonDocument
+                {
+                    Key = key,
+                    Metadata = metadata,
+                    DataAsJson = document,
+                });
 
-				if (Options.BatchSize > bulkInsertBatch.Count)
-					return new CompletedTask();
-			}
+                if (Options.BatchSize > bulkInsertBatch.Count)
+                    return new CompletedTask();
+            }
 
-			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
-			bulkInsertBatch = new List<JsonDocument>();
-			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = Options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
-			return new CompletedTask();
-		}
+            var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
+            bulkInsertBatch = new List<JsonDocument>();
+            database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = Options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
+            return new CompletedTask();
+        }
 
-		public Task PutTransformer(string transformerName, RavenJToken transformer)
-		{
-			if (transformer != null)
-			{
-				var transformerDefinition =
-					JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
-				database.Transformers.PutTransform(transformerName, transformerDefinition);
-			}
+        public Task PutTransformer(string transformerName, RavenJToken transformer)
+        {
+            if (transformer != null)
+            {
+                var transformerDefinition =
+                    JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+                database.Transformers.PutTransform(transformerName, transformerDefinition);
+            }
 
-			return new CompletedTask();
-		}
+            return new CompletedTask();
+        }
 
-		public Task DeleteDocument(string key)
-		{
-			if (key != null)
-			{
-				database.Documents.Delete(key, null, null);
-			}
-			return new CompletedTask();
-		}
+        public Task DeleteDocument(string key)
+        {
+            if (key != null)
+            {
+                database.Documents.Delete(key, null, null);
+            }
+            return new CompletedTask();
+        }
 
-		public SmugglerDatabaseOptions Options { get; private set; }
+        public SmugglerDatabaseOptions Options { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
         public Task DeleteAttachment(string key)
@@ -315,27 +315,27 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
-		{
-			var attachment = database.Attachments.GetStatic(attachmentInformation.Key);
-			if (attachment == null) 
-				return null;
+        public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
+        {
+            var attachment = database.Attachments.GetStatic(attachmentInformation.Key);
+            if (attachment == null) 
+                return null;
 
-			var data = attachment.Data;
-			attachment.Data = () =>
-			{
-				var memoryStream = new MemoryStream();
-				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
-				memoryStream.Position = 0;
-				return memoryStream;
-			};
+            var data = attachment.Data;
+            attachment.Data = () =>
+            {
+                var memoryStream = new MemoryStream();
+                database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+                memoryStream.Position = 0;
+                return memoryStream;
+            };
 
-			return new CompletedTask<byte[]>(attachment.Data().ReadData());
-		}
+            return new CompletedTask<byte[]>(attachment.Data().ReadData());
+        }
 
-		public string GetIdentifier()
-		{
-			return string.Format("embedded: {0}/{1}", database.Name ?? Constants.SystemDatabase, database.TransactionalStorage.Id);
-		}
-	}
+        public string GetIdentifier()
+        {
+            return string.Format("embedded: {0}/{1}", database.Name ?? Constants.SystemDatabase, database.TransactionalStorage.Id);
+        }
+    }
 }

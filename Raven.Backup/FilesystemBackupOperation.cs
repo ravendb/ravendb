@@ -58,9 +58,9 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-				using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, HttpMethod.Post))
-	            {
-					req.WriteAsync(json).Wait();
+                using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, HttpMethod.Post))
+                {
+                    req.WriteAsync(json).Wait();
 
                     Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
 
@@ -80,7 +80,7 @@ namespace Raven.Backup
         protected override HttpJsonRequest CreateRequest(string url, HttpMethod method)
         {
             var uriString = parameters.ServerUrl + url;
-			return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method,
+            return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method,
                 new OperationCredentials(parameters.ApiKey, parameters.Credentials), store.Conventions, timeout: parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 

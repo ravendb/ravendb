@@ -93,17 +93,17 @@ namespace Raven.Database.Bundles.SqlReplication
         }
     }
 
-	public class SqlReplicationConnections<TClass> where TClass : SqlReplicationConnections.PredefinedSqlConnection
-	{
-		public List<TClass> PredefinedConnections { get; set; }
+    public class SqlReplicationConnections<TClass> where TClass : SqlReplicationConnections.PredefinedSqlConnection
+    {
+        public List<TClass> PredefinedConnections { get; set; }
 
-		public SqlReplicationConnections()
-		{
-			PredefinedConnections = new List<TClass>();
-		}
-	}
+        public SqlReplicationConnections()
+        {
+            PredefinedConnections = new List<TClass>();
+        }
+    }
 
-	public class SqlReplicationConnections : SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnection>
+    public class SqlReplicationConnections : SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnection>
     {
         public class PredefinedSqlConnection
         {
@@ -112,11 +112,11 @@ namespace Raven.Database.Bundles.SqlReplication
             public string ConnectionString { get; set; }
         }
 
-		public class PredefinedSqlConnectionWithConfigurationOrigin : PredefinedSqlConnection
-		{
-			public bool HasGlobal { get; set; }
+        public class PredefinedSqlConnectionWithConfigurationOrigin : PredefinedSqlConnection
+        {
+            public bool HasGlobal { get; set; }
 
-			public bool HasLocal { get; set; }
-		}
+            public bool HasLocal { get; set; }
+        }
     }
 }

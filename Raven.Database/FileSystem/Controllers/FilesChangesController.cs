@@ -1,4 +1,4 @@
-﻿using Raven.Database.Server.Connections;
+using Raven.Database.Server.Connections;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -25,8 +25,8 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var name = (!string.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : string.Empty;
-		    var globalConnectionState = FileSystem.TransportState.For(id, this);
-			var connectionState = globalConnectionState.FileSystem;
+            var globalConnectionState = FileSystem.TransportState.For(id, this);
+            var connectionState = globalConnectionState.FileSystem;
 
             var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
@@ -51,11 +51,11 @@ namespace Raven.Database.FileSystem.Controllers
             }
             else if (Match(cmd, "watch-folder"))
             {
-				connectionState.WatchFolder(name);
+                connectionState.WatchFolder(name);
             }
             else if (Match(cmd, "unwatch-folder"))
             {
-				connectionState.UnwatchFolder(name);
+                connectionState.UnwatchFolder(name);
             }
             else if (Match(cmd, "watch-config"))
             {

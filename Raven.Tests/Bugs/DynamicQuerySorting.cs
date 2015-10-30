@@ -136,18 +136,18 @@ namespace Raven.Tests.Bugs
 
                 CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
 
-				var indexQuery = new IndexQuery
-								 {
-									 SortedFields = new[] { new SortedField("Name") },
-									 SortHints = new Dictionary<string, SortOptions> { { "Name", SortOptions.String } }
-								 };
+                var indexQuery = new IndexQuery
+                                 {
+                                     SortedFields = new[] { new SortedField("Name") },
+                                     SortHints = new Dictionary<string, SortOptions> { { "Name", SortOptions.String } }
+                                 };
 
-				var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString();
-				var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
-				var result = request.ReadResponseJson().JsonDeserialization<QueryResult>();
+                var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString();
+                var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+                var result = request.ReadResponseJson().JsonDeserialization<QueryResult>();
 
-				Assert.Equal(stats.IndexName, result.IndexName);
-			}
-		}
-	}
+                Assert.Equal(stats.IndexName, result.IndexName);
+            }
+        }
+    }
 }

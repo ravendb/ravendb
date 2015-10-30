@@ -60,169 +60,169 @@ namespace Voron.Impl
 
         private long totalSize = 0;
 
-		public long Size()
-		{
-			return totalSize;
-		}
+        public long Size()
+        {
+            return totalSize;
+        }
 
-		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
+        public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
 
-		public bool DisposeAfterWrite
-		{
-			get { return _disposeAfterWrite; }
-			set { _disposeAfterWrite = value; }
-		}
+        public bool DisposeAfterWrite
+        {
+            get { return _disposeAfterWrite; }
+            set { _disposeAfterWrite = value; }
+        }
 
-		internal bool TryGetValue(string treeName, Slice key, out InBatchValue result)
-		{
-			result = new InBatchValue()
-			{
-				OperationType = BatchOperationType.None
-			};
+        internal bool TryGetValue(string treeName, Slice key, out InBatchValue result)
+        {
+            result = new InBatchValue()
+            {
+                OperationType = BatchOperationType.None
+            };
 
-			if (treeName == null)
-				treeName = Constants.RootTreeName;
+            if (treeName == null)
+                treeName = Constants.RootTreeName;
 
-			//first check if it is a multi-tree operation
-			Dictionary<Slice, List<BatchOperation>> treeOperations;
-			if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
-			{
-				List<BatchOperation> operationRecords;
-				if (treeOperations.TryGetValue(key, out operationRecords))
-				{
-					//since in multi-tree there are many operations for single tree key, then fetching operation type and value is meaningless
-					return true;
-				}
-			}
+            //first check if it is a multi-tree operation
+            Dictionary<Slice, List<BatchOperation>> treeOperations;
+            if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
+            {
+                List<BatchOperation> operationRecords;
+                if (treeOperations.TryGetValue(key, out operationRecords))
+                {
+                    //since in multi-tree there are many operations for single tree key, then fetching operation type and value is meaningless
+                    return true;
+                }
+            }
 
-			Dictionary<Slice, BatchOperation> operations;
-			if (_lastOperations.TryGetValue(treeName, out operations) == false)
-				return false;
+            Dictionary<Slice, BatchOperation> operations;
+            if (_lastOperations.TryGetValue(treeName, out operations) == false)
+                return false;
 
-			BatchOperation operation;
-			if (operations.TryGetValue(key, out operation))
-			{
-				result.OperationType = operation.Type;
-				result.Version = operation.Version;
+            BatchOperation operation;
+            if (operations.TryGetValue(key, out operation))
+            {
+                result.OperationType = operation.Type;
+                result.Version = operation.Version;
 
-				if (operation.Type == BatchOperationType.Delete)
-					return true;
+                if (operation.Type == BatchOperationType.Delete)
+                    return true;
 
-				result.Stream = operation.ValueStream;
-				operation.Reset(); // will reset stream position
-				result.Struct = operation.ValueStruct;
+                result.Stream = operation.ValueStream;
+                operation.Reset(); // will reset stream position
+                result.Struct = operation.ValueStruct;
 
-				if (operation.Type == BatchOperationType.Add || operation.Type == BatchOperationType.AddStruct)
-					return true;
-			}
+                if (operation.Type == BatchOperationType.Add || operation.Type == BatchOperationType.AddStruct)
+                    return true;
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		public WriteBatch()
-		{
-			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
-			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
-		}
+        public WriteBatch()
+        {
+            _lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
+            _multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
+        }
 
-		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
-		{
-			AssertValidTreeName(treeName);
-			if (value == null) throw new ArgumentNullException("value");
+        public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+        {
+            AssertValidTreeName(treeName);
+            if (value == null) throw new ArgumentNullException("value");
 
-			var batchOperation = BatchOperation.Add(key, value, version, treeName);
-			if (shouldIgnoreConcurrencyExceptions)
-				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
-			AddOperation(batchOperation);
-		}
+            var batchOperation = BatchOperation.Add(key, value, version, treeName);
+            if (shouldIgnoreConcurrencyExceptions)
+                batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+            AddOperation(batchOperation);
+        }
 
-		public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
-		{
-			AssertValidTreeName(treeName);
-			if (value == null) throw new ArgumentNullException("value");
-			if (value.Length > int.MaxValue)
-				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+        public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+        {
+            AssertValidTreeName(treeName);
+            if (value == null) throw new ArgumentNullException("value");
+            if (value.Length > int.MaxValue)
+                throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-			var batchOperation = BatchOperation.Add(key, value, version, treeName);
-			if (shouldIgnoreConcurrencyExceptions)
-				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
-			AddOperation(batchOperation);
-		}
+            var batchOperation = BatchOperation.Add(key, value, version, treeName);
+            if (shouldIgnoreConcurrencyExceptions)
+                batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+            AddOperation(batchOperation);
+        }
 
-		public void AddStruct(Slice key, IStructure value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
-		{
-			var batchOperation = BatchOperation.Add(key, value, version, treeName);
-			if (shouldIgnoreConcurrencyExceptions)
-				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
-			AddOperation(batchOperation);
-		}
+        public void AddStruct(Slice key, IStructure value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+        {
+            var batchOperation = BatchOperation.Add(key, value, version, treeName);
+            if (shouldIgnoreConcurrencyExceptions)
+                batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+            AddOperation(batchOperation);
+        }
 
-		public void Delete(Slice key, string treeName, ushort? version = null)
-		{
-			AssertValidRemove(treeName);
+        public void Delete(Slice key, string treeName, ushort? version = null)
+        {
+            AssertValidRemove(treeName);
 
-			AddOperation(BatchOperation.Delete(key, version, treeName));
-		}
+            AddOperation(BatchOperation.Delete(key, version, treeName));
+        }
 
-		private static void AssertValidRemove(string treeName)
-		{
-			AssertValidTreeName(treeName);
-		}
+        private static void AssertValidRemove(string treeName)
+        {
+            AssertValidTreeName(treeName);
+        }
 
-		public void MultiAdd(Slice key, Slice value, string treeName, ushort? version = null)
-		{
-			AssertValidMultiOperation(value, treeName);
+        public void MultiAdd(Slice key, Slice value, string treeName, ushort? version = null)
+        {
+            AssertValidMultiOperation(value, treeName);
 
-			AddOperation(BatchOperation.MultiAdd(key, value, version, treeName));
-		}
+            AddOperation(BatchOperation.MultiAdd(key, value, version, treeName));
+        }
 
-		public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)
-		{
-			AssertValidMultiOperation(value, treeName);
+        public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)
+        {
+            AssertValidMultiOperation(value, treeName);
 
-			AddOperation(BatchOperation.MultiDelete(key, value, version, treeName));
-		}
+            AddOperation(BatchOperation.MultiDelete(key, value, version, treeName));
+        }
 
-		public void Increment(Slice key, long delta, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
-		{
-			AssertValidTreeName(treeName);
+        public void Increment(Slice key, long delta, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+        {
+            AssertValidTreeName(treeName);
 
-			var batchOperation = BatchOperation.Increment(key, delta, version, treeName);
-			if (shouldIgnoreConcurrencyExceptions)
-				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
-			AddOperation(batchOperation);
-		}
+            var batchOperation = BatchOperation.Increment(key, delta, version, treeName);
+            if (shouldIgnoreConcurrencyExceptions)
+                batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+            AddOperation(batchOperation);
+        }
 
-		private static void AssertValidTreeName(string treeName)
-		{
-			if (treeName != null && treeName.Length == 0) 
-				throw new ArgumentException("treeName must not be empty", "treeName");
-		}
+        private static void AssertValidTreeName(string treeName)
+        {
+            if (treeName != null && treeName.Length == 0) 
+                throw new ArgumentException("treeName must not be empty", "treeName");
+        }
 
-		private static void AssertValidMultiOperation(Slice value, string treeName)
-		{
-			AssertValidTreeName(treeName);
-			if (value == null) throw new ArgumentNullException("value");
-			if (value.Size == 0)
-				throw new ArgumentException("Cannot add empty value");
-		}
+        private static void AssertValidMultiOperation(Slice value, string treeName)
+        {
+            AssertValidTreeName(treeName);
+            if (value == null) throw new ArgumentNullException("value");
+            if (value.Size == 0)
+                throw new ArgumentException("Cannot add empty value");
+        }
 
-		private void AddOperation(BatchOperation operation)
-		{
-			var treeName = operation.TreeName;
-			AssertValidTreeName(treeName);
-			AssertValidKey(operation.Key);
+        private void AddOperation(BatchOperation operation)
+        {
+            var treeName = operation.TreeName;
+            AssertValidTreeName(treeName);
+            AssertValidKey(operation.Key);
 
-			if (treeName == null)
-				treeName = Constants.RootTreeName;
+            if (treeName == null)
+                treeName = Constants.RootTreeName;
 
-			_trees.Add(treeName);
+            _trees.Add(treeName);
 
-			if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
-			{
-				Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
-				if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
-				{
+            if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
+            {
+                Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
+                if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
+                {
                     _multiTreeOperations[treeName] = multiTreeOperationsOfTree = _multiTreeOperationsPool.Allocate();
                     Debug.Assert(multiTreeOperationsOfTree.Count == 0);
                 }

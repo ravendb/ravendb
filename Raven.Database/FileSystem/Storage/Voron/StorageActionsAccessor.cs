@@ -550,60 +550,60 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-		public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
-		{
-			ushort version;
-			ushort? fileVersion;
-			var targetKey = CreateKey(targetFilename);
+        public void CopyFile(string sourceFilename, string targetFilename, bool commitPeriodically = false)
+        {
+            ushort version;
+            ushort? fileVersion;
+            var targetKey = CreateKey(targetFilename);
 
-			if (storage.Files.Contains(Snapshot, targetKey, writeBatch.Value, out fileVersion))
-				throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' exists.", sourceFilename, targetFilename));
+            if (storage.Files.Contains(Snapshot, targetKey, writeBatch.Value, out fileVersion))
+                throw new FileExistsException(string.Format("Cannot copy '{0}' to '{1}'. File '{1}' exists.", sourceFilename, targetFilename));
 
-			var key = CreateKey(sourceFilename);
-			var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
-			if (file == null)
-				throw new FileNotFoundException("Could not find file: " + sourceFilename);
+            var key = CreateKey(sourceFilename);
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            if (file == null)
+                throw new FileNotFoundException("Could not find file: " + sourceFilename);
 
-			var newEtag = uuidGenerator.CreateSequentialUuid();
-			file["etag"] = newEtag.ToByteArray();
-			file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
+            var newEtag = uuidGenerator.CreateSequentialUuid();
+            file["etag"] = newEtag.ToByteArray();
+            file.Value<RavenJObject>("metadata").Remove(RavenConstants.MetadataEtagField);
 
-			CopyUsage(sourceFilename, targetFilename, commitPeriodically);
+            CopyUsage(sourceFilename, targetFilename, commitPeriodically);
 
-			file["name"] = targetFilename;
-			storage.Files.Add(writeBatch.Value, targetKey, file, fileVersion ?? 0);
+            file["name"] = targetFilename;
+            storage.Files.Add(writeBatch.Value, targetKey, file, fileVersion ?? 0);
 
-			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
-			fileCount.Add(writeBatch.Value, targetKey, targetKey);
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            fileCount.Add(writeBatch.Value, targetKey, targetKey);
 
-			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
-			filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
-		}
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            filesByEtag.Add(writeBatch.Value, CreateKey(Etag.Parse(file.Value<byte[]>("etag"))), targetKey);
+        }
 
-		private void CopyUsage(string sourceFilename, string targetFilename, bool commitPeriodically)
-		{
-			var oldKey = CreateKey(sourceFilename);
-			var newKey = CreateKey(targetFilename);
+        private void CopyUsage(string sourceFilename, string targetFilename, bool commitPeriodically)
+        {
+            var oldKey = CreateKey(sourceFilename);
+            var newKey = CreateKey(targetFilename);
 
-			var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
-			var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
+            var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+            var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
-			using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
-			{
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return;
+            using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return;
 
-				var count = 0;
+                var count = 0;
 
-				do
-				{
-					var usageId = iterator.CurrentKey.ToString();
-					ushort version;
-					var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
-					var newId = IdGenerator.GetNextIdForTable(storage.Usage);
-					var position = usage.Value<int>("file_pos");
+                do
+                {
+                    var usageId = iterator.CurrentKey.ToString();
+                    ushort version;
+                    var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
+                    var newId = IdGenerator.GetNextIdForTable(storage.Usage);
+                    var position = usage.Value<int>("file_pos");
 
-					var newUsage = new RavenJObject
+                    var newUsage = new RavenJObject
                         {
                             { "id", newId },
                             { "name", targetFilename }, 
@@ -612,22 +612,22 @@ namespace Raven.Database.FileSystem.Storage.Voron
                             { "page_size", usage.Value<int>("page_size") }
                         };
 
-					var newUsageId = CreateKey(newId);
+                    var newUsageId = CreateKey(newId);
 
-					storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
+                    storage.Usage.Add(writeBatch.Value, newUsageId, newUsage);
 
-					usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
-					usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
+                    usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
+                    usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
 
-					if (commitPeriodically && count++ > 1000)
-					{
-						PulseTransaction();
-						count = 0;
-					}
-				}
-				while (iterator.MoveNext());
-			}
-		}
+                    if (commitPeriodically && count++ > 1000)
+                    {
+                        PulseTransaction();
+                        count = 0;
+                    }
+                }
+                while (iterator.MoveNext());
+            }
+        }
 
         public RavenJObject GetConfig(string name)
         {
@@ -844,17 +844,17 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                 do
                 {
-					var config = iterator
-							.CreateReaderForCurrent()
-							.AsStream()
-							.ToJObject();
+                    var config = iterator
+                            .CreateReaderForCurrent()
+                            .AsStream()
+                            .ToJObject();
 
-	                var configName = config.Value<string>("name");
+                    var configName = config.Value<string>("name");
 
-					if (configName.StartsWith(prefix) == false)
-						break;
+                    if (configName.StartsWith(prefix) == false)
+                        break;
 
-					if (count < take)
+                    if (count < take)
                     {
                         results.Add(configName);
                     }

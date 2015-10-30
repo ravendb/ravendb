@@ -58,7 +58,7 @@ declare module BootstrapV3DatetimePicker {
         disable(): void;
         enable(): void;
         date(): void;
-		date(date: any): void;
+        date(date: any): void;
     }
 
 }

@@ -7,71 +7,71 @@ using Xunit;
 
 namespace Voron.Tests
 {
-	public class MultiValueTree : StorageTest
-	{
-		[PrefixesFact]
-		public void Single_MultiAdd_And_Read_DataStored()
-		{
-			var random = new Random();
-			var buffer = new byte[1000];
-			random.NextBytes(buffer);
+    public class MultiValueTree : StorageTest
+    {
+        [PrefixesFact]
+        public void Single_MultiAdd_And_Read_DataStored()
+        {
+            var random = new Random();
+            var buffer = new byte[1000];
+            random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(tx, "foo");
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "foo");
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.Environment.CreateTree(tx,"foo").MultiAdd("ChildTreeKey", new Slice(buffer));
-				tx.Commit();
-			}
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.Environment.CreateTree(tx,"foo").MultiAdd("ChildTreeKey", new Slice(buffer));
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				using (var fetchedDataIterator = tx.Environment.CreateTree(tx,"foo").MultiRead("ChildTreeKey"))
-				{
-					fetchedDataIterator.Seek(Slice.BeforeAllKeys);
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                using (var fetchedDataIterator = tx.Environment.CreateTree(tx,"foo").MultiRead("ChildTreeKey"))
+                {
+                    fetchedDataIterator.Seek(Slice.BeforeAllKeys);
 
-					Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer)) == 0);
-				}
-			}
-		}
+                    Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer)) == 0);
+                }
+            }
+        }
 
-		[PrefixesFact]
-		public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
-		{
-		    const int INPUT_COUNT = 3;
-		    const int INPUT_DATA_SIZE = 1000;
-		    const string CHILDTREE_KEY = "ChildTree";
+        [PrefixesFact]
+        public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
+        {
+            const int INPUT_COUNT = 3;
+            const int INPUT_DATA_SIZE = 1000;
+            const string CHILDTREE_KEY = "ChildTree";
 
-		    var inputData = new List<string>();
-		    for (int i = 0; i < INPUT_COUNT; i++)
-		    {
-		        inputData.Add(RandomString(INPUT_DATA_SIZE));
-		    }
+            var inputData = new List<string>();
+            for (int i = 0; i < INPUT_COUNT; i++)
+            {
+                inputData.Add(RandomString(INPUT_DATA_SIZE));
+            }
 
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-		    {
-		        for (int i = 0; i < INPUT_COUNT; i++)
-		        {
-		            tx.Root.MultiAdd(CHILDTREE_KEY, inputData[i]);
-		        }
-		        tx.Commit();
-		    }
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                for (int i = 0; i < INPUT_COUNT; i++)
+                {
+                    tx.Root.MultiAdd(CHILDTREE_KEY, inputData[i]);
+                }
+                tx.Commit();
+            }
 
-		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-		    {
-		        for (int i = 0; i < INPUT_COUNT - 1; i++)
-		        {
-		            tx.Root.MultiDelete(CHILDTREE_KEY, inputData[i]);
-		            inputData.Remove(inputData[i]);
-		        }
-		        tx.Commit();
-		    }
-		    
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                for (int i = 0; i < INPUT_COUNT - 1; i++)
+                {
+                    tx.Root.MultiDelete(CHILDTREE_KEY, inputData[i]);
+                    inputData.Remove(inputData[i]);
+                }
+                tx.Commit();
+            }
+            
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Constants.RootTreeName);
         }
 

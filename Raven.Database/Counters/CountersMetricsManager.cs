@@ -18,8 +18,8 @@ namespace Raven.Database.Counters
 
         public MeterMetric Increments { get; private set; }
         public MeterMetric Decrements { get; private set; }
-		public MeterMetric Resets { get; private set; }
-		public MeterMetric Deletes { get; private set; }
+        public MeterMetric Resets { get; private set; }
+        public MeterMetric Deletes { get; private set; }
         public MeterMetric ClientRequests { get; private set; }
         public MeterMetric IncomingReplications { get; private set; }
         public MeterMetric OutgoingReplications { get; private set; }
@@ -38,8 +38,8 @@ namespace Raven.Database.Counters
         {
             Increments = counterMetrics.Meter("counterMetrics", "inc/min", "increments", TimeUnit.Minutes);
             Decrements = counterMetrics.Meter("counterMetrics", "dec/min", "decrements", TimeUnit.Minutes);
-			Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
-			Deletes = counterMetrics.Meter("counterMetrics", "delete/min", "deletes", TimeUnit.Minutes);
+            Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
+            Deletes = counterMetrics.Meter("counterMetrics", "delete/min", "deletes", TimeUnit.Minutes);
             ClientRequests = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
 
             IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);

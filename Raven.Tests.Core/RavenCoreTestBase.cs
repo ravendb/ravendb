@@ -188,28 +188,28 @@ namespace Raven.Tests.Core
             Assert.True(done);
         }
 
-		public virtual void Dispose()
-		{
-			Authentication.Disable();
-			foreach (var store in createdStores)
-			{
-				store.Dispose();
-			}
+        public virtual void Dispose()
+        {
+            Authentication.Disable();
+            foreach (var store in createdStores)
+            {
+                store.Dispose();
+            }
 
-			foreach (var db in createdDbs)
-			{
-				Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase(db, hardDelete: true);
-			}
-		}
+            foreach (var db in createdDbs)
+            {
+                Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase(db, hardDelete: true);
+            }
+        }
 
-		public static IEnumerable<object[]> InsertOptions
-		{
-			get
-			{
-				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
-				yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
-				yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
-			}
-		}
-	}
+        public static IEnumerable<object[]> InsertOptions
+        {
+            get
+            {
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+            }
+        }
+    }
 }
