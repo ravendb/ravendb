@@ -844,6 +844,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				string ravenDebugDir = null;
 
+				var output = string.Empty;
 				try
 				{
 					if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
@@ -872,7 +873,7 @@ namespace Raven.Database.Server.Controllers.Admin
 						EnableRaisingEvents = true
 					};
 
-					var output = string.Empty;
+					
 
 					process.OutputDataReceived += (sender, args) => output += args.Data;
 					process.ErrorDataReceived += (sender, args) => output += args.Data;
@@ -887,7 +888,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					if (process.ExitCode != 0)
 					{
 						Log.Error("Could not read stacktraces. Message: " + output);
-						throw new InvalidOperationException("Could not read stacktraces. Please refer to logs for more details.");
+						throw new InvalidOperationException("Could not read stacktraces.");
 					}
 
 					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
@@ -898,7 +899,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				catch (Exception ex)
 				{
 					var streamWriter = new StreamWriter(stacktraceStream);
-					jsonSerializer.Serialize(streamWriter, new { Error = ex.Message });
+					jsonSerializer.Serialize(streamWriter, new { Error = ex.Message, Details = output });
 					streamWriter.Flush();
 				}
 				finally
