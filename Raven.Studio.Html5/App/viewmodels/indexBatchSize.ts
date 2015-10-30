@@ -20,7 +20,7 @@ class metricsIndexBatchSize extends viewModelBase {
     ];
 
     attached() {
-		super.attached();
+        super.attached();
         this.modelPolling();
     }
 

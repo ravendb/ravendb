@@ -3,13 +3,13 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class when_index_failing : RavenTestBase
-	{
-		public class Foo
+    public class when_index_failing : RavenTestBase
+    {
+        public class Foo
         {
             public decimal Bar { get; set; }
         }
-	
+    
         [Fact]
         public void Document_with_big_decimal_saving_test()
         {
@@ -19,22 +19,22 @@ namespace Raven.Tests.MailingList
             {
                 Bar = 9999999999999999999999999999M
             };
-			
+            
             using (var session = documentStore.OpenSession())
             {
                 session.Store(foo, id);
                 session.SaveChanges();
             }
             
-			Foo resultFoo = null;
+            Foo resultFoo = null;
             
-			using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
             {
                 resultFoo = session.Load<Foo>(id);
             }
             
-			Assert.Equal(resultFoo.Bar, foo.Bar);
+            Assert.Equal(resultFoo.Bar, foo.Bar);
         }
         
-	}
+    }
 }

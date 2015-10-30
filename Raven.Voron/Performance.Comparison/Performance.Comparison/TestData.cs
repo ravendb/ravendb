@@ -1,4 +1,4 @@
-﻿namespace Performance.Comparison
+namespace Performance.Comparison
 {
     public class TestData
     {

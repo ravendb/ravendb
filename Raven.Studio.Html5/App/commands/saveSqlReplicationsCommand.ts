@@ -1,4 +1,4 @@
-﻿import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
+import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 import sqlReplication = require("models/sqlReplication");
 import database = require("models/database");
 

@@ -1,4 +1,4 @@
-﻿import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
+import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 import apiKey = require("models/apiKey");
 import database = require("models/database");
 import appUrl = require("common/appUrl");

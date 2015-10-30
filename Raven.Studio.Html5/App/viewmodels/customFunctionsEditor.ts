@@ -1,4 +1,4 @@
-﻿import ace = require("ace/ace");
+import ace = require("ace/ace");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import viewModelBase = require('viewmodels/viewModelBase');
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
@@ -35,7 +35,7 @@ class customFunctionsEditor extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#customFunctionsExample").popover({
             html: true,
             trigger: 'hover',

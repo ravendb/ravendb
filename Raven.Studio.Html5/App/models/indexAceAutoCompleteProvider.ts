@@ -1,4 +1,4 @@
-﻿import database = require("models/database");
+import database = require("models/database");
 import collection = require("models/collection");
 import document = require("models/document");
 import indexDefinition = require("models/indexDefinition");

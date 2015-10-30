@@ -1,4 +1,4 @@
-﻿using Raven.Database.Impl.Generators;
+using Raven.Database.Impl.Generators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,10 +45,10 @@ namespace Raven.Database.Server.Controllers
             var code = generator.Execute(document);
 
             return GetMessageWithObject(new
-	        {
-				Document = docId,
-				Code = code
-	        });
+            {
+                Document = docId,
+                Code = code
+            });
         }
 
 

@@ -1,4 +1,4 @@
-﻿import conflictHistory = require("models/filesystem/conflictHistory");
+import conflictHistory = require("models/filesystem/conflictHistory");
 
 class conflictItem {
 

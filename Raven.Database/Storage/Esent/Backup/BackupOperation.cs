@@ -19,18 +19,18 @@ using Raven.Storage.Esent.Backup;
 
 namespace Raven.Database.Storage.Esent.Backup
 {
-	public class BackupOperation : BaseBackupOperation
-	{
-		private readonly JET_INSTANCE instance;
-	    private string backupConfigPath;
+    public class BackupOperation : BaseBackupOperation
+    {
+        private readonly JET_INSTANCE instance;
+        private string backupConfigPath;
 
         public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup,
-	                           DatabaseDocument databaseDocument)
+                               DatabaseDocument databaseDocument)
             : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument)
-	    {
-	        instance = ((TransactionalStorage) database.TransactionalStorage).Instance;
+        {
+            instance = ((TransactionalStorage) database.TransactionalStorage).Instance;
             backupConfigPath = Path.Combine(backupDestinationDirectory, "RavenDB.Backup");
-	    }
+        }
 
         protected override bool BackupAlreadyExists
         {
@@ -59,5 +59,5 @@ namespace Raven.Database.Storage.Esent.Backup
         {
             return BackupAlreadyExists;
         }
-	}
+    }
 }

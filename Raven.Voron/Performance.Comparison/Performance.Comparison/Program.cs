@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 namespace Performance.Comparison
 {
@@ -34,15 +34,15 @@ namespace Performance.Comparison
 
 
             var performanceTests = new List<IStoragePerformanceTest>()
-				{
+                {
                     //new SqlServerTest(buffer),
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
                     new EsentTest(path, buffer),
                     //new FdbTest(buffer),
-					new VoronTest(path, buffer)
-				};
+                    new VoronTest(path, buffer)
+                };
 
             var perfTracker = new PerfTracker();
             for (var i = 0; i < performanceTests.Count; i++)
@@ -290,13 +290,13 @@ namespace Performance.Comparison
 
             public uint Next()
             {
-				return PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
+                return PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
             }
         }
 
         private static IEnumerable<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)
         {
-	        return InitValue(Enumerable.Range(0, count).Select(x => (uint) x), minValueSize, maxValueSize);
+            return InitValue(Enumerable.Range(0, count).Select(x => (uint) x), minValueSize, maxValueSize);
         }
 
         private static IEnumerable<TestData> InitValue(IEnumerable<uint> ids, int minValueSize, int maxValueSize)

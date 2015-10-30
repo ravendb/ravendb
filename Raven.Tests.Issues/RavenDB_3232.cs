@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3232.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,182 +16,182 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3232 : RavenTest
-	{
-		public class Person
-		{
-			public string Id { get; set; }
+    public class RavenDB_3232 : RavenTest
+    {
+        public class Person
+        {
+            public string Id { get; set; }
 
-			public string FirstName { get; set; }
+            public string FirstName { get; set; }
 
-			public string LastName { get; set; }
-		}
+            public string LastName { get; set; }
+        }
 
-		public class TestIndex : AbstractIndexCreationTask<Person>
-		{
-			public TestIndex()
-			{
-				Map = persons => from person in persons select new { person.FirstName, person.LastName };
-			}
-		}
-		[Fact]
-		public void ShouldSimplyCreateIndex()
-		{
-			using (var store = NewDocumentStore(runInMemory: false))
-			{
-				// since index dones't exists just it should simply create it instead of using side-by-side.
-				new TestIndex().SideBySideExecute(store);
+        public class TestIndex : AbstractIndexCreationTask<Person>
+        {
+            public TestIndex()
+            {
+                Map = persons => from person in persons select new { person.FirstName, person.LastName };
+            }
+        }
+        [Fact]
+        public void ShouldSimplyCreateIndex()
+        {
+            using (var store = NewDocumentStore(runInMemory: false))
+            {
+                // since index dones't exists just it should simply create it instead of using side-by-side.
+                new TestIndex().SideBySideExecute(store);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Person { FirstName = "John", LastName = "Doe" });
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { FirstName = "John", LastName = "Doe" });
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Person, TestIndex>()
-						.Count(x => x.LastName == "Doe");
-				}
-			}
-		}
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Person, TestIndex>()
+                        .Count(x => x.LastName == "Doe");
+                }
+            }
+        }
 
-		[Fact]
-		public void ReplaceOfNonStaleIndex()
-		{
-			using (var store = NewDocumentStore(runInMemory: false))
-			{
+        [Fact]
+        public void ReplaceOfNonStaleIndex()
+        {
+            using (var store = NewDocumentStore(runInMemory: false))
+            {
 
-				var oldIndexDef = new IndexDefinition
-				{
-					Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
-				};
-				store.DatabaseCommands.PutIndex("TestIndex", oldIndexDef);
+                var oldIndexDef = new IndexDefinition
+                {
+                    Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
+                };
+                store.DatabaseCommands.PutIndex("TestIndex", oldIndexDef);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Person { FirstName = "John", LastName = "Doe" });
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { FirstName = "John", LastName = "Doe" });
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store);
-				store.DocumentDatabase.StopBackgroundWorkers();
+                WaitForIndexing(store);
+                store.DocumentDatabase.StopBackgroundWorkers();
 
-				new TestIndex().SideBySideExecute(store);
+                new TestIndex().SideBySideExecute(store);
 
-				var e = Assert.Throws<InvalidOperationException>(() =>
-				{
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<Person, TestIndex>()
-							.Count(x => x.LastName == "Doe");
-					}
-				});
+                var e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<Person, TestIndex>()
+                            .Count(x => x.LastName == "Doe");
+                    }
+                });
 
-				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-				store.DocumentDatabase.SpinBackgroundWorkers();
+                store.DocumentDatabase.SpinBackgroundWorkers();
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				store
-					.DatabaseCommands
-					.Admin
-					.StopIndexing();
+                store
+                    .DatabaseCommands
+                    .Admin
+                    .StopIndexing();
 
-				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
+                store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Person, TestIndex>()
-						.Count(x => x.LastName == "Doe");
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Person, TestIndex>()
+                        .Count(x => x.LastName == "Doe");
 
-					Assert.Equal(1, count);
-				}
-			}
-		}
+                    Assert.Equal(1, count);
+                }
+            }
+        }
 
-		[Fact]
-		public async Task ReplaceOfNonStaleIndexAsync()
-		{
-			using (var store = NewDocumentStore(runInMemory: false))
-			{
+        [Fact]
+        public async Task ReplaceOfNonStaleIndexAsync()
+        {
+            using (var store = NewDocumentStore(runInMemory: false))
+            {
 
-				var oldIndexDef = new IndexDefinition
-				{
-					Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
-				};
-				await store.AsyncDatabaseCommands.PutIndexAsync("TestIndex", oldIndexDef).ConfigureAwait(false);
+                var oldIndexDef = new IndexDefinition
+                {
+                    Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
+                };
+                await store.AsyncDatabaseCommands.PutIndexAsync("TestIndex", oldIndexDef).ConfigureAwait(false);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Person { FirstName = "John", LastName = "Doe" });
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { FirstName = "John", LastName = "Doe" });
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store);
-				store.DocumentDatabase.StopBackgroundWorkers();
+                WaitForIndexing(store);
+                store.DocumentDatabase.StopBackgroundWorkers();
 
-				await new TestIndex().SideBySideExecuteAsync(store).ConfigureAwait(false);
+                await new TestIndex().SideBySideExecuteAsync(store).ConfigureAwait(false);
 
-				var e = Assert.Throws<InvalidOperationException>(() =>
-				{
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<Person, TestIndex>()
-							.Count(x => x.LastName == "Doe");
-					}
-				});
+                var e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<Person, TestIndex>()
+                            .Count(x => x.LastName == "Doe");
+                    }
+                });
 
-				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-				store.DocumentDatabase.SpinBackgroundWorkers();
+                store.DocumentDatabase.SpinBackgroundWorkers();
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				store
-					.DatabaseCommands
-					.Admin
-					.StopIndexing();
+                store
+                    .DatabaseCommands
+                    .Admin
+                    .StopIndexing();
 
-				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
+                store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Person, TestIndex>()
-						.Count(x => x.LastName == "Doe");
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Person, TestIndex>()
+                        .Count(x => x.LastName == "Doe");
 
-					Assert.Equal(1, count);
-				}
-			}
-		}
+                    Assert.Equal(1, count);
+                }
+            }
+        }
 
-		[Fact]
-		public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
-		{
-			using (var store = NewDocumentStore(runInMemory: false))
-			{
-				var indexName = new TestIndex().IndexName;
+        [Fact]
+        public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
+        {
+            using (var store = NewDocumentStore(runInMemory: false))
+            {
+                var indexName = new TestIndex().IndexName;
 
-				new TestIndex().SideBySideExecute(store);
+                new TestIndex().SideBySideExecute(store);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Person { FirstName = "John", LastName = "Doe" });
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { FirstName = "John", LastName = "Doe" });
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store);
-				store.DocumentDatabase.StopBackgroundWorkers();
-				store
-					.DatabaseCommands
-					.Admin
-					.StopIndexing();
+                WaitForIndexing(store);
+                store.DocumentDatabase.StopBackgroundWorkers();
+                store
+                    .DatabaseCommands
+                    .Admin
+                    .StopIndexing();
 
-				new TestIndex().SideBySideExecute(store);
+                new TestIndex().SideBySideExecute(store);
 
-				Assert.Null(store.DatabaseCommands.GetIndex(Constants.SideBySideIndexNamePrefix + indexName));
-			}
-		}
-	}
+                Assert.Null(store.DatabaseCommands.GetIndex(Constants.SideBySideIndexNamePrefix + indexName));
+            }
+        }
+    }
 }

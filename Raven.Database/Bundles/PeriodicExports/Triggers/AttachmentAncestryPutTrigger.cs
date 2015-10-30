@@ -13,18 +13,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-	[ExportMetadata("Bundle", "PeriodicExport")]
-	[ExportMetadata("Order", 10001)]
-	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
+    [ExportMetadata("Bundle", "PeriodicExport")]
+    [ExportMetadata("Order", 10001)]
+    [InheritedExport(typeof(AbstractAttachmentPutTrigger))]
     [Obsolete("Use RavenFS instead.")]
-	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
-	{
-		public override void OnPut(string key, Stream data, RavenJObject metadata)
-		{
-			if (key.StartsWith("Raven/")) // we don't deal with system attachment
-				return;
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
+    public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
+    {
+        public override void OnPut(string key, Stream data, RavenJObject metadata)
+        {
+            if (key.StartsWith("Raven/")) // we don't deal with system attachment
+                return;
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
                 Database.TransactionalStorage.Batch(accessor =>
                 {
                     var tombstone = accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, key);
@@ -32,7 +32,7 @@ namespace Raven.Database.Bundles.PeriodicExports.Triggers
                         return;
                     accessor.Lists.Remove(Constants.RavenPeriodicExportsAttachmentsTombstones, key);
                 });
-			}
-		}
-	}
+            }
+        }
+    }
 }

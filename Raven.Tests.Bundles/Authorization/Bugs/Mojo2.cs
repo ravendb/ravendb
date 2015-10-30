@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Mojo2.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,136 +12,136 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Authorization.Bugs
 {
-	public class Mojo2 : AuthorizationTest
-	{
-		private static void SetupRoles(IDocumentSession session)
-		{
-			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationRole
-			{
-				Id = "Users"
-			});
+    public class Mojo2 : AuthorizationTest
+    {
+        private static void SetupRoles(IDocumentSession session)
+        {
+            session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationRole
+            {
+                Id = "Users"
+            });
 
-			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationRole
-			{
-				Id = "Administrators",
-				Permissions =
-					{
-						new client::Raven.Bundles.Authorization.Model.OperationPermission
-						{
-							Allow = true,
-							Operation = "Library/Manage"
-						}
-					}
-			});
-			session.SaveChanges();
-		}
+            session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationRole
+            {
+                Id = "Administrators",
+                Permissions =
+                    {
+                        new client::Raven.Bundles.Authorization.Model.OperationPermission
+                        {
+                            Allow = true,
+                            Operation = "Library/Manage"
+                        }
+                    }
+            });
+            session.SaveChanges();
+        }
 
-		private static void SetupUsers(IDocumentSession session)
-		{
-			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
-			{
-				Id = "andrea",
-				Roles = { "Users", "Administrators" },
-			});
+        private static void SetupUsers(IDocumentSession session)
+        {
+            session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
+            {
+                Id = "andrea",
+                Roles = { "Users", "Administrators" },
+            });
 
-			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
-			{
-				Id = "administrator",
-				Roles = { "Users", "Administrators" },
-			});
+            session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
+            {
+                Id = "administrator",
+                Roles = { "Users", "Administrators" },
+            });
 
-			//Paolo is a Users with permission for Library/Fake
-			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
-			{
-				Id = "paolo",
-				Roles = { "Users" },
-				Permissions =
-					new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
-					{
-						new client::Raven.Bundles.Authorization.Model.OperationPermission
-						{Allow = true, Operation = "Library/Fake"}
-					}
-			});
+            //Paolo is a Users with permission for Library/Fake
+            session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
+            {
+                Id = "paolo",
+                Roles = { "Users" },
+                Permissions =
+                    new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
+                    {
+                        new client::Raven.Bundles.Authorization.Model.OperationPermission
+                        {Allow = true, Operation = "Library/Fake"}
+                    }
+            });
 
-			session.SaveChanges();
-		}
+            session.SaveChanges();
+        }
 
-		[Fact]
-		public void Create_Library_And_Set_Permission_For_Roles_Administrators_And_For_User_Andrea()
-		{
+        [Fact]
+        public void Create_Library_And_Set_Permission_For_Roles_Administrators_And_For_User_Andrea()
+        {
             using (IDocumentSession session = store.OpenSession(DatabaseName))
-			{
-				SetupRoles(session);
-				SetupUsers(session);
-			}
+            {
+                SetupRoles(session);
+                SetupUsers(session);
+            }
             using (IDocumentSession session = store.OpenSession(DatabaseName))
-			{
-				var library = new Library { Id = "library/andrea-lib" };
-				session.Store(library);
-				var documentAuthorization = new client::Raven.Bundles.
-					Authorization.Model.
-					DocumentAuthorization
-				{
-					Permissions =
-						{
-							new client::Raven.Bundles.
-								Authorization.Model.
-								DocumentPermission
-							{
-								Allow = true,
-								Operation = "Library/View",
-								User = "andrea"
-							},
-							new client::Raven.Bundles.
-								Authorization.Model.
-								DocumentPermission
-							{
-								Allow = true,
-								Operation =
-									"Library/Manage",
-								Role = "Administrators"
-							}
-						}
-				};
-				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, library,
-					documentAuthorization);
-				session.SaveChanges();
-			}
+            {
+                var library = new Library { Id = "library/andrea-lib" };
+                session.Store(library);
+                var documentAuthorization = new client::Raven.Bundles.
+                    Authorization.Model.
+                    DocumentAuthorization
+                {
+                    Permissions =
+                        {
+                            new client::Raven.Bundles.
+                                Authorization.Model.
+                                DocumentPermission
+                            {
+                                Allow = true,
+                                Operation = "Library/View",
+                                User = "andrea"
+                            },
+                            new client::Raven.Bundles.
+                                Authorization.Model.
+                                DocumentPermission
+                            {
+                                Allow = true,
+                                Operation =
+                                    "Library/Manage",
+                                Role = "Administrators"
+                            }
+                        }
+                };
+                client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, library,
+                    documentAuthorization);
+                session.SaveChanges();
+            }
 
             using (IDocumentSession session = store.OpenSession(DatabaseName))
-			{
-				var paolo = session.Load<client::Raven.Bundles.Authorization.Model.AuthorizationUser>("paolo");
+            {
+                var paolo = session.Load<client::Raven.Bundles.Authorization.Model.AuthorizationUser>("paolo");
 
-				//Paolo is a Users
-				Assert.True(paolo.Roles.Exists(mc => mc.Equals("Users")));
+                //Paolo is a Users
+                Assert.True(paolo.Roles.Exists(mc => mc.Equals("Users")));
 
-				//Paolo is not an Administrators
-				Assert.True(!paolo.Roles.Exists(mc => mc.Equals("Administrators")));
-
-
-				client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanView =
-					client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(session.Advanced,
-																												  "paolo",
-																												  "Library/View",
-																												  "library/andrea-lib");
-
-				//Paolo cannot View 
-				Assert.True(!paoloCanView.IsAllowed);
+                //Paolo is not an Administrators
+                Assert.True(!paolo.Roles.Exists(mc => mc.Equals("Administrators")));
 
 
-				client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanMange =
-					client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(session.Advanced,
-																												  "paolo",
-																												  "Library/Manage",
-																												  "library/andrea-lib");
-				//Paolo cannot Manage
-				Assert.True(!paoloCanMange.IsAllowed);
-			}
-		}
+                client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanView =
+                    client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(session.Advanced,
+                                                                                                                  "paolo",
+                                                                                                                  "Library/View",
+                                                                                                                  "library/andrea-lib");
 
-		public class Library
-		{
-			public string Id { get; set; }
-		}
-	}
+                //Paolo cannot View 
+                Assert.True(!paoloCanView.IsAllowed);
+
+
+                client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanMange =
+                    client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(session.Advanced,
+                                                                                                                  "paolo",
+                                                                                                                  "Library/Manage",
+                                                                                                                  "library/andrea-lib");
+                //Paolo cannot Manage
+                Assert.True(!paoloCanMange.IsAllowed);
+            }
+        }
+
+        public class Library
+        {
+            public string Id { get; set; }
+        }
+    }
 }

@@ -22,22 +22,22 @@ class getDocumentsByEntityNameCommand extends commandBase {
         var url =  "/indexes/Raven/DocumentsByEntityName";
         var documentsTask = $.Deferred();
         this.query(url, args, this.collection.ownerDatabase, resultsSelector)
-			.fail(response => {
-				if (response.status == ResponseCodes.InternalServerError) {
-					// old style index, probably, try again without the LastModifiedTicks
-					args.sort = "-LastModified";
-					this.query(url, args, this.collection.ownerDatabase, resultsSelector)
-						.fail(_ => documentsTask.reject())
-						.then(collection => {
-							var items = collection.results;
-							var resultSet = new pagedResultSet(items, collection.totalResults);
-							documentsTask.resolve(resultSet);
-						});
-					return;
-				}
-				documentsTask.reject()
-	        })
-			.then(collection => {
+            .fail(response => {
+                if (response.status == ResponseCodes.InternalServerError) {
+                    // old style index, probably, try again without the LastModifiedTicks
+                    args.sort = "-LastModified";
+                    this.query(url, args, this.collection.ownerDatabase, resultsSelector)
+                        .fail(_ => documentsTask.reject())
+                        .then(collection => {
+                            var items = collection.results;
+                            var resultSet = new pagedResultSet(items, collection.totalResults);
+                            documentsTask.resolve(resultSet);
+                        });
+                    return;
+                }
+                documentsTask.reject()
+            })
+            .then(collection => {
                 var items = collection.results;
                 var resultSet = new pagedResultSet(items, collection.totalResults);
                 documentsTask.resolve(resultSet);

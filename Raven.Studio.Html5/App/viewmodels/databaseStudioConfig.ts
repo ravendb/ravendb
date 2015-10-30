@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");

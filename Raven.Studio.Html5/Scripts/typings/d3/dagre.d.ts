@@ -1,4 +1,4 @@
-﻿declare var dagre: any;
+declare var dagre: any;
 
 declare module "dagre" {
     export = dagre;

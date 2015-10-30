@@ -1,23 +1,23 @@
-﻿namespace Raven.Abstractions.FileSystem
+namespace Raven.Abstractions.FileSystem
 {
-	public class HistoryItem
-	{
-		public long Version { get; set; }
-		public string ServerId { get; set; }
+    public class HistoryItem
+    {
+        public long Version { get; set; }
+        public string ServerId { get; set; }
 
-		public override bool Equals(object obj)
-		{
-			var history = obj as HistoryItem;
+        public override bool Equals(object obj)
+        {
+            var history = obj as HistoryItem;
 
-			if (history == null)
-				return false;
+            if (history == null)
+                return false;
 
-			return Version == history.Version && ServerId == history.ServerId;
-		}
+            return Version == history.Version && ServerId == history.ServerId;
+        }
 
-		public override int GetHashCode()
-		{
-			return Version.GetHashCode() ^ ServerId.GetHashCode();
-		}
-	}
+        public override int GetHashCode()
+        {
+            return Version.GetHashCode() ^ ServerId.GetHashCode();
+        }
+    }
 }

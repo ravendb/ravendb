@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
@@ -7,12 +7,12 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DirectoryCreation : RavenTest
-	{
-		[Fact]
-		public void ShouldOnlyBeInDataDir()
-		{
-		    var appDataPath = NewDataPath("App_Data");
+    public class DirectoryCreation : RavenTest
+    {
+        [Fact]
+        public void ShouldOnlyBeInDataDir()
+        {
+            var appDataPath = NewDataPath("App_Data");
             var dataPath = NewDataPath("Data");
 
             IOExtensions.DeleteDirectory(appDataPath);
@@ -40,6 +40,6 @@ namespace Raven.Tests.Bugs
 
             IOExtensions.DeleteDirectory(appDataPath);
             IOExtensions.DeleteDirectory(dataPath);
-		}
-	}
+        }
+    }
 }

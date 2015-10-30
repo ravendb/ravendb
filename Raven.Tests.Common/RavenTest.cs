@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="RavenTest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -22,19 +22,19 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
-	    public class TestMemoryTarget : DatabaseMemoryTarget
-	    {
-		    public override bool ShouldLog(ILog logger, LogLevel level)
-		    {
-			    return true;
-		    }
-	    }
+        public class TestMemoryTarget : DatabaseMemoryTarget
+        {
+            public override bool ShouldLog(ILog logger, LogLevel level)
+            {
+                return true;
+            }
+        }
 
-		protected bool ShowLogs { get; set; }
+        protected bool ShowLogs { get; set; }
 
         static RavenTest()
         {
-			LogManager.RegisterTarget<TestMemoryTarget>();
+            LogManager.RegisterTarget<TestMemoryTarget>();
         }
 
         public RavenTest()
@@ -43,47 +43,47 @@ namespace Raven.Tests.Common
             SystemTime.WaitCalled = null;
         }
 
-	    public override void Dispose()
-	    {
-		    ShowLogsIfNecessary();
+        public override void Dispose()
+        {
+            ShowLogsIfNecessary();
 
-		    base.Dispose();
-	    }
+            base.Dispose();
+        }
 
-	    private void ShowLogsIfNecessary()
-	    {
-		    if (!ShowLogs)
-			    return;
+        private void ShowLogsIfNecessary()
+        {
+            if (!ShowLogs)
+                return;
             
-		    foreach (var databaseName in DatabaseNames)
-		    {
-				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
-			    if (target == null)
-				    continue;
+            foreach (var databaseName in DatabaseNames)
+            {
+                var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
+                if (target == null)
+                    continue;
 
-			    using (var file = File.Open("debug_output.txt", FileMode.Append))
-			    using (var writer = new StreamWriter(file))
-			    {
-					WriteLine(writer);
-				    WriteLine(writer, "Logs for: " + databaseName);
+                using (var file = File.Open("debug_output.txt", FileMode.Append))
+                using (var writer = new StreamWriter(file))
+                {
+                    WriteLine(writer);
+                    WriteLine(writer, "Logs for: " + databaseName);
 
-				    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
-				    {
-						WriteLine(writer, string.Format("{0}|{1}|{2}|{3}|{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
-				    }
+                    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
+                    {
+                        WriteLine(writer, string.Format("{0}|{1}|{2}|{3}|{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
+                    }
 
-				    WriteLine(writer);
-			    }
-		    }
-	    }
+                    WriteLine(writer);
+                }
+            }
+        }
 
-	    private static void WriteLine(TextWriter writer, string message = "")
-	    {
-		    Console.WriteLine(message);
-			writer.WriteLine(message);
-	    }
+        private static void WriteLine(TextWriter writer, string message = "")
+        {
+            Console.WriteLine(message);
+            writer.WriteLine(message);
+        }
 
-	    protected void Consume(object o)
+        protected void Consume(object o)
         {
 
         }
@@ -118,10 +118,10 @@ namespace Raven.Tests.Common
             get
             {
                 return new[]
-				{
-					new object[] {"voron"},
-					new object[] {"esent"}
-				};
+                {
+                    new object[] {"voron"},
+                    new object[] {"esent"}
+                };
             }
         }
     }

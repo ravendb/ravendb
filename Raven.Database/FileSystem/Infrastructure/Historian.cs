@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -11,37 +11,37 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.FileSystem.Infrastructure
 {
-	public class Historian
-	{
-		private readonly ITransactionalStorage storage;
-		private readonly SynchronizationHiLo synchronizationHiLo;
+    public class Historian
+    {
+        private readonly ITransactionalStorage storage;
+        private readonly SynchronizationHiLo synchronizationHiLo;
 
-		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo)
-		{
-			this.storage = storage;
-			this.synchronizationHiLo = synchronizationHiLo;
-		}
+        public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo)
+        {
+            this.storage = storage;
+            this.synchronizationHiLo = synchronizationHiLo;
+        }
 
-		public void Update(string fileName, RavenJObject sourceMetadata)
-		{
-			var fileMetadata = GetMetadata(fileName);
+        public void Update(string fileName, RavenJObject sourceMetadata)
+        {
+            var fileMetadata = GetMetadata(fileName);
             var serverId = fileMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
-			var history = new List<HistoryItem>();
-			// if there is RavenReplicationVersion metadata it means that file is not new and we have to add a new item to the history
-			if (!String.IsNullOrEmpty(serverId))
-			{
-				var currentVersion = fileMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);               
+            var history = new List<HistoryItem>();
+            // if there is RavenReplicationVersion metadata it means that file is not new and we have to add a new item to the history
+            if (!String.IsNullOrEmpty(serverId))
+            {
+                var currentVersion = fileMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);               
                 history = DeserializeHistory(fileMetadata);
-				history.Add(new HistoryItem { ServerId = serverId, Version = currentVersion });
-			}
+                history.Add(new HistoryItem { ServerId = serverId, Version = currentVersion });
+            }
 
-			if (history.Count > SynchronizationConstants.ChangeHistoryLength)
-				history.RemoveAt(0);
+            if (history.Count > SynchronizationConstants.ChangeHistoryLength)
+                history.RemoveAt(0);
 
             sourceMetadata[SynchronizationConstants.RavenSynchronizationHistory] = SerializeHistory(history);            
-			sourceMetadata[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId();
-			sourceMetadata[SynchronizationConstants.RavenSynchronizationSource] = new RavenJValue(storage.Id);
-		}
+            sourceMetadata[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId();
+            sourceMetadata[SynchronizationConstants.RavenSynchronizationSource] = new RavenJValue(storage.Id);
+        }
 
         public void UpdateLastModified(RavenJObject metadata)
         {
@@ -56,7 +56,7 @@ namespace Raven.Database.FileSystem.Infrastructure
         }
 
         private RavenJObject GetMetadata(string fileName)
-		{
+        {
             try
             {
                 FileAndPagesInformation fileAndPages = null;
@@ -67,7 +67,7 @@ namespace Raven.Database.FileSystem.Infrastructure
             {
                 return new RavenJObject();
             }
-		}
+        }
 
         public static List<HistoryItem> DeserializeHistory(RavenJObject metadata)
         {
@@ -88,19 +88,19 @@ namespace Raven.Database.FileSystem.Infrastructure
         }
 
         public static bool IsDirectChildOfCurrent(RavenJObject destinationMetadata, RavenJObject sourceMetadata)
-		{
+        {
             long destVersion = destinationMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);
             var destServerId = destinationMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
 
-			var version = new HistoryItem { ServerId = destServerId, Version = destVersion };
+            var version = new HistoryItem { ServerId = destServerId, Version = destVersion };
 
-			var history = DeserializeHistory(sourceMetadata);
+            var history = DeserializeHistory(sourceMetadata);
             long sourceVersion = sourceMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);
-			var sourceServerId = sourceMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
+            var sourceServerId = sourceMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
 
-			history.Add(new HistoryItem { ServerId = sourceServerId, Version = sourceVersion });
+            history.Add(new HistoryItem { ServerId = sourceServerId, Version = sourceVersion });
 
-			return history.Contains(version);
-		}
-	}
+            return history.Contains(version);
+        }
+    }
 }

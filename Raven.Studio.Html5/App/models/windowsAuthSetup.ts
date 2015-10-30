@@ -1,4 +1,4 @@
-﻿import windowsAuthData = require("models/windowsAuthData");
+import windowsAuthData = require("models/windowsAuthData");
 
 class windowsAuthSetup {
 

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RemoteDocumentReplicationConflictResolver.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,19 +11,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Plugins
 {
-	[PartNotDiscoverable]
-	public class RemoteDocumentReplicationConflictResolver : AbstractDocumentReplicationConflictResolver
-	{
-		public static RemoteDocumentReplicationConflictResolver Instance = new RemoteDocumentReplicationConflictResolver();
+    [PartNotDiscoverable]
+    public class RemoteDocumentReplicationConflictResolver : AbstractDocumentReplicationConflictResolver
+    {
+        public static RemoteDocumentReplicationConflictResolver Instance = new RemoteDocumentReplicationConflictResolver();
 
-		protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
-		                                Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
-		                                out RavenJObject documentToSave)
-		{
-			metadataToSave = metadata;
-			documentToSave = document;
+        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+                                        Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+                                        out RavenJObject documentToSave)
+        {
+            metadataToSave = metadata;
+            documentToSave = document;
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 }

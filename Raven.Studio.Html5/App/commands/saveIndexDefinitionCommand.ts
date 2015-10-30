@@ -15,8 +15,8 @@ class saveIndexDefinitionCommand extends commandBase {
                 this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText);
             })
             .done(() => {
-		        this.reportSuccess("Saved " + this.index.Name + ".");
-	        });
+                this.reportSuccess("Saved " + this.index.Name + ".");
+            });
 
     }
 

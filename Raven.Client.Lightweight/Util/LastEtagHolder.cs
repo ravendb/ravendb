@@ -1,10 +1,10 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Util
 {
-	public interface ILastEtagHolder
-	{
-		void UpdateLastWrittenEtag(Etag etag);
-		Etag GetLastWrittenEtag();
-	}
+    public interface ILastEtagHolder
+    {
+        void UpdateLastWrittenEtag(Etag etag);
+        Etag GetLastWrittenEtag();
+    }
 }

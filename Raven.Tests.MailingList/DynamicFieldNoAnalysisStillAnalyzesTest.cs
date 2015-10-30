@@ -28,17 +28,17 @@ namespace Raven.Tests.MailingList
                 var articleGroup = new Item
                 {
                     Properties =
-								   {
-									   new Property
-									   {
-										   HeaderId = "brand",
-										   Values =
-										   {
-											   "Sony",
-											   "Samsung",
-										   },
-									   },
-								   },
+                                   {
+                                       new Property
+                                       {
+                                           HeaderId = "brand",
+                                           Values =
+                                           {
+                                               "Sony",
+                                               "Samsung",
+                                           },
+                                       },
+                                   },
                 };
 
                 _session.Store(articleGroup);
@@ -48,12 +48,12 @@ namespace Raven.Tests.MailingList
 
                 var facets = _session.Advanced.DocumentQuery<Item, ItemsWithDynamicFieldsIndex>()
                                      .ToFacets(new[]
-										   {
-											   new Facet
-											   {
-												   Name = "prop_brand",
-											   },
-										   });
+                                           {
+                                               new Facet
+                                               {
+                                                   Name = "prop_brand",
+                                               },
+                                           });
 
                 Assert.True(facets.Results.ContainsKey("prop_brand"));
 

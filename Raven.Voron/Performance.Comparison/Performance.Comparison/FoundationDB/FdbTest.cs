@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -82,7 +82,7 @@ namespace Performance.Comparison.FoundationDB
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-			IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
+            IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[FoundationDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds,
                 perfTracker);
@@ -90,7 +90,7 @@ namespace Performance.Comparison.FoundationDB
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-			IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
+            IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(
                 string.Format("[FoundationDB] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds,

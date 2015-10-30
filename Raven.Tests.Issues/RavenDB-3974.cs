@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -47,7 +47,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-		[PropertyData("Storages")]
+        [PropertyData("Storages")]
         public void can_make_post_requests_when_apikey_is_readonly(string storageName)
         {
             Authentication.EnableOnce();

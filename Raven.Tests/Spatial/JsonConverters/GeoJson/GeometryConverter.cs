@@ -9,7 +9,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 // From: https://code.google.com/p/nettopologysuite/source/browse/#svn%2Ftrunk%2FNetTopologySuite.IO%2FNetTopologySuite.IO.GeoJSON
 namespace Raven.Tests.Spatial.JsonConverters.GeoJson
 {
-	public class GeometryConverter : JsonConverter
+    public class GeometryConverter : JsonConverter
     {
         private readonly IGeometryFactory _factory;
         

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="BufferPoolMemoryStream.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,8 +15,8 @@ namespace Raven.Abstractions.Util.Streams
     {       
         protected byte[] _buffer;
         protected ObjectPool<byte[]> _bufferPool;
-		
-		[CLSCompliant(false)]
+        
+        [CLSCompliant(false)]
         protected long _length;
 
         private int _position;
@@ -93,15 +93,15 @@ namespace Raven.Abstractions.Util.Streams
             if (requestedCapacity <= _buffer.Length)
                 return;
 
-			//estimate that the needed buffer growth is at most twice the old length
-	        var estimatedNewCapacity = _buffer.Length * 2;
+            //estimate that the needed buffer growth is at most twice the old length
+            var estimatedNewCapacity = _buffer.Length * 2;
 
-			//precaution -> to make sure casting long to int is ok (I doubt this will ever be not ok, but still)
-			Debug.Assert(requestedCapacity <= Int32.MaxValue,"should never grow buffer to these sizes");
+            //precaution -> to make sure casting long to int is ok (I doubt this will ever be not ok, but still)
+            Debug.Assert(requestedCapacity <= Int32.MaxValue,"should never grow buffer to these sizes");
 
 
-			//if the required capacity is more than the estimated growth, grow the buffer by the requested capacity
-			var newCapacity = (requestedCapacity <= estimatedNewCapacity) ? estimatedNewCapacity : (int)requestedCapacity;
+            //if the required capacity is more than the estimated growth, grow the buffer by the requested capacity
+            var newCapacity = (requestedCapacity <= estimatedNewCapacity) ? estimatedNewCapacity : (int)requestedCapacity;
                         
             // We reset the buffer pool
             ObjectPool<byte[]> newBufferPool = null;

@@ -14,5 +14,5 @@ namespace Raven.Abstractions.Smuggler
         Task ImportData(SmugglerImportOptions<TIn> importOptions);
 
         Task Between(SmugglerBetweenOptions<TIn> betweenOptions);
-	}
+    }
 }

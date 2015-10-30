@@ -49,7 +49,7 @@ var Mode = function() {
 oop.inherits(Mode, TextMode);
 
 (function() { 
-	this.lineCommentStart = "//";
+    this.lineCommentStart = "//";
     this.$id = "ace/mode/jade";
 }).call(Mode.prototype);
 

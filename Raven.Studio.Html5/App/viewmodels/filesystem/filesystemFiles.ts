@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import shell = require("viewmodels/shell");
@@ -101,7 +101,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.collapseUploadQueuePanel();
     }
 
@@ -374,35 +374,35 @@ class filesystemFiles extends viewModelBase {
         $(".upload-queue").addClass("upload-queue-min");
     }
 
-	deleteFolder() {
-		if (!this.selectedFolder()) {
-			// delete all files from filesystem
-			new getFileSystemStatsCommand(this.activeFilesystem())
-				.execute()
-				.done((fs: filesystemStatisticsDto) => {
-					this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
-				});
-		} else {
-			// Run the query so that we have an idea of what we'll be deleting.
-			var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
-			new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
-				.execute()
-				.done((results: pagedResultSet) => {
-				if (results.totalResultCount === 0) {
-					app.showMessage("There are no files matching your query.", "Nothing to do");
-				} else {
-					this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
-				}
-			});
-		}
-	}
+    deleteFolder() {
+        if (!this.selectedFolder()) {
+            // delete all files from filesystem
+            new getFileSystemStatsCommand(this.activeFilesystem())
+                .execute()
+                .done((fs: filesystemStatisticsDto) => {
+                    this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
+                });
+        } else {
+            // Run the query so that we have an idea of what we'll be deleting.
+            var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+            new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
+                .execute()
+                .done((results: pagedResultSet) => {
+                if (results.totalResultCount === 0) {
+                    app.showMessage("There are no files matching your query.", "Nothing to do");
+                } else {
+                    this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
+                }
+            });
+        }
+    }
 
-	private escapeQueryString(query: string): string {
-		if (!query) return null;
+    private escapeQueryString(query: string): string {
+        if (!query) return null;
         return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 
-	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
+    promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
         var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
         app
             .showDialog(viewModel)

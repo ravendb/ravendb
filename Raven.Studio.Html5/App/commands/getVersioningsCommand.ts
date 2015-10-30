@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import versioningEntry = require("models/versioningEntry");
 

@@ -1,4 +1,4 @@
-﻿using System.Security.Principal;
+using System.Security.Principal;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -29,212 +29,212 @@ using System.Web.Http.Routing;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class RavenDbApiController : RavenBaseApiController
-	{
-	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+    public abstract class RavenDbApiController : RavenBaseApiController
+    {
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-		public string DatabaseName { get; private set; }
+        public string DatabaseName { get; private set; }
 
-		private string queryFromPostRequest;
-		
-		public void SetPostRequestQuery(string query)
-		{
-			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
-		}
+        private string queryFromPostRequest;
+        
+        public void SetPostRequestQuery(string query)
+        {
+            queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
+        }
 
-		public void InitializeFrom(RavenDbApiController other)
-		{
-			DatabaseName = other.DatabaseName;
-			queryFromPostRequest = other.queryFromPostRequest;
-			if (other.Configuration != null)
-				Configuration = other.Configuration;
-			ControllerContext = other.ControllerContext;
-			ActionContext = other.ActionContext;
-		}
+        public void InitializeFrom(RavenDbApiController other)
+        {
+            DatabaseName = other.DatabaseName;
+            queryFromPostRequest = other.queryFromPostRequest;
+            if (other.Configuration != null)
+                Configuration = other.Configuration;
+            ControllerContext = other.ControllerContext;
+            ActionContext = other.ActionContext;
+        }
 
-		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
-		{
-			InnerInitialization(controllerContext);
-			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-			var result = new HttpResponseMessage();
-			if (InnerRequest.Method.Method != "OPTIONS")
-			{
-				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
-				{
+        public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+        {
+            InnerInitialization(controllerContext);
+            var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+            var result = new HttpResponseMessage();
+            if (InnerRequest.Method.Method != "OPTIONS")
+            {
+                result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
+                {
                     RequestManager.SetThreadLocalState(ReadInnerHeaders, DatabaseName);
-					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-				}, httpException =>
-				{
-				    var response = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
+                    return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
+                }, httpException =>
+                {
+                    var response = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
 
-				    var timeout = httpException.InnerException as TimeoutException;
+                    var timeout = httpException.InnerException as TimeoutException;
                     if (timeout != null)
                     {
                         response.Headers.Add("Raven-Database-Load-In-Progress", DatabaseName);
                     }
-				    return response;
-				});
-			}
+                    return response;
+                });
+            }
 
-			RequestManager.AddAccessControlHeaders(this, result);
+            RequestManager.AddAccessControlHeaders(this, result);
             RequestManager.ResetThreadLocalState();
 
-			return result;
-		}
+            return result;
+        }
 
-		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
-			MixedModeRequestAuthorizer authorizer)
-		{
-			if (SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized == false)
-			{
-				HttpResponseMessage authMsg;
-				if (authorizer.TryAuthorize(this, out authMsg) == false)
-					return authMsg;
-			}
+        private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
+            MixedModeRequestAuthorizer authorizer)
+        {
+            if (SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized == false)
+            {
+                HttpResponseMessage authMsg;
+                if (authorizer.TryAuthorize(this, out authMsg) == false)
+                    return authMsg;
+            }
 
             if (IsInternalRequest == false)
-				RequestManager.IncrementRequestCount();
+                RequestManager.IncrementRequestCount();
 
-			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
-			{
-				var msg = "Could not find a database named: " + DatabaseName;
-				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
-			}
+            if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
+            {
+                var msg = "Could not find a database named: " + DatabaseName;
+                return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
+            }
 
-			var sp = Stopwatch.StartNew();
+            var sp = Stopwatch.StartNew();
 
-			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
-			sp.Stop();
-			AddRavenHeader(result, sp);
+            var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+            sp.Stop();
+            AddRavenHeader(result, sp);
 
-			return result;
-		}
+            return result;
+        }
 
-		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
-		{
-			JsonDocument replicationDestinationsDocument;
-			erroResponseMessage = null;
-			try
-			{
-				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
-			}
-			catch (Exception e)
-			{
-				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
-				Log.ErrorException(errorMessage, e);
-				erroResponseMessage = GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
-				return null;
-			}
+        protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
+        {
+            JsonDocument replicationDestinationsDocument;
+            erroResponseMessage = null;
+            try
+            {
+                replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
+            }
+            catch (Exception e)
+            {
+                const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
+                Log.ErrorException(errorMessage, e);
+                erroResponseMessage = GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
+                return null;
+            }
 
-			if (replicationDestinationsDocument == null)
-			{
-				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
-				return null;
-			}
+            if (replicationDestinationsDocument == null)
+            {
+                erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
+                return null;
+            }
 
-			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
+            var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 
-			if (replicationDocument.Destinations.Count != 0) 
-				return replicationDocument;
+            if (replicationDocument.Destinations.Count != 0) 
+                return replicationDocument;
 
-			erroResponseMessage = GetMessageWithObject(new
-			{
-				Message = @"Replication document found, but no destinations configured for index replication. 
-																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
-																Nothing to do in this case..."
-			},
-			HttpStatusCode.Accepted);
-			return null;
-		}
+            erroResponseMessage = GetMessageWithObject(new
+            {
+                Message = @"Replication document found, but no destinations configured for index replication. 
+                                                                Maybe all replication destinations have SkipIndexReplication flag equals to true?  
+                                                                Nothing to do in this case..."
+            },
+            HttpStatusCode.Accepted);
+            return null;
+        }
 
-		protected override void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			base.InnerInitialization(controllerContext);
+        protected override void InnerInitialization(HttpControllerContext controllerContext)
+        {
+            base.InnerInitialization(controllerContext);
 
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("MS_SubRoutes"))
-			{
-				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
+            var values = controllerContext.Request.GetRouteData().Values;
+            if (values.ContainsKey("MS_SubRoutes"))
+            {
+                var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+                var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
 
-				if (selectedData != null)
-					DatabaseName = selectedData.Values["databaseName"] as string;
-				else
-					DatabaseName = null;
-			}
-			else
-			{
-				if (values.ContainsKey("databaseName"))
-					DatabaseName = values["databaseName"] as string;
-				else
-					DatabaseName = null;
-			}
-		}
+                if (selectedData != null)
+                    DatabaseName = selectedData.Values["databaseName"] as string;
+                else
+                    DatabaseName = null;
+            }
+            else
+            {
+                if (values.ContainsKey("databaseName"))
+                    DatabaseName = values["databaseName"] as string;
+                else
+                    DatabaseName = null;
+            }
+        }
 
-		public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var result = base.GetEmptyMessage(code, etag);
-			RequestManager.AddAccessControlHeaders(this, result);
-			HandleReplication(result);
-			return result;
-		}
+        public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var result = base.GetEmptyMessage(code, etag);
+            RequestManager.AddAccessControlHeaders(this, result);
+            HandleReplication(result);
+            return result;
+        }
 
-		public override HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var result = base.GetMessageWithObject(item, code, etag);
+        public override HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var result = base.GetMessageWithObject(item, code, etag);
 
-			RequestManager.AddAccessControlHeaders(this, result);
-			HandleReplication(result);
-			return result;
-		}
+            RequestManager.AddAccessControlHeaders(this, result);
+            HandleReplication(result);
+            return result;
+        }
 
-		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var result =base.GetMessageWithString(msg, code, etag);
-			RequestManager.AddAccessControlHeaders(this, result);
-			HandleReplication(result);
-			return result;
-		}
+        public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var result =base.GetMessageWithString(msg, code, etag);
+            RequestManager.AddAccessControlHeaders(this, result);
+            HandleReplication(result);
+            return result;
+        }
 
         public override InMemoryRavenConfiguration SystemConfiguration
         {
             get { return DatabasesLandlord.SystemConfiguration; }
         }
 
-	    private DocumentDatabase _currentDb;
-		public DocumentDatabase Database
-		{
-			get
-			{
-			    if (_currentDb != null)
-			        return _currentDb;
+        private DocumentDatabase _currentDb;
+        public DocumentDatabase Database
+        {
+            get
+            {
+                if (_currentDb != null)
+                    return _currentDb;
 
-				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
-				if (database == null)
-				{
-					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
-				}
+                var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
+                if (database == null)
+                {
+                    throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
+                }
 
                 return _currentDb = database.Result;
-			}
-		}
+            }
+        }
 
-		public void SetCurrentDatabase(DocumentDatabase db)
-		{
-			DatabaseName = db.Name;
-			_currentDb = db;
-		}
+        public void SetCurrentDatabase(DocumentDatabase db)
+        {
+            DatabaseName = db.Name;
+            _currentDb = db;
+        }
 
-	    public override InMemoryRavenConfiguration ResourceConfiguration
-	    {
-	        get { return Database.Configuration; }
-	    }
+        public override InMemoryRavenConfiguration ResourceConfiguration
+        {
+            get { return Database.Configuration; }
+        }
 
 
-	    protected bool EnsureSystemDatabase()
-		{
-			return DatabasesLandlord.SystemDatabase == Database;
-		}
+        protected bool EnsureSystemDatabase()
+        {
+            return DatabasesLandlord.SystemDatabase == Database;
+        }
 
         protected bool IsAnotherRestoreInProgress(out string resourceName)
         {
@@ -250,155 +250,155 @@ namespace Raven.Database.Server.Controllers
         }
 
 
-		protected TransactionInformation GetRequestTransaction()
-		{
-			if (InnerRequest.Headers.Contains("Raven-Transaction-Information") == false)
-				return null;
-			var txInfo = InnerRequest.Headers.GetValues("Raven-Transaction-Information").FirstOrDefault();
-			if (string.IsNullOrEmpty(txInfo))
-				return null;
-			var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length != 2)
-				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
-			
-			return new TransactionInformation
-			{
-				Id = parts[0],
-				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
-			};
-		}
+        protected TransactionInformation GetRequestTransaction()
+        {
+            if (InnerRequest.Headers.Contains("Raven-Transaction-Information") == false)
+                return null;
+            var txInfo = InnerRequest.Headers.GetValues("Raven-Transaction-Information").FirstOrDefault();
+            if (string.IsNullOrEmpty(txInfo))
+                return null;
+            var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+                throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
+            
+            return new TransactionInformation
+            {
+                Id = parts[0],
+                Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
+            };
+        }
 
-		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
-		{
-			var query = new IndexQuery
-			{
-				Query = GetQueryStringValue("query") ?? queryFromPostRequest ?? "",
-				Start = GetStart(),
-				Cutoff = GetCutOff(),
+        protected virtual IndexQuery GetIndexQuery(int maxPageSize)
+        {
+            var query = new IndexQuery
+            {
+                Query = GetQueryStringValue("query") ?? queryFromPostRequest ?? "",
+                Start = GetStart(),
+                Cutoff = GetCutOff(),
                 WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
-				CutoffEtag = GetCutOffEtag(),
-				PageSize = GetPageSize(maxPageSize),
-				FieldsToFetch = GetQueryStringValues("fetch"),
-				DefaultField = GetQueryStringValue("defaultField"),
+                CutoffEtag = GetCutOffEtag(),
+                PageSize = GetPageSize(maxPageSize),
+                FieldsToFetch = GetQueryStringValues("fetch"),
+                DefaultField = GetQueryStringValue("defaultField"),
 
-				DefaultOperator =
-					string.Equals(GetQueryStringValue("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
-						QueryOperator.And :
-						QueryOperator.Or,
+                DefaultOperator =
+                    string.Equals(GetQueryStringValue("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
+                        QueryOperator.And :
+                        QueryOperator.Or,
 
-				SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
-					.Select(x => new SortedField(x))
-					.ToArray(),
-				HighlightedFields = GetHighlightedFields().ToArray(),
-				HighlighterPreTags = GetQueryStringValues("preTags"),
-				HighlighterPostTags = GetQueryStringValues("postTags"),
-				HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
-				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
-				TransformerParameters = ExtractTransformerParameters(),
-				ExplainScores = GetExplainScores(),
-				SortHints = GetSortHints(),
-				IsDistinct = IsDistinct()
-			};
+                SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
+                    .Select(x => new SortedField(x))
+                    .ToArray(),
+                HighlightedFields = GetHighlightedFields().ToArray(),
+                HighlighterPreTags = GetQueryStringValues("preTags"),
+                HighlighterPostTags = GetQueryStringValues("postTags"),
+                HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
+                ResultsTransformer = GetQueryStringValue("resultsTransformer"),
+                TransformerParameters = ExtractTransformerParameters(),
+                ExplainScores = GetExplainScores(),
+                SortHints = GetSortHints(),
+                IsDistinct = IsDistinct()
+            };
 
-			var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
-			bool allowMultiple;
-			if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
-				query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
+            var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
+            bool allowMultiple;
+            if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
+                query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
 
             if (query.WaitForNonStaleResultsAsOfNow)
                 query.Cutoff = SystemTime.UtcNow;
 
-			var showTimingsAsString = GetQueryStringValue("showTimings");
-			bool showTimings;
-			if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
-				query.ShowTimings = true;
+            var showTimingsAsString = GetQueryStringValue("showTimings");
+            bool showTimings;
+            if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
+                query.ShowTimings = true;
 
-			var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
-			var queryShape = GetQueryStringValue("queryShape");
-			SpatialUnits units;
-			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
-			double distanceErrorPct;
-			if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
-				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
-			SpatialRelation spatialRelation;
-			
-			if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
-			{
-				return new SpatialIndexQuery(query)
-				{
-					SpatialFieldName = spatialFieldName,
-					QueryShape = queryShape,
-					RadiusUnitOverride = unitsSpecified ? units : (SpatialUnits?)null,
-					SpatialRelation = spatialRelation,
-					DistanceErrorPercentage = distanceErrorPct,
-				};
-			}
+            var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
+            var queryShape = GetQueryStringValue("queryShape");
+            SpatialUnits units;
+            var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
+            double distanceErrorPct;
+            if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
+                distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
+            SpatialRelation spatialRelation;
+            
+            if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
+            {
+                return new SpatialIndexQuery(query)
+                {
+                    SpatialFieldName = spatialFieldName,
+                    QueryShape = queryShape,
+                    RadiusUnitOverride = unitsSpecified ? units : (SpatialUnits?)null,
+                    SpatialRelation = spatialRelation,
+                    DistanceErrorPercentage = distanceErrorPct,
+                };
+            }
 
-			return query;
-		}
+            return query;
+        }
 
-		private bool IsDistinct()
-		{
-			var distinct = GetQueryStringValue("distinct");
-			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
-				return true;
-			var aggAsString = GetQueryStringValue("aggregation"); // 2.x legacy support
-			if (aggAsString == null)
-				return false;
+        private bool IsDistinct()
+        {
+            var distinct = GetQueryStringValue("distinct");
+            if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+                return true;
+            var aggAsString = GetQueryStringValue("aggregation"); // 2.x legacy support
+            if (aggAsString == null)
+                return false;
 
-			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
-				return true;
+            if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+                return true;
 
-			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
-				return false;
+            if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
-		}
+            throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
+        }
 
-		private Dictionary<string, SortOptions> GetSortHints()
-		{
-			var result = new Dictionary<string, SortOptions>();
+        private Dictionary<string, SortOptions> GetSortHints()
+        {
+            var result = new Dictionary<string, SortOptions>();
 
-			// backward compatibility
-			foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
-			{
-				SortOptions sort;
-				Enum.TryParse(GetHeader(header.Key), true, out sort);
-				result[Uri.UnescapeDataString(header.Key)] = sort;
-			}
+            // backward compatibility
+            foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
+            {
+                SortOptions sort;
+                Enum.TryParse(GetHeader(header.Key), true, out sort);
+                result[Uri.UnescapeDataString(header.Key)] = sort;
+            }
 
-			foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
-			{
-				var key = pair.Key;
-				var value = pair.Value != null ? Uri.UnescapeDataString(pair.Value) : null;
+            foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
+            {
+                var key = pair.Key;
+                var value = pair.Value != null ? Uri.UnescapeDataString(pair.Value) : null;
 
-				SortOptions sort;
-				Enum.TryParse(value, true, out sort);
-				result[Uri.UnescapeDataString(key)] = sort;
-			}
+                SortOptions sort;
+                Enum.TryParse(value, true, out sort);
+                result[Uri.UnescapeDataString(key)] = sort;
+            }
 
-			return result;
-		}
+            return result;
+        }
 
-		public Etag GetCutOffEtag()
-		{
-			var etagAsString = GetQueryStringValue("cutOffEtag");
-			if (etagAsString != null)
-			{
-				etagAsString = Uri.UnescapeDataString(etagAsString);
+        public Etag GetCutOffEtag()
+        {
+            var etagAsString = GetQueryStringValue("cutOffEtag");
+            if (etagAsString != null)
+            {
+                etagAsString = Uri.UnescapeDataString(etagAsString);
 
-				return Etag.Parse(etagAsString);
-			}
+                return Etag.Parse(etagAsString);
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		private bool GetExplainScores()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("explainScores"), out result);
-			return result;
-		}
+        private bool GetExplainScores()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("explainScores"), out result);
+            return result;
+        }
 
         private bool GetWaitForNonStaleResultsAsOfNow()
         {
@@ -407,90 +407,90 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
-		public DateTime? GetCutOff()
-		{
-			var etagAsString = GetQueryStringValue("cutOff");
-			if (etagAsString != null)
-			{
-				etagAsString = Uri.UnescapeDataString(etagAsString);
+        public DateTime? GetCutOff()
+        {
+            var etagAsString = GetQueryStringValue("cutOff");
+            if (etagAsString != null)
+            {
+                etagAsString = Uri.UnescapeDataString(etagAsString);
 
-				DateTime result;
-				if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-					return result;
-				throw new BadRequestException("Could not parse cut off query parameter as date");
-			}
+                DateTime result;
+                if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+                    return result;
+                throw new BadRequestException("Could not parse cut off query parameter as date");
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public IEnumerable<HighlightedField> GetHighlightedFields()
-		{
-			var highlightedFieldStrings = EnumerableExtension.EmptyIfNull(GetQueryStringValues("highlight"));
-			var fields = new HashSet<string>();
+        public IEnumerable<HighlightedField> GetHighlightedFields()
+        {
+            var highlightedFieldStrings = EnumerableExtension.EmptyIfNull(GetQueryStringValues("highlight"));
+            var fields = new HashSet<string>();
 
-			foreach (var highlightedFieldString in highlightedFieldStrings)
-			{
-				HighlightedField highlightedField;
-				if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
-				{
-					if (!fields.Add(highlightedField.Field))
-						throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
+            foreach (var highlightedFieldString in highlightedFieldStrings)
+            {
+                HighlightedField highlightedField;
+                if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
+                {
+                    if (!fields.Add(highlightedField.Field))
+                        throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
 
-					yield return highlightedField;
-				}
-				else 
-					throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
-			}
-		}
+                    yield return highlightedField;
+                }
+                else 
+                    throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
+            }
+        }
 
-		public Dictionary<string, RavenJToken> ExtractTransformerParameters()
-		{
-			var result = new Dictionary<string, RavenJToken>();
-			foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
-			{
-				if (string.IsNullOrEmpty(key)) continue;
-				if (key.StartsWith("qp-") || key.StartsWith("tp-"))
-				{
-					var realkey = key.Substring(3);
-					result[realkey] = GetQueryStringValue(key);
-				}
-			}
+        public Dictionary<string, RavenJToken> ExtractTransformerParameters()
+        {
+            var result = new Dictionary<string, RavenJToken>();
+            foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.StartsWith("qp-") || key.StartsWith("tp-"))
+                {
+                    var realkey = key.Substring(3);
+                    result[realkey] = GetQueryStringValue(key);
+                }
+            }
 
-			return result;
-		}
+            return result;
+        }
 
-		protected bool GetOverwriteExisting()
-		{
-			bool result;
-			if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
+        protected bool GetOverwriteExisting()
+        {
+            bool result;
+            if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
             {
                 // Check legacy key.
                 bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
             }
 
-			return result;
-		}
+            return result;
+        }
 
-		protected bool GetCheckReferencesInIndexes()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("checkReferencesInIndexes"), out result);
-			return result;
-		}
+        protected bool GetCheckReferencesInIndexes()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("checkReferencesInIndexes"), out result);
+            return result;
+        }
 
-		protected bool GetAllowStale()
-		{
-			bool stale;
-			bool.TryParse(GetQueryStringValue("allowStale"), out stale);
-			return stale;
-		}
+        protected bool GetAllowStale()
+        {
+            bool stale;
+            bool.TryParse(GetQueryStringValue("allowStale"), out stale);
+            return stale;
+        }
 
-		protected bool GetSkipOverwriteIfUnchanged()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
-			return result;
-		}
+        protected bool GetSkipOverwriteIfUnchanged()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
+            return result;
+        }
 
         protected int? GetMaxOpsPerSec()
         {
@@ -510,15 +510,15 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
-		protected bool GetRetrieveDetails()
-		{
-			bool details;
-			bool.TryParse(GetQueryStringValue("details"), out details);
-			return details;
-		}
+        protected bool GetRetrieveDetails()
+        {
+            bool details;
+            bool.TryParse(GetQueryStringValue("details"), out details);
+            return details;
+        }
 
-		protected void HandleReplication(HttpResponseMessage msg)
-		{
+        protected void HandleReplication(HttpResponseMessage msg)
+        {
 
             if (msg.StatusCode == HttpStatusCode.BadRequest ||
                 msg.StatusCode == HttpStatusCode.ServiceUnavailable ||
@@ -526,30 +526,30 @@ namespace Raven.Database.Server.Controllers
                 )
                 return;
 
-			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
-			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
-			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
-			{
-				return;
-			}
+            var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
+            var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
+            if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
+            {
+                return;
+            }
 
-			DateTime primaryServerLastCheck;
-			if (DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
-			{
-				return;
-			}
+            DateTime primaryServerLastCheck;
+            if (DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
+            {
+                return;
+            }
 
-			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-			if (replicationTask == null)
-			{
-				return;
-			}
+            var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+            if (replicationTask == null)
+            {
+                return;
+            }
 
-			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
-			{
-				msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
-			}
-		}
+            if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+            {
+                msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
+            }
+        }
 
 
         public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
@@ -590,30 +590,30 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
-					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
-					{
-						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
-						{
-							var msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
-							Logger.Warn(msg);
-							throw new TimeoutException(msg);
-						}
+                    int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
+                    if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
+                    {
+                        if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
+                        {
+                            var msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+                            Logger.Warn(msg);
+                            throw new TimeoutException(msg);
+                        }
 
-						try
-						{
-							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
-							{
-								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
-								Logger.Warn(msg);
-								throw new TimeoutException(msg);
-							}
-						}
-						finally
-						{
-							MaxNumberOfThreadsForDatabaseToLoad.Release();
-						}
-					}
+                        try
+                        {
+                            if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
+                            {
+                                var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
+                                Logger.Warn(msg);
+                                throw new TimeoutException(msg);
+                            }
+                        }
+                        finally
+                        {
+                            MaxNumberOfThreadsForDatabaseToLoad.Release();
+                        }
+                    }
 
                     args = new RequestWebApiEventArgs()
                     {
@@ -628,7 +628,7 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-	                var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
+                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg,e);
@@ -645,155 +645,155 @@ namespace Raven.Database.Server.Controllers
             return true;
         }
 
-	    public override string TenantName
-	    {
+        public override string TenantName
+        {
             get { return DatabaseName; }
-	    }
+        }
 
-	    public override void MarkRequestDuration(long duration)
-	    {
-	        if (Database == null)
-	            return;
-	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
-	    }
+        public override void MarkRequestDuration(long duration)
+        {
+            if (Database == null)
+                return;
+            Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
+        }
 
-	    public bool ClientIsV3OrHigher
-	    {
-	        get
-	        {
-	            IEnumerable<string> values;
-	            if (Request.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+        public bool ClientIsV3OrHigher
+        {
+            get
+            {
+                IEnumerable<string> values;
+                if (Request.Headers.TryGetValues("Raven-Client-Version", out values) == false)
                     return false; // probably 1.0 client?
 
-	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
-	        }
-	    }
+                return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
+            }
+        }
 
-		protected Etag GetLastDocEtag()
-		{
-			var lastDocEtag = Etag.Empty;
-			long documentsCount = 0;
-			Database.TransactionalStorage.Batch(
-				accessor =>
-				{
-					lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-					documentsCount = accessor.Documents.GetDocumentsCount();
-				});
+        protected Etag GetLastDocEtag()
+        {
+            var lastDocEtag = Etag.Empty;
+            long documentsCount = 0;
+            Database.TransactionalStorage.Batch(
+                accessor =>
+                {
+                    lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+                    documentsCount = accessor.Documents.GetDocumentsCount();
+                });
 
-			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
-			return lastDocEtag;
-		}
+            lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+            return lastDocEtag;
+        }
 
-		protected class TenantData
-		{
-			public string Name { get; set; }
-			public bool Disabled { get; set; }
-			public string[] Bundles { get; set; }
-			public bool IsAdminCurrentTenant { get; set; }
-		}
+        protected class TenantData
+        {
+            public string Name { get; set; }
+            public bool Disabled { get; set; }
+            public string[] Bundles { get; set; }
+            public bool IsAdminCurrentTenant { get; set; }
+        }
 
-		protected UserInfo GetUserInfo()
-		{
-			var principal = User;
-			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
-			{
-				var anonymous = new UserInfo
-				{
-					Remark = "Using anonymous user",
-					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
-				};
-				return anonymous;
-			}
+        protected UserInfo GetUserInfo()
+        {
+            var principal = User;
+            if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
+            {
+                var anonymous = new UserInfo
+                {
+                    Remark = "Using anonymous user",
+                    IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+                };
+                return anonymous;
+            }
 
-			var windowsPrincipal = principal as WindowsPrincipal;
-			if (windowsPrincipal != null)
-			{
-				var windowsUser = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
-									windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
-				};
+            var windowsPrincipal = principal as WindowsPrincipal;
+            if (windowsPrincipal != null)
+            {
+                var windowsUser = new UserInfo
+                {
+                    Remark = "Using windows auth",
+                    User = windowsPrincipal.Identity.Name,
+                    IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+                                    windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+                };
 
-				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
+                windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
 
-				return windowsUser;
-			}
+                return windowsUser;
+            }
 
-			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
-			if (principalWithDatabaseAccess != null)
-			{
-				var windowsUserWithDatabase = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
-						principalWithDatabaseAccess.IsAdministrator(
-							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
-					Databases =
-						principalWithDatabaseAccess.AdminDatabases.Concat(
-							principalWithDatabaseAccess.ReadOnlyDatabases)
-												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
-												   .Select(db => new DatabaseInfo
-												   {
-													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
-												   }).ToList(),
-					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
-					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
-					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
-				};
+            var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
+            if (principalWithDatabaseAccess != null)
+            {
+                var windowsUserWithDatabase = new UserInfo
+                {
+                    Remark = "Using windows auth",
+                    User = principalWithDatabaseAccess.Identity.Name,
+                    IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
+                        principalWithDatabaseAccess.IsAdministrator(
+                            DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+                    Databases =
+                        principalWithDatabaseAccess.AdminDatabases.Concat(
+                            principalWithDatabaseAccess.ReadOnlyDatabases)
+                                                   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
+                                                   .Select(db => new DatabaseInfo
+                                                   {
+                                                       Database = db,
+                                                       IsAdmin = principal.IsAdministrator(db)
+                                                   }).ToList(),
+                    AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
+                    ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
+                    ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
+                };
 
-				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+                windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
 
-				return windowsUserWithDatabase;
-			}
+                return windowsUserWithDatabase;
+            }
 
-			var oAuthPrincipal = principal as OAuthPrincipal;
-			if (oAuthPrincipal != null)
-			{
-				var oAuth = new UserInfo
-				{
-					Remark = "Using OAuth",
-					User = oAuthPrincipal.Name,
-					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
-					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
-											  .Select(db => new DatabaseInfo
-											  {
-												  Database = db.TenantId,
-												  IsAdmin = principal.IsAdministrator(db.TenantId)
-											  }).ToList(),
-					AccessTokenBody = oAuthPrincipal.TokenBody,
-				};
+            var oAuthPrincipal = principal as OAuthPrincipal;
+            if (oAuthPrincipal != null)
+            {
+                var oAuth = new UserInfo
+                {
+                    Remark = "Using OAuth",
+                    User = oAuthPrincipal.Name,
+                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+                    Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
+                                              .Select(db => new DatabaseInfo
+                                              {
+                                                  Database = db.TenantId,
+                                                  IsAdmin = principal.IsAdministrator(db.TenantId)
+                                              }).ToList(),
+                    AccessTokenBody = oAuthPrincipal.TokenBody,
+                };
 
-				return oAuth;
-			}
+                return oAuth;
+            }
 
-			var unknown = new UserInfo
-			{
-				Remark = "Unknown auth",
-				Principal = principal
-			};
+            var unknown = new UserInfo
+            {
+                Remark = "Unknown auth",
+                Principal = principal
+            };
 
-			return unknown;
-		}
+            return unknown;
+        }
 
-		protected bool CanExposeConfigOverTheWire()
-		{
-			if (string.Equals(SystemConfiguration.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-			{
-				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-				var user = authorizer.GetUser(this);
-				if (user == null || user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
-				{
-					return false;
-				}
-			}
+        protected bool CanExposeConfigOverTheWire()
+        {
+            if (string.Equals(SystemConfiguration.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+            {
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                var user = authorizer.GetUser(this);
+                if (user == null || user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+                {
+                    return false;
+                }
+            }
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -86,7 +86,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         }
 #endif
 
-		public static MethodInfo Method(this Delegate d)
+        public static MethodInfo Method(this Delegate d)
         {
 #if !(NETFX_CORE || PORTABLE)
             return d.Method;

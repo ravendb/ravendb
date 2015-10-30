@@ -51,9 +51,9 @@ class database extends resource {
         return "true";
     }
 
-	activate() {
+    activate() {
         ko.postbox.publish("ActivateDatabase", this);
-	}
+    }
 
     static getNameFromUrl(url: string) {
         var index = url.indexOf("databases/");

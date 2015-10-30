@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexMergeSuggestionsCommand = require("commands/getIndexMergeSuggestionsCommand");
 import database = require("models/database");
 import appUrl = require("common/appUrl");

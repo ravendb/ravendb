@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IdGenerator.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,7 +13,7 @@ using Voron.Impl;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
-	internal class IdGenerator
+    internal class IdGenerator
     {
         private readonly ConcurrentDictionary<string, int> tableIds;
 

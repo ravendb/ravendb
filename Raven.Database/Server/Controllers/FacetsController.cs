@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -34,24 +34,24 @@ namespace Raven.Database.Server.Controllers
                 var facetsJson = GetQueryStringValue("facets");
                 if (string.IsNullOrEmpty(facetsJson) == false)
                 {
-					additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+                    additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
 
-					var msg = TryGetFacetsFromString(facetsJson, out facets);
-					if (msg != null)
-						return msg;
+                    var msg = TryGetFacetsFromString(facetsJson, out facets);
+                    if (msg != null)
+                        return msg;
                 }
             }
             else
             {
                 var jsonDocument = Database.Documents.Get(facetSetupDoc, null);
-	            if (jsonDocument == null)
-		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
+                if (jsonDocument == null)
+                    return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
 
-	            additionalEtagBytes = jsonDocument.Etag.ToByteArray();
+                additionalEtagBytes = jsonDocument.Etag.ToByteArray();
                 facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
             }
 
-			var etag = GetFacetsEtag(id, additionalEtagBytes);
+            var etag = GetFacetsEtag(id, additionalEtagBytes);
             if (MatchEtag(etag))
             {
                 return GetEmptyMessage(HttpStatusCode.NotModified);
@@ -74,11 +74,11 @@ namespace Raven.Database.Server.Controllers
             if (msg != null)
                 return msg;
 
-	        var etag = GetFacetsEtag(id, Encoding.UTF8.GetBytes(facetsJson));
-			if (MatchEtag(etag))
-			{
-				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
+            var etag = GetFacetsEtag(id, Encoding.UTF8.GetBytes(facetsJson));
+            if (MatchEtag(etag))
+            {
+                return GetEmptyMessage(HttpStatusCode.NotModified);
+            }
 
             return await ExecuteFacetsQuery(id, facets, etag);
         }
@@ -100,8 +100,8 @@ namespace Raven.Database.Server.Controllers
 
                         var curFacetEtag = GetFacetsEtag(facetedQuery.IndexName, Encoding.UTF8.GetBytes(facetedQuery.Query.Query + string.Concat(facetedQuery.Facets.Select(x => x.Name).ToArray())));
 
-						if (Database.IndexDefinitionStorage.Contains(facetedQuery.IndexName) == false)
-							throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", facetedQuery.IndexName));
+                        if (Database.IndexDefinitionStorage.Contains(facetedQuery.IndexName) == false)
+                            throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", facetedQuery.IndexName));
 
                         if (facetedQuery.FacetSetupDoc != null)
                             facetResults =  Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
@@ -123,10 +123,10 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(results, HttpStatusCode.OK);
         }
 
-		private Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
+        private Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
         {
-			if (Database.IndexDefinitionStorage.Contains(index) == false)
-				return GetMessageWithStringAsTask(string.Format("Index '{0}' does not exist.", index), HttpStatusCode.BadRequest);
+            if (Database.IndexDefinitionStorage.Contains(index) == false)
+                return GetMessageWithStringAsTask(string.Format("Index '{0}' does not exist.", index), HttpStatusCode.BadRequest);
 
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();

@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace Voron.Impl.FileHeaders
 {
@@ -21,7 +21,7 @@ namespace Voron.Impl.FileHeaders
         public int Depth;
         [FieldOffset(60)]
         public TreeFlags Flags;
-		[FieldOffset(61)]
-		public bool KeysPrefixing;
+        [FieldOffset(61)]
+        public bool KeysPrefixing;
     }
 }

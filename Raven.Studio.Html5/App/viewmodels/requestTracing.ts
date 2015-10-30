@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getRequestTracingCommand = require("commands/getRequestTracingCommand");
 import database = require("models/database");

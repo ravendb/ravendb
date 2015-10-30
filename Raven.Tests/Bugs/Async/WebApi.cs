@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs.Async
         [IISExpressInstalledFact]
         public void InsertAndReadFromDB()
         {
-	        using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
                 DoInsert(store, 1);
 
@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs.Async
             }
         }
 
-	    [IISExpressInstalledFact]
+        [IISExpressInstalledFact]
         public void LoadDbInfo()
         {
             using (var _store = NewDocumentStore())

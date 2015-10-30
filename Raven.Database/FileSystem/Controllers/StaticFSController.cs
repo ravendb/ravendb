@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,20 +11,20 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public class StaticFSController : RavenFsApiController
-	{
-		[HttpGet]
+    public class StaticFSController : RavenFsApiController
+    {
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/static/FavIcon")]		
-		public HttpResponseMessage FavIcon()
-		{
-			return new HttpResponseMessage(HttpStatusCode.NotFound);
-		}
+        public HttpResponseMessage FavIcon()
+        {
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
 
-		[HttpGet]
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/static/id")]
-		public HttpResponseMessage Id()
-		{
-			return Request.CreateResponse(HttpStatusCode.OK, FileSystem.Storage.Id);
-		}
-	}
+        public HttpResponseMessage Id()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, FileSystem.Storage.Id);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1305.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -61,15 +61,15 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewRemoteDocumentStore(requestedStorage: requestedStorage))
             {
-	            store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
+                store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
 
-	            Assert.Throws<ConcurrencyException>(() =>
-	            {
-		            using (var bulk = store.BulkInsert())
-		            {
-			            bulk.Store(new {}, "foos/1");
-		            }
-	            });
+                Assert.Throws<ConcurrencyException>(() =>
+                {
+                    using (var bulk = store.BulkInsert())
+                    {
+                        bulk.Store(new {}, "foos/1");
+                    }
+                });
             }
         }
 
@@ -77,18 +77,18 @@ namespace Raven.Tests.Issues
         [PropertyData("Storages")]
         public void BulkInsertOperationShouldThrowConcurrencyExceptionOnDuplicateKeys(string requestedStorage)
         {
-	        using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-	        {
-		        store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
+            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+            {
+                store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
 
-		        Assert.Throws<ConcurrencyException>(() =>
-		        {
-			        using (var bulk = store.BulkInsert())
-			        {
-				        bulk.Store(new {}, "foos/1");
-			        }
-		        });
-	        }
+                Assert.Throws<ConcurrencyException>(() =>
+                {
+                    using (var bulk = store.BulkInsert())
+                    {
+                        bulk.Store(new {}, "foos/1");
+                    }
+                });
+            }
         }
     }
 }

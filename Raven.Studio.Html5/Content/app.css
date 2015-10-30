@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6859,12 +6859,12 @@ body {
 }
 /*
 .ace_editor {
-		border: 1px solid lightgray;
-		margin: auto;
-		height: 200px;
-		width: 80%;
-		position: relative !important
-	}*/
+        border: 1px solid lightgray;
+        margin: auto;
+        height: 200px;
+        width: 80%;
+        position: relative !important
+    }*/
 .fullScreen .fullScreen-editor {
   height: auto !important;
   width: auto !important;
@@ -8487,4 +8487,8 @@ a.global_help_link:focus {
 }
 #matchingDocumentsGrid {
   margin-bottom: -30px;
+}
+.alert-danger a {
+  color: white;
+  text-decoration: underline;
 }

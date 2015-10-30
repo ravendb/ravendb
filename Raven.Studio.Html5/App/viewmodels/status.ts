@@ -16,7 +16,7 @@ class status extends viewModelBase {
     private bundleMap = { replication: "Replication Stats", sqlreplication: "SQL Replication Stats" };
     userDatabasePages = ko.observableArray(status.initialVisibleViews.slice());
 
-	constructor() {
+    constructor() {
         super();
             
         this.appUrls = appUrl.forCurrentDatabase();
@@ -37,7 +37,7 @@ class status extends viewModelBase {
                 { route: 'databases/status/debug*details', moduleId: 'viewmodels/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
                 { route: 'databases/status/storage*details', moduleId: 'viewmodels/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
                 { route: 'databases/status/infoPackage', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
-			])
+            ])
             .buildNavigationModel();
 
         status.statusRouter = this.router;

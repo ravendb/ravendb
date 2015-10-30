@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
@@ -78,7 +78,7 @@ class studioConfig extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         var self = this;
         $(window).bind('storage', (e: any) => {
             if (e.originalEvent.key === serverBuildReminder.localStorageName) {

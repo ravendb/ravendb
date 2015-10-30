@@ -1,4 +1,4 @@
-﻿using Raven.Tests.Bundles.Authorization;
+using Raven.Tests.Bundles.Authorization;
 
 namespace Raven.Bundles.Tests.Authorization.Bugs
 {

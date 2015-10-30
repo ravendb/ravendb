@@ -5,17 +5,17 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ResettingIndex : RavenTest
-	{
-		[Fact]
-		public void CanResetIndex()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
-				ravenDocumentsByEntityName.Execute(store);
-				store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
-			}
-		}
-	}
+    public class ResettingIndex : RavenTest
+    {
+        [Fact]
+        public void CanResetIndex()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
+                ravenDocumentsByEntityName.Execute(store);
+                store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
+            }
+        }
+    }
 }

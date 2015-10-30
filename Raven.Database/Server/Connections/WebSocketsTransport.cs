@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -66,50 +66,50 @@ namespace Raven.Database.Server.Connections
             public static readonly DisconnectWebSockets Instance = new DisconnectWebSockets();
             
 
-	        public void HandleLowMemory()
-	        {
-				SoftMemoryRelease();
-	        }
+            public void HandleLowMemory()
+            {
+                SoftMemoryRelease();
+            }
 
-	        public void SoftMemoryRelease()
-	        {
-				var cancellationTokenSource = ravenGcCancellation;
-				ravenGcCancellation = new CancellationTokenSource();
-				cancellationTokenSource.Cancel();
-	        }
+            public void SoftMemoryRelease()
+            {
+                var cancellationTokenSource = ravenGcCancellation;
+                ravenGcCancellation = new CancellationTokenSource();
+                cancellationTokenSource.Cancel();
+            }
 
-	        public LowMemoryHandlerStatistics GetStats()
-	        {
-		        return new LowMemoryHandlerStatistics
-		        {
-			        EstimatedUsedMemory = 0,
-					Name = "DisconnectWebSockets",
-					Metadata = new 
-					{
-						WebsocketTransportsCount = webSocektTransportsCount
-					}
-		        };
-	        }
+            public LowMemoryHandlerStatistics GetStats()
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    EstimatedUsedMemory = 0,
+                    Name = "DisconnectWebSockets",
+                    Metadata = new 
+                    {
+                        WebsocketTransportsCount = webSocektTransportsCount
+                    }
+                };
+            }
         };
 
         static WebSocketTransportFactory()
         {
-			MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
+            MemoryStatistics.RegisterLowMemoryHandler(DisconnectWebSockets.Instance);
         }
 
-		private static int webSocektTransportsCount = 0;
+        private static int webSocektTransportsCount = 0;
 
-	    public static void DecrementWebSocketTransportsCount()
-	    {
-		    Interlocked.Decrement(ref webSocektTransportsCount);
-	    }
+        public static void DecrementWebSocketTransportsCount()
+        {
+            Interlocked.Decrement(ref webSocektTransportsCount);
+        }
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
             try
             {
                 if (RavenGC.GcCollectLock.TryEnterReadLock(5000) == false)
                     throw new TimeoutException("Could not create a new web socket connection. Probably because GC is currently in progress, try again later.");
-				Interlocked.Increment(ref webSocektTransportsCount);
+                Interlocked.Increment(ref webSocektTransportsCount);
                 var localPath = context.Request.Path.Value;
                 if (localPath.EndsWith(ChangesApiWebsocketSuffix))
                 {
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Connections
                 {
                     return new WebSocketsValidateTransport(options, context, ravenGcCancellation.Token);
                 }
-				Interlocked.Decrement(ref webSocektTransportsCount);
+                Interlocked.Decrement(ref webSocektTransportsCount);
                 return null;
             }
             finally
@@ -273,7 +273,7 @@ namespace Raven.Database.Server.Connections
             cancellationTokenSource.Cancel();
         }
 
-	    private readonly DateTime _started = SystemTime.UtcNow;
+        private readonly DateTime _started = SystemTime.UtcNow;
         private CancellationTokenSource cancellationTokenSource;
         public TimeSpan Age
         {
@@ -293,63 +293,63 @@ namespace Raven.Database.Server.Connections
 
         public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
-	        try
-	        {
-		        var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
-	            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
+            try
+            {
+                var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
+                cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
 
-		        var memoryStream = new MemoryStream();
-		        var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                var memoryStream = new MemoryStream();
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
-		        CreateWaitForClientCloseTask(websocketContext);
+                CreateWaitForClientCloseTask(websocketContext);
 
                 while (cancellationTokenSource.IsCancellationRequested == false)
-		        {
+                {
                     var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
                     if (cancellationTokenSource.IsCancellationRequested)
-				        break;
+                        break;
 
-			        if (result == false)
-			        {
-				        await SendMessage(memoryStream, serializer,
-					        new {Type = "Heartbeat", Time = SystemTime.UtcNow},
+                    if (result == false)
+                    {
+                        await SendMessage(memoryStream, serializer,
+                            new {Type = "Heartbeat", Time = SystemTime.UtcNow},
                             sendAsync, cancellationTokenSource.Token);
 
-				        if (lastMessageEnqueuedAndNotSent != null)
-				        {
-					        await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
-					        lastMessageEnqueuedAndNotSent = null;
-					        lastMessageSentTick = Environment.TickCount;
-				        }
-				        continue;
-			        }
+                        if (lastMessageEnqueuedAndNotSent != null)
+                        {
+                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
+                            lastMessageEnqueuedAndNotSent = null;
+                            lastMessageSentTick = Environment.TickCount;
+                        }
+                        continue;
+                    }
 
-			        manualResetEvent.Reset();
+                    manualResetEvent.Reset();
 
-			        object message;
-			        while (msgs.TryDequeue(out message))
-			        {
+                    object message;
+                    while (msgs.TryDequeue(out message))
+                    {
                         if (cancellationTokenSource.IsCancellationRequested)
-					        break;
+                            break;
 
-				        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-				        {
-					        lastMessageEnqueuedAndNotSent = message;
-					        continue;
-				        }
+                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
+                        {
+                            lastMessageEnqueuedAndNotSent = message;
+                            continue;
+                        }
 
                         await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token);
-				        lastMessageEnqueuedAndNotSent = null;
-				        lastMessageSentTick = Environment.TickCount;
-			        }
-		        }
-	        }
-	        catch (Exception e)
-	        {
-		        Log.Info("Error when handling web socket connection", e);
-		        if (cancellationTokenSource != null)
-			        cancellationTokenSource.Cancel();
-	        }
+                        lastMessageEnqueuedAndNotSent = null;
+                        lastMessageSentTick = Environment.TickCount;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("Error when handling web socket connection", e);
+                if (cancellationTokenSource != null)
+                    cancellationTokenSource.Cancel();
+            }
             finally
             {
                 OnDisconnection();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,37 +8,37 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Abstractions.Json
 {
-	public class RavenJsonTextReader : JsonTextReader
-	{
-		public RavenJsonTextReader(TextReader reader)
-			: base(reader)
-		{
-			DateParseHandling = DateParseHandling.None;
-		}
-
-	    public RavenJsonTextReader(char[] externalBuffer) : base(externalBuffer)
-	    {
+    public class RavenJsonTextReader : JsonTextReader
+    {
+        public RavenJsonTextReader(TextReader reader)
+            : base(reader)
+        {
             DateParseHandling = DateParseHandling.None;
         }
 
-		public static DateTime ParseDateMicrosoft(string text)
-		{
-			string value = text.Substring(6, text.Length - 8);
+        public RavenJsonTextReader(char[] externalBuffer) : base(externalBuffer)
+        {
+            DateParseHandling = DateParseHandling.None;
+        }
 
-			int index = value.IndexOf('+', 1);
+        public static DateTime ParseDateMicrosoft(string text)
+        {
+            string value = text.Substring(6, text.Length - 8);
 
-			if (index == -1)
-				index = value.IndexOf('-', 1);
+            int index = value.IndexOf('+', 1);
 
-			if (index != -1)
-			{
-				value = value.Substring(0, index);
-			}
+            if (index == -1)
+                index = value.IndexOf('-', 1);
 
-			long javaScriptTicks = long.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+            if (index != -1)
+            {
+                value = value.Substring(0, index);
+            }
 
-			DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
-			return utcDateTime;
-		}
-	}
+            long javaScriptTicks = long.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+
+            DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
+            return utcDateTime;
+        }
+    }
 }

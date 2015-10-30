@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 namespace Raven.Database.Indexing.Collation.Cultures
 {
-	
-	public class IiCollationAnalyzer : AbstractCultureCollationAnalyzer
-	{
-	}
+    
+    public class IiCollationAnalyzer : AbstractCultureCollationAnalyzer
+    {
+    }
 }

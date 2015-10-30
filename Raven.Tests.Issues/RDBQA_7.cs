@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RDBQA_7.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -35,19 +35,19 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options = new SmugglerDatabaseOptions
-		        {
-			        Filters =
-				        new EquatableList<FilterSetting>
-				        {
-					        new FilterSetting
-					        {
-						        Path = "Value",
-						        ShouldMatch = false,
-						        Values = new EquatableList<string> {"Value1"}
-					        }
-				        }
-		        };
+            var options = new SmugglerDatabaseOptions
+                {
+                    Filters =
+                        new EquatableList<FilterSetting>
+                        {
+                            new FilterSetting
+                            {
+                                Path = "Value",
+                                ShouldMatch = false,
+                                Values = new EquatableList<string> {"Value1"}
+                            }
+                        }
+                };
 
             try
             {
@@ -89,19 +89,19 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options = new SmugglerDatabaseOptions
-		        {
-			        Filters =
-				        new EquatableList<FilterSetting>
-				        {
-					        new FilterSetting
-					        {
-						        Path = "@metadata.Raven-Entity-Name",
-						        ShouldMatch = false,
-						        Values = new EquatableList<string> {"Products"}
-					        }
-				        }
-		        };
+            var options = new SmugglerDatabaseOptions
+                {
+                    Filters =
+                        new EquatableList<FilterSetting>
+                        {
+                            new FilterSetting
+                            {
+                                Path = "@metadata.Raven-Entity-Name",
+                                ShouldMatch = false,
+                                Values = new EquatableList<string> {"Products"}
+                            }
+                        }
+                };
 
             try
             {

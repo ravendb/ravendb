@@ -6,66 +6,66 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Server.Security
 {
-	public abstract class AbstractRequestAuthorizer : IDisposable
-	{
-		[CLSCompliant(false)]
-		protected InMemoryRavenConfiguration settings;
-		[CLSCompliant(false)]
-		protected DocumentDatabase database;
-		[CLSCompliant(false)]
-		protected IRavenServer server;
-		[CLSCompliant(false)]
-		protected Func<string> tenantId;
+    public abstract class AbstractRequestAuthorizer : IDisposable
+    {
+        [CLSCompliant(false)]
+        protected InMemoryRavenConfiguration settings;
+        [CLSCompliant(false)]
+        protected DocumentDatabase database;
+        [CLSCompliant(false)]
+        protected IRavenServer server;
+        [CLSCompliant(false)]
+        protected Func<string> tenantId;
 
-		public DocumentDatabase Database { get { return database; } }
-		public InMemoryRavenConfiguration Settings { get { return settings; } }
-		public string TenantId { get { return tenantId(); } }
+        public DocumentDatabase Database { get { return database; } }
+        public InMemoryRavenConfiguration Settings { get { return settings; } }
+        public string TenantId { get { return tenantId(); } }
 
-		public void Initialize(DocumentDatabase database, InMemoryRavenConfiguration settings, Func<string> tenantIdGetter, IRavenServer theServer)
-		{
-			server = theServer;
-			this.database = database;
-			this.settings = settings;
-			this.tenantId = tenantIdGetter;
+        public void Initialize(DocumentDatabase database, InMemoryRavenConfiguration settings, Func<string> tenantIdGetter, IRavenServer theServer)
+        {
+            server = theServer;
+            this.database = database;
+            this.settings = settings;
+            this.tenantId = tenantIdGetter;
 
-			Initialize();
-		}
+            Initialize();
+        }
 
-		public void Initialize(DocumentDatabase database, IRavenServer theServer)
-		{
-			this.database = database;
-			this.settings = database.Configuration;
-			this.server = theServer;
+        public void Initialize(DocumentDatabase database, IRavenServer theServer)
+        {
+            this.database = database;
+            this.settings = database.Configuration;
+            this.server = theServer;
 
-			Initialize();
-		}
+            Initialize();
+        }
 
-		protected virtual void Initialize()
-		{
-		}
+        protected virtual void Initialize()
+        {
+        }
 
-		public static bool IsGetRequest(RavenBaseApiController controller)
-		{
+        public static bool IsGetRequest(RavenBaseApiController controller)
+        {
             switch (controller.InnerRequest.Method.Method)
-		    {
+            {
                 case "GET":
                 case "HEAD":
-		            return true;
+                    return true;
                 case "POST":
-		            var absolutePath = controller.InnerRequest.RequestUri.AbsolutePath;
-				    return absolutePath.EndsWith("/queries", StringComparison.Ordinal) ||
+                    var absolutePath = controller.InnerRequest.RequestUri.AbsolutePath;
+                    return absolutePath.EndsWith("/queries", StringComparison.Ordinal) ||
                            absolutePath.EndsWith("/queries/", StringComparison.Ordinal) ||
                            absolutePath.EndsWith("/multi_get", StringComparison.Ordinal) ||
-				           absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal);
+                           absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal);
                 default:
-		            return false;
-		    }
-		}
+                    return false;
+            }
+        }
 
-		public abstract void Dispose();
+        public abstract void Dispose();
 
-	    public static bool IsGetRequest(HttpListenerRequest request)
-	    {
+        public static bool IsGetRequest(HttpListenerRequest request)
+        {
             switch (request.HttpMethod)
             {
                 case "GET":
@@ -78,6 +78,6 @@ namespace Raven.Database.Server.Security
                 default:
                     return false;
             }
-	    }
-	}
+        }
+    }
 }

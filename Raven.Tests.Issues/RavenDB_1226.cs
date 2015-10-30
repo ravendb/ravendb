@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -52,13 +52,13 @@ namespace Raven.Tests.Issues
             int[] streamDocsRequestCounter = {0};
             using (var ravenServer = GetNewServer())
             {
-				ravenServer.Server.RequestManager.BeforeRequest += (sender, args) =>
-				{
-					if (args.Controller.InnerRequest.RequestUri.PathAndQuery.Contains("/streams/docs?"))
-					{
-						Interlocked.Increment(ref streamDocsRequestCounter[0]);
-					}
-				};
+                ravenServer.Server.RequestManager.BeforeRequest += (sender, args) =>
+                {
+                    if (args.Controller.InnerRequest.RequestUri.PathAndQuery.Contains("/streams/docs?"))
+                    {
+                        Interlocked.Increment(ref streamDocsRequestCounter[0]);
+                    }
+                };
 
                 using (var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenServer))
                 {

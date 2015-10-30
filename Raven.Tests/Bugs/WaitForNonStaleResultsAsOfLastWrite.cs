@@ -7,101 +7,101 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class WaitForNonStaleResultsAsOfLastWrite : RavenTest
-	{
-		[Fact]
-		public void WillRecordLastWrittenEtag()
-		{
-			using (var store = NewDocumentStore())
-			{
-				Assert.Null(store.GetLastWrittenEtag());
+    public class WaitForNonStaleResultsAsOfLastWrite : RavenTest
+    {
+        [Fact]
+        public void WillRecordLastWrittenEtag()
+        {
+            using (var store = NewDocumentStore())
+            {
+                Assert.Null(store.GetLastWrittenEtag());
 
 
-				using(var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
-				}
+                using(var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
 
-				Assert.NotNull(store.GetLastWrittenEtag());
-			}
-		}
-
-
-		[Fact]
-		public void WillChangeEtagsAfterSecondWrite()
-		{
-			using (var store = NewDocumentStore())
-			{
-				Assert.Null(store.GetLastWrittenEtag());
+                Assert.NotNull(store.GetLastWrittenEtag());
+            }
+        }
 
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
-				}
-
-				var firstWrittenEtag = store.GetLastWrittenEtag();
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
-				}
-				Assert.NotEqual(firstWrittenEtag, store.GetLastWrittenEtag());
-			}
-		}
+        [Fact]
+        public void WillChangeEtagsAfterSecondWrite()
+        {
+            using (var store = NewDocumentStore())
+            {
+                Assert.Null(store.GetLastWrittenEtag());
 
 
-		[Fact]
-		public void CanExplicitlyAskForNonStaleAsOfLastWrite()
-		{
-			using(var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
 
-					var users = session.Query<object, RavenDocumentsByEntityName>()
-						.Customize(x=>x.WaitForNonStaleResultsAsOfLastWrite())
-						.ToList();
+                var firstWrittenEtag = store.GetLastWrittenEtag();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+                Assert.NotEqual(firstWrittenEtag, store.GetLastWrittenEtag());
+            }
+        }
 
-					Assert.NotEmpty(users);
-				}
 
-			}
-		}
+        [Fact]
+        public void CanExplicitlyAskForNonStaleAsOfLastWrite()
+        {
+            using(var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
 
-		[Fact]
-		public void WillIgnoreUnIndexedChangesLaterInTheGame()
-		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User());
-					session.SaveChanges();
+                    var users = session.Query<object, RavenDocumentsByEntityName>()
+                        .Customize(x=>x.WaitForNonStaleResultsAsOfLastWrite())
+                        .ToList();
 
-					// this is where we record the etag value
+                    Assert.NotEmpty(users);
+                }
+
+            }
+        }
+
+        [Fact]
+        public void WillIgnoreUnIndexedChangesLaterInTheGame()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+
+                    // this is where we record the etag value
                     var usersQuery = session.Advanced.DocumentQuery<object, RavenDocumentsByEntityName>()
-						.WaitForNonStaleResultsAsOfLastWrite();
+                        .WaitForNonStaleResultsAsOfLastWrite();
 
-					// wait for indexing to complete
-					while(store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
-						Thread.Sleep(100);
+                    // wait for indexing to complete
+                    while(store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
+                        Thread.Sleep(100);
 
-					store.SystemDatabase.StopBackgroundWorkers();
+                    store.SystemDatabase.StopBackgroundWorkers();
 
-					session.Store(new User());
-					session.SaveChanges();
+                    session.Store(new User());
+                    session.SaveChanges();
 
-					var objects = usersQuery.ToList();
+                    var objects = usersQuery.ToList();
 
-					Assert.Equal(1, objects.Count);
-				}
+                    Assert.Equal(1, objects.Count);
+                }
 
-			}
-		}
-	}
+            }
+        }
+    }
 }

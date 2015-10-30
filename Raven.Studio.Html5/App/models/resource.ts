@@ -1,4 +1,4 @@
-﻿class resource {
+class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
     isSystem = false;
     isSelected = ko.observable<boolean>(false);

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ClientWithoutAuthenticationSetup.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -31,92 +31,92 @@ namespace Raven.Tests.FileSystem.Auth
                 });
 
                 await client.UploadAsync("a", new MemoryStream(new byte[] { 1, 2 }));
-				await client.UploadAsync("b", new MemoryStream(new byte[] { 2, 1, 0 }));
+                await client.UploadAsync("b", new MemoryStream(new byte[] { 2, 1, 0 }));
 
-				var ms = new MemoryStream();
+                var ms = new MemoryStream();
                 (await client.DownloadAsync("a")).CopyTo(ms);
 
                 var array = ms.ToArray();
                 Assert.Equal(1, array[0]);
                 Assert.Equal(2, array[1]);
 
-				ms = new MemoryStream();
-				(await client.DownloadAsync("b")).CopyTo(ms);
+                ms = new MemoryStream();
+                (await client.DownloadAsync("b")).CopyTo(ms);
 
-				array = ms.ToArray();
-				Assert.Equal(2, array[0]);
-				Assert.Equal(1, array[1]);
-				Assert.Equal(0, array[2]);
-			}
+                array = ms.ToArray();
+                Assert.Equal(2, array[0]);
+                Assert.Equal(1, array[1]);
+                Assert.Equal(0, array[2]);
+            }
         }
 
-		[Fact]
-		public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication_SessionUsage()
-		{
-			using(var store = NewStore(enableAuthentication: true)) // enable authentication
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					session.RegisterUpload("a", new MemoryStream(new byte[] { 1, 2 }));
-					session.RegisterUpload("b", new MemoryStream(new byte[] { 2, 1, 0 }));
+        [Fact]
+        public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication_SessionUsage()
+        {
+            using(var store = NewStore(enableAuthentication: true)) // enable authentication
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("a", new MemoryStream(new byte[] { 1, 2 }));
+                    session.RegisterUpload("b", new MemoryStream(new byte[] { 2, 1, 0 }));
 
-					await session.SaveChangesAsync();
-				}
+                    await session.SaveChangesAsync();
+                }
 
-				var ms = new MemoryStream();
-				(await store.AsyncFilesCommands.DownloadAsync("a")).CopyTo(ms);
+                var ms = new MemoryStream();
+                (await store.AsyncFilesCommands.DownloadAsync("a")).CopyTo(ms);
 
-				var array = ms.ToArray();
-				Assert.Equal(1, array[0]);
-				Assert.Equal(2, array[1]);
+                var array = ms.ToArray();
+                Assert.Equal(1, array[0]);
+                Assert.Equal(2, array[1]);
 
-				ms = new MemoryStream();
-				(await store.AsyncFilesCommands.DownloadAsync("b")).CopyTo(ms);
+                ms = new MemoryStream();
+                (await store.AsyncFilesCommands.DownloadAsync("b")).CopyTo(ms);
 
-				array = ms.ToArray();
-				Assert.Equal(2, array[0]);
-				Assert.Equal(1, array[1]);
-				Assert.Equal(0, array[2]);
-			}
-		}
+                array = ms.ToArray();
+                Assert.Equal(2, array[0]);
+                Assert.Equal(1, array[1]);
+                Assert.Equal(0, array[2]);
+            }
+        }
 
-		[Fact]
-		public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication_SessionUsage_DefferedAction()
-		{
-			using (var store = NewStore(enableAuthentication: true)) // enable authentication
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					session.RegisterUpload("a", 2, s =>
-					{
-						s.WriteByte(1);
-						s.WriteByte(2);
-					});
-					session.RegisterUpload("b", 3, s =>
-					{
-						s.WriteByte(2);
-						s.WriteByte(1);
-						s.WriteByte(0);
-					});
+        [Fact]
+        public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication_SessionUsage_DefferedAction()
+        {
+            using (var store = NewStore(enableAuthentication: true)) // enable authentication
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("a", 2, s =>
+                    {
+                        s.WriteByte(1);
+                        s.WriteByte(2);
+                    });
+                    session.RegisterUpload("b", 3, s =>
+                    {
+                        s.WriteByte(2);
+                        s.WriteByte(1);
+                        s.WriteByte(0);
+                    });
 
-					await session.SaveChangesAsync();
-				}
+                    await session.SaveChangesAsync();
+                }
 
-				var ms = new MemoryStream();
-				(await store.AsyncFilesCommands.DownloadAsync("a")).CopyTo(ms);
+                var ms = new MemoryStream();
+                (await store.AsyncFilesCommands.DownloadAsync("a")).CopyTo(ms);
 
-				var array = ms.ToArray();
-				Assert.Equal(1, array[0]);
-				Assert.Equal(2, array[1]);
+                var array = ms.ToArray();
+                Assert.Equal(1, array[0]);
+                Assert.Equal(2, array[1]);
 
-				ms = new MemoryStream();
-				(await store.AsyncFilesCommands.DownloadAsync("b")).CopyTo(ms);
+                ms = new MemoryStream();
+                (await store.AsyncFilesCommands.DownloadAsync("b")).CopyTo(ms);
 
-				array = ms.ToArray();
-				Assert.Equal(2, array[0]);
-				Assert.Equal(1, array[1]);
-				Assert.Equal(0, array[2]);
-			}
-		}
-	}
+                array = ms.ToArray();
+                Assert.Equal(2, array[0]);
+                Assert.Equal(1, array[1]);
+                Assert.Equal(0, array[2]);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import exportDatabaseCommand = require("commands/exportDatabaseCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
@@ -52,7 +52,7 @@ class exportDatabase extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#transformScriptHelp").popover({
             html: true,
             trigger: 'hover',

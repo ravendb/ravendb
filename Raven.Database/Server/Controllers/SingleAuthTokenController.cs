@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -59,7 +59,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }
 
@@ -79,6 +79,6 @@ namespace Raven.Database.Counters.Controllers
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }

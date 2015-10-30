@@ -1,4 +1,4 @@
-﻿class folder {
+class folder {
 
     name: string;
 

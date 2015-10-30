@@ -1,4 +1,4 @@
-﻿class inputCursor {
+class inputCursor {
     static setPosition($input: JQuery, position: number) {
         var input = $input[0];
         if (!input) return null;

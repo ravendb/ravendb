@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
@@ -15,9 +15,9 @@ namespace Raven.Client.FileSystem
 
         Task<List<T>> ToListAsync();
 
-		/// <summary>
-		///   Deletes the files matching the query.
-		/// </summary>
-	    void RegisterResultsForDeletion();
+        /// <summary>
+        ///   Deletes the files matching the query.
+        /// </summary>
+        void RegisterResultsForDeletion();
     }
 }

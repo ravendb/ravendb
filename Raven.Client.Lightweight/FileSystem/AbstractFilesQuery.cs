@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -61,8 +61,8 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
-	    protected int pageSize = 1024;
-	    protected int start = 0;
+        protected int pageSize = 1024;
+        protected int start = 0;
 
         public AbstractFilesQuery(InMemoryFilesSessionOperations theSession, IAsyncFilesCommands commands)
         {
@@ -78,7 +78,7 @@ namespace Raven.Client.FileSystem
         /// </summary>
         protected string[] orderByFields = new string[0];
 
-	    /// <summary>
+        /// <summary>
         ///   Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>
@@ -137,15 +137,15 @@ namespace Raven.Client.FileSystem
 
             if (fieldName.EndsWith("_numeric"))
             {
-	            var transformToRangeValue = TransformToRangeValue(new WhereParams
-	            {
-		            Value = whereParams.Value, FieldName = whereParams.FieldName
-	            });
+                var transformToRangeValue = TransformToRangeValue(new WhereParams
+                {
+                    Value = whereParams.Value, FieldName = whereParams.FieldName
+                });
 
                 queryText.Append("[");
                 queryText.Append(transformToRangeValue);
                 queryText.Append(" TO ");
-				queryText.Append(transformToRangeValue);
+                queryText.Append(transformToRangeValue);
                 queryText.Append("]");
             }
             else
@@ -545,21 +545,21 @@ namespace Raven.Client.FileSystem
         }
 
         private bool UsesRangeType(object o)
-		{
-			if (o == null)
-				return false;
+        {
+            if (o == null)
+                return false;
 
-			var type = o as Type ?? o.GetType();
-			var nonNullable = Nullable.GetUnderlyingType(type);
-			if (nonNullable != null)
-				type = nonNullable;
+            var type = o as Type ?? o.GetType();
+            var nonNullable = Nullable.GetUnderlyingType(type);
+            if (nonNullable != null)
+                type = nonNullable;
 
-			if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-			    type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
-				return true;
+            if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
+                type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
+                return true;
 
-			return false;
-		}
+            return false;
+        }
 
         private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
         {
@@ -583,10 +583,10 @@ namespace Raven.Client.FileSystem
         public string GetMemberQueryPath(Expression expression)
         {
             var result = linqPathProvider.GetPath(expression);
-			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+            result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
 
-			if (expression.NodeType == ExpressionType.ArrayLength)
-				result.Path += ".Length";
+            if (expression.NodeType == ExpressionType.ArrayLength)
+                result.Path += ".Length";
 
             return result.Path;
         }
@@ -688,16 +688,16 @@ namespace Raven.Client.FileSystem
             if (whereParams.Value is TimeSpan)
                 return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
 
-			if (whereParams.Value is int)
-				return NumberUtil.NumberToString((int) whereParams.Value);
-			if (whereParams.Value is long)
-				return NumberUtil.NumberToString((long) whereParams.Value);
-			if (whereParams.Value is decimal)
-				return NumberUtil.NumberToString((double) (decimal) whereParams.Value);
-			if (whereParams.Value is double)
-				return NumberUtil.NumberToString((double) whereParams.Value);
-			if (whereParams.Value is float)
-				return NumberUtil.NumberToString((float) whereParams.Value);
+            if (whereParams.Value is int)
+                return NumberUtil.NumberToString((int) whereParams.Value);
+            if (whereParams.Value is long)
+                return NumberUtil.NumberToString((long) whereParams.Value);
+            if (whereParams.Value is decimal)
+                return NumberUtil.NumberToString((double) (decimal) whereParams.Value);
+            if (whereParams.Value is double)
+                return NumberUtil.NumberToString((double) whereParams.Value);
+            if (whereParams.Value is float)
+                return NumberUtil.NumberToString((float) whereParams.Value);
 
             if (whereParams.Value is string)
                 return RavenQuery.Escape(whereParams.Value.ToString(), false, true);

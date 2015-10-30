@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;

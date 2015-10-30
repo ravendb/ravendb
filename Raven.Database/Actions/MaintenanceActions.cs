@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MaintenanceActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -55,12 +55,12 @@ namespace Raven.Database.Actions
             string storage;
             if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
             {
-	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-					storage = InMemoryRavenConfiguration.VoronTypeName;
-	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-				else
-					storage = InMemoryRavenConfiguration.EsentTypeName;
+                if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
+                    storage = InMemoryRavenConfiguration.VoronTypeName;
+                else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+                    storage = InMemoryRavenConfiguration.EsentTypeName;
+                else
+                    storage = InMemoryRavenConfiguration.EsentTypeName;
             }
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
@@ -116,23 +116,23 @@ namespace Raven.Database.Actions
             TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
         }
 
-	    public void PurgeOutdatedTombstones()
-	    {
-		    var tomstoneLists = new[]
-		    {
-			    Constants.RavenPeriodicExportsAttachmentsTombstones,
-			    Constants.RavenPeriodicExportsDocsTombstones,
-			    Constants.RavenReplicationAttachmentsTombstones,
-			    Constants.RavenReplicationDocsTombstones
-		    };
+        public void PurgeOutdatedTombstones()
+        {
+            var tomstoneLists = new[]
+            {
+                Constants.RavenPeriodicExportsAttachmentsTombstones,
+                Constants.RavenPeriodicExportsDocsTombstones,
+                Constants.RavenReplicationAttachmentsTombstones,
+                Constants.RavenReplicationDocsTombstones
+            };
 
-			var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
+            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
 
-		    foreach (var listName in tomstoneLists)
-		    {
-			    string name = listName;
-			    TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
-		    }
-	    }
+            foreach (var listName in tomstoneLists)
+            {
+                string name = listName;
+                TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
+            }
+        }
     }
 }

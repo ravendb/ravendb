@@ -10,31 +10,31 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnEqualToNull : RavenTest
-	{
-		[Fact]
-		public void QueryingOnEqNull()
-		{
-			using(var store = NewDocumentStore())
-			{
-				using(var s = store.OpenSession())
-				{
-					s.Store(new Company
-					{
-						Phone = 1,
-						Type = Company.CompanyType.Public,
-						Name = null
-					});
-					s.SaveChanges();
-				}
+    public class QueryingOnEqualToNull : RavenTest
+    {
+        [Fact]
+        public void QueryingOnEqNull()
+        {
+            using(var store = NewDocumentStore())
+            {
+                using(var s = store.OpenSession())
+                {
+                    s.Store(new Company
+                    {
+                        Phone = 1,
+                        Type = Company.CompanyType.Public,
+                        Name = null
+                    });
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession())
-				{
-					int actual = s.Query<Company>().Where(x => x.Name == null).Count();
-					WaitForUserToContinueTheTest(store);
-					Assert.Equal(1, actual);
-				}
-			}
-		}
-	}
+                using (var s = store.OpenSession())
+                {
+                    int actual = s.Query<Company>().Where(x => x.Name == null).Count();
+                    WaitForUserToContinueTheTest(store);
+                    Assert.Equal(1, actual);
+                }
+            }
+        }
+    }
 }

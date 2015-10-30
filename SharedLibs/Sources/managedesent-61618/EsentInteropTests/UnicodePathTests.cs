@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="UnicodePathTests.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation.
 // </copyright>
@@ -34,9 +34,9 @@ namespace InteropApiTests
         [Description("Setup the UnicodePathsTests fixture")]
         public void Setup()
         {
-            this.directory = "字会意";
+            this.directory = "???";
             Cleanup.DeleteDirectoryWithRetry(this.directory);
-            this.database = Path.Combine(this.directory, "한글.edb");
+            this.database = Path.Combine(this.directory, "??.edb");
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace InteropApiTests
         public void ApiThrowsArgumentExceptionOnUnmappableChar()
         {
             JET_INSTANCE instance;
-            Api.JetCreateInstance(out instance, "한글");
+            Api.JetCreateInstance(out instance, "??");
         }
 
         /// <summary>
@@ -311,7 +311,7 @@ namespace InteropApiTests
                 return;
             }
 
-            var test = new DatabaseFileTestHelper(this.directory, "한글", false);
+            var test = new DatabaseFileTestHelper(this.directory, "??", false);
             test.TestBackupRestore();
         }
 
@@ -328,7 +328,7 @@ namespace InteropApiTests
                 return;
             }
 
-            var test = new DatabaseFileTestHelper(this.directory, "한글", false);
+            var test = new DatabaseFileTestHelper(this.directory, "??", false);
             test.TestStreamingBackup();
         }
 

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1754.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,7 +18,7 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1754 : RavenTest
     {
-	    
+        
         [Fact]
         public void ShouldntThrowCollectionModified()
         {

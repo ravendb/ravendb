@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Crud.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,26 +19,26 @@ namespace Raven.Tests.Core.Commands
 {
     public class Documents : RavenCoreTestBase
     {
-	    [Fact]
-	    public void CanCancelPutDocument()
-	    {
-		    var random = new Random();
-		    var largeArray = new byte[1024*1024*2]; 
-			//2mb - document large enough for PUT to take a while, so
-			//we will be able to cancel the operation BEFORE the PUT completes
-			random.NextBytes(largeArray);
-			var largeDocument = new { Data = largeArray };
+        [Fact]
+        public void CanCancelPutDocument()
+        {
+            var random = new Random();
+            var largeArray = new byte[1024*1024*2]; 
+            //2mb - document large enough for PUT to take a while, so
+            //we will be able to cancel the operation BEFORE the PUT completes
+            random.NextBytes(largeArray);
+            var largeDocument = new { Data = largeArray };
 
-		    var cts = new CancellationTokenSource();
-		    using (var store = GetDocumentStore())
-		    {
-			    var ravenJObject = RavenJObject.FromObject(largeDocument);
-				cts.Cancel();
-				var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);								
-				Assert.True(putTask.IsCanceled);
-		    }
-	    }
-		
+            var cts = new CancellationTokenSource();
+            using (var store = GetDocumentStore())
+            {
+                var ravenJObject = RavenJObject.FromObject(largeDocument);
+                cts.Cancel();
+                var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);								
+                Assert.True(putTask.IsCanceled);
+            }
+        }
+        
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
@@ -163,29 +163,29 @@ namespace Raven.Tests.Core.Commands
                        Query = "note:" + oldTagName
                    },
                    new[]
-				   {
-					   new PatchRequest
-					   {
-						   Name = "Comment",
-						   Type = PatchCommandType.Modify,
-						   AllPositions = true,
-						   Nested = new[]
-						   {
-							   new PatchRequest
-							   {
-								   Type = PatchCommandType.Remove,
-								   Name = "Notes",
-								   Value = oldTagName
-							   },
-							   new PatchRequest
-							   {
-								   Type = PatchCommandType.Add,
-								   Name = "Notes",
-								   Value = "new"
-							   }
-						   }
-					   }
-				   },
+                   {
+                       new PatchRequest
+                       {
+                           Name = "Comment",
+                           Type = PatchCommandType.Modify,
+                           AllPositions = true,
+                           Nested = new[]
+                           {
+                               new PatchRequest
+                               {
+                                   Type = PatchCommandType.Remove,
+                                   Name = "Notes",
+                                   Value = oldTagName
+                               },
+                               new PatchRequest
+                               {
+                                   Type = PatchCommandType.Add,
+                                   Name = "Notes",
+                                   Value = "new"
+                               }
+                           }
+                       }
+                   },
                    null
                ).WaitForCompletion();
 

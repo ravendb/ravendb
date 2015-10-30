@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -203,8 +203,8 @@ namespace Raven.Client.Changes
                             .ObserveException()
                             .ContinueWith(task =>
                             {
-	                            lastSendTask = null;
-	                            request.Dispose();
+                                lastSendTask = null;
+                                request.Dispose();
                             });
                 }
                 catch (Exception e)

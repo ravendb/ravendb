@@ -1,4 +1,4 @@
-﻿using Raven.Client.Connection;
+using Raven.Client.Connection;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;

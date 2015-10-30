@@ -108,8 +108,8 @@ class changesApi {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-	    var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
-	    this.webSocket = new WebSocket(url);
+        var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
+        this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {

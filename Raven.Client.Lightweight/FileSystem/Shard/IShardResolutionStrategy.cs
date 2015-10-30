@@ -1,4 +1,4 @@
-﻿using Raven.Json.Linq;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystem = require("models/filesystem/filesystem");
 import moment = require("moment");

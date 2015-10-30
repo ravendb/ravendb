@@ -62,16 +62,16 @@ module.exports = {
             guard: "(?:(=)|(:))?s*)",
             trigger: "\\(?f",
             endTrigger: "\\)",
-			endGuard: "",
+            endGuard: "",
             content: "{$0}\n"
          }, {
             tabTrigger: "f",
             name: "f function",
             content: "function"
         }];
-		
-		
-		
+        
+        
+        
         var parsed = snippetManager.parseSnippetFile(
             "name a\nregex /(?:(=)|(:))?\s*)/\\(?f/\\)/\n\t{$0}" +
             "\n\t\n\n#function\nsnippet f function\n\tfunction"

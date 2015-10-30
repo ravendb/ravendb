@@ -2812,7 +2812,7 @@ Parser.prototype = function(){
 
                 var tokenStream = this._tokenStream,
                     values      = [],
-					//valueParts	= [],
+                    //valueParts	= [],
                     value       = null,
                     operator    = null;
 
@@ -2829,9 +2829,9 @@ Parser.prototype = function(){
                             values.push(operator);
                         } /*else {
                             //if there's not an operator, you have a full value
-							values.push(new PropertyValue(valueParts, valueParts[0].line, valueParts[0].col));
-							valueParts = [];
-						}*/
+                            values.push(new PropertyValue(valueParts, valueParts[0].line, valueParts[0].col));
+                            valueParts = [];
+                        }*/
 
                         value = this._term(inFunction);
 
@@ -2843,7 +2843,7 @@ Parser.prototype = function(){
                     } while(true);
                 }
 
-				//cleanup
+                //cleanup
                 /*if (valueParts.length){
                     values.push(new PropertyValue(valueParts, valueParts[0].line, valueParts[0].col));
                 }*/
@@ -4719,12 +4719,12 @@ function isIdentStart(c){
 }
 
 function mix(receiver, supplier){
-	for (var prop in supplier){
-		if (supplier.hasOwnProperty(prop)){
-			receiver[prop] = supplier[prop];
-		}
-	}
-	return receiver;
+    for (var prop in supplier){
+        if (supplier.hasOwnProperty(prop)){
+            receiver[prop] = supplier[prop];
+        }
+    }
+    return receiver;
 }
 
 //-----------------------------------------------------------------------------
@@ -4740,7 +4740,7 @@ function mix(receiver, supplier){
  * @namespace parserlib.css
  */
 function TokenStream(input){
-	TokenStreamBase.call(this, input, Tokens);
+    TokenStreamBase.call(this, input, Tokens);
 }
 
 TokenStream.prototype = mix(new TokenStreamBase(), {

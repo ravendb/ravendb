@@ -1,4 +1,4 @@
-﻿class sqlReplicationSimulatedCommand {
+class sqlReplicationSimulatedCommand {
     showParamsValues = ko.observable<boolean>(false);
     commandData = ko.observable<commandData>();
     commandText: KnockoutComputed<string>;

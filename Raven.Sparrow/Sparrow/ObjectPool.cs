@@ -1,4 +1,4 @@
-﻿
+
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the Roslyn project root for license information.
 
 // define TRACE_LEAKS to get additional diagnostics that can lead to the leak sources. note: it will

@@ -132,7 +132,7 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
-	showSplash = viewModelBase.showSplash;
+    showSplash = viewModelBase.showSplash;
 
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
@@ -150,8 +150,8 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-	        this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-			this.notifications = this.createNotifications();
+            this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+            this.notifications = this.createNotifications();
         });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -307,17 +307,17 @@ class shell extends viewModelBase {
     // Called by Durandal when shell.html has been put into the DOM.
     // The view must be attached to the DOM before we can hook up keyboard shortcuts.
     attached() {
-		super.attached();
+        super.attached();
 
-		var target = document.getElementById("splash-spinner");
-		//this.spinner.stop();
-	    this.showSplash.subscribe((show: boolean) => {
-			if (show) {
-				this.spinner.spin(target);
-			} else {
-				this.spinner.stop();
-			}
-	    });
+        var target = document.getElementById("splash-spinner");
+        //this.spinner.stop();
+        this.showSplash.subscribe((show: boolean) => {
+            if (show) {
+                this.spinner.spin(target);
+            } else {
+                this.spinner.stop();
+            }
+        });
 
         jwerty.key("ctrl+alt+n", e => {
             e.preventDefault();
@@ -409,7 +409,7 @@ class shell extends viewModelBase {
         }
 
         if ((!rs.disabled() && rs.isLicensed()) &&
-			(isPreviousDifferentKind || changesContext.currentResourceChangesApi() == null)) {
+            (isPreviousDifferentKind || changesContext.currentResourceChangesApi() == null)) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             var changes = new changesApi(rs, 5000);
             changes.connectToChangesApiTask.done(() => {
@@ -575,8 +575,8 @@ class shell extends viewModelBase {
                     resourceObservableArray.remove(resourceToDelete);
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
-					if (resourceType == logTenantType.Database)
-						recentQueriesStorage.removeRecentQueries(resourceToDelete);
+                    if (resourceType == logTenantType.Database)
+                        recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
@@ -1025,29 +1025,29 @@ class shell extends viewModelBase {
         return result;
     }
 
-	private spinnerOptions = {
-		lines: 17, // The number of lines to draw
-		length: 28, // The length of each line
-		width: 14, // The line thickness
-		radius: 44, // The radius of the inner circle
-		scale: 1, // Scales overall size of the spinner
-		corners: 1, // Corner roundness (0..1)
-		color: ["#d74c0c", "#CC0000"], // #rgb or #rrggbb or array of colors
-		opacity: 0.35, // Opacity of the lines
-		rotate: 0, // The rotation offset
-		direction: 1, // 1: clockwise, -1: counterclockwise
-		speed: 0.8, // Rounds per second
-		trail: 60, // Afterglow percentage
-		fps: 20, // Frames per second when using setTimeout() as a fallback for CSS
-		zIndex: 2e9, // The z-index (defaults to 2000000000)
-		className: "spinner", // The CSS class to assign to the spinner
-		top: "50%", // Top position relative to parent
-		left: "50%", // Left position relative to parent
-		shadow: false, // Whether to render a shadow
-		hwaccel: false, // Whether to use hardware acceleration
-		position: "absolute" // Element positioning
-	};
-	private spinner = new Spinner(this.spinnerOptions);
+    private spinnerOptions = {
+        lines: 17, // The number of lines to draw
+        length: 28, // The length of each line
+        width: 14, // The line thickness
+        radius: 44, // The radius of the inner circle
+        scale: 1, // Scales overall size of the spinner
+        corners: 1, // Corner roundness (0..1)
+        color: ["#d74c0c", "#CC0000"], // #rgb or #rrggbb or array of colors
+        opacity: 0.35, // Opacity of the lines
+        rotate: 0, // The rotation offset
+        direction: 1, // 1: clockwise, -1: counterclockwise
+        speed: 0.8, // Rounds per second
+        trail: 60, // Afterglow percentage
+        fps: 20, // Frames per second when using setTimeout() as a fallback for CSS
+        zIndex: 2e9, // The z-index (defaults to 2000000000)
+        className: "spinner", // The CSS class to assign to the spinner
+        top: "50%", // Top position relative to parent
+        left: "50%", // Left position relative to parent
+        shadow: false, // Whether to render a shadow
+        hwaccel: false, // Whether to use hardware acceleration
+        position: "absolute" // Element positioning
+    };
+    private spinner = new Spinner(this.spinnerOptions);
 }
 
 

@@ -1,11 +1,11 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 
 namespace Raven.Tests.FileSystem
 {
-	public class StorageSignatureRepositoryTests : StorageTest
+    public class StorageSignatureRepositoryTests : StorageTest
     {
         [Fact]
         public void Should_read_from_storage()

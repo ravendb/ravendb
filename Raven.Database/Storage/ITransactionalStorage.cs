@@ -17,57 +17,57 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
-	public interface ITransactionalStorage : IDisposable
-	{
-		/// <summary>
-		/// This is used mostly for replication
-		/// </summary>
-		Guid Id { get; }
+    public interface ITransactionalStorage : IDisposable
+    {
+        /// <summary>
+        /// This is used mostly for replication
+        /// </summary>
+        Guid Id { get; }
 
-		IDocumentCacher DocumentCacher { get; }
+        IDocumentCacher DocumentCacher { get; }
 
-		IDisposable DisableBatchNesting();
+        IDisposable DisableBatchNesting();
 
-		IStorageActionsAccessor CreateAccessor();
+        IStorageActionsAccessor CreateAccessor();
 
-		void Batch(Action<IStorageActionsAccessor> action);
-		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
-		void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
-		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
-		void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output);
-		DatabaseSizeInformation GetDatabaseSize();
-		long GetDatabaseCacheSizeInBytes();
-		long GetDatabaseTransactionVersionSizeInBytes();
-		StorageStats GetStorageStats();
+        void Batch(Action<IStorageActionsAccessor> action);
+        void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
+        void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
+        void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
+        void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output);
+        DatabaseSizeInformation GetDatabaseSize();
+        long GetDatabaseCacheSizeInBytes();
+        long GetDatabaseTransactionVersionSizeInBytes();
+        StorageStats GetStorageStats();
 
-		string FriendlyName { get; }
-		bool HandleException(Exception exception);
+        string FriendlyName { get; }
+        bool HandleException(Exception exception);
 
-		bool IsAlreadyInBatch { get; }
+        bool IsAlreadyInBatch { get; }
         bool SupportsDtc { get; }
 
-		void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
-		Guid ChangeId();
-		void ClearCaches();
-		void DumpAllStorageTables();
-		InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
+        void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
+        Guid ChangeId();
+        void ClearCaches();
+        void DumpAllStorageTables();
+        InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
         IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false);
         List<TransactionContextData> GetPreparedTransactions();
 
-		object GetInFlightTransactionsInternalStateForDebugOnly();
+        object GetInFlightTransactionsInternalStateForDebugOnly();
 
-		ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();
-		/// <summary>
-		/// Scheduled reduction tracking is a memory living entity it will get corrupted on a reset.
-		/// The reset must occur while there are no map/reduce indexing activity going on.
-		/// </summary>
-		void ResetScheduledReductionsTracking();
+        ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();
+        /// <summary>
+        /// Scheduled reduction tracking is a memory living entity it will get corrupted on a reset.
+        /// The reset must occur while there are no map/reduce indexing activity going on.
+        /// </summary>
+        void ResetScheduledReductionsTracking();
 
-		void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler);
-	}
+        void RegisterTransactionalStorageNotificationHandler(ITransactionalStorageNotificationHandler handler);
+    }
 
-	public interface ITransactionalStorageNotificationHandler
-	{
-		void HandleTransactionalStorageNotification();
-	}
+    public interface ITransactionalStorageNotificationHandler
+    {
+        void HandleTransactionalStorageNotification();
+    }
 }

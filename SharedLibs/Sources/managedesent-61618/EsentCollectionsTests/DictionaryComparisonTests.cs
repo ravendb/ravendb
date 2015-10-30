@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="DictionaryComparisonTests.cs" company="Microsoft Corporation">
 //   Copyright (c) Microsoft Corporation.
 // </copyright>
@@ -136,9 +136,9 @@ namespace EsentCollectionsTests
             this.expected[" "] = this.actual[" "] = "6";
 
             // Unicode
-            this.expected["字会意"] = this.actual["字会意"] = "字会意";
-            this.expected["한글"] = this.actual["한글"] = "한글";
-            this.expected["?字3한会X"] = this.actual["?字3한会X"] = "xyzzy";
+            this.expected["???"] = this.actual["???"] = "???";
+            this.expected["??"] = this.actual["??"] = "??";
+            this.expected["??3??X"] = this.actual["??3??X"] = "xyzzy";
             DictionaryAssert.AreEqual(this.expected, this.actual);
         }
 

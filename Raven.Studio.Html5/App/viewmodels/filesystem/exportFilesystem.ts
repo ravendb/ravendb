@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");

@@ -1,4 +1,4 @@
-﻿
+
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -24,14 +24,14 @@ namespace Raven.Tests.Issues
         public LazilyLoadWithTransformerWhileUsingSharding()
         {
             servers = new Dictionary<string, RavenDbServer>
-			{
-				{"shard", GetNewServer(8079)}
-			};
+            {
+                {"shard", GetNewServer(8079)}
+            };
 
             documentStores = new Dictionary<string, IDocumentStore>
-			{
-				{"shard", new DocumentStore{Url = "http://localhost:8079"}}
-			};
+            {
+                {"shard", new DocumentStore{Url = "http://localhost:8079"}}
+            };
 
             foreach (var documentStore in documentStores)
             {

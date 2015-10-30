@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	[CLSCompliant(false)]
+    [CLSCompliant(false)]
     public class SqlReplicationMetricsCountersManager
     {
         readonly Metrics dbMetrics;

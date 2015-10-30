@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="From45To46.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,7 +19,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
         {
         }
 
-		public void Update(Session session, JET_DBID dbid, Action<string> output)
+        public void Update(Session session, JET_DBID dbid, Action<string> output)
         {
             using (var table = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
             {
@@ -31,20 +31,20 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                     grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
                 }, defaultValue, defaultValue.Length, out columnid);
 
-				defaultValue = BitConverter.GetBytes(0);
-				Api.JetAddColumn(session, table, "created_timestamp", new JET_COLUMNDEF
+                defaultValue = BitConverter.GetBytes(0);
+                Api.JetAddColumn(session, table, "created_timestamp", new JET_COLUMNDEF
                 {
                     cbMax = 8, //64 bits
                     coltyp = JET_coltyp.Binary,
                     grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-				}, defaultValue, defaultValue.Length, out columnid);
+                }, defaultValue, defaultValue.Length, out columnid);
 
-				Api.JetAddColumn(session, table, "last_indexing_time", new JET_COLUMNDEF
-				{
-					cbMax = 8, //64 bits
-					coltyp = JET_coltyp.Binary,
-					grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-				}, defaultValue, defaultValue.Length, out columnid);
+                Api.JetAddColumn(session, table, "last_indexing_time", new JET_COLUMNDEF
+                {
+                    cbMax = 8, //64 bits
+                    coltyp = JET_coltyp.Binary,
+                    grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+                }, defaultValue, defaultValue.Length, out columnid);
             }
 
             SchemaCreator.UpdateVersion(session,   dbid, "4.6");

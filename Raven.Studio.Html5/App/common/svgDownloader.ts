@@ -1,4 +1,4 @@
-﻿import d3 = require('d3/d3');
+import d3 = require('d3/d3');
 
 class svgDownloader {
 

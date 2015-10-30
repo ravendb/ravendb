@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -23,35 +23,35 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
                 Name = "Hibernating Rhinos"
             };
 
-						var secretCompany = new Company
-						{
-							Name = "Secret Co."
-						};
+                        var secretCompany = new Company
+                        {
+                            Name = "Secret Co."
+                        };
 
-						var authorizationUser = new AuthorizationUser
-						{
-							Id = UserId,
-							Name = "Ayende Rahien",
-						};
+                        var authorizationUser = new AuthorizationUser
+                        {
+                            Id = UserId,
+                            Name = "Ayende Rahien",
+                        };
 
-					  var operation = "Company/Bid"; 
-					
+                      var operation = "Company/Bid"; 
+                    
             using (var s = store.OpenSession())
             {
                 s.Store(authorizationUser);
-								s.Store(rhinosCompany);
-								s.Store(secretCompany);
+                                s.Store(rhinosCompany);
+                                s.Store(secretCompany);
 
-								var documentAuthorization = new DocumentAuthorization();
-								documentAuthorization.Permissions.Add(new DocumentPermission()
-								{
-									Allow = true,
-									Operation = operation,
-									User = UserId
-								});
+                                var documentAuthorization = new DocumentAuthorization();
+                                documentAuthorization.Permissions.Add(new DocumentPermission()
+                                {
+                                    Allow = true,
+                                    Operation = operation,
+                                    User = UserId
+                                });
 
-								s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
-								s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
+                                s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
+                                s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
 
                 s.SaveChanges();
             }
@@ -61,73 +61,73 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
             using (var s = store.OpenSession())
             {
                 s.SecureFor(UserId, operation);
-				var expected = s.Advanced.LuceneQuery<Company, CompanyIndex>().ToList().Count();
-				
-				var results = QueryExtensions.StreamAllFrom(s.Advanced.LuceneQuery<Company, CompanyIndex>(), s);
+                var expected = s.Advanced.LuceneQuery<Company, CompanyIndex>().ToList().Count();
+                
+                var results = QueryExtensions.StreamAllFrom(s.Advanced.LuceneQuery<Company, CompanyIndex>(), s);
 
-	            Assert.Equal(expected, results.Count());
+                Assert.Equal(expected, results.Count());
             }
         }
 
-		[Fact]
-		public void DocumentWithoutPermissionWillBeFilteredOutSilentlyWithStreaming()
-		{
-			var rhinosCompany = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
+        [Fact]
+        public void DocumentWithoutPermissionWillBeFilteredOutSilentlyWithStreaming()
+        {
+            var rhinosCompany = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
 
-			var secretCompany = new Company
-			{
-				Name = "Secret Co."
-			};
+            var secretCompany = new Company
+            {
+                Name = "Secret Co."
+            };
 
-			var authorizationUser = new AuthorizationUser
-			{
-				Id = UserId,
-				Name = "Ayende Rahien",
-			};
+            var authorizationUser = new AuthorizationUser
+            {
+                Id = UserId,
+                Name = "Ayende Rahien",
+            };
 
-			var operation = "Company/Bid";
+            var operation = "Company/Bid";
 
-			using (var s = store.OpenSession())
-			{
-				s.Store(authorizationUser);
-				s.Store(rhinosCompany);
-				s.Store(secretCompany);
+            using (var s = store.OpenSession())
+            {
+                s.Store(authorizationUser);
+                s.Store(rhinosCompany);
+                s.Store(secretCompany);
 
-				var documentAuthorization = new DocumentAuthorization();
-				documentAuthorization.Permissions.Add(new DocumentPermission()
-				{
-					Allow = true,
-					Operation = operation,
-					User = UserId
-				});
+                var documentAuthorization = new DocumentAuthorization();
+                documentAuthorization.Permissions.Add(new DocumentPermission()
+                {
+                    Allow = true,
+                    Operation = operation,
+                    User = UserId
+                });
 
-				s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
-				s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
+                s.SetAuthorizationFor(rhinosCompany, documentAuthorization); // allow Ayende Rahien
+                s.SetAuthorizationFor(secretCompany, new DocumentAuthorization()); // deny everyone
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
 
-			using (var s = store.OpenSession())
-			{
-				s.SecureFor(UserId, operation);
+            using (var s = store.OpenSession())
+            {
+                s.SecureFor(UserId, operation);
 
-				var results = 0;
+                var results = 0;
 
-				using (var it = s.Advanced.Stream<Company>("companies/"))
-				{
-					while (it.MoveNext())
-					{
-						results++;
-					}
-				}
+                using (var it = s.Advanced.Stream<Company>("companies/"))
+                {
+                    while (it.MoveNext())
+                    {
+                        results++;
+                    }
+                }
 
-				Assert.Equal(2, results);
-			}
-		}
+                Assert.Equal(2, results);
+            }
+        }
     }
 
     public class Company

@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 using System;
@@ -8,14 +8,14 @@ namespace Raven.Client.FileSystem.Impl
 {
     public class UpdateMetadataOperation: IFilesOperation
     {
-	    private readonly InMemoryFilesSessionOperations sessionOperations;
+        private readonly InMemoryFilesSessionOperations sessionOperations;
 
         public string FileName { get; private set; }
-	    private FileHeader FileHeader { get; set; }
-	    private RavenJObject Metadata { get; set; }
-	    private Etag Etag { get; set; }
+        private FileHeader FileHeader { get; set; }
+        private RavenJObject Metadata { get; set; }
+        private Etag Etag { get; set; }
 
-		public UpdateMetadataOperation(InMemoryFilesSessionOperations sessionOperations, FileHeader fileHeader, RavenJObject metadata, Etag etag)
+        public UpdateMetadataOperation(InMemoryFilesSessionOperations sessionOperations, FileHeader fileHeader, RavenJObject metadata, Etag etag)
         {
             if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.FullPath))
                 throw new ArgumentNullException("fileHeader", "The file cannot be null or have an empty or whitespace name!");
@@ -25,7 +25,7 @@ namespace Raven.Client.FileSystem.Impl
             FileHeader = fileHeader;
             FileName = fileHeader.FullPath;
             Metadata = metadata;
-			Etag = etag;
+            Etag = etag;
         }
 
         public async Task<FileHeader> Execute(IAsyncFilesSession session)

@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
@@ -22,8 +22,8 @@ class resources extends viewModelBase {
     visibleResources = ko.observable('');
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
-	isAnyResourceSelected: KnockoutComputed<boolean>;
-	hasAllResourcesSelected: KnockoutComputed<boolean>;
+    isAnyResourceSelected: KnockoutComputed<boolean>;
+    hasAllResourcesSelected: KnockoutComputed<boolean>;
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
     isCheckboxVisible: KnockoutComputed<boolean>;
     systemDb: database;
@@ -132,7 +132,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink('Z8DC3Q');
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();
@@ -207,7 +207,7 @@ class resources extends viewModelBase {
 
             if (!!databaseInArray) {
                 this.databases.remove(databaseInArray);
-	            recentQueriesStorage.removeRecentQueries(databaseInArray);
+                recentQueriesStorage.removeRecentQueries(databaseInArray);
             }
         } else if (rs.type == filesystem.type) {
             var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
@@ -325,7 +325,7 @@ class resources extends viewModelBase {
     urlForAlert(alert: alert) {
         var index = this.alerts().indexOf(alert);
         return appUrl.forAlerts(appUrl.getSystemDatabase()) + "&item=" + index;
-	}
+    }
 
     newResource() {
         require(["viewmodels/createResource"], createResource => {

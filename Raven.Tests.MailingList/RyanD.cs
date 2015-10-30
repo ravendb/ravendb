@@ -8,46 +8,46 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class RyanD : RavenTest
-	{
-		[Fact]
-		public void Changing_FindIdentityProperty_breaks_loading()
-		{
-			using(var store = NewDocumentStore())
-			{
-				store.Conventions.FindIdentityProperty = FindGuidIdentityProperty;
+    public class RyanD : RavenTest
+    {
+        [Fact]
+        public void Changing_FindIdentityProperty_breaks_loading()
+        {
+            using(var store = NewDocumentStore())
+            {
+                store.Conventions.FindIdentityProperty = FindGuidIdentityProperty;
 
-				var id = Guid.NewGuid();
-				var name = "bar";
+                var id = Guid.NewGuid();
+                var name = "bar";
 
-				using (var session = store.OpenSession())
-				{
-					var entity = new BaseOne() { BaseOneGuid = id, Name = name };
-					session.Store(entity);
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    var entity = new BaseOne() { BaseOneGuid = id, Name = name };
+                    session.Store(entity);
+                    session.SaveChanges();
+                }
 
-				using (var session2 = store.OpenSession())
-				{
-					var entity = session2.Load<BaseOne>(id);
-					Assert.NotNull(entity);
-					Assert.Equal(name, entity.Name);
-				}
-			}
-		}
+                using (var session2 = store.OpenSession())
+                {
+                    var entity = session2.Load<BaseOne>(id);
+                    Assert.NotNull(entity);
+                    Assert.Equal(name, entity.Name);
+                }
+            }
+        }
 
-		private bool FindGuidIdentityProperty(MemberInfo memberInfo)
-		{
-			var found = memberInfo.Name == memberInfo.DeclaringType.Name + "Guid";
-			return found;
-		}
+        private bool FindGuidIdentityProperty(MemberInfo memberInfo)
+        {
+            var found = memberInfo.Name == memberInfo.DeclaringType.Name + "Guid";
+            return found;
+        }
 
 
-		public class BaseOne
-		{
-			public Guid BaseOneGuid { get; set; }
-			public string Name { get; set; }
-		}
+        public class BaseOne
+        {
+            public Guid BaseOneGuid { get; set; }
+            public string Name { get; set; }
+        }
 
-	}
+    }
 }

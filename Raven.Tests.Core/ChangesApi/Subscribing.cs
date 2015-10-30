@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Replication;
@@ -224,65 +224,65 @@ namespace Raven.Tests.Core.ChangesApi
         {
             using (var store = GetDocumentStore())
             {
-	            using (var bulkInsert = store.BulkInsert())
-	            {
-		            store.Changes().Task.Result
-			            .ForBulkInsert(bulkInsert.OperationId).Task.Result
-			            .Subscribe(changes =>
-			            {
-				            output.Add("passed_bulkInsert");
-			            });
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    store.Changes().Task.Result
+                        .ForBulkInsert(bulkInsert.OperationId).Task.Result
+                        .Subscribe(changes =>
+                        {
+                            output.Add("passed_bulkInsert");
+                        });
 
-		            bulkInsert.Store(new User
-		            {
-			            Name = "User"
-		            });
+                    bulkInsert.Store(new User
+                    {
+                        Name = "User"
+                    });
 
-	            }
+                }
 
-				// perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
-				WaitUntilOutput("passed_bulkInsert");
+                // perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
+                WaitUntilOutput("passed_bulkInsert");
             }
         }
 
-		[Fact]
-		public void CanSubscribeToAnyBulkInsert()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var bulkEndedCount = 0;
-				var bulkStartedCount = 0;
+        [Fact]
+        public void CanSubscribeToAnyBulkInsert()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var bulkEndedCount = 0;
+                var bulkStartedCount = 0;
 
-				store.Changes().Task.Result
-						.ForBulkInsert().Task.Result
-						.Subscribe(changes =>
-						{
-							if(changes.Type == DocumentChangeTypes.BulkInsertEnded)
-								Interlocked.Increment(ref bulkEndedCount);
-							else if (changes.Type == DocumentChangeTypes.BulkInsertStarted)
-								Interlocked.Increment(ref bulkStartedCount);
-						});
+                store.Changes().Task.Result
+                        .ForBulkInsert().Task.Result
+                        .Subscribe(changes =>
+                        {
+                            if(changes.Type == DocumentChangeTypes.BulkInsertEnded)
+                                Interlocked.Increment(ref bulkEndedCount);
+                            else if (changes.Type == DocumentChangeTypes.BulkInsertStarted)
+                                Interlocked.Increment(ref bulkStartedCount);
+                        });
 
-				using (var bulkInsert = store.BulkInsert())
-				{
-					bulkInsert.Store(new User
-					{
-						Name = "User"
-					});
-				}
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new User
+                    {
+                        Name = "User"
+                    });
+                }
 
-				using (var bulkInsert = store.BulkInsert())
-				{
-					bulkInsert.Store(new User
-					{
-						Name = "User"
-					});
-				}
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new User
+                    {
+                        Name = "User"
+                    });
+                }
 
-				// perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
-				Assert.True(SpinWait.SpinUntil(() => bulkStartedCount == 2 && bulkEndedCount == 2, TimeSpan.FromSeconds(20)));
-			}
-		}
+                // perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
+                Assert.True(SpinWait.SpinUntil(() => bulkStartedCount == 2 && bulkEndedCount == 2, TimeSpan.FromSeconds(20)));
+            }
+        }
 
         [Fact]
         public void CanSubscribeToAllTransformers()
@@ -312,69 +312,69 @@ namespace Raven.Tests.Core.ChangesApi
             }
         }
 
-		[Fact]
-		public void CanSubscribeToAllDataSubscriptions()
-		{
-			using (var store = GetDocumentStore())
-			{
-				store.Changes().Task.Result
-					.ForAllDataSubscriptions().Task.Result
-					.Subscribe(changes =>
-					{
-						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
-						{
-							output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
-						}
-						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-						{
-							output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
-						}
-					});
+        [Fact]
+        public void CanSubscribeToAllDataSubscriptions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Changes().Task.Result
+                    .ForAllDataSubscriptions().Task.Result
+                    .Subscribe(changes =>
+                    {
+                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
+                        {
+                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
+                        }
+                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+                        {
+                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
+                        }
+                    });
 
-				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+                var id = store.Subscriptions.Create(new SubscriptionCriteria());
+                var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
-				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
+                WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
 
-				subscription.Dispose();
+                subscription.Dispose();
 
-				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
-			}
-		}
+                WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
+            }
+        }
 
-		[Fact]
-		public void CanSubscribeToSpecificDataSubscriptionChanges()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+        [Fact]
+        public void CanSubscribeToSpecificDataSubscriptionChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				var id2 = store.Subscriptions.Create(new SubscriptionCriteria());
+                var id2 = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				store.Changes().Task.Result
-					.ForDataSubscription(1).Task.Result
-					.Subscribe(changes =>
-					{
-						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
-						{
-							output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + changes.Id);
-						}
-						if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-						{
-						    output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + changes.Id);
-						}
-					});
+                store.Changes().Task.Result
+                    .ForDataSubscription(1).Task.Result
+                    .Subscribe(changes =>
+                    {
+                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
+                        {
+                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + changes.Id);
+                        }
+                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+                        {
+                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + changes.Id);
+                        }
+                    });
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
-				var subscription2 = store.Subscriptions.Open(id2, new SubscriptionConnectionOptions());
+                var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+                var subscription2 = store.Subscriptions.Open(id2, new SubscriptionConnectionOptions());
 
-				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + id);
+                WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened_" + id);
 
-				subscription.Dispose();
-				subscription2.Dispose();
+                subscription.Dispose();
+                subscription2.Dispose();
 
-				WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + id);
-			}
-		}
+                WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + id);
+            }
+        }
     }
 }

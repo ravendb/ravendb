@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -117,10 +117,10 @@ class search extends viewModelBase {
             searchSingleInputClauseViewModel
                 .applyFilterTask
                 .done((input: string) => {
-		            if (!input.startsWith("/")) input = "/" + input;
-					var escaped = this.escapeQueryString(input);
-		            this.addToSearchInput("__directoryName:" + escaped);
-	            });
+                    if (!input.startsWith("/")) input = "/" + input;
+                    var escaped = this.escapeQueryString(input);
+                    this.addToSearchInput("__directoryName:" + escaped);
+                });
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -147,21 +147,21 @@ class search extends viewModelBase {
     }
 
 
-	deleteFilesMatchingQuery() {
-		// Run the query so that we have an idea of what we'll be deleting.
-		this.search();
-		this.allFilesPagedItems()
-			.fetch(0, 1)
-			.done((results: pagedResultSet) => {
-				if (results.totalResultCount === 0) {
-					app.showMessage("There are no files matching your query.", "Nothing to do");
-				} else {
-					this.promptDeleteFilesMatchingQuery(results.totalResultCount);
-				}
-			});
-	}
+    deleteFilesMatchingQuery() {
+        // Run the query so that we have an idea of what we'll be deleting.
+        this.search();
+        this.allFilesPagedItems()
+            .fetch(0, 1)
+            .done((results: pagedResultSet) => {
+                if (results.totalResultCount === 0) {
+                    app.showMessage("There are no files matching your query.", "Nothing to do");
+                } else {
+                    this.promptDeleteFilesMatchingQuery(results.totalResultCount);
+                }
+            });
+    }
 
-	promptDeleteFilesMatchingQuery(resultCount: number) {
+    promptDeleteFilesMatchingQuery(resultCount: number) {
         var viewModel = new deleteFilesMatchingQueryConfirm(this.searchText(), resultCount, this.activeFilesystem());
         app
             .showDialog(viewModel)

@@ -1,11 +1,11 @@
-﻿namespace Raven.Bundles.UniqueConstraints
+namespace Raven.Bundles.UniqueConstraints
 {
-	public class Constants
-	{
-		public const string EnsureUniqueConstraints = "Ensure-Unique-Constraints";
+    public class Constants
+    {
+        public const string EnsureUniqueConstraints = "Ensure-Unique-Constraints";
 
-		public const string IsConstraintDocument = "Is-Constraint-Document";
+        public const string IsConstraintDocument = "Is-Constraint-Document";
 
-		public const string RavenEntityName = "Raven-Entity-Name";
-	}
+        public const string RavenEntityName = "Raven-Entity-Name";
+    }
 }

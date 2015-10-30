@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="QueryingIntArray.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
                         .Search(o => o.Name, "Test")
                         .Where(o => o.Resolutions.Any(x => x >= 5 && x <= 9))
-						.ProjectFromIndexFieldsInto<IndexEntry>()
+                        .ProjectFromIndexFieldsInto<IndexEntry>()
                         .ToList();
 
                     Assert.Equal(2, results.Count);
